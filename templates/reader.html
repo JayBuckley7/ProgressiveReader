@@ -9,124 +9,112 @@
         body {
             font-family: sans-serif;
             line-height: 1.6;
-            margin: 0; /* Remove default margin */
-            padding-left: 20px; /* Add padding to prevent content overlap when drawer is closed */
-            padding-right: 20px;
-            transition: margin-left 0.3s ease; /* Animate content shift */
+            margin: 0;
+            padding: 0 20px; /* Adjust padding as needed */
+            transition: margin-left 0.3s ease;
         }
-        .content-wrapper {
-            max-width: 800px;
-            margin: auto;
-            padding: 20px 0; /* Vertical padding */
-        }
+        .content-wrapper { max-width: 800px; margin: auto; padding: 20px 0; }
         img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
         p { margin-bottom: 1em; }
         h1, h2, h3, h4, h5, h6 { margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; }
 
         /* Drawer Styles */
-        #side-drawer {
-            height: 100%;
-            width: 0; /* Initially hidden */
-            position: fixed;
-            z-index: 1000;
-            top: 0;
-            left: 0;
-            background-color: #f1f1f1;
-            overflow-x: hidden;
-            transition: 0.3s ease;
-            padding-top: 60px; /* Space for close button */
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-        }
-        #side-drawer a {
-            padding: 8px 8px 8px 32px;
-            text-decoration: none;
-            font-size: 1em;
-            color: #333;
-            display: block;
-            transition: 0.3s;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        #side-drawer a:hover {
-            color: #007bff;
-            background-color: #e9e9e9;
-        }
-        #side-drawer .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 30px;
-            margin-left: 50px;
-            color: #818181;
-            text-decoration: none;
-            border: none;
-            background: none;
-            cursor: pointer;
-        }
-        #side-drawer .close-btn:hover {
-            color: #333;
-        }
-        #side-drawer.open {
-            width: 280px; /* Width when open */
-        }
-        body.drawer-open {
-            margin-left: 280px; /* Push body content */
-        }
+        #side-drawer { height: 100%; width: 0; position: fixed; z-index: 1000; top: 0; left: 0; background-color: #f1f1f1; overflow-x: hidden; transition: 0.3s ease; padding-top: 60px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        #side-drawer a { padding: 8px 8px 8px 32px; text-decoration: none; font-size: 1em; color: #333; display: block; transition: 0.3s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #side-drawer a:hover { color: #007bff; background-color: #e9e9e9; }
+        #side-drawer .close-btn { position: absolute; top: 10px; right: 15px; font-size: 30px; margin-left: 50px; color: #818181; text-decoration: none; border: none; background: none; cursor: pointer; }
+        #side-drawer .close-btn:hover { color: #333; }
+        #side-drawer.open { width: 280px; }
+        body.drawer-open { margin-left: 280px; }
 
-        /* Toggle Button */
-        #toggle-drawer-btn {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            font-size: 24px;
+        /* Individual Toggle Buttons (now part of nav) */
+        .toggle-btn {
+            font-size: 20px;
             cursor: pointer;
             background-color: #eee;
             border: 1px solid #ccc;
-            padding: 5px 10px;
-            z-index: 1001; /* Above drawer background but below drawer content if needed */
+            padding: 5px 8px;
             border-radius: 4px;
-            transition: left 0.3s ease;
+            margin-right: 5px; /* Add some space between buttons */
         }
-        #toggle-drawer-btn:hover {
-            background-color: #ddd;
+        .toggle-btn:hover { background-color: #ddd; }
+
+        /* Settings Modal Styles */
+        #settings-modal { display: none; position: fixed; z-index: 1002; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 450px; background-color: #fefefe; padding: 25px; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 8px; }
+        #settings-modal .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+        #settings-modal .close-modal-btn:hover, #settings-modal .close-modal-btn:focus { color: black; text-decoration: none; }
+        #settings-modal h4 { margin-top: 0; }
+        #settings-modal label {
+            display: block;
+            margin-top: 12px; /* Increased spacing */
+            margin-bottom: 5px;
+            font-weight: bold;
         }
-        body.drawer-open #toggle-drawer-btn {
-             /* Optionally hide or move button when drawer is open */
-             /* left: 295px; */ /* Example: move it with the drawer */
-             opacity: 0; /* Hide it when drawer is open */
-             pointer-events: none;
+        #settings-modal .slider-container {
+            margin-top: 10px;
+            margin-bottom: 15px;
         }
+        #settings-modal .slider-container label {
+             margin-bottom: 8px;
+        }
+        #settings-modal input[type="range"] {
+            width: 100%;
+        }
+        #settings-modal #cefr-output {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+            color: #555;
+            min-width: 25px; /* Prevent layout shifts */
+        }
+        #settings-modal .button-group {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap; /* Wrap buttons if needed */
+            gap: 10px; /* Space between buttons */
+        }
+        #settings-modal button {
+            margin-top: 0; /* Reset margin as gap handles spacing */
+            margin-right: 0;
+        }
+        #settings-modal input[type="text"], #settings-modal input[type="password"], #settings-modal select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; box-sizing: border-box; border-radius: 4px; }
+        #settings-modal button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px; margin-right: 10px; }
+        #settings-modal button:hover { background-color: #0056b3; }
+        #settings-modal button#translate-btn { background-color: #28a745; }
+        #settings-modal button#translate-btn:hover { background-color: #218838; }
 
         /* Navigation */
         .navigation {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; /* Key for layout */
             align-items: center;
             padding: 10px 0;
             font-size: 0.9em;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
-         .navigation span { color: #555; }
-         .navigation a, .navigation span.disabled {
+        /* Grouping left elements */
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Space between buttons and upload link */
+        }
+         .navigation span { color: #555; text-align: center; flex-grow: 1; /* Allow span to take space */ padding: 0 10px; }
+         .navigation a, .navigation span.disabled, .toggle-btn {
             padding: 5px 10px;
             text-decoration: none;
             border: 1px solid #ccc;
             border-radius: 4px;
             margin: 0 5px;
         }
+         /* Override for toggle buttons */
+        .toggle-btn { padding: 5px 8px; margin: 0; }
         .navigation a { color: #007bff; background-color: #f8f9fa; }
         .navigation a:hover { background-color: #e2e6ea; }
-        .navigation span.disabled {
-            color: #aaa;
-            background-color: #f8f9fa;
-            cursor: default;
-        }
+        .navigation span.disabled { color: #aaa; background-color: #f8f9fa; cursor: default; }
         hr { border: 0; height: 1px; background-color: #eee; margin: 20px 0; }
     </style>
 </head>
 <body>
-
-<button id="toggle-drawer-btn">&#9776;</button> <!-- Hamburger Icon -->
 
 <div id="side-drawer">
     <button class="close-btn" onclick="closeDrawer()">&times;</button>
@@ -140,9 +128,64 @@
     {% endif %}
 </div>
 
+<!-- Settings Modal -->
+<div id="settings-modal">
+    <span class="close-modal-btn" onclick="closeSettingsModal()">&times;</span>
+    <h4>Settings</h4>
+    <form id="settings-form">
+        <label for="openai-key">OpenAI API Key (Cookie):</label>
+        <input type="password" id="openai-key" name="openai-key" placeholder="Stored in browser cookie (if set)">
+        <p style="font-size: 0.8em; margin-top: 5px;">
+            Server Key Status:
+            {% if openai_key_configured %}
+                <span style="color: green;">Configured</span>
+                <small>(Will be used if cookie key is empty)</small>
+            {% else %}
+                <span style="color: red;">Not Configured</span>
+                <small>(Set OPENAI_API_KEY in .env file on server)</small>
+            {% endif %}
+        </p>
+
+        <label for="openai-model">Preferred Model:</label>
+        <select id="openai-model" name="openai-model">
+            <option value="gpt-4o-mini">GPT-4o Mini</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-3.5-turbo">GPT-3.5-Turbo</option>
+        </select>
+
+        <label for="target-language">Target Language:</label>
+        <select id="target-language" name="target-language">
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Mandarin Chinese">Mandarin Chinese</option>
+            <option value="Korean">Korean</option>
+            <!-- Add more languages -->
+        </select>
+
+        <div class="slider-container">
+            <label for="cefr-level">Target CEFR Level:</label>
+            <input type="range" id="cefr-level" name="cefr-level" min="0" max="5" step="1" value="3"> <!-- 0:A1, 1:A2, 2:B1, 3:B2, 4:C1, 5:C2 -->
+            <span id="cefr-output">B2</span> <!-- Default output -->
+        </div>
+
+        <button type="button" onclick="saveSettings()">Save Settings to Cookie</button>
+    </form>
+    <hr style="margin: 20px 0;">
+    <div class="button-group">
+        <button id="translate-btn" onclick="translatePage()">Translate Page</button>
+        <button id="translate-cefr-btn" onclick="translatePageCEFR()">Translate Page (CEFR)</button>
+    </div>
+</div>
+
 <div class="content-wrapper">
     <div class="navigation top-nav">
-        <a href="{{ url_for('index') }}">Back to Upload</a>
+        <div class="nav-left">
+            <button id="toggle-drawer-btn" class="toggle-btn" title="Table of Contents">&#9776;</button>
+            <button id="toggle-settings-btn" class="toggle-btn" title="Settings">&#9881;</button>
+            <a href="{{ url_for('index') }}">Back to Upload</a>
+        </div>
         <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
         <div>
             {% if current_index > 0 %}
@@ -184,32 +227,229 @@
 
 <script>
     const drawer = document.getElementById('side-drawer');
-    const toggleBtn = document.getElementById('toggle-drawer-btn');
+    const toggleDrawerBtn = document.getElementById('toggle-drawer-btn');
     const body = document.body;
 
     function openDrawer() {
         drawer.classList.add('open');
         body.classList.add('drawer-open');
-        toggleBtn.style.opacity = '0'; // Hide button when drawer opens
-        toggleBtn.style.pointerEvents = 'none';
     }
 
     function closeDrawer() {
         drawer.classList.remove('open');
         body.classList.remove('drawer-open');
-        toggleBtn.style.opacity = '1'; // Show button when drawer closes
-        toggleBtn.style.pointerEvents = 'auto';
     }
 
-    // Toggle drawer on button click
-    toggleBtn.addEventListener('click', openDrawer);
-
-    // Optional: Close drawer if clicking outside of it
+    toggleDrawerBtn.addEventListener('click', openDrawer);
     document.addEventListener('click', function(event) {
-        if (drawer.classList.contains('open') && !drawer.contains(event.target) && event.target !== toggleBtn) {
+        const settingsModal = document.getElementById('settings-modal');
+        if (drawer.classList.contains('open') && !drawer.contains(event.target) && event.target !== toggleDrawerBtn && !settingsModal.contains(event.target)) {
             closeDrawer();
         }
     });
+
+    const settingsModal = document.getElementById('settings-modal');
+    const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+    const apiKeyInput = document.getElementById('openai-key');
+    const modelSelect = document.getElementById('openai-model');
+    const languageSelect = document.getElementById('target-language');
+    const cefrSlider = document.getElementById('cefr-level');
+    const cefrOutput = document.getElementById('cefr-output');
+    const apiKeyStatusConfigured = {{ openai_key_configured | tojson | safe }};
+    const serverDefaultModel = {{ server_default_model | tojson | safe }} || 'gpt-4o-mini';
+    const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+    const defaultSettings = {
+        apiKey: '',
+        model: serverDefaultModel,
+        language: 'Spanish',
+        cefrIndex: 3
+    };
+
+    function updateCefrOutput() {
+        cefrOutput.textContent = cefrLevels[cefrSlider.value];
+    }
+
+    function openSettingsModal() {
+        loadSettings();
+        settingsModal.style.display = 'block';
+    }
+
+    function closeSettingsModal() {
+        settingsModal.style.display = 'none';
+    }
+
+    function setCookie(name, value, days = 365) {
+        let expires = "";
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+        console.log("Set cookie:", name, value);
+    }
+
+    function getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for(let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    function saveSettings() {
+        const apiKey = apiKeyInput.value;
+        const model = modelSelect.value;
+        const language = languageSelect.value;
+        const cefrIndex = cefrSlider.value;
+        setCookie('openai_api_key', apiKey);
+        setCookie('openai_model', model);
+        setCookie('target_language', language);
+        setCookie('cefr_index', cefrIndex);
+        alert('Settings saved to browser cookie!');
+        closeSettingsModal();
+    }
+
+    function loadSettings() {
+        const savedApiKey = getCookie('openai_api_key');
+        const savedModel = getCookie('openai_model');
+        const savedLanguage = getCookie('target_language');
+        const savedCefrIndex = getCookie('cefr_index');
+
+        apiKeyInput.value = savedApiKey !== null ? savedApiKey : defaultSettings.apiKey;
+        modelSelect.value = savedModel !== null ? savedModel : defaultSettings.model;
+        languageSelect.value = savedLanguage !== null ? savedLanguage : defaultSettings.language;
+        cefrSlider.value = savedCefrIndex !== null ? savedCefrIndex : defaultSettings.cefrIndex;
+        updateCefrOutput();
+        console.log("Loaded settings - Cookie Key found:", savedApiKey !== null, " | Model:", modelSelect.value, " | Lang:", languageSelect.value, " | CEFR:", cefrLevels[cefrSlider.value]);
+    }
+
+    async function callTranslateAPI(payload, buttonElement) {
+        const originalButtonText = buttonElement.textContent;
+        buttonElement.textContent = 'Translating...';
+        buttonElement.disabled = true;
+
+        try {
+            const response = await fetch('{{ url_for("translate_content") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const contentElement = document.querySelector('.epub-content');
+            if (!contentElement) {
+                 throw new Error("Could not find .epub-content element to update.");
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.translated_text) {
+                 // Replace the content directly
+                 contentElement.innerHTML = data.translated_text;
+                 alert('Translation complete!'); // Simple notification
+            } else {
+                 throw new Error('No translation returned from server.');
+            }
+
+        } catch (error) {
+            console.error('Translation Error:', error);
+            alert(`Error during translation: ${error.message}`); // Show error in alert
+        } finally {
+            // Restore button state
+            buttonElement.textContent = originalButtonText;
+            buttonElement.disabled = false;
+        }
+    }
+
+    function translatePage() {
+        console.log("Standard Translate button clicked.");
+        const contentElement = document.querySelector('.epub-content');
+        if (!contentElement) {
+            alert('Could not find page content.');
+            return;
+        }
+        const contentToTranslate = contentElement.innerHTML;
+        const cookieApiKey = apiKeyInput.value;
+        const currentModel = modelSelect.value;
+        const targetLanguage = languageSelect.value;
+        const buttonElement = document.getElementById('translate-btn'); // Get button element
+
+        let apiKeyToSend = cookieApiKey;
+        if (!apiKeyToSend && apiKeyStatusConfigured) {
+             console.log("Using server API Key as fallback.");
+             apiKeyToSend = null;
+        }
+
+        if (!cookieApiKey && !apiKeyStatusConfigured) {
+            alert("OpenAI API Key is not set in cookies and not configured on the server. Please set one.");
+            openSettingsModal();
+            return;
+        }
+
+        const payload = {
+            content: contentToTranslate,
+            target_language: targetLanguage,
+            model: currentModel,
+            api_key: apiKeyToSend
+        };
+        callTranslateAPI(payload, buttonElement); // Pass button element
+    }
+
+    function translatePageCEFR() {
+        console.log("CEFR Translate button clicked.");
+        const contentElement = document.querySelector('.epub-content');
+        if (!contentElement) {
+            alert('Could not find page content.');
+            return;
+        }
+        const contentToTranslate = contentElement.innerHTML;
+        const cookieApiKey = apiKeyInput.value;
+        const currentModel = modelSelect.value;
+        const targetLanguage = languageSelect.value;
+        const currentCefrLevel = cefrLevels[cefrSlider.value];
+        const buttonElement = document.getElementById('translate-cefr-btn'); // Get button element
+
+        let apiKeyToSend = cookieApiKey;
+        if (!apiKeyToSend && apiKeyStatusConfigured) {
+             console.log("Using server API Key as fallback.");
+             apiKeyToSend = null;
+        }
+
+        if (!cookieApiKey && !apiKeyStatusConfigured) {
+            alert("OpenAI API Key is not set in cookies and not configured on the server. Please set one.");
+            openSettingsModal();
+            return;
+        }
+
+         const payload = {
+            content: contentToTranslate,
+            target_language: targetLanguage,
+            model: currentModel,
+            api_key: apiKeyToSend,
+            cefr_level: currentCefrLevel
+        };
+        callTranslateAPI(payload, buttonElement); // Pass button element
+    }
+
+    toggleSettingsBtn.addEventListener('click', openSettingsModal);
+    cefrSlider.addEventListener('input', updateCefrOutput);
+    document.addEventListener('click', function(event) {
+        if (settingsModal.style.display === 'block' && !settingsModal.contains(event.target) && event.target !== toggleSettingsBtn) {
+            closeSettingsModal();
+        }
+    });
+
+    loadSettings();
 </script>
 
 </body>

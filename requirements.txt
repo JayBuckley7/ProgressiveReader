@@ -1,2 +1,6 @@
 Flask
-ebooklib 
+ebooklib
+beautifulsoup4
+lxml
+python-dotenv
+openai 

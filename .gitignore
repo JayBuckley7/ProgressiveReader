@@ -4,4 +4,10 @@ venv/
 __pycache__/
 
 # Uploaded files
-uploads/ 
+uploads/
+
+# Specific EPUB files to ignore
+DCC1.epub
+
+# Environment variables
+.env 
