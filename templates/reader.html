@@ -112,9 +112,39 @@
         .navigation a:hover { background-color: #e2e6ea; }
         .navigation span.disabled { color: #aaa; background-color: #f8f9fa; cursor: default; }
         hr { border: 0; height: 1px; background-color: #eee; margin: 20px 0; }
+        .nav-right { /* Container for prev/next */
+            display: flex;
+            align-items: center;
+        }
+        .page-controls {
+             margin-top: 10px;
+             margin-bottom: 10px;
+             text-align: center; /* Center the controls */
+        }
+        .page-controls button {
+             padding: 5px 10px;
+             margin: 0 5px;
+             cursor: pointer;
+        }
+        .autoload-pref {
+             display: inline-flex; /* Align checkbox and label nicely */
+             align-items: center;
+             gap: 5px;
+             margin-left: 15px; /* Space from other nav items */
+             font-size: 0.85em;
+        }
+
+        /* JLPT Highlighting Styles */
+        .n5 { text-decoration: underline wavy 2px #4caf50; }
+        .n4 { text-decoration: underline wavy 2px #8bc34a; }
+        .n3 { text-decoration: underline wavy 2px #ffc107; }
+        .n2 { text-decoration: underline wavy 2px #ff9800; }
+        .n1 { text-decoration: underline wavy 2px #f44336; }
+
     </style>
 </head>
-<body>
+<body data-openai-key-configured="{{ openai_key_configured | tojson | safe }}"
+      data-server-default-model="{{ server_default_model | default('gpt-4o-mini', true) | tojson | safe }}">
 
 <div id="side-drawer">
     <button class="close-btn" onclick="closeDrawer()">&times;</button>
@@ -130,7 +160,7 @@
 
 <!-- Settings Modal -->
 <div id="settings-modal">
-    <span class="close-modal-btn" onclick="closeSettingsModal()">&times;</span>
+    <span class="close-modal-btn">&times;</span>
     <h4>Settings</h4>
     <form id="settings-form">
         <label for="openai-key">OpenAI API Key (Cookie):</label>
@@ -170,12 +200,13 @@
             <span id="cefr-output">B2</span> <!-- Default output -->
         </div>
 
-        <button type="button" onclick="saveSettings()">Save Settings to Cookie</button>
+        <button type="button" id="save-settings-btn">Save Settings to Cookie</button>
     </form>
     <hr style="margin: 20px 0;">
     <div class="button-group">
-        <button id="translate-btn" onclick="translatePage()">Translate Page</button>
-        <button id="translate-cefr-btn" onclick="translatePageCEFR()">Translate Page (CEFR)</button>
+        <button id="translate-btn">Translate Page</button>
+        <button id="translate-cefr-btn">Translate Page (CEFR)</button>
+        <button id="manual-load-cached-btn">Load Cached Translation</button>
     </div>
 </div>
 
@@ -185,9 +216,22 @@
             <button id="toggle-drawer-btn" class="toggle-btn" title="Table of Contents">&#9776;</button>
             <button id="toggle-settings-btn" class="toggle-btn" title="Settings">&#9881;</button>
             <a href="{{ url_for('index') }}">Back to Upload</a>
+            <!-- Autoload Preference Checkbox -->
+            <div class="autoload-pref">
+                <input type="checkbox" id="autoload-checkbox" title="Automatically load cached translations when navigating">
+                <label for="autoload-checkbox">Autoload Translations</label>
+            </div>
+
+            <!-- JLPT Highlighting Toggle (Visibility controlled by JS) -->
+            <span id="jlpt-toggle-container">
+                <input type="checkbox" id="jlpt-highlighting" {% if jlpt_enabled %}checked{% endif %}>
+                <label for="jlpt-highlighting">JLPT Highlighting</label>
+            </span>
+            <!-- End JLPT Toggle -->
+
         </div>
         <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
-        <div>
+        <div class="nav-right"> <!-- Group prev/next -->
             {% if current_index > 0 %}
                 <a href="{{ url_for('read_item', item_index=current_index - 1) }}">Previous</a>
             {% else %}
@@ -202,6 +246,11 @@
         </div>
     </div>
     <hr>
+    <!-- Buttons for Load/Revert -->
+    <div class="page-controls">
+        <button id="load-cached-btn" style="display: none;">Load Cached Translation</button>
+        <button id="revert-translation-btn" style="display: none;">Show Original Text</button>
+    </div>
     <div class="epub-content">
         {{ content | safe }}
     </div>
@@ -226,95 +275,113 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // --- Config & State (Define these early) ---
+    const bodyData = document.body.dataset;
+    const apiKeyStatusConfigured = JSON.parse(bodyData.openaiKeyConfigured || 'false');
+    const serverDefaultModel = JSON.parse(bodyData.serverDefaultModel || '"gpt-4o-mini"');
+
+    console.log("Script start. API Key Configured:", apiKeyStatusConfigured, "Server Default Model:", serverDefaultModel);
+
+    // --- DOM Elements ---
     const drawer = document.getElementById('side-drawer');
     const toggleDrawerBtn = document.getElementById('toggle-drawer-btn');
-    const body = document.body;
-
-    function openDrawer() {
-        drawer.classList.add('open');
-        body.classList.add('drawer-open');
-    }
-
-    function closeDrawer() {
-        drawer.classList.remove('open');
-        body.classList.remove('drawer-open');
-    }
-
-    toggleDrawerBtn.addEventListener('click', openDrawer);
-    document.addEventListener('click', function(event) {
-        const settingsModal = document.getElementById('settings-modal');
-        if (drawer.classList.contains('open') && !drawer.contains(event.target) && event.target !== toggleDrawerBtn && !settingsModal.contains(event.target)) {
-            closeDrawer();
-        }
-    });
-
+    const drawerCloseBtn = document.querySelector('#side-drawer .close-btn');
+    const contentArea = document.querySelector('.epub-content');
     const settingsModal = document.getElementById('settings-modal');
     const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+    const settingsCloseBtn = document.querySelector('#settings-modal .close-modal-btn');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
     const apiKeyInput = document.getElementById('openai-key');
     const modelSelect = document.getElementById('openai-model');
     const languageSelect = document.getElementById('target-language');
     const cefrSlider = document.getElementById('cefr-level');
     const cefrOutput = document.getElementById('cefr-output');
-    const apiKeyStatusConfigured = {{ openai_key_configured | tojson | safe }};
-    const serverDefaultModel = {{ server_default_model | tojson | safe }} || 'gpt-4o-mini';
+    const translateButton = document.getElementById('translate-btn');
+    const translateCefrButton = document.getElementById('translate-cefr-btn');
+    const loadCachedBtn = document.getElementById('load-cached-btn');
+    const revertBtn = document.getElementById('revert-translation-btn');
+    const manualLoadCachedBtn = document.getElementById('manual-load-cached-btn');
+    const autoloadCheckbox = document.getElementById('autoload-checkbox');
+    const jlptToggleContainer = document.getElementById('jlpt-toggle-container');
+    const jlptToggleCheckbox = document.getElementById('jlpt-highlighting');
+
+
+    // --- Config & State (Rest of state) ---
     const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const defaultSettings = { apiKey: '', model: serverDefaultModel, language: 'Spanish', cefrIndex: 3 };
+    let originalPageContent = ""; // To store original content before translation
+    const getCurrentPageIndex = () => {{ current_index }};
 
-    const defaultSettings = {
-        apiKey: '',
-        model: serverDefaultModel,
-        language: 'Spanish',
-        cefrIndex: 3
-    };
-
-    function updateCefrOutput() {
-        cefrOutput.textContent = cefrLevels[cefrSlider.value];
-    }
-
-    function openSettingsModal() {
-        loadSettings();
-        settingsModal.style.display = 'block';
-    }
-
-    function closeSettingsModal() {
-        settingsModal.style.display = 'none';
-    }
-
-    function setCookie(name, value, days = 365) {
+    // --- Utility Functions ---
+    function updateCefrOutput() { cefrOutput.textContent = cefrLevels[cefrSlider.value]; }
+    function openSettingsModal() { loadSettings(); settingsModal.style.display = 'block'; }
+    function closeSettingsModal() { settingsModal.style.display = 'none'; }
+    function setCookie(name, value, days = 365) { 
         let expires = "";
         if (days) {
             const date = new Date();
             date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
             expires = "; expires=" + date.toUTCString();
         }
-        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
-        console.log("Set cookie:", name, value);
+        // Ensure SameSite=Lax for modern browser compatibility
+        const cookieString = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax"; // Store string
+        document.cookie = cookieString; // Assign to document.cookie
+        console.log("Set cookie string:", cookieString); // Log the full string
     }
-
-    function getCookie(name) {
+    function getCookie(name) { 
         const nameEQ = name + "=";
         const ca = document.cookie.split(';');
         for(let i = 0; i < ca.length; i++) {
             let c = ca[i];
             while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            if (c.indexOf(nameEQ) === 0) {
+                const value = c.substring(nameEQ.length, c.length);
+                console.log("Get cookie:", name, "=", value);
+                return value;
+            }
         }
+        console.log("Get cookie:", name, "= null");
         return null;
     }
 
+    // --- JLPT Toggle Visibility ---
+    function updateJlptToggleVisibility() {
+        const selectedLanguage = languageSelect.value;
+        if (jlptToggleContainer) { // Ensure container exists
+            if (selectedLanguage === 'Japanese') {
+                jlptToggleContainer.style.display = 'inline-block'; // Show it
+                console.log("JLPT Toggle Visible (Japanese selected)");
+            } else {
+                jlptToggleContainer.style.display = 'none'; // Hide it
+                console.log("JLPT Toggle Hidden (Non-Japanese selected)");
+            }
+        }
+    }
+
+    // --- Settings Management ---
     function saveSettings() {
-        const apiKey = apiKeyInput.value;
+        const apiKey = apiKeyInput.value.trim(); // Trim whitespace
         const model = modelSelect.value;
         const language = languageSelect.value;
         const cefrIndex = cefrSlider.value;
+
+        console.log("Saving settings:", { apiKey: apiKey, model: model, language: language, cefrIndex: cefrIndex });
+
         setCookie('openai_api_key', apiKey);
         setCookie('openai_model', model);
         setCookie('target_language', language);
         setCookie('cefr_index', cefrIndex);
-        alert('Settings saved to browser cookie!');
+
+        alert('Settings saved!');
         closeSettingsModal();
+        updateJlptToggleVisibility(); // Update toggle visibility after saving
     }
 
     function loadSettings() {
+        console.log("Loading settings. Raw document.cookie:", document.cookie);
+
         const savedApiKey = getCookie('openai_api_key');
         const savedModel = getCookie('openai_model');
         const savedLanguage = getCookie('target_language');
@@ -325,131 +392,336 @@
         languageSelect.value = savedLanguage !== null ? savedLanguage : defaultSettings.language;
         cefrSlider.value = savedCefrIndex !== null ? savedCefrIndex : defaultSettings.cefrIndex;
         updateCefrOutput();
-        console.log("Loaded settings - Cookie Key found:", savedApiKey !== null, " | Model:", modelSelect.value, " | Lang:", languageSelect.value, " | CEFR:", cefrLevels[cefrSlider.value]);
+        console.log("Loaded settings - Key:", savedApiKey !== null, "| Model:", modelSelect.value, "| Lang:", languageSelect.value, "| CEFR:", cefrLevels[cefrSlider.value]);
+        updateJlptToggleVisibility(); // Update toggle visibility after loading settings
     }
 
-    async function callTranslateAPI(payload, buttonElement) {
+    // --- localStorage Cache Logic ---
+    function getLocalStorageKey(index) { return `translated_page_${index}`; }
+
+    function saveTranslationToLocal(index, translatedHtml) {
+        const key = getLocalStorageKey(index);
+        try {
+            localStorage.setItem(key, translatedHtml);
+            console.log(`Saved translation index ${index}.`);
+        } catch (e) {
+            console.error(`Error saving to localStorage for index ${index}:`, e);
+            alert("Could not save translation locally. Storage might be full.");
+        }
+    }
+
+    function loadTranslationFromLocal(index) {
+        const key = getLocalStorageKey(index);
+        const cachedHtml = localStorage.getItem(key);
+        if (cachedHtml) {
+            console.log(`Found cached translation index ${index}.`);
+            return cachedHtml;
+        }
+        return null;
+    }
+
+    function removeTranslationFromLocal(index) {
+         const key = getLocalStorageKey(index);
+         localStorage.removeItem(key);
+         console.log(`Removed translation index ${index}.`);
+    }
+
+    // --- Autoload Preference ---
+    function getAutoloadPreference() {
+        const pref = localStorage.getItem('autoload_preference');
+        // Default to true (checked) if not set or invalid
+        return pref === null ? true : (pref === 'true');
+    }
+
+    function saveAutoloadPreference() {
+        const isChecked = autoloadCheckbox.checked;
+        localStorage.setItem('autoload_preference', isChecked);
+        console.log("Autoload preference saved:", isChecked);
+        // If user enables autoload and there's a cached version not showing, load it
+        if (isChecked) {
+            const currentIndex = getCurrentPageIndex();
+            const cachedTranslation = loadTranslationFromLocal(currentIndex);
+            if (cachedTranslation && contentArea.innerHTML !== cachedTranslation) {
+                 console.log("Autoload enabled, loading cached translation now.");
+                 if (!originalPageContent) { // Store original if not already stored
+                    originalPageContent = contentArea.innerHTML;
+                 }
+                 contentArea.innerHTML = cachedTranslation;
+                 updateDisplayButtons();
+            }
+        }
+    }
+
+    // --- Button Display Logic ---
+    function updateDisplayButtons() {
+        const currentIndex = getCurrentPageIndex();
+        const cachedTranslation = loadTranslationFromLocal(currentIndex);
+        const isCurrentlyShowingTranslation = originalPageContent && contentArea.innerHTML !== originalPageContent; // Check if original is stored and content differs
+        const autoloadEnabled = getAutoloadPreference();
+
+        console.log(`Updating buttons: Cache exists=${!!cachedTranslation}, Showing Translation=${isCurrentlyShowingTranslation}, Autoload=${autoloadEnabled}`);
+
+        if (cachedTranslation) {
+             // If showing translation (either autoloaded or manually loaded)
+            if (isCurrentlyShowingTranslation) {
+                loadCachedBtn.style.display = 'none';
+                revertBtn.style.display = 'inline-block';
+                console.log("Showing Revert button, disabling manual load.");
+            }
+            // If cache exists but not loaded (because autoload is off OR we're showing original)
+            else {
+                 // If cache exists but not loaded (because autoload is off AND we're showing original)
+                 if (!autoloadEnabled && !isCurrentlyShowingTranslation) {
+                     loadCachedBtn.style.display = 'inline-block';
+                     console.log("Showing Load Cached button (outside modal).");
+                 } else {
+                      loadCachedBtn.style.display = 'none'; // Hide if autoload is on or translation showing
+                 }
+                 revertBtn.style.display = 'none';
+                 console.log("Enabling manual load button, managing outside load button visibility.");
+            }
+        } else { // No cache exists
+            loadCachedBtn.style.display = 'none';
+            revertBtn.style.display = 'none';
+            console.log("No cache, hiding Load/Revert buttons, disabling manual load.");
+        }
+    }
+
+    // --- Translation Call ---
+    async function callTranslateAPI(payload) {
+        const buttonElement = payload.cefr_level ? translateCefrButton : translateButton;
         const originalButtonText = buttonElement.textContent;
         buttonElement.textContent = 'Translating...';
         buttonElement.disabled = true;
+        const currentIndex = getCurrentPageIndex();
+
+        // Ensure original content is stored before translating
+        if (!originalPageContent) {
+             originalPageContent = contentArea.innerHTML;
+             console.log("Original content stored before translation.");
+        }
 
         try {
+            payload.item_index = currentIndex;
+            // Use the stored original content for translation
+            payload.content = originalPageContent;
+
             const response = await fetch('{{ url_for("translate_content") }}', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json', },
                 body: JSON.stringify(payload),
-            });
+             });
 
-            const contentElement = document.querySelector('.epub-content');
-            if (!contentElement) {
-                 throw new Error("Could not find .epub-content element to update.");
-            }
-
+            if (!contentArea) { throw new Error("Could not find .epub-content element."); }
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
-
             const data = await response.json();
             if (data.translated_text) {
-                 // Replace the content directly
-                 contentElement.innerHTML = data.translated_text;
-                 alert('Translation complete!'); // Simple notification
-            } else {
-                 throw new Error('No translation returned from server.');
-            }
-
+                 contentArea.innerHTML = data.translated_text; // Update content
+                 saveTranslationToLocal(currentIndex, data.translated_text); // Save to cache
+                 updateDisplayButtons(); // Show "Show Original" button
+            } else { throw new Error('No translation returned from server.'); }
         } catch (error) {
             console.error('Translation Error:', error);
-            alert(`Error during translation: ${error.message}`); // Show error in alert
+            alert(`Error during translation: ${error.message}`);
+            // Don't revert here, let user click "Show Original" if they want
         } finally {
-            // Restore button state
             buttonElement.textContent = originalButtonText;
             buttonElement.disabled = false;
         }
     }
 
-    function translatePage() {
-        console.log("Standard Translate button clicked.");
-        const contentElement = document.querySelector('.epub-content');
-        if (!contentElement) {
-            alert('Could not find page content.');
-            return;
-        }
-        const contentToTranslate = contentElement.innerHTML;
-        const cookieApiKey = apiKeyInput.value;
-        const currentModel = modelSelect.value;
-        const targetLanguage = languageSelect.value;
-        const buttonElement = document.getElementById('translate-btn'); // Get button element
 
-        let apiKeyToSend = cookieApiKey;
-        if (!apiKeyToSend && apiKeyStatusConfigured) {
-             console.log("Using server API Key as fallback.");
-             apiKeyToSend = null;
-        }
+    // --- Event Listeners Setup ---
+    toggleDrawerBtn.addEventListener('click', () => {
+        drawer.classList.toggle('open');
+    });
 
-        if (!cookieApiKey && !apiKeyStatusConfigured) {
-            alert("OpenAI API Key is not set in cookies and not configured on the server. Please set one.");
-            openSettingsModal();
-            return;
-        }
-
-        const payload = {
-            content: contentToTranslate,
-            target_language: targetLanguage,
-            model: currentModel,
-            api_key: apiKeyToSend
-        };
-        callTranslateAPI(payload, buttonElement); // Pass button element
-    }
-
-    function translatePageCEFR() {
-        console.log("CEFR Translate button clicked.");
-        const contentElement = document.querySelector('.epub-content');
-        if (!contentElement) {
-            alert('Could not find page content.');
-            return;
-        }
-        const contentToTranslate = contentElement.innerHTML;
-        const cookieApiKey = apiKeyInput.value;
-        const currentModel = modelSelect.value;
-        const targetLanguage = languageSelect.value;
-        const currentCefrLevel = cefrLevels[cefrSlider.value];
-        const buttonElement = document.getElementById('translate-cefr-btn'); // Get button element
-
-        let apiKeyToSend = cookieApiKey;
-        if (!apiKeyToSend && apiKeyStatusConfigured) {
-             console.log("Using server API Key as fallback.");
-             apiKeyToSend = null;
-        }
-
-        if (!cookieApiKey && !apiKeyStatusConfigured) {
-            alert("OpenAI API Key is not set in cookies and not configured on the server. Please set one.");
-            openSettingsModal();
-            return;
-        }
-
-         const payload = {
-            content: contentToTranslate,
-            target_language: targetLanguage,
-            model: currentModel,
-            api_key: apiKeyToSend,
-            cefr_level: currentCefrLevel
-        };
-        callTranslateAPI(payload, buttonElement); // Pass button element
+    if (drawerCloseBtn) {
+        drawerCloseBtn.addEventListener('click', () => drawer.classList.remove('open'));
     }
 
     toggleSettingsBtn.addEventListener('click', openSettingsModal);
-    cefrSlider.addEventListener('input', updateCefrOutput);
-    document.addEventListener('click', function(event) {
-        if (settingsModal.style.display === 'block' && !settingsModal.contains(event.target) && event.target !== toggleSettingsBtn) {
+    if (settingsCloseBtn) {
+        settingsCloseBtn.addEventListener('click', closeSettingsModal);
+    }
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', saveSettings);
+    }
+
+    window.addEventListener('click', (event) => {
+        if (event.target == settingsModal) {
             closeSettingsModal();
         }
     });
+    cefrSlider.addEventListener('input', updateCefrOutput);
 
-    loadSettings();
+    // Translation Button Listeners
+    translateButton.addEventListener('click', () => {
+        if (!apiKeyStatusConfigured && !getCookie('openai_api_key')) {
+             alert('Please configure your OpenAI API key in Settings.'); return;
+        }
+        const settings = { // Gather non-CEFR settings for basic translation
+            api_key: getCookie('openai_api_key') || '', // Send cookie value
+            model: getCookie('openai_model') || defaultSettings.model,
+            target_language: getCookie('target_language') || defaultSettings.language,
+        };
+        callTranslateAPI(settings);
+    });
+
+    translateCefrButton.addEventListener('click', () => {
+         if (!apiKeyStatusConfigured && !getCookie('openai_api_key')) {
+             alert('Please configure your OpenAI API key in Settings.'); return;
+        }
+        const settings = { // Gather all settings for CEFR translation
+            api_key: getCookie('openai_api_key') || '', // Send cookie value
+            model: getCookie('openai_model') || defaultSettings.model,
+            target_language: getCookie('target_language') || defaultSettings.language,
+            cefr_level: cefrLevels[getCookie('cefr_index') || defaultSettings.cefrIndex]
+        };
+        callTranslateAPI(settings);
+    });
+
+    // Autoload Checkbox Listener
+    autoloadCheckbox.addEventListener('change', saveAutoloadPreference);
+
+    // Load Cached Button Listener (Outside Modal)
+    loadCachedBtn.addEventListener('click', () => {
+        const currentIndex = getCurrentPageIndex();
+        const cachedTranslation = loadTranslationFromLocal(currentIndex);
+        if (cachedTranslation) {
+            console.log("Manually loading cached translation.");
+            if (!originalPageContent) { // Store original if somehow not stored yet
+                originalPageContent = contentArea.innerHTML;
+            }
+            contentArea.innerHTML = cachedTranslation;
+            updateDisplayButtons(); // Should hide Load, show Revert
+        } else {
+            console.warn("Load cached clicked, but no cache found for index:", currentIndex);
+            alert("No cached translation found for this page.");
+        }
+    });
+
+    // Manual Load Cached Button Listener (Inside Modal)
+    manualLoadCachedBtn.addEventListener('click', () => {
+        console.log("Manual Load Cached (modal button) clicked."); 
+        const currentIndex = getCurrentPageIndex();
+        const cachedTranslation = loadTranslationFromLocal(currentIndex);
+        
+        if (cachedTranslation) {
+            // Check if it's already displayed
+            // Using a simple length comparison might be fragile, 
+            // but comparing potentially large innerHTML strings directly can be slow.
+            // Let's compare directly for now, optimize later if needed.
+            if (contentArea.innerHTML === cachedTranslation) {
+                 alert("Cached translation is already displayed.");
+                 // Keep modal open by not calling closeSettingsModal()
+            } else {
+                // Load the translation
+                console.log("Manually loading cached translation via modal button.");
+                if (!originalPageContent) { // Store original if somehow not stored yet
+                    originalPageContent = contentArea.innerHTML;
+                }
+                contentArea.innerHTML = cachedTranslation;
+                updateDisplayButtons(); // Update other buttons (like Revert)
+                closeSettingsModal(); // Close modal ONLY on successful load
+            }
+        } else {
+            // No cache found
+            alert("No cached translation found for this page.");
+             // Keep modal open by not calling closeSettingsModal()
+        }
+        // closeSettingsModal(); // Moved closing the modal inside the success condition
+    });
+
+    // Revert Button Listener
+    revertBtn.addEventListener('click', () => {
+        console.log("Revert button clicked.");
+        if (originalPageContent) {
+             contentArea.innerHTML = originalPageContent; // Restore original
+             // const currentIndex = getCurrentPageIndex();
+             // removeTranslationFromLocal(currentIndex); // REMOVED this line
+             // originalPageContent = ""; // Don't clear the stored original
+             updateDisplayButtons(); // Update buttons to show "Load Cached" again
+        } else {
+            console.warn("Revert clicked, but no original content was stored.");
+             // If original somehow wasn't stored, just update buttons
+             // (this state shouldn't ideally happen if revertBtn is visible)
+             updateDisplayButtons();
+        }
+    });
+
+    // Add listener for language dropdown changes
+    languageSelect.addEventListener('change', updateJlptToggleVisibility);
+
+    // --- JLPT Toggle Logic (Sending state to backend) ---
+    if (jlptToggleCheckbox) { // Check if the input element exists
+        jlptToggleCheckbox.addEventListener('change', function() { // Use jlptToggleCheckbox
+            const isEnabled = this.checked;
+            console.log('JLPT Toggle changed:', isEnabled);
+            // Send the state to the server
+            fetch('/toggle_jlpt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add CSRF token header if needed in your Flask setup
+                },
+                body: JSON.stringify({ enabled: isEnabled })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('JLPT toggle state saved on server.');
+                    // Optional: Reload the page to reflect server-side highlighting change
+                    // window.location.reload(); 
+                    // OR inform user they need to navigate/reload for change to take full effect
+                     // For now, we just log. The change will apply on next chapter load.
+                } else {
+                    console.error('Failed to save JLPT toggle state:', data.error);
+                    // Optionally revert checkbox state or show error to user
+                    // this.checked = !isEnabled; 
+                    alert('Error saving JLPT highlighting preference.');
+                }
+            })
+            .catch(error => {
+                console.error('Error sending JLPT toggle state:', error);
+                alert('Network error saving JLPT highlighting preference.');
+                // Optionally revert checkbox state
+                // this.checked = !isEnabled; 
+            });
+        });
+    }
+    // --- End JLPT Toggle Logic ---
+
+    // --- Initialization ---
+    console.log("Initializing page...");
+    loadSettings(); // Load settings from cookies first (this calls updateJlptToggleVisibility)
+    originalPageContent = contentArea.innerHTML; // Store initial content as original
+    console.log("Stored initial page content as original.");
+
+    // Initialize autoload checkbox state
+    autoloadCheckbox.checked = getAutoloadPreference();
+    console.log("Initial autoload preference:", autoloadCheckbox.checked);
+
+    // Check for cached translation and apply autoload logic
+    const currentIndex = getCurrentPageIndex();
+    const initialCachedTranslation = loadTranslationFromLocal(currentIndex);
+
+    if (initialCachedTranslation && getAutoloadPreference()) {
+        console.log("Autoloading translation from cache on page load.");
+        contentArea.innerHTML = initialCachedTranslation;
+        // We keep originalPageContent as it was initially set
+    } else {
+        console.log("Not autoloading translation on page load.");
+        // Content is already the original, originalPageContent is set correctly.
+    }
+
+    updateDisplayButtons(); // Set initial button visibility based on cache/autoload state
+    console.log("Page initialization complete.");
+
+});
 </script>
 
 </body>
