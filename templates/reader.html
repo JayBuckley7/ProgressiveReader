@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPUB Content</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 0; /* Remove default margin */
+            padding-left: 20px; /* Add padding to prevent content overlap when drawer is closed */
+            padding-right: 20px;
+            transition: margin-left 0.3s ease; /* Animate content shift */
+        }
+        .content-wrapper {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px 0; /* Vertical padding */
+        }
+        img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+        p { margin-bottom: 1em; }
+        h1, h2, h3, h4, h5, h6 { margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; }
+
+        /* Drawer Styles */
+        #side-drawer {
+            height: 100%;
+            width: 0; /* Initially hidden */
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            background-color: #f1f1f1;
+            overflow-x: hidden;
+            transition: 0.3s ease;
+            padding-top: 60px; /* Space for close button */
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        #side-drawer a {
+            padding: 8px 8px 8px 32px;
+            text-decoration: none;
+            font-size: 1em;
+            color: #333;
+            display: block;
+            transition: 0.3s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #side-drawer a:hover {
+            color: #007bff;
+            background-color: #e9e9e9;
+        }
+        #side-drawer .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 30px;
+            margin-left: 50px;
+            color: #818181;
+            text-decoration: none;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        #side-drawer .close-btn:hover {
+            color: #333;
+        }
+        #side-drawer.open {
+            width: 280px; /* Width when open */
+        }
+        body.drawer-open {
+            margin-left: 280px; /* Push body content */
+        }
+
+        /* Toggle Button */
+        #toggle-drawer-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            z-index: 1001; /* Above drawer background but below drawer content if needed */
+            border-radius: 4px;
+            transition: left 0.3s ease;
+        }
+        #toggle-drawer-btn:hover {
+            background-color: #ddd;
+        }
+        body.drawer-open #toggle-drawer-btn {
+             /* Optionally hide or move button when drawer is open */
+             /* left: 295px; */ /* Example: move it with the drawer */
+             opacity: 0; /* Hide it when drawer is open */
+             pointer-events: none;
+        }
+
+        /* Navigation */
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            font-size: 0.9em;
+        }
+         .navigation span { color: #555; }
+         .navigation a, .navigation span.disabled {
+            padding: 5px 10px;
+            text-decoration: none;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 0 5px;
+        }
+        .navigation a { color: #007bff; background-color: #f8f9fa; }
+        .navigation a:hover { background-color: #e2e6ea; }
+        .navigation span.disabled {
+            color: #aaa;
+            background-color: #f8f9fa;
+            cursor: default;
+        }
+        hr { border: 0; height: 1px; background-color: #eee; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<button id="toggle-drawer-btn">&#9776;</button> <!-- Hamburger Icon -->
+
+<div id="side-drawer">
+    <button class="close-btn" onclick="closeDrawer()">&times;</button>
+    <h4>Table of Contents</h4>
+    {% if toc %}
+        {% for entry in toc %}
+            <a href="{{ url_for('read_item', item_index=entry.index) }}" title="{{ entry.title }}">{{ entry.title }}</a>
+        {% endfor %}
+    {% else %}
+        <p style="padding-left: 32px; color: #888;">No Table of Contents found.</p>
+    {% endif %}
+</div>
+
+<div class="content-wrapper">
+    <div class="navigation top-nav">
+        <a href="{{ url_for('index') }}">Back to Upload</a>
+        <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
+        <div>
+            {% if current_index > 0 %}
+                <a href="{{ url_for('read_item', item_index=current_index - 1) }}">Previous</a>
+            {% else %}
+                <span class="disabled">Previous</span>
+            {% endif %}
+            |
+            {% if current_index < total_items - 1 %}
+                <a href="{{ url_for('read_item', item_index=current_index + 1) }}">Next</a>
+            {% else %}
+                <span class="disabled">Next</span>
+            {% endif %}
+        </div>
+    </div>
+    <hr>
+    <div class="epub-content">
+        {{ content | safe }}
+    </div>
+    <hr>
+    <div class="navigation bottom-nav">
+        <a href="{{ url_for('index') }}">Back to Upload</a>
+        <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
+        <div>
+            {% if current_index > 0 %}
+                <a href="{{ url_for('read_item', item_index=current_index - 1) }}">Previous</a>
+            {% else %}
+                <span class="disabled">Previous</span>
+            {% endif %}
+            |
+            {% if current_index < total_items - 1 %}
+                <a href="{{ url_for('read_item', item_index=current_index + 1) }}">Next</a>
+            {% else %}
+                <span class="disabled">Next</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const drawer = document.getElementById('side-drawer');
+    const toggleBtn = document.getElementById('toggle-drawer-btn');
+    const body = document.body;
+
+    function openDrawer() {
+        drawer.classList.add('open');
+        body.classList.add('drawer-open');
+        toggleBtn.style.opacity = '0'; // Hide button when drawer opens
+        toggleBtn.style.pointerEvents = 'none';
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove('open');
+        body.classList.remove('drawer-open');
+        toggleBtn.style.opacity = '1'; // Show button when drawer closes
+        toggleBtn.style.pointerEvents = 'auto';
+    }
+
+    // Toggle drawer on button click
+    toggleBtn.addEventListener('click', openDrawer);
+
+    // Optional: Close drawer if clicking outside of it
+    document.addEventListener('click', function(event) {
+        if (drawer.classList.contains('open') && !drawer.contains(event.target) && event.target !== toggleBtn) {
+            closeDrawer();
+        }
+    });
+</script>
+
+</body>
+</html> 

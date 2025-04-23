@@ -1,0 +1,7 @@
+# Python virtual environment
+venv/
+*.pyc
+__pycache__/
+
+# Uploaded files
+uploads/ 

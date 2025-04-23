@@ -1,0 +1,114 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+        cache: 'npm'
+    
+    - name: Install dependencies for server
+      run: |
+        cd server
+        npm ci
+    
+    - name: Build server
+      run: |
+        cd server
+        npm run build
+    
+    - name: Install dependencies for client
+      run: |
+        cd client
+        npm ci
+    
+    - name: Build client
+      run: |
+        cd client
+        npm run build
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.0.0
+    
+    - name: Terraform Init
+      run: |
+        cd terraform
+        terraform init
+    
+    - name: Terraform Validate
+      run: |
+        cd terraform
+        terraform validate
+    
+    - name: Terraform Plan
+      run: |
+        cd terraform
+        terraform plan -var "jwt_secret=${{ secrets.JWT_SECRET }}"
+    
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        cd terraform
+        terraform apply -auto-approve -var "jwt_secret=${{ secrets.JWT_SECRET }}"
+    
+    - name: Deploy application
+      run: |
+        # Create deployment package
+        mkdir -p deploy
+        cp -r server/dist deploy/
+        cp -r server/package.json deploy/
+        cp -r server/package-lock.json deploy/
+        mkdir -p deploy/client
+        cp -r client/build deploy/client/
+        
+        # Compress the deployment package
+        cd deploy
+        zip -r ../deploy.zip .
+        cd ..
+        
+        # Get EC2 instance IP from Terraform outputs
+        cd terraform
+        EC2_IP=$(terraform output -raw web_server_public_ip)
+        cd ..
+        
+        # Setup SSH key
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+        chmod 600 private_key.pem
+        
+        # Deploy to EC2 instance
+        scp -i private_key.pem -o StrictHostKeyChecking=no deploy.zip ec2-user@${EC2_IP}:~/
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ec2-user@${EC2_IP} '
+          unzip -o ~/deploy.zip -d ~/app
+          cd ~/app
+          npm ci --production
+          pm2 reload all || pm2 start dist/server.js
+          pm2 save
+        '
+        
+        # Clean up
+        rm -f private_key.pem
+        rm -rf deploy
+        rm -f deploy.zip
+        
+        echo "Deployment completed successfully!" 
