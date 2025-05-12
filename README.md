@@ -73,3 +73,56 @@ MIT
 ## Acknowledgements
 
 - [EPUB.js](https://github.com/futurepress/epub.js/) for the EPUB parsing and rendering capabilities
+
+## Deployment to Google Cloud Run
+
+This application is configured for deployment to Google Cloud Run.
+
+### Prerequisites
+
+- Google Cloud SDK (`gcloud`) installed and configured.
+- A Google Cloud Project with billing enabled.
+- Cloud Build API and Cloud Run API enabled in your GCP project.
+
+### Deployment Steps
+
+1.  **Authenticate with GCP:**
+    ```bash
+    gcloud auth login
+    gcloud config set project YOUR_PROJECT_ID
+    ```
+    (Replace `YOUR_PROJECT_ID` with your actual GCP project ID)
+
+2.  **Build and Deploy:**
+    Run the following command from the project root directory:
+    ```bash
+    gcloud run deploy progressive-reader --source . --region YOUR_REGION --allow-unauthenticated
+    ```
+    - Replace `YOUR_REGION` with your preferred GCP region (e.g., `us-central1`).
+    - The `--allow-unauthenticated` flag makes the service publicly accessible. Remove it if you want to manage access via IAM.
+    - This command uses Cloud Build to build the container image based on the `Dockerfile` and then deploys it to Cloud Run.
+
+3.  **Set Environment Variables (Secrets):**
+    - For the `FLASK_SECRET_KEY`, generate a strong random key.
+    - For the `OPENAI_API_KEY`, use your actual key.
+    - **Method 1 (gcloud command - recommended for secrets):**
+        First, enable the Secret Manager API in your GCP project.
+        ```bash
+        # Create secrets (do this once)
+        printf "your_strong_flask_secret" | gcloud secrets create flask-secret --data-file=-
+        printf "your_openai_api_key" | gcloud secrets create openai-secret --data-file=-
+
+        # Deploy or Update service linking secrets
+        gcloud run deploy progressive-reader --source . --region YOUR_REGION --allow-unauthenticated \
+          --update-secrets=FLASK_SECRET_KEY=flask-secret:latest \
+          --update-secrets=OPENAI_API_KEY=openai-secret:latest
+        ```
+    - **Method 2 (gcloud command - simpler for non-sensitive vars):**
+        ```bash
+        gcloud run deploy progressive-reader --source . --region YOUR_REGION --allow-unauthenticated \
+          --set-env-vars FLASK_SECRET_KEY="your_strong_flask_secret" \
+          --set-env-vars OPENAI_API_KEY="your_openai_api_key"
+        ```
+    - Replace placeholders with your actual keys/secrets.
+
+4.  After deployment, `gcloud` will output the URL of your deployed service.

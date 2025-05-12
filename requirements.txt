@@ -2,6 +2,8 @@ Flask
 ebooklib
 beautifulsoup4
 lxml
-python-dotenv
 openai
-fugashi 
+fugashi
+gunicorn
+waitress
+requests 

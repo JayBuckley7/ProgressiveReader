@@ -4,25 +4,249 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPUB Reader</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        h1, h2 { color: #333; text-align: center; }
+        .container { max-width: 1200px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        .upload-section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; text-align: center;}
+        .upload-form input[type="file"] { margin-bottom:10px; display: block; margin-left:auto; margin-right:auto; }
+        .upload-form button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        .upload-form button:hover { background-color: #0056b3; }
+        
+        .bookshelf { margin-top: 20px; }
+        .bookshelf h2 { text-align: left; margin-bottom: 20px;}
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        .book-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Pushes title down if image is short */
+            min-height: 250px; /* Ensure items have some height for alignment */
+        }
+        .book-item img {
+            max-width: 100%;
+            height: 180px; /* Fixed height for cover images */
+            object-fit: cover; /* Scales image nicely, might crop */
+            margin-bottom: 10px;
+            border: 1px solid #eee;
+            background-color: #f0f0f0; /* Placeholder bg */
+        }
+        .book-item .no-cover {
+            height: 180px; /* Same height as image */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e9e9e9;
+            color: #777;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        .book-item a {
+            color: #333; /* Title color */
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95em;
+            display: block; /* Make title take full width */
+            margin-top: auto; /* Pushes title to bottom if using flex */
+        }
+        .book-item a:hover { color: #007bff; }
+        .book-item .delete-btn {
+            display: none;
+            margin-top: 5px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .book-item .delete-btn:hover {
+            background-color: #c82333;
+        }
+        /* Show delete button on hover */
+        .book-item:hover .delete-btn {
+            display: inline-block;
+        }
+
+        .error-message { color: red; margin-top: 10px; text-align: center; }
+        .success-message { color: green; margin-top: 10px; text-align: center; }
+        .flash-messages { margin-top: 20px; padding:10px; background-color: #e7f3fe; border-left: 6px solid #2196F3; }
+    </style>
 </head>
 <body>
-    <h1>Welcome to the EPUB Reader!</h1>
-    <p>Upload an EPUB file to get started.</p>
+    <div class="container">
+        <h1>Welcome to the EPUB Reader!</h1>
+        
+        <div class="upload-section">
+            <h2>Upload New EPUB</h2>
+            <form id="upload-form" class="upload-form">
+                <input type="file" name="file" id="file-input" accept=".epub" required>
+                <button type="submit">Upload EPUB</button>
+            </form>
+            <div id="upload-status"></div>
+        </div>
 
-    <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".epub" required>
-        <button type="submit">Upload EPUB</button>
-    </form>
+        <div class="bookshelf">
+            <h2>My Bookshelf</h2>
+            <div id="recent-books-grid" class="books-grid">
+                <!-- Books will be listed here by JavaScript -->
+            </div>
+        </div>
 
-    <!-- Display flash messages -->
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul>
-        {% for message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash-messages">
+                <strong>Notifications:</strong>
+                <ul>
+                {% for message in messages %}
+                  <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+          {% endif %}
+        {% endwith %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('upload-form');
+            const fileInput = document.getElementById('file-input');
+            const recentBooksGrid = document.getElementById('recent-books-grid'); // Changed from list to grid
+            const uploadStatusDiv = document.getElementById('upload-status');
+
+            const LOCAL_STORAGE_KEY = 'recentEpubs';
+            const MAX_RECENT_BOOKS = 20; // Increased for a bookshelf
+
+            function getRecentBooks() {
+                return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+            }
+
+            function saveRecentBooks(books) {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(books));
+            }
+
+            function addRecentBook(newBook) {
+                let books = getRecentBooks();
+                books = books.filter(book => book.id !== newBook.id);
+                books.unshift(newBook);
+                if (books.length > MAX_RECENT_BOOKS) {
+                    books.pop(); 
+                }
+                saveRecentBooks(books);
+                renderRecentBooks();
+            }
+
+            function renderRecentBooks() {
+                const books = getRecentBooks();
+                recentBooksGrid.innerHTML = ''; 
+                if (books.length === 0) {
+                    const placeholder = document.createElement('p');
+                    placeholder.textContent = 'Your uploaded books will appear here.';
+                    recentBooksGrid.appendChild(placeholder);
+                    return;
+                }
+                books.forEach(book => {
+                    const bookItemDiv = document.createElement('div');
+                    bookItemDiv.className = 'book-item';
+
+                    if (book.cover_filename) {
+                        const img = document.createElement('img');
+                        img.src = `/book_cover/${book.id}/${book.cover_filename}`;
+                        img.alt = `Cover of ${book.title}`;
+                        bookItemDiv.appendChild(img);
+                    } else {
+                        const noCoverDiv = document.createElement('div');
+                        noCoverDiv.className = 'no-cover';
+                        noCoverDiv.textContent = 'No Cover';
+                        bookItemDiv.appendChild(noCoverDiv);
+                    }
+                    
+                    const bookLink = document.createElement('a');
+                    bookLink.href = `/read/${book.id}/0`; 
+                    bookLink.textContent = book.title || 'Untitled Book';
+                    bookItemDiv.appendChild(bookLink);
+                    
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.addEventListener('click', async function() {
+                        if (!confirm(`Delete "${book.title || 'Untitled Book'}"? This cannot be undone.`)) return;
+                        try {
+                            const response = await fetch(`/delete_book/${book.id}`, { method: 'POST' });
+                            const result = await response.json();
+                            if (response.ok && result.success) {
+                                // Remove from localStorage and re-render
+                                const updatedBooks = getRecentBooks().filter(b => b.id !== book.id);
+                                saveRecentBooks(updatedBooks);
+                                renderRecentBooks();
+                            } else {
+                                alert(`Error deleting book: ${result.error || 'Unknown error'}`);
+                            }
+                        } catch (error) {
+                            console.error('Delete error:', error);
+                            alert('Error deleting book. Please try again.');
+                        }
+                    });
+                    bookItemDiv.appendChild(deleteBtn);
+                    
+                    recentBooksGrid.appendChild(bookItemDiv);
+                });
+            }
+
+            uploadForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                uploadStatusDiv.textContent = 'Uploading...';
+                uploadStatusDiv.className = '';
+                const formData = new FormData();
+                if (fileInput.files.length > 0) {
+                    formData.append('file', fileInput.files[0]);
+                } else {
+                    uploadStatusDiv.textContent = 'Please select a file.';
+                    uploadStatusDiv.className = 'error-message';
+                    return;
+                }
+
+                try {
+                    const response = await fetch("{{ url_for('upload_file') }}", {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (response.ok && result.book_id) {
+                        uploadStatusDiv.textContent = 'Upload successful! Opening book...';
+                        uploadStatusDiv.className = 'success-message';
+                        // Store cover_filename from server response
+                        addRecentBook({ 
+                            id: result.book_id, 
+                            title: result.title, 
+                            cover_filename: result.cover_image_filename 
+                        });
+                        window.location.href = `/read/${result.book_id}/0`;
+                    } else {
+                        uploadStatusDiv.textContent = `Error: ${result.error || 'Upload failed.'}`;
+                        uploadStatusDiv.className = 'error-message';
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    uploadStatusDiv.textContent = 'Upload error: Could not connect to server or unexpected issue.';
+                    uploadStatusDiv.className = 'error-message';
+                }
+            });
+            renderRecentBooks();
+        });
+    </script>
 </body>
 </html> 
