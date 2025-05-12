@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run & Debug Waitress Server",
+            "type": "python",
+            "request": "launch",
+            "module": "waitress",
+            "args": [
+                "--port=8080",
+                "app:app"
+            ],
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "console": "integratedTerminal",
+            "Flask": true,
+            "subProcess": true,
+            "justMyCode": true
+        }
+    ]
+} 

@@ -1,0 +1,37 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Git directory
+.git/
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets / Local config
+.env
+*.sqlite3
+*.log
+
+# Uploaded files and data
+uploads/
+*.epub
+
+# Downloaded vocabulary (if large and managed separately)
+# N1-N5_all.min.json
+
+# Docker ignore this itself
+.dockerignore
+
+# GCP ignore this itself
+.gcloudignore 
