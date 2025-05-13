@@ -20,11 +20,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          # Note: this is the FULL resource path to your provider
-          workload_identity_provider: >-
-            projects/49477009498/locations/global/
-            workloadIdentityPools/github-pool/
-            providers/github-provider
+          workload_identity_provider: projects/49477009498/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           # The service account you created for CI/CD
           service_account: github-actions@floofgg.iam.gserviceaccount.com
 
