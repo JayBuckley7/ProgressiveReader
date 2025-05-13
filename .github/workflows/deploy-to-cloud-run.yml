@@ -1,0 +1,41 @@
+name: Deploy to Cloud Run via Cloud Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'  # needed for OIDC
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          # Note: this is the FULL resource path to your provider
+          workload_identity_provider: >-
+            projects/49477009498/locations/global/
+            workloadIdentityPools/github-pool/
+            providers/github-provider
+          # The service account you created for CI/CD
+          service_account: github-actions@floofgg.iam.gserviceaccount.com
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: floofgg
+
+      - name: Submit build to Google Cloud Build
+        run: |
+          gcloud builds submit \
+            --project=floofgg \
+            --config=cloudbuild.yaml \
+            .
