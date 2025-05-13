@@ -16,8 +16,19 @@ export interface JpHighlighterConfig {
     neverForgetDeckId?: string | number;
     customWordCSS?: string;
     customPopupCSS?: string;
-    showPopupKey?: Keybind;
     touchscreenSupport?: boolean;
+
+    // Keybinds
+    showPopupKey?: Keybind;
+    addKey?: Keybind;
+    dialogKey?: Keybind;
+    blacklistKey?: Keybind;
+    neverForgetKey?: Keybind;
+    nothingKey?: Keybind;
+    somethingKey?: Keybind;
+    hardKey?: Keybind;
+    goodKey?: Keybind;
+    easyKey?: Keybind;
 }
 
 // Default configuration
@@ -27,6 +38,18 @@ export const defaultConfig: JpHighlighterConfig = {
     contextWidth: 1,
     forqOnMine: false,
     showPopupOnHover: true,
+    // Initialize keybinds to a default "None" state or specific defaults
+    showPopupKey: { code: 'ShiftLeft', modifiers: [] }, // Default from settingsModal.js was 'ShiftLeft' string
+    addKey: { code: 'None', modifiers: [] },
+    dialogKey: { code: 'None', modifiers: [] },
+    blacklistKey: { code: 'None', modifiers: [] },
+    neverForgetKey: { code: 'None', modifiers: [] },
+    nothingKey: { code: 'None', modifiers: [] },
+    somethingKey: { code: 'None', modifiers: [] },
+    hardKey: { code: 'None', modifiers: [] },
+    goodKey: { code: 'None', modifiers: [] },
+    easyKey: { code: 'None', modifiers: [] },
+    touchscreenSupport: false,
 };
 
 // Internal variable to hold the current configuration instance
@@ -152,8 +175,19 @@ export function loadConfig(): JpHighlighterConfig {
     }
     
     // Update the internal config instance with the newly loaded values
-    currentConfigInstance = { ...loadedConfig };
-    //console.log('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance));
+    // Ensure that all properties from loadedConfig are spread, 
+    // and then explicitly overwrite with defaults ONLY if a loadedConfig property is truly undefined.
+    // This handles cases where a loaded value might be, e.g., `false` for a boolean, which is valid and not undefined.
+    currentConfigInstance = { 
+        ...defaultConfig, // Start with all defaults
+        ...loadedConfig   // Spread loaded values, overwriting defaults
+    };
+
+    // Special handling for keybinds: if a keybind was not in localStorage, 
+    // loadedConfig[keybindKey] would be undefined. The spread above handles this by keeping the default.
+    // If it *was* in localStorage and parsed to { code: 'None', ... }, that will correctly override a different default.
+
+    console.log('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance, null, 2));
     return currentConfigInstance; // Return the new config instance
 }
 

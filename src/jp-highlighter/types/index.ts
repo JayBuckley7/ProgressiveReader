@@ -8,6 +8,7 @@ declare global {
 // Define Keybind type
 export interface Keybind {
     code: string;
+    key?: string; // Optional: the character pressed, for display or other logic if needed
     modifiers: string[]; // e.g., ['Control', 'Shift']
 }
 
