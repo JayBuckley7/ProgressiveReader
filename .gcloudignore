@@ -37,4 +37,7 @@ uploads/
 .gcloudignore
 
 # User-uploaded files
-user_epubs/ 
+user_epubs/
+
+# Node.js dependencies
+node_modules/ 

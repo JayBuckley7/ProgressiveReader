@@ -1,4 +1,5 @@
 // jlptHighlighter.js
+// This is now a thin wrapper around the TypeScript implementation
 
 let jlptToggleCheckbox, contentAreaJlpt;
 let trueOriginalServerContentForJlpt = "";
@@ -94,11 +95,62 @@ function extractCleanTextSegments(rootElement) {
     return segments.filter(s => s !== ""); // Remove empty strings unless they were intended by BR
 }
 
+function _attachJlptEventListeners() {
+    if (jlptToggleCheckbox) {
+        // The toggle event handler is now managed by the TypeScript library
+        console.log("Using TypeScript implementation for JLPT highlighting");
+    }
+}
+
+function initJlptHighlighter(config) {
+    contentAreaJlpt = config.contentAreaElement; // Expect contentArea to be passed in
+    trueOriginalServerContentForJlpt = config.trueOriginalServerContent;
+
+    // Save original content for restoring later
+    if (contentAreaJlpt) {
+        contentAreaJlpt.setAttribute('data-original-content', contentAreaJlpt.innerHTML);
+    }
+
+    _selectDOMElementsForJlpt();
+    
+    if (!jlptToggleCheckbox) {
+        console.warn("JLPT toggle checkbox not found, highlighter not fully initialized.");
+    } else {
+        // Initialize and wire up the TypeScript implementation
+        if (window.jpHighlighter) {
+            window.jpHighlighter.initialize(contentAreaJlpt).then(() => {
+                window.jpHighlighter.wireUpToggle(contentAreaJlpt);
+                
+                if (jlptToggleCheckbox.checked) {
+                    console.log("JLPT highlighting enabled on page load, applying highlights...");
+                    if (contentAreaJlpt) {
+                        window.jpHighlighter.highlightContent(contentAreaJlpt);
+                    } else {
+                        console.error("Cannot apply JLPT highlights on load: contentArea not ready.");
+                    }
+                }
+            });
+        } else {
+            console.error("JP Highlighter module not loaded!");
+            // Fallback to old implementation
+            _attachJlptEventListeners();
+            if (jlptToggleCheckbox.checked) {
+                console.log("Using legacy JLPT highlighting (TypeScript module not loaded)");
+                if (contentAreaJlpt) fetchAndApplyJlptHighlights();
+                else console.error("Cannot apply JLPT highlights on load: contentArea not ready.");
+            }
+        }
+    }
+    console.log("JlptHighlighter initialized.");
+}
+
+// Legacy implementation kept for fallback
 async function fetchAndApplyJlptHighlights() {
     if (!contentAreaJlpt) {
         console.error("JLPT Highlighter: Content area not set.");
         return;
     }
+    
     const getCookieFunc = window.appUtils ? window.appUtils.getCookie : getCookie;
     const jpdbApiKey = getCookieFunc('jpdb_api_key')?.trim();
     if (!jpdbApiKey) {
@@ -214,56 +266,8 @@ function removeJlptHighlights() {
     if (window.translationManager) window.translationManager.updateDisplayButtons();
 }
 
-function _attachJlptEventListeners() {
-    if (jlptToggleCheckbox) {
-        jlptToggleCheckbox.addEventListener('change', function() {
-            const isEnabled = this.checked;
-            fetch('/api/toggle_jlpt', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: isEnabled })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if (isEnabled) fetchAndApplyJlptHighlights();
-                    else removeJlptHighlights();
-                } else {
-                    alert('Error saving JLPT highlighting preference.');
-                    this.checked = !isEnabled;
-                }
-            })
-            .catch(error => {
-                console.error('Error sending JLPT toggle state:', error);
-                alert('Network error saving JLPT preference.');
-                this.checked = !isEnabled;
-            });
-        });
-    }
-}
-
-function initJlptHighlighter(config) {
-    contentAreaJlpt = config.contentAreaElement; // Expect contentArea to be passed in
-    trueOriginalServerContentForJlpt = config.trueOriginalServerContent;
-    // originalPageContentForJlpt will be set dynamically when highlighting is applied
-
-    _selectDOMElementsForJlpt();
-    if (!jlptToggleCheckbox) {
-        console.warn("JLPT toggle checkbox not found, highlighter not fully initialized.");
-    } else {
-        _attachJlptEventListeners();
-        if (jlptToggleCheckbox.checked) { // Apply on load if already checked
-            console.log("JLPT highlighting enabled on page load, applying highlights...");
-            // Ensure contentAreaJlpt is set before calling
-            if(contentAreaJlpt) fetchAndApplyJlptHighlights();
-            else console.error("Cannot apply JLPT highlights on load: contentArea not ready.");
-        }
-    }
-    console.log("JlptHighlighter initialized.");
-}
-
 window.jlptHighlighter = {
     initJlptHighlighter,
-    fetchAndApplyJlptHighlights, // Expose for manual calls if needed
+    fetchAndApplyJlptHighlights,
     removeJlptHighlights
 }; 

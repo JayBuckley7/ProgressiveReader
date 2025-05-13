@@ -12,5 +12,17 @@ class Config:
     MAX_BYTES_PER_API_BATCH = 15000 
     MAX_SEGMENTS_PER_API_BATCH = 75
     JPDB_TOKEN_FIELDS = ['vocabulary_index', 'position', 'length', 'furigana']
-    JPDB_VOCAB_FIELDS = ['vid', 'sid', 'card_state']
+    JPDB_VOCAB_FIELDS = [
+        'vid',
+        'sid',
+        'rid',
+        'spelling',
+        'reading',
+        'frequency_rank',
+        'part_of_speech',
+        'meanings_chunks',
+        'meanings_part_of_speech',
+        'card_state',
+        'pitch_accent',
+    ]
     JPDB_API_URL = 'https://jpdb.io/api/v1/parse' 

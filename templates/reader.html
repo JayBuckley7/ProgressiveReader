@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reader_styles.css') }}">
     <!-- Dynamic styles for word highlighting injected by JS -->
     <style id="custom-word-styles"></style>
+    <!-- JP Highlighter styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='js/dist/styles.css') }}">
 </head>
 <body 
     data-openai-key-configured="{{ openai_key_configured | tojson }}"
@@ -83,6 +85,9 @@
   "jlptEnabled": {{ jlpt_enabled | default(false) | tojson }}
 }
 </script>
+
+{# Load JP Highlighter TypeScript bundle #}
+<script src="{{ url_for('static', filename='js/dist/jpHighlighter.bundle.js') }}"></script>
 
 {# List of JavaScript modules to load #}
 {# IMPORTANT: These files must be written as ES modules #}

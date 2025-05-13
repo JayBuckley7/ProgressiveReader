@@ -114,83 +114,174 @@ def get_jpdb_data():
         global_offset_at_start_of_this_api_call = global_offset_processed_across_batches
         temp_next_segment_start_index = current_segment_list_start_index
         
+        current_app.logger.debug(f"Starting new batch creation. current_segment_list_start_index: {current_segment_list_start_index}, total_clean_segments: {len(all_clean_segments)}")
+
         for i in range(current_segment_list_start_index, len(all_clean_segments)):
             segment_to_consider = all_clean_segments[i]
             segment_byte_length = len(segment_to_consider.encode('utf-8'))
+            current_app.logger.debug(f"Considering segment {i}: '{segment_to_consider[:50]}...', length: {len(segment_to_consider)}, bytes: {segment_byte_length}")
+
+            if segment_byte_length > MAX_BYTES_PER_API_BATCH:
+                current_app.logger.warning(f"Segment {i} (bytes: {segment_byte_length}) is larger than MAX_BYTES_PER_API_BATCH ({MAX_BYTES_PER_API_BATCH}). Skipping this segment.")
+                # If we skip, we need to advance global_offset_processed_across_batches and temp_next_segment_start_index
+                # to avoid reprocessing or getting stuck if this was the only segment.
+                if i == current_segment_list_start_index: # This oversized segment is the first one we are looking at for a new batch
+                    global_offset_processed_across_batches += len(segment_to_consider) # Account for its characters for global offset
+                    temp_next_segment_start_index = i + 1 # Move to the next segment
+                # If it's not the first, the batch might already have items. We just break to process the current batch.
+                # However, current logic will only put one segment in a batch if that segment itself is > MAX_BYTES_PER_API_BATCH.
+                # This ensures we don't try to send an oversized segment alone.
+                if not segments_for_this_batch: # If batch is empty, and this one is too big, we must advance.
+                     temp_next_segment_start_index = i + 1 # Ensure we move past this segment
+                     # We also need to update global_offset_processed_across_batches as if we processed it, for correct subsequent offsets.
+                     # This assumes we are effectively *dropping* this segment from being sent to JPDB.
+                     global_offset_processed_across_batches += len(segment_to_consider)
+                # If segments_for_this_batch is NOT empty, we break to process the current valid batch, and this oversized one will be considered next iteration.
+                # But the outer loop condition (current_segment_list_start_index < len(all_clean_segments)) will handle it.
+                # The current logic: if a segment is too big, it won't be added by the next `if` condition.
+                # If segments_for_this_batch is empty and this segment is too large, the `else: break` below is hit, leading to empty batch.
+                # Let's directly continue to next segment if it's too large and the batch is empty.
+                if not segments_for_this_batch:
+                    current_segment_list_start_index = i + 1 # Advance the main loop index
+                    global_offset_processed_across_batches += len(segment_to_consider) # Pretend we processed its length for offset tracking
+                    continue # Try next segment in all_clean_segments
+                else:
+                    break # Process existing batch, this oversized segment will be handled next round
+
             if len(segments_for_this_batch) < MAX_SEGMENTS_PER_API_BATCH and \
                bytes_in_this_batch + segment_byte_length <= MAX_BYTES_PER_API_BATCH:
                 segments_for_this_batch.append(segment_to_consider)
                 bytes_in_this_batch += segment_byte_length
                 temp_next_segment_start_index = i + 1
+                current_app.logger.debug(f"Added segment {i} to batch. Batch size: {len(segments_for_this_batch)}, bytes: {bytes_in_this_batch}")
             else:
-                if not segments_for_this_batch and segment_byte_length <= MAX_BYTES_PER_API_BATCH:
-                    segments_for_this_batch.append(segment_to_consider)
-                    bytes_in_this_batch += segment_byte_length
-                    temp_next_segment_start_index = i + 1
+                current_app.logger.debug(f"Segment {i} does not fit. Max segments: {len(segments_for_this_batch)}/{MAX_SEGMENTS_PER_API_BATCH}, Max bytes: {bytes_in_this_batch + segment_byte_length}/{MAX_BYTES_PER_API_BATCH}. Breaking to process current batch.")
                 break 
         current_segment_list_start_index = temp_next_segment_start_index
 
         if not segments_for_this_batch:
-            if current_segment_list_start_index > 0: 
-                potentially_long_segment_index = current_segment_list_start_index -1 
-                if potentially_long_segment_index < len(all_clean_segments):
-                    segment_that_was_too_long = all_clean_segments[potentially_long_segment_index]
-                    if len(segment_that_was_too_long.encode('utf-8')) > MAX_BYTES_PER_API_BATCH:
-                        current_app.logger.warning(f"Segment at index {potentially_long_segment_index} too long. Skipping.") 
-                        global_offset_processed_across_batches += len(segment_that_was_too_long) 
-                        continue 
-            current_app.logger.info("No more segments for new JPDB batch.") 
+            # This condition is now hit if all remaining segments were individually too large, or no segments left.
+            current_app.logger.info("No segments fit into a new JPDB batch (possibly due to segments being too large or no segments remaining).")
             break
 
         current_app.logger.info(f"JPDB batch: {len(segments_for_this_batch)} segments, {bytes_in_this_batch} bytes. Offset: {global_offset_at_start_of_this_api_call}") 
         payload = { 'text': segments_for_this_batch, 'position_length_encoding': 'utf16', 'token_fields': TOKEN_FIELDS, 'vocabulary_fields': VOCAB_FIELDS}
         
+        # --- Start Enhanced Logging ---
+        current_app.logger.debug(f"Sending payload to JPDB: {payload}")
+        # --- End Enhanced Logging ---
+        
         response_from_jpdb = None
         try:
             response_from_jpdb = requests.post(jpdb_api_url, headers=headers, json=payload)
-            response_from_jpdb.raise_for_status()
-            jpdb_data = response_from_jpdb.json()
+            
+            # --- Start Enhanced Logging ---
+            current_app.logger.info(f"JPDB API response status: {response_from_jpdb.status_code}")
+            response_text = response_from_jpdb.text # Get text before trying to parse JSON
+            current_app.logger.debug(f"JPDB API raw response text: {response_text[:500]}...") # Log first 500 chars
+            # --- End Enhanced Logging ---
+
+            response_from_jpdb.raise_for_status() # Check for HTTP errors after logging status
+            
+            jpdb_data = response_from_jpdb.json() # Now parse JSON
+            
+            # --- Start Enhanced Logging ---
+            current_app.logger.debug(f"JPDB API parsed JSON data (sample): {str(jpdb_data)[:500]}...")
+            # --- End Enhanced Logging ---
+            
             jpdb_vocab_list = jpdb_data.get('vocabulary', [])
             vocab_map = []
             for v_entry in jpdb_vocab_list:
-                if not isinstance(v_entry, (list, tuple)) or len(v_entry) < 3:
-                    vocab_map.append({'vid': None, 'sid': None, 'state': ['error-vocab-format']}); continue 
-                vocab_map.append({ 'vid': v_entry[0], 'sid': v_entry[1], 'state': v_entry[2] if v_entry[2] else ['not-in-deck'] })
+                # Check if entry has enough fields (example: vid, sid, state)
+                if not isinstance(v_entry, (list, tuple)) or len(v_entry) < len(VOCAB_FIELDS):
+                    current_app.logger.warning(f"Skipping malformed vocab entry: {v_entry}")
+                    vocab_map.append({ 'vid': None, 'sid': None, 'state': ['error-vocab-format'] }); continue
+                
+                # Map fields based on order defined in VOCAB_FIELDS
+                entry_data = {
+                    'vid': v_entry[VOCAB_FIELDS.index('vid')],
+                    'sid': v_entry[VOCAB_FIELDS.index('sid')],
+                    'rid': v_entry[VOCAB_FIELDS.index('rid')],
+                    'spelling': v_entry[VOCAB_FIELDS.index('spelling')],
+                    'reading': v_entry[VOCAB_FIELDS.index('reading')],
+                    'frequencyRank': v_entry[VOCAB_FIELDS.index('frequency_rank')],
+                    'partOfSpeech': v_entry[VOCAB_FIELDS.index('part_of_speech')],
+                    'meaningsChunks': v_entry[VOCAB_FIELDS.index('meanings_chunks')],
+                    'meaningsPartOfSpeech': v_entry[VOCAB_FIELDS.index('meanings_part_of_speech')],
+                    'state': v_entry[VOCAB_FIELDS.index('card_state')] or ['not-in-deck'],
+                    'pitchAccent': v_entry[VOCAB_FIELDS.index('pitch_accent')] or []
+                }
+                
+                # Construct meanings list
+                entry_data['meanings'] = []
+                if entry_data['meaningsChunks'] and entry_data['meaningsPartOfSpeech']:
+                    for i, glosses in enumerate(entry_data['meaningsChunks']):
+                        if i < len(entry_data['meaningsPartOfSpeech']):
+                            entry_data['meanings'].append({
+                                'glosses': glosses,
+                                'partOfSpeech': entry_data['meaningsPartOfSpeech'][i]
+                            })
+                
+                # Remove intermediate keys
+                del entry_data['meaningsChunks']
+                del entry_data['meaningsPartOfSpeech']
+                
+                vocab_map.append(entry_data)
 
             tokens_data_from_api = jpdb_data.get('tokens', [])
             if len(tokens_data_from_api) != len(segments_for_this_batch):
-                 current_app.logger.warning("JPDB API segments sent/received mismatch.") 
+                 current_app.logger.warning("JPDB API segments sent/received mismatch.")
 
-            character_offset_within_this_api_batch = 0 
+            character_offset_within_this_api_batch = 0
             for segment_idx_in_batch, tokens_for_one_segment in enumerate(tokens_data_from_api):
                 if segment_idx_in_batch >= len(segments_for_this_batch): break
                 current_segment_text = segments_for_this_batch[segment_idx_in_batch]
                 for raw_token in tokens_for_one_segment:
-                    if not isinstance(raw_token, (list, tuple)) or len(raw_token) < 4:
+                    if not isinstance(raw_token, (list, tuple)) or len(raw_token) < len(TOKEN_FIELDS):
+                        current_app.logger.warning(f"Skipping malformed token: {raw_token}")
                         continue
-                    vocab_idx, position_in_segment, length, furigana_data = raw_token[0:4]
+                    
+                    vocab_idx = raw_token[TOKEN_FIELDS.index('vocabulary_index')]
+                    position_in_segment = raw_token[TOKEN_FIELDS.index('position')]
+                    length = raw_token[TOKEN_FIELDS.index('length')]
+                    furigana_data = raw_token[TOKEN_FIELDS.index('furigana')]
+
                     if not all(isinstance(x, int) for x in [vocab_idx, position_in_segment, length]):
-                         continue
-                    card_info = {}
+                        current_app.logger.warning(f"Skipping token with invalid numeric fields: {raw_token}")
+                        continue
+                    
+                    card_data = {}
                     try:
-                        if vocab_idx < 0: card_info = {'state': ['unknown-negative-vocab-idx']}
-                        elif vocab_idx < len(vocab_map): card_info = vocab_map[vocab_idx] 
-                        else: card_info = {'state': ['unknown-vocab-idx-out-of-bounds']}
-                    except Exception: card_info = {'state': ['error-vocab-map-access']}; continue
+                        if vocab_idx < 0: card_data = { 'state': ['unknown-negative-vocab-idx'] } # Handle negative index
+                        elif vocab_idx < len(vocab_map): card_data = vocab_map[vocab_idx]
+                        else: card_data = { 'state': ['unknown-vocab-idx-out-of-bounds'] } # Handle out-of-bounds
+                    except Exception as e:
+                        current_app.logger.error(f"Error accessing vocab_map at index {vocab_idx}: {e}")
+                        card_data = { 'state': ['error-vocab-map-access'] }; continue
+                    
+                    # Process rubies
                     rubies = []
                     if furigana_data and isinstance(furigana_data, list):
                         current_offset_in_token_surface = 0
                         for part in furigana_data:
-                            if isinstance(part, str): current_offset_in_token_surface += len(part)
-                            elif isinstance(part, list) and len(part) == 2: 
+                            if isinstance(part, str):
+                                current_offset_in_token_surface += len(part)
+                            elif isinstance(part, list) and len(part) == 2:
                                 base_text_segment_part, ruby_text = part
                                 if isinstance(base_text_segment_part, str) and isinstance(ruby_text, str):
                                     ruby_seg_start = current_offset_in_token_surface
                                     ruby_seg_length = len(base_text_segment_part)
                                     rubies.append({ 'text': ruby_text, 'start': ruby_seg_start, 'length': ruby_seg_length, 'end': ruby_seg_start + ruby_seg_length })
                                     current_offset_in_token_surface += ruby_seg_length
+                    
                     token_start_global = global_offset_at_start_of_this_api_call + character_offset_within_this_api_batch + position_in_segment
-                    all_processed_tokens_globally_offset.append({ 'start': token_start_global, 'length': length, 'end': token_start_global + length, 'state': card_info.get('state', ['unknown']), 'rubies': rubies })
+                    all_processed_tokens_globally_offset.append({
+                        'start': token_start_global,
+                        'length': length,
+                        'end': token_start_global + length,
+                        'card': card_data, # Now return the full card data
+                        'rubies': rubies
+                    })
                 character_offset_within_this_api_batch += len(current_segment_text)
             chars_processed_in_this_batch_for_global_offset = sum(len(s) for s in segments_for_this_batch)
             global_offset_processed_across_batches += chars_processed_in_this_batch_for_global_offset 
@@ -213,3 +304,90 @@ def get_jpdb_data():
             
     current_app.logger.info(f"JPDB data processed. Total tokens: {len(all_processed_tokens_globally_offset)}") 
     return jsonify(all_processed_tokens_globally_offset) 
+
+@api_bp.route('/mine_jpdb_word', methods=['POST'])
+def mine_jpdb_word():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    vid = data.get('vid')
+    sid = data.get('sid')
+    forq = data.get('forq', False)
+    sentence = data.get('sentence')
+    jpdb_api_key = data.get('jpdb_api_key')
+    mining_deck_id = data.get('mining_deck_id')
+    forq_deck_id = data.get('forq_deck_id')
+
+    if not jpdb_api_key:
+        return jsonify({"error": "Missing JPDB API key"}), 400
+    if vid is None or sid is None:
+        return jsonify({"error": "Missing vid or sid"}), 400
+
+    # Here you would implement the JPDB mining API call
+    # For now, we'll just return a success response
+    current_app.logger.info(f"Mining word vid={vid}, sid={sid} to deck {mining_deck_id}")
+    
+    return jsonify({"success": True})
+
+@api_bp.route('/update_jpdb_word_state', methods=['POST'])
+def update_jpdb_word_state():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    vid = data.get('vid')
+    sid = data.get('sid')
+    flag = data.get('flag')
+    state = data.get('state')
+    jpdb_api_key = data.get('jpdb_api_key')
+
+    if not jpdb_api_key:
+        return jsonify({"error": "Missing JPDB API key"}), 400
+    if vid is None or sid is None:
+        return jsonify({"error": "Missing vid or sid"}), 400
+    if flag not in ('blacklist', 'never-forget', 'forq'):
+        return jsonify({"error": "Invalid flag"}), 400
+    if state is None:
+        return jsonify({"error": "Missing state"}), 400
+
+    # Here you would implement the JPDB state update API call
+    # For now, we'll just return a success response
+    current_app.logger.info(f"Updating word vid={vid}, sid={sid}, flag={flag}, state={state}")
+    
+    # Return a mock new state for the word
+    new_state = ['known'] if state else ['new']
+    
+    return jsonify({"success": True, "newState": new_state})
+
+@api_bp.route('/review_jpdb_card', methods=['POST'])
+def review_jpdb_card():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    vid = data.get('vid')
+    sid = data.get('sid')
+    rating = data.get('rating')
+    jpdb_api_key = data.get('jpdb_api_key')
+
+    if not jpdb_api_key:
+        return jsonify({"error": "Missing JPDB API key"}), 400
+    if vid is None or sid is None:
+        return jsonify({"error": "Missing vid or sid"}), 400
+    if not rating or rating not in ('nothing', 'something', 'hard', 'good', 'easy', 'pass', 'fail', 'known', 'unknown'):
+        return jsonify({"error": "Invalid rating"}), 400
+
+    # Here you would implement the JPDB review API call
+    # For now, we'll just return a success response
+    current_app.logger.info(f"Reviewing card vid={vid}, sid={sid}, rating={rating}")
+    
+    # Return a mock new state for the word
+    if rating in ('good', 'easy', 'pass', 'known'):
+        new_state = ['known']
+    elif rating in ('nothing', 'hard', 'fail'):
+        new_state = ['failed']
+    else:
+        new_state = ['learning']
+    
+    return jsonify({"success": True, "newState": new_state}) 

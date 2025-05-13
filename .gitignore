@@ -149,4 +149,7 @@ dmypy.json
 .vscode/
 
 # User-uploaded EPUBs - ADDED
-user_epubs/ 
+user_epubs/
+
+# Node.js
+node_modules/ 

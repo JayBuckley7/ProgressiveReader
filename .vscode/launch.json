@@ -3,18 +3,18 @@
     "configurations": [
         
         {
-            "name": "Run & Debug Waitress Server",
+            "name": "Run Flask Dev Server (Debug)",
             "type": "debugpy",
             "request": "launch",
-            "module": "waitress",
-            "args": [
-                "--port=8080",
-                "run:app"
-            ],
+            "program": "${workspaceFolder}/run.py",
+            "args": [],
             "python": "${workspaceFolder}/.venv/Scripts/python.exe",
             "console": "integratedTerminal",
             "subProcess": true,
-            "justMyCode": true
+            "justMyCode": true,
+            "env": {
+                "FLASK_DEBUG": "1"
+            }
         },
         {
             "name": "Python: Generate EPUB Ground Truth",
@@ -26,6 +26,27 @@
             "env": {},
             "stopOnEntry": false,
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "npm: Run Development Watch",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full-Stack: Server + Webpack",
+            "configurations": ["Run Flask Dev Server (Debug)", "npm: Run Development Watch"],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "fullstack",
+                "order": 1
+            }
         }
     ]
 } 

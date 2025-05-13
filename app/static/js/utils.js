@@ -5,10 +5,16 @@ function setCookie(name, value, days = 365) {
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
         expires = "; expires=" + date.toUTCString();
     }
-    // Ensure SameSite=Lax for modern browser compatibility
-    const cookieString = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax"; // Store string
-    document.cookie = cookieString; // Assign to document.cookie
-    // console.log("Set cookie string:", cookieString); 
+    
+    console.log(`Setting cookie ${name} to value: ${value} (length: ${value.length})`);
+    
+    // Make sure path is set correctly and SameSite is appropriate
+    const cookieString = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    document.cookie = cookieString;
+    
+    // Verify the cookie was set by immediately trying to read it back
+    const verifyValue = getCookie(name);
+    console.log(`Verifying cookie ${name} was set. Read back value: ${verifyValue} (length: ${verifyValue?.length || 0})`);
 }
 
 function getCookie(name) { 

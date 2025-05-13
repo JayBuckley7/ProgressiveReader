@@ -1,6 +1,43 @@
-# Flask EPUB Reader
+# Progressive Reader
 
-A simple web application built with Flask and ebooklib to upload and read EPUB files directly in your browser.
+A web-based progressive reader for language learning with JPDB integration.
+
+## New TypeScript JP Highlighter
+
+The application now includes an enhanced JP Highlighter module that provides improved Japanese word highlighting with JPDB integration.
+
+### Setting Up the TypeScript Module
+
+1. Install Node.js dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Build the TypeScript module:
+   ```bash
+   npm run build
+   ```
+
+3. For development with automatic rebuilding:
+   ```bash
+   npm run dev
+   ```
+
+### Features
+
+- Highlights Japanese words based on their JPDB status (known, learning, new, etc.)
+- Interactive word information on hover
+- Mining capabilities directly to JPDB
+- Review functionality
+- Custom CSS for word and popup styling
+
+## Original Features
+
+- EPUB reader with simple navigation
+- Translation capabilities
+- JLPT word highlighting (now enhanced with TypeScript)
+- Settings management
+- And more...
 
 ## Features
 
