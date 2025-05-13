@@ -34,5 +34,6 @@ jobs:
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
+            --substitutions=COMMIT_SHA=${{ github.sha }} \
             --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .
