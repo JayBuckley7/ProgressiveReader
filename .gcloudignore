@@ -34,4 +34,7 @@ uploads/
 .dockerignore
 
 # GCP ignore this itself
-.gcloudignore 
+.gcloudignore
+
+# User-uploaded files
+user_epubs/ 

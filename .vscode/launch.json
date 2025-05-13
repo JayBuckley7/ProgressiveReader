@@ -1,20 +1,31 @@
 {
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Run & Debug Waitress Server",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "waitress",
             "args": [
                 "--port=8080",
-                "app:app"
+                "run:app"
             ],
             "python": "${workspaceFolder}/.venv/Scripts/python.exe",
             "console": "integratedTerminal",
-            "Flask": true,
             "subProcess": true,
             "justMyCode": true
+        },
+        {
+            "name": "Python: Generate EPUB Ground Truth",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/generate_epub_groundtruth.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": {},
+            "stopOnEntry": false,
+            "cwd": "${workspaceFolder}"
         }
     ]
 } 

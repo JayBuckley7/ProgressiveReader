@@ -1,0 +1,45 @@
+{# templates/components/navigation.html #}
+{% macro navigation_bar(position, book_id, current_index, total_items, jlpt_enabled=false) %}
+{% set is_top = position == 'top' %}
+<div class="navigation {{ 'top-nav' if is_top else 'bottom-nav' }}">
+    {% if is_top %}
+    <div class="nav-left">
+        <button id="toggle-drawer-btn" class="toggle-btn" title="Table of Contents" aria-label="Toggle Table of Contents">&#9776;</button>
+        <button id="toggle-settings-btn" class="toggle-btn" title="Settings" aria-label="Toggle Settings">&#9881;</button>
+        <a href="{{ url_for('main.index') }}">Back to Upload</a>
+        <!-- Autoload Preference Checkbox -->
+        <div class="autoload-pref">
+            <input type="checkbox" id="autoload-checkbox" title="Automatically load cached translations when navigating">
+            <label for="autoload-checkbox">Autoload Translations</label>
+        </div>
+
+        <!-- JLPT Highlighting Toggle (Visibility controlled by JS) -->
+        {# Only render if jlpt_enabled is passed and true, or handled by JS config #}
+        <span id="jlpt-toggle-container" style="display: none;"> {# Initially hidden, shown by JS based on config/prefs #}
+            <input type="checkbox" id="jlpt-highlighting">
+            <label for="jlpt-highlighting">JLPT Highlighting</label>
+        </span>
+        <!-- End JLPT Toggle -->
+    </div>
+    {% else %}
+    {# Placeholder for bottom-left content #}
+    <a href="{{ url_for('main.index') }}">Back to Upload</a>
+    {% endif %}
+
+    <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
+
+    <div class="nav-right">
+        {% if current_index > 0 %}
+            <a href="{{ url_for('reader.read_item', book_id=book_id, item_index=current_index - 1) }}">Previous</a>
+        {% else %}
+            <button type="button" class="disabled-nav-btn" disabled>Previous</button>
+        {% endif %}
+        |
+        {% if current_index < total_items - 1 %}
+            <a href="{{ url_for('reader.read_item', book_id=book_id, item_index=current_index + 1) }}">Next</a>
+        {% else %}
+            <button type="button" class="disabled-nav-btn" disabled>Next</button>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %} 

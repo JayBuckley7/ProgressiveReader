@@ -1,0 +1,12 @@
+<div id="side-drawer">
+    <button class="close-btn" onclick="closeDrawer()">&times;</button>
+    <h4>Table of Contents</h4>
+    {% if toc %}
+        {% for entry in toc %}
+            {# Ensure book_id is included in ToC links #}
+            <a href="{{ url_for('reader.read_item', book_id=book_id, item_index=entry.index) }}" title="{{ entry.title }}">{{ entry.title }}</a>
+        {% endfor %}
+    {% else %}
+        <p style="padding-left: 32px; color: #888;">No Table of Contents found.</p>
+    {% endif %}
+</div> 

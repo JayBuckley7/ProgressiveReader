@@ -1,0 +1,160 @@
+<!-- Settings Modal -->
+<div id="settings-modal">
+    <span class="close-modal-btn">&times;</span>
+    <h4>Settings</h4>
+
+    <!-- Panel Navigation -->
+    <div class="panel-nav">
+        <button type="button" class="panel-nav-btn active-panel-btn" data-panel="general-panel-content">General</button>
+        <button type="button" class="panel-nav-btn" data-panel="jlpt-panel-content">JLPT</button>
+    </div>
+
+    <form id="settings-form">
+        <!-- General Panel Content -->
+        <div id="general-panel-content" class="settings-panel-content active">
+            <label for="openai-key">OpenAI API Key (Cookie):</label>
+            <input type="password" id="openai-key" name="openai-key" placeholder="Stored in browser cookie (if set)">
+            <p style="font-size: 0.8em; margin-top: 5px;">
+                Server Key Status:
+                {% if openai_key_configured %}<span style="color: green;">Configured</span> <small>(Will be used if cookie key is empty)</small>
+                {% else %}<span style="color: red;">Not Configured</span> <small>(Set OPENAI_API_KEY in .env file on server)</small>{% endif %}
+            </p>
+
+            <label for="theme-select">Theme:</label>
+            <select id="theme-select" name="theme-select">
+                <option value="system">System Default</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+            <p class="notes">Choose the application theme. "System Default" follows your OS setting.</p>
+
+            <label for="openai-model">Preferred Model:</label>
+            <select id="openai-model" name="openai-model">
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-3.5-turbo">GPT-3.5-Turbo</option>
+            </select>
+
+            <label for="target-language">Target Language:</label>
+            <select id="target-language" name="target-language">
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+                <option value="German">German</option>
+                <option value="Japanese">Japanese</option>
+                <option value="Mandarin Chinese">Mandarin Chinese</option>
+                <option value="Korean">Korean</option>
+                <!-- Add more languages -->
+            </select>
+
+            <div class="slider-container">
+                <label for="cefr-level">Target CEFR Level:</label>
+                <input type="range" id="cefr-level" name="cefr-level" min="0" max="5" step="1" value="3"> <!-- 0:A1, 1:A2, 2:B1, 3:B2, 4:C1, 5:C2 -->
+                <span id="cefr-output">B2</span> <!-- Default output -->
+            </div>
+
+            <div>
+                <label for="font-size-control">Font Size (for book content):</label>
+                <div style="display: flex; align-items: center; margin-top: 5px; margin-bottom: 15px;">
+                    <button type="button" id="decrease-font-size" class="toggle-btn" style="margin-right: 10px;">-</button>
+                    <span id="current-font-size" style="min-width: 30px; text-align: center; font-weight: bold;">16px</span>
+                    <button type="button" id="increase-font-size" class="toggle-btn" style="margin-left: 10px;">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- JLPT Panel Content -->
+        <div id="jlpt-panel-content" class="settings-panel-content">
+            <label for="jpdb-api-key">JPDB API Key (Cookie):</label>
+            <input type="password" id="jpdb-api-key" name="jpdb-api-key" placeholder="Your JPDB API Key (required for highlighting)">
+            <p class="notes">Used for JLPT highlighting. Stored in a browser cookie.</p>
+
+            <label for="mining-deck-id">JPDB Mining Deck ID (LocalStorage):</label>
+            <input type="text" id="mining-deck-id" name="mining-deck-id" placeholder="e.g., 12345 or 'My Mining Deck'">
+            <p class="notes">Default deck ID for mining new words to JPDB. Stored in browser localStorage.</p>
+            
+            <hr>
+            <h4>Additional Mining Settings:</h4>
+            <label for="forq-deck-id">FORQ Deck ID:</label>
+            <input type="text" id="forq-deck-id" name="forq-deck-id" placeholder="e.g., forq, 12345">
+            <p class="notes">Special deck ID for "Front of Review Queue".</p>
+
+            <label for="blacklist-deck-id">Blacklist Deck ID:</label>
+            <input type="text" id="blacklist-deck-id" name="blacklist-deck-id" placeholder="e.g., blacklist, 12345">
+            <p class="notes">Special deck ID for blacklisted words.</p>
+
+            <label for="never-forget-deck-id">Never Forget Deck ID:</label>
+            <input type="text" id="never-forget-deck-id" name="never-forget-deck-id" placeholder="e.g., never-forget, 12345">
+            <p class="notes">Special deck ID for words marked 'never forget'.</p>
+
+            <label for="context-width">Number of Context Sentences:</label>
+            <input type="number" id="context-width" name="context-width" value="1" min="0" max="5">
+            <p class="notes">How many sentences of context to include when mining.</p>
+
+            <label for="forq-on-mine">Add to FORQ When Mining:</label>
+            <input type="checkbox" id="forq-on-mine" name="forq-on-mine">
+            <p class="notes">Automatically add mined words to the FORQ deck.</p>
+
+            <hr>
+            <h4>Keybinds:</h4>
+            <p class="notes">Press Escape to clear. Based on key position. Hover over a word to target.</p>
+            <label for="show-popup-key">Show Popup Key:</label>
+            <input type="text" id="show-popup-key" name="show-popup-key">
+            <label for="add-key">Add Word Key:</label>
+            <input type="text" id="add-key" name="add-key">
+            <label for="dialog-key">Advanced Mining Dialog Key:</label>
+            <input type="text" id="dialog-key" name="dialog-key">
+            <label for="blacklist-key">Blacklist Word Key:</label>
+            <input type="text" id="blacklist-key" name="blacklist-key">
+            <label for="never-forget-key">Never Forget Word Key:</label>
+            <input type="text" id="never-forget-key" name="never-forget-key">
+            <label for="nothing-key">Review as 'Nothing' Key:</label>
+            <input type="text" id="nothing-key" name="nothing-key">
+            <label for="something-key">Review as 'Something' Key:</label>
+            <input type="text" id="something-key" name="something-key">
+            <label for="hard-key">Review as 'Hard' Key:</label>
+            <input type="text" id="hard-key" name="hard-key">
+            <label for="good-key">Review as 'Good' Key:</label>
+            <input type="text" id="good-key" name="good-key">
+            <label for="easy-key">Review as 'Easy' Key:</label>
+            <input type="text" id="easy-key" name="easy-key">
+
+            <hr>
+            <h4>Accessibility Settings:</h4>
+            <label for="show-popup-on-hover">Show Popup on Hover:</label>
+            <input type="checkbox" id="show-popup-on-hover" name="show-popup-on-hover" checked>
+            
+            <label for="touchscreen-support">Touchscreen Support:</label>
+            <input type="checkbox" id="touchscreen-support" name="touchscreen-support">
+
+            <label for="disable-fade-animation">Disable Fade Animation:</label>
+            <input type="checkbox" id="disable-fade-animation" name="disable-fade-animation">
+
+            <hr>
+            <h4>Additional Appearance Settings:</h4>
+            <label for="custom-word-css">Custom Word CSS (LocalStorage):</label>
+            <textarea id="custom-word-css" name="custom-word-css" placeholder=".n5 { color: green !important; }\n.known { text-decoration: none !important; }" style="width: 100%; min-height: 100px; font-family: monospace; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; box-sizing: border-box; border-radius: 4px;"></textarea>
+            <p class="notes">Override default JPDB/word styles. Applied directly in the reader. Stored in browser localStorage.</p>
+
+            <label for="custom-popup-css">Custom Popup CSS (LocalStorage):</label>
+            <textarea id="custom-popup-css" name="custom-popup-css" placeholder=".popup-class { background-color: lightblue; }" style="width: 100%; min-height: 100px; font-family: monospace; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; box-sizing: border-box; border-radius: 4px;"></textarea>
+            <p class="notes">Apply custom styles to the word information popup.</p>
+            
+            <hr>
+            <h4>Import/Export Settings:</h4>
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <button type="button" id="export-settings-btn" class="toggle-btn" style="font-size: 0.9em; padding: 8px 12px;">Export Settings</button>
+                <button type="button" id="import-settings-btn" class="toggle-btn" style="font-size: 0.9em; padding: 8px 12px;">Import Settings</button>
+            </div>
+            <p class="notes">Import/Export all settings as a JSON file.</p>
+
+        </div>
+
+        <!-- <button type="button" id="save-settings-btn">Save & Close</button> REMOVED -->
+    </form>
+    <hr style="margin: 20px 0;">
+    <div class="button-group">
+        <button id="translate-btn">Translate Page</button>
+        <button id="translate-cefr-btn">Translate Page (CEFR)</button>
+        <button id="manual-load-cached-btn">Load Cached Translation</button>
+    </div>
+</div> 
