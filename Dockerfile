@@ -26,4 +26,4 @@ ENV PORT 8080
 # Use the number of workers recommended by Gunicorn documentation for Cloud Run
 # https://cloud.google.com/run/docs/tips/python#optimize_gunicorn
 # Let Cloud Run set the number of threads based on CPU allocation
-CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 app:app 
+CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 "app:create_app()" 

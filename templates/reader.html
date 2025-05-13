@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPUB Content</title>
+    
+    <script>
+        // Immediately apply the theme from localStorage to prevent FOUC
+        (function() {
+            const savedTheme = localStorage.getItem('userTheme') || 'system';
+            const htmlElement = document.documentElement;
+            // Simplified applyTheme logic for immediate execution
+            htmlElement.classList.remove('user-theme-light', 'user-theme-dark');
+            if (savedTheme === 'light') {
+                htmlElement.classList.add('user-theme-light');
+            } else if (savedTheme === 'dark') {
+                htmlElement.classList.add('user-theme-dark');
+            }
+            // If 'system', no class needed, browser default (prefers-color-scheme) applies via CSS
+        })();
+    </script>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/reader_styles.css') }}">
     <!-- Dynamic styles for word highlighting injected by JS -->
     <style id="custom-word-styles"></style>
