@@ -1,49 +1,37 @@
 steps:
-  # 1. Build the container image
-  # This step builds the Docker image using the Dockerfile in the current directory.
-  # The image is tagged with the Artifact Registry path, including the project ID, region, repository name, image name, and the commit SHA.
-  - name: 'gcr.io/cloud-builders/docker'
+  # 1. Build
+  - name: gcr.io/cloud-builders/docker
+    id: Build Docker Image
     args:
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA'
-      - '.'
-    id: 'Build Docker Image'
+      - build
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA
+      - .
 
-  # 2. Push the container image to Artifact Registry
-  # This step pushes the built image to your Artifact Registry repository.
-  - name: 'gcr.io/cloud-builders/docker'
+  # 2. Push
+  - name: gcr.io/cloud-builders/docker
+    id: Push to Artifact Registry
+    waitFor: [Build Docker Image]
     args:
-      - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA'
-    id: 'Push to Artifact Registry'
-    waitFor: ['Build Docker Image'] # Ensures this step runs after the build is complete
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA
 
-  # 3. Deploy container image to Cloud Run
-  # This step deploys the image from Artifact Registry to your Cloud Run service.
-  # It specifies the service name, image URL, region, platform, and allows unauthenticated access.
-  - name: 'gcr.io/google-cloud-sdk/cloud-sdk'
-    entrypoint: gcloud
+  # 3. Deploy
+  - name: gcr.io/cloud-builders/gcloud        # ← switch to this image
+    id: Deploy to Cloud Run
+    waitFor: [Push to Artifact Registry]
+    entrypoint: bash
     args:
-      - 'run'
-      - 'deploy'
-      - 'progressive-reader' # Your Cloud Run service name
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA'
-      - '--region=us-central1'
-      - '--platform=managed' # Specifies the fully managed version of Cloud Run
-      - '--allow-unauthenticated'
-      - '--project=$PROJECT_ID' # Explicitly set the project for the deployment
-    id: 'Deploy to Cloud Run'
-    waitFor: ['Push to Artifact Registry'] # Ensures this step runs after the image is pushed
+      - -c
+      - |
+        gcloud run deploy progressive-reader \
+          --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA \
+          --region=us-central1 \
+          --platform=managed \
+          --allow-unauthenticated \
+          --project=$PROJECT_ID
 
-# Specify the images to be built and pushed.
-# This can sometimes help with caching and ensures these images are made available by Cloud Build.
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA'
+  - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/progressive-reader:$COMMIT_SHA
 
-# Optional: Set a timeout for the entire build process.
-timeout: '1200s' # 20 minutes (e.g., 1200s)
-
-# Note: $PROJECT_ID and $COMMIT_SHA are built-in substitutions provided by Cloud Build.
-# $PROJECT_ID will be automatically replaced with 'floofgg'.
-# $COMMIT_SHA will be the SHA of the commit being built. 
+timeout: "1200s"
