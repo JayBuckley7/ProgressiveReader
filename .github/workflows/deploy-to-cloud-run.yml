@@ -31,7 +31,7 @@ jobs:
 
       - name: Submit build to Google Cloud Build
         run: |
-          gcloud builds submit \
+          gcloud builds submit --no-stream \
             --project=floofgg \
             --config=cloudbuild.yaml \
             .

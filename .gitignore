@@ -10,6 +10,9 @@ uploads/
 # Specific EPUB files to ignore
 *.epub
 
+# Cursor files directory
+.cursorrules
+
 # Environment variables
 .env 
 
