@@ -91,4 +91,4 @@ def demo():
         demo_book_files = [f for f in os.listdir(demo_books_dir) if f.endswith('.epub')]
         print(f"Found demo books: {demo_book_files}") # Log for debugging
 
-    return render_template('demo.html', is_demo=True, demo_books=demo_book_files) 
+    return render_template('demo.html', is_demo=True, demo_books=demo_book_files, openai_key_configured=True) 

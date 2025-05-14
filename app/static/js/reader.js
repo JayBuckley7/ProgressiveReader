@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function updatePrevNextButtons(totalChapters) {
         const currentIndex = Number(config.currentIndex) || 0;
+        const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
     
         // Walk over *both* nav bars (top & bottom)
         document.querySelectorAll('.navigation').forEach(nav => {
@@ -85,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentIndex > 0) {
                 const aPrev = document.createElement('a');
                 aPrev.textContent = 'Previous';
-                aPrev.href = `/read/${config.bookId}/${currentIndex - 1}`;
+                aPrev.href = `${baseUrl}/${currentIndex - 1}`;
                 aPrev.dataset.nav = 'prev';
                 navRight.appendChild(aPrev);
             } else {
@@ -103,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentIndex < totalChapters - 1) {
                 const aNext = document.createElement('a');
                 aNext.textContent = 'Next';
-                aNext.href = `/read/${config.bookId}/${currentIndex + 1}`;
+                aNext.href = `${baseUrl}/${currentIndex + 1}`;
                 aNext.dataset.nav = 'next';
                 navRight.appendChild(aNext);
             } else {
@@ -121,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // From the template, the TOC container is:
         // <div id="side-drawer">
         const sideDrawer = document.getElementById('side-drawer');
+        const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
         
         if (!sideDrawer) {
             console.warn('readerJS: Could not find side drawer with id="side-drawer"');
@@ -168,8 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const a = document.createElement('a');
                     a.textContent = chapter.title || `Chapter ${chapter.index + 1}`;
                     
-                    // Use the proper URL format: /read/bookId/index
-                    a.href = `/read/${config.bookId}/${chapter.index}`;
+                    // Use the proper URL format: /read/bookId/index or /demo/read/bookId/index
+                    a.href = `${baseUrl}/${chapter.index}`;
                     
                     a.title = chapter.title || `Chapter ${chapter.index + 1}`;
                     
@@ -188,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     a.textContent = `Chapter ${i + 1}`;
                     
                     // Use the proper URL format
-                    a.href = `/read/${config.bookId}/${i}`;
+                    a.href = `${baseUrl}/${i}`;
                     
                     a.title = `Chapter ${i + 1}`;
                     

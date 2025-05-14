@@ -1,0 +1,27 @@
+[
+  {
+    "book_id": "demo-uuid-dcc-smol",
+    "item_index": 1,
+    "target_language": "Japanese",
+    "cefr_level": "B1",
+    "response_json_stream": [
+      "data: {\"status\": \"started\"}\n\n",
+      "data: {\"content\": \"<div class=\\\"chapter-content\\\">\"}\n\n",
+      "data: {\"content\": \"  <div id=\\\"epigraph\\\" class=\\\"element2\\\" epub:type=\\\"epigraph\\\">\"}\n\n",
+      "data: {\"content\": \"    <div class=\\\"title-page-contributor-primary-block\\\" id=\\\"epigraph-text\\\">\"}\n\n",
+      "data: {\"content\": \"      <div class=\\\"title-page-contributor-primary-block\\\">\"}\n\n",
+      "data: {\"content\": \"        <blockquote class=\\\"prose\\\">\"}\n\n",
+      "data: {\"content\": \"        <div class=\\\"title-page-contributor-primary-block\\\">\"}\n\n",
+      "data: {\"content\": \"        <p class=\\\"first2\\\">\\u30b3\\u30ed\\u30c3\\u30bb\\u30aa\\u304c\\u3042\\u308b\\u9650\\u308a\\u30ed\\u30fc\\u30de\\u306f\\u5b58\\u5728\\u3059\\u308b\\u3002\\u30b3\\u30ed\\u30c3\\u30bb\\u30aa\\u304c\\u5d29\\u308c\\u305f\\u3068\\u304d\\u3001\\u30ed\\u30fc\\u30de\\u3082\\u5d29\\u308c\\u308b\\u3002\\u30ed\\u30fc\\u30de\\u304c\\u5d29\\u308c\\u305f\\u3068\\u304d\\u3001\\u4e16\\u754c\\u3082\\u5d29\\u308c\\u308b\\u3002</p>\"}\n\n",
+      "data: {\"content\": \"        <p class=\\\"pcalibre blockquote-attribution\\\">\\u5c0a\\u656c\\u3055\\u308c\\u305f\\u30d3\\u30fc\\u30c7</p>\"}\n\n",
+      "data: {\"content\": \"      </div>\"}\n\n",
+      "data: {\"content\": \"        </blockquote>\"}\n\n",
+      "data: {\"content\": \"      </div>\"}\n\n",
+      "data: {\"content\": \"    </div>\"}\n\n",
+      "data: {\"content\": \"  </div>\"}\n\n",
+      "data: {\"content\": \"</div>\"}\n\n",
+      "data: {\"complete\": true, \"translated_text\": \"<div class=\\\"chapter-content\\\"><div id=\\\"epigraph\\\" class=\\\"element2\\\" epub:type=\\\"epigraph\\\"><div class=\\\"title-page-contributor-primary-block\\\" id=\\\"epigraph-text\\\"><div class=\\\"title-page-contributor-primary-block\\\"><blockquote class=\\\"prose\\\"><div class=\\\"title-page-contributor-primary-block\\\"><p class=\\\"first2\\\">\\u30b3\\u30ed\\u30c3\\u30bb\\u30aa\\u304c\\u3042\\u308b\\u9650\\u308a\\u30ed\\u30fc\\u30de\\u306f\\u5b58\\u5728\\u3059\\u308b\\u3002\\u30b3\\u30ed\\u30c3\\u30bb\\u30aa\\u304c\\u5d29\\u308c\\u305f\\u3068\\u304d\\u3001\\u30ed\\u30fc\\u30de\\u3082\\u5d29\\u308c\\u308b\\u3002\\u30ed\\u30fc\\u30de\\u304c\\u5d29\\u308c\\u305f\\u3068\\u304d\\u3001\\u4e16\\u754c\\u3082\\u5d29\\u308c\\u308b\\u3002</p><p class=\\\"pcalibre blockquote-attribution\\\">\\u5c0a\\u656c\\u3055\\u308c\\u305f\\u30d3\\u30fc\\u30c7</p></div></blockquote></div></div></div></div>\"}\n\n",
+      "data: [DONE]\n\n"
+    ]
+  }
+] 
