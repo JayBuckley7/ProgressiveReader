@@ -17,6 +17,7 @@ export interface JpHighlighterConfig {
     customWordCSS?: string;
     customPopupCSS?: string;
     touchscreenSupport?: boolean;
+    disableFadeAnimation?: boolean;
 
     // Keybinds
     showPopupKey?: Keybind;
@@ -50,6 +51,7 @@ export const defaultConfig: JpHighlighterConfig = {
     goodKey: { code: 'None', modifiers: [] },
     easyKey: { code: 'None', modifiers: [] },
     touchscreenSupport: false,
+    disableFadeAnimation: false,
 };
 
 // Internal variable to hold the current configuration instance
