@@ -36,6 +36,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     const trueOriginalServerContent = contentArea.innerHTML; // Capture pristine server content early
 
+    // --- PWA Offline Support - Store content for offline use ---
+    if (currentBookId && window.storageManager) {
+        // Store the current page content for offline use
+        storeContentForOffline();
+        
+        // Handle offline mode
+        if (window.storageManager.isOffline()) {
+            showOfflineNotification();
+        }
+    }
+
     // --- Initialize Managers/Modules ---
     // Utility functions should be globally available or properly imported/passed if using modules
     // Assuming appUtils, themeManager, etc., are now on window object from their respective files
@@ -104,6 +115,87 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.warn("StorageManager not found, cannot save reading progress.");
     }
+    
+    // --- Listen for online/offline events ---
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     console.log("Main Reader Initializer (readerInit.js) complete.");
+    
+    // --- Helper functions ---
+    
+    // Store the current page content for offline use
+    function storeContentForOffline() {
+        if (!window.storageManager) return;
+        
+        // Store the content using IndexedDB
+        window.storageManager.storePageContent(currentBookId, pageCurrentIndex, trueOriginalServerContent)
+            .then(success => {
+                if (success) {
+                    console.log(`Content for book ${currentBookId}, page ${pageCurrentIndex} stored for offline use`);
+                }
+            });
+        
+        // Store book metadata for offline use
+        const bookMetadata = {
+            title: document.title,
+            timestamp: Date.now()
+        };
+        
+        window.storageManager.storeBookForOffline(currentBookId, bookMetadata)
+            .then(success => {
+                if (success) {
+                    console.log(`Book ${currentBookId} metadata stored for offline use`);
+                }
+            });
+    }
+    
+    // Handle going online
+    function handleOnline() {
+        console.log("App is online");
+        
+        // Remove offline notification if it exists
+        const offlineNotification = document.querySelector('.offline-notification');
+        if (offlineNotification) {
+            offlineNotification.classList.remove('show');
+            setTimeout(() => offlineNotification.remove(), 300);
+        }
+        
+        // Sync any offline changes
+        if (window.storageManager) {
+            // Try to sync reading progress
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.sync.register('sync-reading-progress');
+                });
+            }
+        }
+    }
+    
+    // Handle going offline
+    function handleOffline() {
+        console.log("App is offline");
+        showOfflineNotification();
+    }
+    
+    // Show offline notification
+    function showOfflineNotification() {
+        // Check if notification already exists
+        if (document.querySelector('.offline-notification')) return;
+        
+        const notification = document.createElement('div');
+        notification.className = 'offline-notification';
+        notification.textContent = 'You are currently offline. Some features may be limited.';
+        document.body.appendChild(notification);
+        
+        // Trigger reflow to ensure the transition works
+        notification.offsetHeight;
+        notification.classList.add('show');
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
 }); 

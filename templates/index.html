@@ -4,8 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPUB Reader</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4b8dff">
+    <meta name="description" content="An EPUB reader with Japanese language learning features">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ProgReader">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
+    <!-- PWA Icons -->
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.png') }}">
+    
+    <!-- App Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-    <script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
+    
+    <!-- Offline Stylesheet (minimal styles for offline page) -->
+    <style>
+        .offline-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .offline-notification.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #pwa-install-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4b8dff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: none;
+            z-index: 900;
+            font-size: 24px;
+        }
+        
+        #pwa-install-button:hover {
+            background-color: #3a7ae0;
+        }
+    </style>
 </head>
 <body>
     <main>
@@ -43,5 +102,14 @@
             {% endwith %}
         </div>
     </main>
+    
+    <!-- PWA Install Button -->
+    <button id="pwa-install-button" aria-label="Install app">+</button>
+    
+    <!-- App Scripts -->
+    <script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
+    
+    <!-- PWA Registration Script -->
+    <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
 </body>
 </html> 

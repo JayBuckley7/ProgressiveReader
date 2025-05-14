@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Progressive Reader</title>
+    <link rel="icon" href="/static/icons/icon.png" type="image/png">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background-color: #4b8dff;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        
+        h1 {
+            margin-top: 0;
+        }
+        
+        .offline-icon {
+            font-size: 64px;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .actions {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        button {
+            padding: 0.75rem 1.5rem;
+            background-color: #4b8dff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #3a7ae0;
+        }
+        
+        .books-section {
+            margin-top: 2rem;
+        }
+        
+        #offline-books {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .book-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .book-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Progressive Reader</h1>
+    </header>
+    
+    <main>
+        <div class="offline-icon">📴</div>
+        <h2>You're offline</h2>
+        <p>
+            It looks like you're not connected to the internet right now. 
+            Don't worry - you can still access your downloaded books and 
+            continue reading from where you left off.
+        </p>
+        
+        <div class="books-section">
+            <h3>Your Downloaded Books</h3>
+            <div id="offline-books">
+                <!-- Books will be populated by JavaScript -->
+                <p id="no-books-message">Loading your books...</p>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button id="reload-button">Try Reconnecting</button>
+        </div>
+    </main>
+    
+    <script>
+        // Check connection status when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const reloadButton = document.getElementById('reload-button');
+            const offlineBooksContainer = document.getElementById('offline-books');
+            const noBooksMessage = document.getElementById('no-books-message');
+            
+            // Reload button event listener
+            reloadButton.addEventListener('click', () => {
+                window.location.reload();
+            });
+            
+            // Check if we have IndexedDB support
+            if ('indexedDB' in window) {
+                // Try to load books from IndexedDB
+                loadOfflineBooks()
+                    .then(books => {
+                        if (books && books.length > 0) {
+                            displayOfflineBooks(books);
+                        } else {
+                            noBooksMessage.textContent = 'No books available offline.';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading offline books:', error);
+                        noBooksMessage.textContent = 'Error loading your books.';
+                    });
+            } else {
+                noBooksMessage.textContent = 'Your browser does not support offline storage.';
+            }
+            
+            // Listen for online event
+            window.addEventListener('online', () => {
+                window.location.href = '/';
+            });
+        });
+        
+        // Function to load books from IndexedDB
+        async function loadOfflineBooks() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('progressive-reader-db', 1);
+                
+                request.onerror = event => {
+                    reject('IndexedDB error: ' + event.target.errorCode);
+                };
+                
+                request.onsuccess = event => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['books'], 'readonly');
+                    const booksStore = transaction.objectStore('books');
+                    const getAllRequest = booksStore.getAll();
+                    
+                    getAllRequest.onsuccess = () => {
+                        resolve(getAllRequest.result || []);
+                    };
+                    
+                    getAllRequest.onerror = event => {
+                        reject('Error fetching books: ' + event.target.errorCode);
+                    };
+                };
+                
+                request.onupgradeneeded = event => {
+                    // This should not happen in the offline page as the DB should already exist
+                    // But just in case, we'll set up the store
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('books')) {
+                        db.createObjectStore('books', { keyPath: 'id' });
+                    }
+                    resolve([]);
+                };
+            });
+        }
+        
+        // Function to display offline books in the UI
+        function displayOfflineBooks(books) {
+            const offlineBooksContainer = document.getElementById('offline-books');
+            const noBooksMessage = document.getElementById('no-books-message');
+            
+            // Remove the loading message
+            if (noBooksMessage) {
+                noBooksMessage.remove();
+            }
+            
+            // Add each book to the container
+            books.forEach(book => {
+                const bookElement = document.createElement('div');
+                bookElement.className = 'book-item';
+                bookElement.dataset.id = book.id;
+                
+                // Create book content
+                const titleElement = document.createElement('h4');
+                titleElement.textContent = book.title || 'Untitled Book';
+                
+                bookElement.appendChild(titleElement);
+                
+                // Add click event to open the book
+                bookElement.addEventListener('click', () => {
+                    window.location.href = `/read/${book.id}/0`;
+                });
+                
+                offlineBooksContainer.appendChild(bookElement);
+            });
+        }
+    </script>
+</body>
+</html> 

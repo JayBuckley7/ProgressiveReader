@@ -1,0 +1,129 @@
+// Service Worker for Progressive Reader PWA
+const CACHE_NAME = 'progressive-reader-cache-v1';
+
+// Assets to cache on install
+const PRECACHE_ASSETS = [
+  '/',
+  '/static/css/index.css',
+  '/static/css/reader_styles.css',
+  '/static/js/index.js',
+  '/static/js/dbService.js',
+  '/static/js/storageManager.js',
+  '/static/js/epubProcessor.js',
+  '/static/js/themeManager.js',
+  '/static/js/fontSizeManager.js',
+  '/static/js/customCssManager.js',
+  '/static/js/sideDrawer.js',
+  '/static/js/settingsModal.js',
+  '/static/js/translationManager.js',
+  '/static/js/jlptHighlighter.js',
+  '/static/js/readerInit.js',
+  '/static/js/epubViewer.js',
+  '/static/js/dist/jpHighlighter.bundle.js',
+  '/static/js/dist/styles.css',
+  '/static/js/utils.js',
+  '/static/icons/icon.png',
+  '/static/icons/icon-192x192.png',
+  '/static/icons/icon-512x512.png'
+];
+
+// Install event - cache core assets
+self.addEventListener('install', event => {
+  console.log('[Service Worker] Installing');
+  
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('[Service Worker] Caching app shell and assets');
+        return cache.addAll(PRECACHE_ASSETS);
+      })
+      .then(() => self.skipWaiting())
+  );
+});
+
+// Activate event - clean up old caches
+self.addEventListener('activate', event => {
+  console.log('[Service Worker] Activating');
+  
+  event.waitUntil(
+    caches.keys()
+      .then(cacheNames => {
+        return Promise.all(
+          cacheNames.filter(cacheName => {
+            return cacheName !== CACHE_NAME;
+          }).map(cacheName => {
+            console.log('[Service Worker] Clearing old cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      })
+      .then(() => self.clients.claim())
+  );
+});
+
+// Fetch event - network-first strategy with cache fallback
+self.addEventListener('fetch', event => {
+  // Handle only GET requests
+  if (event.request.method !== 'GET') return;
+  
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) return;
+  
+  // Skip API requests - always fetch from network
+  if (event.request.url.includes('/api/')) return;
+  
+  // Handle static files and page requests
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        // Clone the response to cache it and return it
+        if (response.ok) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+        }
+        return response;
+      })
+      .catch(() => {
+        // If network fails, try to serve from cache
+        console.log('[Service Worker] Serving from cache:', event.request.url);
+        return caches.match(event.request)
+          .then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            
+            // If not in cache, return offline fallback
+            if (event.request.headers.get('accept').includes('text/html')) {
+              return caches.match('/');
+            }
+            
+            return new Response('Network error', { 
+              status: 408, 
+              headers: { 'Content-Type': 'text/plain' } 
+            });
+          });
+      })
+  );
+});
+
+// Handle background sync for offline functionality
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-reading-progress') {
+    event.waitUntil(syncReadingProgress());
+  }
+});
+
+// Example function to sync reading progress when back online
+async function syncReadingProgress() {
+  try {
+    // Here you would implement logic to send cached reading progress to server
+    console.log('[Service Worker] Syncing reading progress');
+    // Example: const requests = await idb.getAll('readingProgressOutbox');
+    // Then send requests to server
+  } catch (error) {
+    console.error('[Service Worker] Sync error:', error);
+  }
+} 

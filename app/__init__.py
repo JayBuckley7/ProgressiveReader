@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask
+from flask import Flask, send_from_directory
 from config import Config
 
 # Define a filter for logging
@@ -47,6 +47,20 @@ def create_app(config_class=Config):
     def hello():
         return 'Hello, World from create_app!'
     # --- End Example ---
+
+    # --- Add routes for PWA resources ---
+    @app.route('/offline')
+    def offline():
+        return send_from_directory('static', 'offline.html')
+        
+    @app.route('/service-worker.js')
+    def service_worker():
+        return send_from_directory('static/js', 'service-worker.js')
+        
+    @app.route('/manifest.json')
+    def manifest():
+        return send_from_directory('static', 'manifest.json')
+    # --- End PWA routes ---
 
     # --- Import and register blueprints from routes --- 
     # (This is where we'll add them later)
