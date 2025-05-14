@@ -21,7 +21,7 @@
     <!-- App Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
     
-    <!-- Offline Stylesheet (minimal styles for offline page) -->
+    <!-- Inline styles for PWA elements and new hero banner -->
     <style>
         .offline-notification {
             position: fixed;
@@ -68,19 +68,25 @@
 </head>
 <body>
     <main>
-        <div class="container">
-            <h1>Welcome to the EPUB Reader!</h1>
-            
-            <div class="upload-section">
-                <h2>Upload New EPUB</h2>
-                <form id="upload-form" class="upload-form" action="#" method="post">
-                    <label for="file-input" class="visually-hidden">Select EPUB file</label>
+        <section class="hero-banner">
+            <div class="hero-content">
+                <img src="{{ url_for('static', filename='icons/icon.png') }}" alt="Progressive Reader Logo" class="hero-logo">
+                <h1 class="hero-headline">Your Digital Bookshelf, Reimagined.</h1>
+                <p class="hero-tagline">Upload EPUBs, read anywhere, and enhance your language learning.</p>
+                <form id="upload-form" class="hero-upload-form" action="#" method="post">
+                    <label for="file-input" class="custom-file-upload-label">
+                        <span>Select EPUB File</span>
+                    </label>
                     <input type="file" name="file" id="file-input" accept=".epub" required>
-                    <button type="submit">Upload EPUB</button>
+                    <div class="upload-progress-container" style="display: none; width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-top: 0.5rem;">
+                        <div class="upload-progress-bar" style="width: 0%; height: 10px; background-color: #4b8dff; border-radius: 4px; text-align: center; line-height: 10px; color: white; font-size: 8px;"></div>
+                    </div>
                 </form>
-                <div id="upload-status"></div>
+                <div id="upload-status" class="hero-upload-status"></div>
             </div>
+        </section>
 
+        <div class="container page-content-container"> 
             <div class="bookshelf">
                 <h2>My Bookshelf</h2>
                 <div id="recent-books-grid" class="books-grid">
