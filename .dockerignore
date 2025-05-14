@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Git
+.git/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE/Editor specific
+.vscode/
+.idea/
+*.project
+*.classpath
+*.cproject
+*.launch
+*.settings
+*.sublime-*
+*.DS_Store
+
+# OS generated files
+Thumbs.db
+
+# Local secrets / config (if any not already in .gitignore)
+.env
+secrets.yaml
+
+# Log files
+*.log
+
+# Test files and coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+pytestdebug.log
+
+# Build artifacts from frontend (if they exist at root)
+# We only want the ones from app/static/js/dist after the build
+# frontend/ # if you had a separate frontend dir
+
+# Docker itself
+Dockerfile
+.dockerignore
+
+# GCP specific (already in .gcloudignore, but good to have here too for explicitness if running docker locally)
+.gcloudignore
+
+# User uploaded files (if not part of the app image)
+user_epubs/ 
