@@ -1,7 +1,8 @@
-from flask import Blueprint, request, jsonify, session, current_app
+from flask import Blueprint, request, jsonify, session, current_app, Response
 from openai import OpenAI
 import requests
 import re
+import json
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -16,6 +17,7 @@ def translate_content():
     model = data.get('model')
     user_api_key = data.get('api_key')
     cefr_level = data.get('cefr_level')
+    stream = data.get('stream', False)  # New parameter to enable streaming
 
     if content is None or target_language is None or model is None:
         return jsonify({"error": "Missing required fields: content, target_language, model"}), 400
@@ -30,22 +32,77 @@ def translate_content():
     else: user_prompt_prefix += ". Preserve HTML tags."
     full_user_prompt = f"{user_prompt_prefix}\n\nHTML Content:\n```html\n{content}\n```"
 
-    current_app.logger.info(f"--- API/Translate Request --- Lang: {target_language}, Model: {model}, CEFR: {cefr_level or 'N/A'}") 
+    current_app.logger.info(f"--- API/Translate Request --- Lang: {target_language}, Model: {model}, CEFR: {cefr_level or 'N/A'}, Stream: {stream}") 
 
     try:
         client = OpenAI(api_key=api_key_to_use)
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": full_user_prompt}]
-        )
-        translated_text = completion.choices[0].message.content.strip()
-
-        if translated_text.startswith("```html"): translated_text = translated_text[7:].strip()
-        elif translated_text.startswith("```"): translated_text = translated_text[3:].strip()
-        if translated_text.endswith("```"): translated_text = translated_text[:-3].strip()
         
-        current_app.logger.info(f"Translation successful. First 100 chars: {translated_text[:100]}...") 
-        return jsonify({"translated_text": translated_text})
+        if stream:
+            # Handle streaming response
+            def generate():
+                buffer = ""
+                last_chunk = "" # Store the complete translated text to save to cache at the end
+                
+                # Create a streaming request to OpenAI
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": full_user_prompt}],
+                    stream=True
+                )
+                
+                # Send SSE format for streaming events
+                yield "data: {\"status\": \"started\"}\n\n"
+                
+                for chunk in completion:
+                    content = chunk.choices[0].delta.content
+                    
+                    # Some chunks might not have content
+                    if content is not None:
+                        buffer += content
+                        last_chunk += content
+                        
+                        # Clean any markdown code blocks on the fly
+                        while "```html" in buffer:
+                            buffer = buffer.replace("```html", "", 1)
+                        while "```" in buffer:
+                            buffer = buffer.replace("```", "", 1)
+                        
+                        # Send the accumulated buffer
+                        yield f"data: {json.dumps({'content': buffer})}\n\n"
+                        buffer = ""  # Clear buffer after sending
+                
+                # Ensure the final chunk is sent (if any remains in buffer)
+                if buffer:
+                    yield f"data: {json.dumps({'content': buffer})}\n\n"
+                
+                # Send complete translated text for caching
+                clean_translated_text = last_chunk
+                if clean_translated_text.startswith("```html"): 
+                    clean_translated_text = clean_translated_text[7:].strip()
+                elif clean_translated_text.startswith("```"): 
+                    clean_translated_text = clean_translated_text[3:].strip()
+                if clean_translated_text.endswith("```"): 
+                    clean_translated_text = clean_translated_text[:-3].strip()
+                
+                yield f"data: {json.dumps({'complete': True, 'translated_text': clean_translated_text})}\n\n"
+                yield "data: [DONE]\n\n"
+                
+            # Return the generator as a streaming response
+            return Response(generate(), mimetype='text/event-stream')
+        else:
+            # Handle non-streaming (original) response method
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": full_user_prompt}]
+            )
+            translated_text = completion.choices[0].message.content.strip()
+
+            if translated_text.startswith("```html"): translated_text = translated_text[7:].strip()
+            elif translated_text.startswith("```"): translated_text = translated_text[3:].strip()
+            if translated_text.endswith("```"): translated_text = translated_text[:-3].strip()
+            
+            current_app.logger.info(f"Translation successful. First 100 chars: {translated_text[:100]}...") 
+            return jsonify({"translated_text": translated_text})
 
     except Exception as e:
         current_app.logger.error(f"Error calling OpenAI API: {e}", exc_info=True) 

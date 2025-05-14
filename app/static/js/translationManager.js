@@ -12,6 +12,12 @@ let apiKeyIsConfigured = false;
 let serverDefaultModelForTranslation = 'gpt-4o-mini';
 const CEFR_LEVELS_TRANSLATION = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']; // Must match settingsModal.js if shared
 
+let isCurrentlyStreaming = false;
+let streamingIndicator = null;
+
+let translationBuffer = null;
+let lastRenderedLength = 0;
+
 function _selectDOMElements() {
     translateButton = document.getElementById('translate-btn');
     translateCefrButton = document.getElementById('translate-cefr-btn');
@@ -48,6 +54,88 @@ function updateDisplayButtons() {
     }
 }
 
+function createStreamingIndicator() {
+    if (streamingIndicator) return streamingIndicator;
+    
+    // Create a more informative indicator element to show streaming status
+    streamingIndicator = document.createElement('div');
+    streamingIndicator.className = 'translation-streaming-indicator';
+    streamingIndicator.style.position = 'fixed';
+    streamingIndicator.style.bottom = '20px';
+    streamingIndicator.style.right = '20px';
+    streamingIndicator.style.backgroundColor = 'rgba(0, 123, 255, 0.8)';
+    streamingIndicator.style.color = 'white';
+    streamingIndicator.style.padding = '10px 15px';
+    streamingIndicator.style.borderRadius = '6px';
+    streamingIndicator.style.fontSize = '15px';
+    streamingIndicator.style.zIndex = '1000';
+    streamingIndicator.style.display = 'none';
+    streamingIndicator.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    streamingIndicator.style.transition = 'all 0.3s ease';
+    
+    // Add progress visualization
+    streamingIndicator.innerHTML = `
+        <div style="display: flex; align-items: center;">
+            <div style="margin-right: 10px; display: inline-block;">
+                <span class="translation-dots" style="display: inline-block;">
+                    <span style="animation: blink 1.4s infinite both; animation-delay: 0s;">⋯</span>
+                </span>
+            </div>
+            <div>
+                <div>Translating content</div>
+                <div style="font-size: 12px; opacity: 0.8;">Original content visible until complete</div>
+            </div>
+        </div>
+    `;
+    
+    // Add some CSS animation for the dots
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes blink {
+            0% { opacity: 0.2; }
+            20% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(streamingIndicator);
+    return streamingIndicator;
+}
+
+function showStreamingIndicator() {
+    const indicator = createStreamingIndicator();
+    isCurrentlyStreaming = true;
+    indicator.style.display = 'block';
+}
+
+function hideStreamingIndicator() {
+    if (streamingIndicator) {
+        isCurrentlyStreaming = false;
+        streamingIndicator.style.display = 'none';
+    }
+}
+
+function createBufferElement() {
+    if (translationBuffer) return translationBuffer;
+    
+    // Create a hidden div to safely parse the incoming HTML
+    translationBuffer = document.createElement('div');
+    translationBuffer.style.display = 'none';
+    document.body.appendChild(translationBuffer);
+    return translationBuffer;
+}
+
+function getCompleteHtmlElements(html) {
+    // Create temporary element to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // Check if inner HTML matches what we put in - if it does, it's valid HTML
+    // If not, browser might have auto-corrected incomplete tags
+    return temp.innerHTML;
+}
+
 async function callTranslateAPI(payload) {
     if (!contentArea) {
         console.error("Content area not set for translation manager.");
@@ -78,32 +166,166 @@ async function callTranslateAPI(payload) {
 
     try {
         payload.item_index = currentPageIndexForTranslation;
-        payload.content = originalPageContent; 
+        payload.content = originalPageContent;
+        // Enable streaming by default
+        payload.stream = true;
 
-        const response = await fetch("/api/translate", { // Corrected endpoint
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify(payload),
-         });
+        if (payload.stream) {
+            // Handle streaming response using EventSource
+            const response = await fetch("/api/translate", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            // Show streaming indicator
+            showStreamingIndicator();
+            
+            // Prepare buffer element
+            const buffer = createBufferElement();
+            buffer.innerHTML = "";
+            
+            // Keep original content visible until we have enough translated content
+            let accumulatedHtml = "";
+            lastRenderedLength = 0;
+            
+            // Create a reader for the streaming response
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let textBuffer = "";
+            let finalTranslatedText = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                // Decode chunk and add to buffer
+                textBuffer += decoder.decode(value, { stream: true });
+                
+                // Process each complete SSE message in the textBuffer
+                while (true) {
+                    const messageEnd = textBuffer.indexOf("\n\n");
+                    if (messageEnd === -1) break;
+                    
+                    const message = textBuffer.substring(0, messageEnd);
+                    textBuffer = textBuffer.substring(messageEnd + 2);
+                    
+                    if (message.startsWith("data: ")) {
+                        const data = message.substring(6);
+                        if (data === "[DONE]") {
+                            break;
+                        }
+                        
+                        try {
+                            const parsedData = JSON.parse(data);
+                            
+                            // Handle status message
+                            if (parsedData.status === "started") {
+                                console.log("Translation streaming started");
+                                // But we don't clear the content area immediately
+                                // We'll keep showing the original content until we have complete HTML
+                                continue;
+                            }
+                            
+                            // Handle content chunks
+                            if (parsedData.content) {
+                                // Add new content to our accumulated HTML
+                                accumulatedHtml += parsedData.content;
+                                
+                                // Try to render only complete elements
+                                buffer.innerHTML = accumulatedHtml;
+                                
+                                // Check if we have at least a complete paragraph or significant content
+                                // that's worth updating the display for
+                                const completeElements = Array.from(buffer.children);
+                                
+                                // Only update display if we have significantly more content
+                                // or if we have complete, meaningful elements
+                                const hasCompleteElements = completeElements.length > 0;
+                                const hasSignificantNewContent = accumulatedHtml.length > lastRenderedLength + 100;
+                                
+                                if (hasCompleteElements && (hasSignificantNewContent || parsedData.complete)) {
+                                    // We have enough content to update the display
+                                    lastRenderedLength = accumulatedHtml.length;
+                                    // Only show complete elements (exclude any partial content at the end)
+                                    contentArea.innerHTML = buffer.innerHTML;
+                                    
+                                    // Scroll to keep current position visible if needed
+                                    if (contentArea.scrollHeight > contentArea.clientHeight) {
+                                        contentArea.scrollTop = contentArea.scrollHeight;
+                                    }
+                                }
+                            }
+                            
+                            // Handle completion message with full translated text for caching
+                            if (parsedData.complete && parsedData.translated_text) {
+                                finalTranslatedText = parsedData.translated_text;
+                                // Ensure the final state is set correctly with the complete translation
+                                contentArea.innerHTML = finalTranslatedText;
+                                
+                                // Save the complete translation to cache
+                                if (window.storageManager) {
+                                    window.storageManager.saveTranslationToLocal(
+                                        currentBookIdForTranslation, 
+                                        currentPageIndexForTranslation, 
+                                        finalTranslatedText
+                                    );
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error parsing SSE data:', error, data);
+                        }
+                    }
+                }
+            }
+            
+            // Clean up buffer
+            if (translationBuffer) {
+                translationBuffer.innerHTML = "";
+            }
+            
+            // Make sure we update the button states after translation
+            updateDisplayButtons();
+        } else {
+            // Original non-streaming implementation as fallback
+            const response = await fetch("/api/translate", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data.translated_text) {
+                contentArea.innerHTML = data.translated_text;
+                if (window.storageManager) {
+                    window.storageManager.saveTranslationToLocal(
+                        currentBookIdForTranslation, 
+                        currentPageIndexForTranslation, 
+                        data.translated_text
+                    );
+                }
+                updateDisplayButtons();
+            } else { 
+                throw new Error('No translation returned from server.'); 
+            }
         }
-        const data = await response.json();
-        if (data.translated_text) {
-             contentArea.innerHTML = data.translated_text;
-             if (window.storageManager) {
-                window.storageManager.saveTranslationToLocal(currentBookIdForTranslation, currentPageIndexForTranslation, data.translated_text);
-             }
-             updateDisplayButtons();
-        } else { throw new Error('No translation returned from server.'); }
     } catch (error) {
         console.error('Translation Error:', error);
         alert(`Error during translation: ${error.message}`);
     } finally {
         buttonElement.textContent = originalButtonText;
         buttonElement.disabled = false;
+        hideStreamingIndicator();
     }
 }
 
