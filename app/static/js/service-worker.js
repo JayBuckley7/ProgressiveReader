@@ -24,7 +24,8 @@ const PRECACHE_ASSETS = [
   '/static/js/utils.js',
   '/static/icons/icon.png',
   '/static/icons/icon-192x192.png',
-  '/static/icons/icon-512x512.png'
+  '/static/icons/icon-512x512.png',
+  '/static/icons/slow.gif'
 ];
 
 // Install event - cache core assets
@@ -35,7 +36,17 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('[Service Worker] Caching app shell and assets');
-        return cache.addAll(PRECACHE_ASSETS);
+        
+        // Cache each asset individually to prevent one failure from stopping all caching
+        return Promise.all(
+          PRECACHE_ASSETS.map(url => {
+            return cache.add(url).catch(error => {
+              console.error('[Service Worker] Failed to cache:', url, error);
+              // Continue despite the error
+              return Promise.resolve();
+            });
+          })
+        );
       })
       .then(() => self.skipWaiting())
   );
@@ -71,6 +82,12 @@ self.addEventListener('fetch', event => {
   
   // Skip API requests - always fetch from network
   if (event.request.url.includes('/api/')) return;
+
+  // Skip caching for URLs with nocache parameter
+  if (event.request.url.includes('nocache=')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   
   // Handle static files and page requests
   event.respondWith(

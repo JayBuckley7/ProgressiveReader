@@ -64,13 +64,27 @@
         #pwa-install-button:hover {
             background-color: #3a7ae0;
         }
+        
+        /* Animation removed to prevent unwanted pulsing */
+        .hero-logo {
+            /* animation removed */
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
     <main>
         <section class="hero-banner">
             <div class="hero-content">
-                <img src="{{ url_for('static', filename='icons/icon.png') }}" alt="Progressive Reader Logo" class="hero-logo">
+                <div class="logo-container" style="position: relative; display: inline-block;">
+                    <!-- <img src="{{ url_for('static', filename='icons/icon.png') }}" alt="Progressive Reader Logo" class="hero-logo"> -->
+                    <img src="{{ url_for('static', filename='icons/slow.gif', _external=True) }}?nocache={{ range(1, 1000000) | random }}" alt="Animation" class="hero-logo">
+                </div>
                 <h1 class="hero-headline">Your Digital Bookshelf, Reimagined.</h1>
                 <p class="hero-tagline">Upload EPUBs, read anywhere, and enhance your language learning.</p>
                 <form id="upload-form" class="hero-upload-form" action="#" method="post">
