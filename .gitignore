@@ -8,7 +8,11 @@ __pycache__/
 uploads/
 
 # Specific EPUB files to ignore
-*.epub
+# *.epub
+
+# Ensure demo books and their covers are NOT ignored
+!app/static/demo_books/*.epub
+!app/static/demo_books/covers/*
 
 # Cursor files directory
 .cursorrules
