@@ -514,4 +514,39 @@ hr {
 .nav-buttons {
     text-align: center;
     padding: 10px;
+}
+
+.navigation a.disabled {
+    color: var(--color-text-default); /* Use theme variable */
+    opacity: 0.5; /* More faded for disabled state */
+    cursor: default;
+    pointer-events: none; /* Prevent clicking */
+}
+
+.navigation a.disabled:hover {
+    filter: none; /* No hover effect on disabled links */
+    background-color: var(--color-input-background); /* Keep original background */
+}
+
+.navigation button.nav-button {
+    background-color: var(--color-input-background);
+    color: var(--color-link-default);
+    border: 1px solid var(--color-input-border);
+    border-radius: var(--border-radius-default);
+    padding: 5px 10px;
+    margin: 0 5px;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    transition: background-color 0.2s, filter 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.navigation button.nav-button:hover {
+    filter: var(--filter-brighter);
+}
+
+.navigation button.nav-button.disabled {
+    color: var(--color-text-default);
+    opacity: 0.5;
+    cursor: default;
 } 

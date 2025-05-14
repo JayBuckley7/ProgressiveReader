@@ -75,9 +75,46 @@
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
+        
+        .button-like-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #6c757d; /* A neutral, secondary color */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        
+        .button-like-link:hover {
+            background-color: #5a6268;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .top-left-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1001; /* Ensure it's above other content if necessary */
+        }
+        
+        .top-left-container .button-like-link {
+            padding: 8px 15px; /* Slightly smaller padding */
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
+    {% block body_start %}{% endblock %}
+    {# Container for top-left content like the demo button #}
+    <div class="top-left-container">
+        {% if not is_demo %}
+            <a href="{{ url_for('main.demo') }}" class="button-like-link">Try Demo</a>
+        {% endif %}
+    </div>
     <main>
         <section class="hero-banner">
             <div class="hero-content">
@@ -131,5 +168,7 @@
     
     <!-- PWA Registration Script -->
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+    
+    {% block body_end %}{% endblock %}
 </body>
 </html> 

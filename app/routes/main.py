@@ -39,10 +39,9 @@ def upload_file():
     if file and file.filename.endswith('.epub'):
         # No longer saving the file to the server.
         # The client will handle storage in IndexedDB.
-        # filename = str(uuid.uuid4()) + ".epub" # Generate a unique filename
-        # file_path = os.path.join(current_app.config['USER_EPUB_DIR'], filename)
-        # file.save(file_path)
-        # print(f"File saved to {file_path}")
+        # This endpoint now exists purely to maintain familiar upload terminology
+        # No actual file storage happens here - everything is client-side
+        current_app.logger.info(f"MOCK UPLOAD in main.py: Client sent '{file.filename}' - directing to client processing")
         return jsonify({'success': True, 'message': 'File ready for client-side processing.'})
     else:
         return jsonify({'success': False, 'message': 'Invalid file type, please upload an EPUB.'}), 400
@@ -82,3 +81,14 @@ def delete_book(filename):
 # @main_bp.route('/book/cover/<book_id>/<filename>')
 # def book_cover(book_id, filename):
 #    ... (old cover serving logic) 
+
+@main_bp.route('/demo', strict_slashes=False)
+def demo():
+    """Render the demo page by including index.html"""
+    demo_books_dir = os.path.join(current_app.root_path, 'static', 'demo_books')
+    demo_book_files = []
+    if os.path.exists(demo_books_dir):
+        demo_book_files = [f for f in os.listdir(demo_books_dir) if f.endswith('.epub')]
+        print(f"Found demo books: {demo_book_files}") # Log for debugging
+
+    return render_template('demo.html', is_demo=True, demo_books=demo_book_files) 

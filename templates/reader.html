@@ -108,7 +108,7 @@
             position='top',
             book_id=book_id,
             current_index=current_index,
-            total_items=total_items
+            total_items=0
         ) }}
     </nav>
     {# Removed <hr>, use CSS for visual separation if needed #}
@@ -118,7 +118,9 @@
         <button id="revert-translation-btn" style="display: none;">Show Original Text</button>
     </div>
     <div class="epub-content">
-        {{ content | safe }}
+        <div id="loading-indicator" style="text-align: center; padding: 2rem;">
+            <p>Loading content from storage...</p>
+        </div>
     </div>
     {# Removed <hr>, use CSS for visual separation if needed #}
 
@@ -128,7 +130,7 @@
             position='bottom',
             book_id=book_id,
             current_index=current_index,
-            total_items=total_items
+            total_items=0
         ) }}
     </footer>
 </div>
@@ -166,7 +168,7 @@
     'translationManager.js',
     'jlptHighlighter.js',
     'readerInit.js',
-    'epubViewer.js'
+    'reader.js'
 ] %}
 
 {# Load JavaScript files as ES modules #}

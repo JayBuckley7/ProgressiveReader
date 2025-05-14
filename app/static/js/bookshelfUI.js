@@ -14,6 +14,10 @@ export async function renderBookshelf() {
         return;
     }
 
+    // Check if we're in demo mode - check for the global variable each time we render
+    const isInDemoMode = window.IS_DEMO_MODE === true;
+    console.log(`${logPrefix} Demo mode detected: ${isInDemoMode}`);
+
     console.log(`${logPrefix} Starting render...`);
     recentBooksGrid.innerHTML = '<p>Loading bookshelf...</p>'; // Initial loading state
     recentBooksGrid.setAttribute('role', 'list'); // Set list role
@@ -22,25 +26,39 @@ export async function renderBookshelf() {
     try {
         console.log(`${logPrefix} Calling getAllBooksMetadata...`);
         const booksMetadata = await getAllBooksMetadata();
-        console.log(`${logPrefix} Received metadata:`, booksMetadata);
+        
+        // Log the books before filtering
+        console.log(`${logPrefix} All books before filtering:`, 
+            booksMetadata.map(book => ({ 
+                id: book.id, 
+                title: book.title,
+                isDemo: book.isDemo 
+            })));
+        
+        // Filter out demo books if not in demo mode
+        const filteredBooksMetadata = isInDemoMode 
+            ? booksMetadata 
+            : booksMetadata.filter(book => !book.isDemo);
+
+        console.log(`${logPrefix} Received metadata (${booksMetadata.length} total, ${filteredBooksMetadata.length} filtered)`, filteredBooksMetadata);
         recentBooksGrid.innerHTML = ''; // Clear loading state
 
-        if (!booksMetadata || booksMetadata.length === 0) {
+        if (!filteredBooksMetadata || filteredBooksMetadata.length === 0) {
             console.log(`${logPrefix} No books found.`);
             recentBooksGrid.innerHTML = '<p>Your bookshelf is empty. Upload an EPUB to get started!</p>';
             return;
         }
 
         // Sort books by lastOpened (desc), then title (asc)
-        booksMetadata.sort((a, b) => {
+        filteredBooksMetadata.sort((a, b) => {
             const dateA = a.lastOpened ? new Date(a.lastOpened) : new Date(0);
             const dateB = b.lastOpened ? new Date(b.lastOpened) : new Date(0);
             if (dateB - dateA !== 0) return dateB - dateA;
             return a.title.localeCompare(b.title);
         });
-        console.log(`${logPrefix} Sorted metadata:`, booksMetadata);
+        console.log(`${logPrefix} Sorted metadata:`, filteredBooksMetadata);
 
-        booksMetadata.forEach(book => {
+        filteredBooksMetadata.forEach(book => {
             console.log(`${logPrefix} Processing book:`, book);
             const bookItemDiv = document.createElement('div');
             bookItemDiv.className = 'book-item';

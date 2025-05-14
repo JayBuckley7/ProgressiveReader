@@ -455,18 +455,69 @@ function initTranslationManager(config) {
     _selectDOMElements();
     _attachEventListeners();
 
-    // Initial setup
-    if(autoloadCheckbox && window.storageManager) {
-      autoloadCheckbox.checked = window.storageManager.getAutoloadPreference();
-      if (autoloadCheckbox.checked && currentBookIdForTranslation !== null) {
-          const initialCachedTranslation = window.storageManager.loadTranslationFromLocal(currentBookIdForTranslation, currentPageIndexForTranslation);
-          if (initialCachedTranslation) {
-              console.log("Autoloading translation from cache on page load for book:", currentBookIdForTranslation);
-              originalPageContent = contentArea.innerHTML; // Store current before overwriting
-              contentArea.innerHTML = initialCachedTranslation;
-          }
-      }
+    // Initial setup for autoloading translations
+    let autoloadInitialized = false;
+    
+    function initializeAutoload() {
+        if (autoloadInitialized || !autoloadCheckbox || !window.storageManager) return;
+        
+        autoloadCheckbox.checked = window.storageManager.getAutoloadPreference();
+        if (autoloadCheckbox.checked && currentBookIdForTranslation !== null) {
+            const cachedTranslation = window.storageManager.loadTranslationFromLocal(
+                currentBookIdForTranslation, 
+                currentPageIndexForTranslation
+            );
+            
+            if (cachedTranslation && contentArea) {
+                console.log("TranslationManager: Autoloading translation from cache for book:", 
+                            currentBookIdForTranslation, 
+                            "page:", currentPageIndexForTranslation);
+                
+                // Only apply cached translation if we have actual content (not loading placeholder)
+                const isLoadingPlaceholder = contentArea.innerHTML.includes("Loading content from storage");
+                if (!isLoadingPlaceholder) {
+                    originalPageContent = contentArea.innerHTML; // Store current before overwriting
+                    contentArea.innerHTML = cachedTranslation;
+                    updateDisplayButtons();
+                    autoloadInitialized = true;
+                } else {
+                    console.log("TranslationManager: Delaying autoload until real content is available");
+                }
+            }
+        }
     }
+
+    // Listen for ebookContentLoaded event to update content references and handle autoload
+    document.addEventListener('ebookContentLoaded', (event) => {
+        console.log("TranslationManager: Detected new content loaded", event.detail);
+        // Update the original content references when new content is loaded
+        if (contentArea) {
+            console.log("TranslationManager: Updating content references from:", 
+                        trueOriginalServerContent.substring(0, 50) + "...",
+                        "to current content:", 
+                        contentArea.innerHTML.substring(0, 50) + "...");
+            
+            // Store the new content as the original content
+            trueOriginalServerContent = contentArea.innerHTML;
+            originalPageContent = trueOriginalServerContent;
+            
+            // Update the current page index
+            currentPageIndexForTranslation = event.detail.chapterIndex;
+            console.log("TranslationManager: Updated page index to:", currentPageIndexForTranslation);
+            
+            // Try autoloading translations after content is loaded
+            initializeAutoload();
+            
+            // Update buttons visibility based on new content
+            updateDisplayButtons();
+        } else {
+            console.error("TranslationManager: Content area not available when handling ebookContentLoaded");
+        }
+    });
+
+    // Try initial autoload but it may be delayed until real content is available
+    initializeAutoload();
+    
     updateDisplayButtons();
     console.log("TranslationManager initialized.");
 }

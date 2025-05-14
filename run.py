@@ -1,13 +1,11 @@
 from app import create_app
 import logging # Import the logging module
+import os
+import sys
 
 app = create_app()
 
 if __name__ == '__main__':
-    # You might want to configure host and port here for development
-    # e.g., app.run(host='0.0.0.0', port=5001, debug=True)
-    # For production, use a proper WSGI server like Gunicorn or Waitress
-    
     # Ensure debug logging is active when running with app.run(debug=True)
     if app.debug:
         app.logger.setLevel(logging.DEBUG)
@@ -15,4 +13,29 @@ if __name__ == '__main__':
         # logging.getLogger('werkzeug').setLevel(logging.DEBUG)
         app.logger.info("Flask development server running with DEBUG log level.")
 
-    app.run(debug=True) # Default Flask development server 
+    # Configure extra files to watch for changes
+    extra_files = []
+    for root, dirs, files in os.walk('app'):
+        for file in files:
+            if file.endswith('.py') or file.endswith('.html') or file.endswith('.js') or file.endswith('.css'):
+                extra_files.append(os.path.join(root, file))
+    
+    # Add templates directory
+    for root, dirs, files in os.walk('templates'):
+        for file in files:
+            if file.endswith('.html'):
+                extra_files.append(os.path.join(root, file))
+    
+    app.logger.info(f"Watching {len(extra_files)} files for changes")
+    
+    # Detect if running under debugger
+    is_debugging = 'debugpy' in sys.modules or any('debugpy' in arg for arg in sys.argv)
+    
+    if is_debugging:
+        # When debugging with VS Code, disable Flask's reloader to avoid conflicts
+        app.logger.info("Debugger detected: disabling Flask reloader")
+        app.run(debug=True, use_reloader=False)
+    else:
+        # Normal mode with hot reload enabled
+        app.logger.info("Running with hot reload enabled")
+        app.run(debug=True, use_reloader=True, extra_files=extra_files) 

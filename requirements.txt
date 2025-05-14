@@ -1,4 +1,4 @@
-Flask==3.0.0
+Flask==3.1.1
 python-dotenv==1.0.0
 # ebooklib==0.18 # Removed as EbookLib>=0.18 covers it
 EbookLib>=0.18
@@ -6,7 +6,7 @@ beautifulsoup4==4.12.3
 lxml==5.1.0
 openai==1.78.1
 requests==2.31.0
-Werkzeug==3.0.1
+Werkzeug==3.1.3
 gunicorn==21.2.0
 fugashi==1.3.0
 waitress==3.0.0 

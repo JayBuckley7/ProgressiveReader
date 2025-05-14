@@ -13,7 +13,22 @@
             "subProcess": true,
             "justMyCode": true,
             "env": {
-                "FLASK_DEBUG": "1"
+                "FLASK_DEBUG": "1",
+                "FLASK_APP": "run.py",
+                "FLASK_ENV": "development"
+            }
+        },
+        {
+            "name": "Run Flask with Hot Reload (No Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "env": {
+                "FLASK_DEBUG": "1",
+                "FLASK_APP": "run.py",
+                "FLASK_ENV": "development"
             }
         },
         {
@@ -46,6 +61,16 @@
                 "hidden": false,
                 "group": "fullstack",
                 "order": 1
+            }
+        },
+        {
+            "name": "Full-Stack: Hot Reload + Webpack",
+            "configurations": ["Run Flask with Hot Reload (No Debug)", "npm: Run Development Watch"],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "fullstack",
+                "order": 2
             }
         }
     ]

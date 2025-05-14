@@ -24,59 +24,17 @@ def upload_file():
         return jsonify({'error': 'No selected file'}), 400
 
     if file and allowed_file(file.filename):
-        book_id = str(uuid.uuid4())
-        # Ensure UPLOAD_FOLDER path is constructed correctly (relative to project root)
-        project_root = os.path.dirname(current_app.root_path)
-        upload_folder_abs = os.path.join(project_root, current_app.config['UPLOAD_FOLDER'])
-        book_folder = os.path.join(upload_folder_abs, book_id)
-        book_file_path = os.path.join(book_folder, 'book.epub')
-        cover_image_filename = None
-        title = "Untitled Book" # Default title
-
-        try:
-            if not os.path.exists(book_folder):
-                os.makedirs(book_folder)
-            
-            file.save(book_file_path)
-            current_app.logger.info(f"Saved EPUB file to: {book_file_path}")
-
-            # Get Title (Keep this simple part here, or move if desired)
-            try:
-                book = epub.read_epub(book_file_path)
-                title_meta = book.get_metadata('DC', 'title')
-                if title_meta:
-                    title = title_meta[0][0]
-            except Exception as title_e:
-                 current_app.logger.warning(f"Could not read title metadata from {book_file_path}: {title_e}")
-                 # Keep default title
-
-            # --- Call utility function for Cover extraction --- 
-            cover_image_filename = extract_and_save_cover(book_file_path, book_folder)
-            # --- End cover image extraction call --- 
-
-            current_app.logger.info(f"Persistently stored EPUB: {book_file_path} with ID: {book_id}, Title: {title}, Cover: {cover_image_filename}")
-            return jsonify({
-                'book_id': book_id, 
-                'title': title, 
-                'cover_image_filename': cover_image_filename 
-            }), 200
-
-        except Exception as e:
-            current_app.logger.error(f"Error processing or saving EPUB with ID {book_id}: {e}", exc_info=True)
-            # Cleanup partially created folder/files
-            if os.path.exists(book_file_path):
-                try: os.remove(book_file_path) 
-                except OSError: pass
-            if cover_image_filename and os.path.exists(os.path.join(book_folder, cover_image_filename)):
-                 try: os.remove(os.path.join(book_folder, cover_image_filename)) 
-                 except OSError: pass 
-            if os.path.exists(book_folder):
-                # Use shutil.rmtree for potentially non-empty folders during cleanup
-                try: shutil.rmtree(book_folder) 
-                except OSError as rm_err:
-                    current_app.logger.error(f"Error cleaning up folder {book_folder} after upload failure: {rm_err}")
-                    pass # Log error but continue 
-            return jsonify({'error': f'Could not process EPUB file: {str(e)}'}), 500
+        # MOCK ENDPOINT - No longer storing files on server
+        # Just return a mock success response to keep API compatibility
+        # All actual file processing happens client-side
+        current_app.logger.info(f"MOCK UPLOAD: Client uploaded {file.filename} - not storing on server")
+        
+        # Return values that match the expected response format
+        # The client now handles all actual processing
+        return jsonify({
+            'success': True,
+            'message': 'File ready for client-side processing.'
+        }), 200
     else:
         return jsonify({'error': 'Invalid file type. Please upload an EPUB file.'}), 400
 
@@ -100,27 +58,10 @@ def serve_book_cover(book_id, filename):
 
 @book_bp.route('/delete/<book_id>', methods=['POST'])
 def delete_book_route(book_id):
-    # Ensure uuid and shutil are imported
-    if not book_id: 
-        return jsonify({'success': False, 'error': 'Book ID is required.'}), 400
-    
-    try:
-        uuid.UUID(book_id) # Validate UUID format
-    except ValueError:
-        return jsonify({'success': False, 'error': 'Invalid Book ID format.'}), 400
-
-    # Construct path relative to project root, same as above
-    project_root = os.path.dirname(current_app.root_path)
-    book_folder_path = os.path.join(project_root, current_app.config['UPLOAD_FOLDER'], book_id)
-
-    if not os.path.exists(book_folder_path) or not os.path.isdir(book_folder_path):
-        current_app.logger.info(f"Book folder {book_folder_path} not found. Already considered deleted.") 
-        return jsonify({'success': True, 'message': 'Book not found or already deleted.'}), 200
-
-    try:
-        shutil.rmtree(book_folder_path)
-        current_app.logger.info(f"Successfully deleted book folder: {book_folder_path}") 
-        return jsonify({'success': True, 'message': 'Book deleted successfully.'}), 200
-    except Exception as e:
-        current_app.logger.error(f"Error deleting book folder {book_folder_path}: {e}", exc_info=True) 
-        return jsonify({'success': False, 'error': f'Could not delete book: {str(e)}'}), 500 
+    # MOCK DELETE ENDPOINT - No server files to delete
+    # Just return success for API compatibility
+    current_app.logger.info(f"MOCK DELETE: Client requested deletion of book ID {book_id}")
+    return jsonify({
+        'success': True,
+        'message': 'Book delete request acknowledged. Client should remove from IndexedDB.'
+    }), 200 

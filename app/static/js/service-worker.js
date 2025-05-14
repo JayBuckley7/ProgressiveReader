@@ -18,7 +18,7 @@ const PRECACHE_ASSETS = [
   '/static/js/translationManager.js',
   '/static/js/jlptHighlighter.js',
   '/static/js/readerInit.js',
-  '/static/js/epubViewer.js',
+  '/static/js/reader.js',
   '/static/js/dist/jpHighlighter.bundle.js',
   '/static/js/dist/styles.css',
   '/static/js/utils.js',

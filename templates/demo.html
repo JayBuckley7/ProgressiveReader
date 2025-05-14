@@ -1,0 +1,18 @@
+{% extends "index.html" %}
+
+{% block body_start %}
+<div class="demo-banner" style="background-color: #ffc107; color: #333; padding: 10px; text-align: center; font-weight: bold;">
+    You are viewing the Demo Version. <a href="{{ url_for('main.index') }}" style="color: #007bff; text-decoration: underline;">Back to Main App</a>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+    <script>
+        const demoBookFilenames = {{ demo_books | tojson }};
+    </script>
+{% endblock %}
+
+{# Add the demo script right at the end of the body #}
+{% block body_end %}
+    <script type="module" src="{{ url_for('static', filename='js/demo.js') }}"></script>
+{% endblock %} 
