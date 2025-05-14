@@ -25,7 +25,11 @@ Thumbs.db
 
 # Uploaded files and data
 uploads/
-*.epub
+# *.epub
+
+# Ensure demo books and their covers are NOT ignored for gcloud deployment
+!app/static/demo_books/*.epub
+!app/static/demo_books/covers/*
 
 # Downloaded vocabulary (if large and managed separately)
 # N1-N5_all.min.json
