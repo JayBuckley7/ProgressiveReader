@@ -1,326 +1,264 @@
-import { ready as dbReady } from './dbService.js';
+/* ──────────────────────────────────────────────────────────────
+ * demo.js  – lightweight “ephemeral demo” loader
+ * ────────────────────────────────────────────────────────────── */
+
+import { ready as dbReady }               from './dbService.js';
 import { getAllBooksMetadata, deleteBook } from './dbService.js';
-import { renderBookshelf } from './bookshelfUI.js';
+import { EpubProcessorWrapper }           from './epubProcessor.js';
 
 const logPrefix = '[DemoInit]';
 
-// We know we're in demo mode if this script is loaded
+/*--------------------------------------------------------------
+ | 0.  Global demo flag                                        
+ *--------------------------------------------------------------*/
 window.IS_DEMO_MODE = true;
 console.log(`${logPrefix} Setting global IS_DEMO_MODE flag to true`);
 
-// Demo book metadata
+/*--------------------------------------------------------------
+ | 1.  Demo-book descriptors                                   
+ *--------------------------------------------------------------*/
 const DEMO_BOOKS = [
-    {
-        id: 'demo-uuid-dcc-smol',
-        filename: 'dcc_smol.epub',
-        title: 'Declaration of the Rights of Man',
-        coverImage: '/static/demo_books/covers/dcc_cover.jpg',
-        description: 'French Revolution document establishing basic rights'
-    },
-    {
-        id: 'demo-uuid-wasteland-smol',
-        filename: 'wasteland_smol.epub',
-        title: 'The Waste Land',
-        coverImage: '/static/demo_books/covers/wasteland_cover.jpg',
-        description: 'T.S. Eliot\'s modernist poem'
-    },
-    {
-        id: 'demo-uuid-kusamakura-smol',
-        filename: '草枕_smol.epub',
-        title: 'Kusamakura (草枕)',
-        coverImage: '/static/demo_books/covers/kusamakura_cover.jpg',
-        description: 'Natsume Soseki\'s Japanese novel'
-    }
+  {
+    id:        'demo-uuid-dcc-smol',
+    filename:  'dcc_smol.epub',
+    title:     'Dungeon Crawler Carl – 01',
+    coverImage:'/static/demo_books/covers/dcc_cover.jpg', // fallback
+  },
+  {
+    id:        'demo-uuid-wasteland-smol',
+    filename:  'wasteland_smol.epub',
+    title:     'The Waste Land',
+    coverImage:'/static/demo_books/covers/wasteland_cover.jpg',
+  },
+  {
+    id:        'demo-uuid-kusamakura-smol',
+    filename:  '草枕_smol.epub',
+    title:     'Kusamakura (草枕)',
+    coverImage:'/static/demo_books/covers/kusamakura_cover.jpg',
+  },
 ];
 
-// Add CSS styles for demo books
+/*--------------------------------------------------------------
+ | 1a.  Preload JSZip & epub.js once so loadBook never stalls  
+ *--------------------------------------------------------------*/
+async function preloadEpubDependencies() {
+  const jszipUrl  = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  const epubjsUrl = 'https://unpkg.com/epubjs@0.3.93/dist/epub.min.js';
+
+  if (!window.JSZip) {
+    console.log(`${logPrefix} Loading JSZip…`);
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src   = jszipUrl;
+      s.async = true;
+      s.onload  = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load JSZip'));
+      document.head.appendChild(s);
+    });
+  }
+
+  if (!window.ePub) {
+    console.log(`${logPrefix} Loading epub.js…`);
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src   = epubjsUrl;
+      s.async = true;
+      s.onload  = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load epub.js'));
+      document.head.appendChild(s);
+    });
+  }
+
+  console.log(`${logPrefix} EPUB dependencies are ready`);  // from internal loader logic :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}:contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
+}
+
+/*--------------------------------------------------------------
+ | 2.  Cover extraction (purely in-memory)                      
+ *--------------------------------------------------------------*/
+async function attachCoverImage(book) {
+  try {
+    const res = await fetch(`/static/demo_books/${book.filename}`);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const buf  = await res.arrayBuffer();
+    const proc = new EpubProcessorWrapper();
+    await proc.loadBook(buf);             // guaranteed not to stall
+    const coverBlob = await proc.getCoverBlob();
+    if (coverBlob) book.coverImage = URL.createObjectURL(coverBlob);
+  } catch (err) {
+    console.warn(`${logPrefix} cover extraction failed for ${book.title}:`, err);
+  }
+}
+
+/*--------------------------------------------------------------
+ | 3.  Visual styling                                           
+ *--------------------------------------------------------------*/
 function addDemoBookStyles() {
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-        .book-item.demo-book {
-            position: relative;
-            border: 2px solid #4CAF50;
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
-        }
-        .book-item.demo-book::after {
-            content: "DEMO";
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: #4CAF50;
-            color: white;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 0.7em;
-            font-weight: bold;
-        }
-        .demo-badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background-color: #4CAF50;
-            color: white;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 0.7em;
-            font-weight: bold;
-        }
-    `;
-    document.head.appendChild(styleEl);
-}
-
-// Function to mark non-demo books as locked
-function lockNonDemoBooks() {
-    const bookItems = document.querySelectorAll('.book-item:not(.demo-book)');
-    bookItems.forEach(bookItem => {
-        bookItem.classList.add('locked-book');
-    });
-}
-
-// Add CSS styles for locked books
-function addLockedBookStyles() {
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-        .book-item.locked-book {
-            position: relative;
-            opacity: 0.5;
-        }
-        .book-item.locked-book::after {
-            content: "DEMO ONLY";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            pointer-events: none;
-        }
-    `;
-    document.head.appendChild(styleEl);
-}
-
-// Set up a MutationObserver to watch for bookshelf changes
-function setupBookshelfObserver() {
-    const recentBooksGrid = document.getElementById('recent-books-grid');
-    if (!recentBooksGrid) {
-        console.warn(`${logPrefix} Cannot find recent-books-grid to observe.`);
-        return;
+  const style = document.createElement('style');
+  style.textContent = `
+    .book-item.demo-book {
+      position: relative;
+      border: 2px solid #4CAF50;
+      box-shadow: 0 0 8px rgba(76,175,80,.5);
     }
-
-    // Create an observer instance
-    const observer = new MutationObserver((mutations) => {
-        // If we observe changes to the grid, check and lock non-demo books
-        lockNonDemoBooks();
-    });
-
-    // Configuration of the observer:
-    const config = { childList: true, subtree: true };
-
-    // Start observing
-    observer.observe(recentBooksGrid, config);
-    console.log(`${logPrefix} Bookshelf observer setup complete.`);
+    .book-item.demo-book::after {
+      content: "DEMO";
+      position: absolute;
+      top: 5px; right: 5px;
+      background: #4CAF50; color: #fff;
+      padding: 2px 6px; border-radius: 3px;
+      font-size: .7em; font-weight: 700;
+    }
+    .book-item.locked-book {
+      position: relative; opacity: .5;
+    }
+    .book-item.locked-book::after {
+      content: "DEMO ONLY";
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%) rotate(-30deg);
+      background: rgba(0,0,0,.7); color: #fff;
+      padding: 5px 12px; border-radius: 4px;
+      font-weight: 700; pointer-events: none;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
-/**
- * Creates a book item DOM element for a demo book
- */
+/*--------------------------------------------------------------
+ | 4.  DOM helpers                                              
+ *--------------------------------------------------------------*/
 function createDemoBookElement(book) {
-    // Create the main book item container
-    const bookItemDiv = document.createElement('div');
-    bookItemDiv.className = 'book-item demo-book';
-    bookItemDiv.dataset.bookId = book.id;
-    bookItemDiv.setAttribute('role', 'listitem');
+  const item = document.createElement('div');
+  item.className   = 'book-item demo-book';
+  item.dataset.bookId = book.id;
 
-    // Create cover container to maintain consistent sizing
-    const coverContainer = document.createElement('div');
-    coverContainer.className = 'demo-cover-container';
-    coverContainer.style.position = 'relative';
-    coverContainer.style.height = '180px';
-    coverContainer.style.overflow = 'hidden';
-    coverContainer.style.backgroundColor = '#f8f8f8';
-    coverContainer.style.display = 'flex';
-    coverContainer.style.justifyContent = 'center';
-    coverContainer.style.alignItems = 'center';
+  // cover container
+  const coverBox = document.createElement('div');
+  coverBox.style.cssText = `
+    position:relative;height:180px;overflow:hidden;
+    background:#f8f8f8;display:flex;justify-content:center;align-items:center;
+  `;
+  if (book.coverImage) {
+    const img = document.createElement('img');
+    img.src   = book.coverImage;
+    img.alt   = `Cover for ${book.title}`;
+    img.style.cssText = 'max-height:100%;max-width:100%;object-fit:cover';
+    img.onerror = () => { img.remove(); addLetterFallback(); };
+    coverBox.appendChild(img);
+  } else {
+    addLetterFallback();
+  }
+  function addLetterFallback() {
+    const div = document.createElement('div');
+    div.textContent = book.title[0].toUpperCase();
+    div.style.cssText = 'font: bold 48px/1 sans-serif;color:#666';
+    coverBox.appendChild(div);
+  }
+  item.appendChild(coverBox);
 
-    // Create and add cover image if available
-    if (book.coverImage) {
-        const img = document.createElement('img');
-        img.className = 'demo-cover-image';
-        img.src = book.coverImage;
-        img.alt = `Cover for ${book.title}`;
-        img.style.maxHeight = '100%';
-        img.style.maxWidth = '100%';
-        img.style.objectFit = 'cover';
-        
-        // Handle loading error gracefully
-        img.onerror = () => {
-            console.warn(`${logPrefix} Failed to load cover image for ${book.title}, using fallback`);
-            img.style.display = 'none';
-            
-            // Create fallback text cover
-            const fallbackCover = document.createElement('div');
-            fallbackCover.textContent = book.title.substring(0, 1).toUpperCase();
-            fallbackCover.style.fontSize = '48px';
-            fallbackCover.style.color = '#666';
-            fallbackCover.style.fontWeight = 'bold';
-            coverContainer.appendChild(fallbackCover);
-        };
-        
-        coverContainer.appendChild(img);
-    } else {
-        // If no cover image specified, use the first letter as a placeholder
-        const textCover = document.createElement('div');
-        textCover.textContent = book.title.substring(0, 1).toUpperCase();
-        textCover.style.fontSize = '48px';
-        textCover.style.color = '#666';
-        textCover.style.fontWeight = 'bold';
-        coverContainer.appendChild(textCover);
-    }
-    
-    // Add the DEMO badge
-    const badgeDiv = document.createElement('div');
-    badgeDiv.className = 'demo-badge';
-    badgeDiv.textContent = 'DEMO';
-    badgeDiv.style.position = 'absolute';
-    badgeDiv.style.top = '5px';
-    badgeDiv.style.right = '5px';
-    badgeDiv.style.backgroundColor = '#4CAF50';
-    badgeDiv.style.color = 'white';
-    badgeDiv.style.padding = '3px 6px';
-    badgeDiv.style.borderRadius = '3px';
-    badgeDiv.style.fontSize = '0.7rem';
-    badgeDiv.style.fontWeight = 'bold';
-    badgeDiv.style.zIndex = '2';
-    coverContainer.appendChild(badgeDiv);
-    
-    bookItemDiv.appendChild(coverContainer);
+  // title link
+  const link = document.createElement('a');
+  link.href        = `/read/${book.id}/0`;
+  link.textContent = book.title;
+  link.style.cssText = `
+    display:block;padding:8px 0 2px 0;
+    font-weight:700;color:#333;text-decoration:none;
+  `;
+  item.appendChild(link);
 
-    // Create title link
-    const bookLink = document.createElement('a');
-    bookLink.href = `/read/${book.id}/0`;
-    bookLink.textContent = book.title;
-    bookLink.style.fontWeight = 'bold'; 
-    bookLink.style.textDecoration = 'none';
-    bookLink.style.color = '#333';
-    bookLink.style.display = 'block';
-    bookLink.style.padding = '8px 0 2px 0';
-    bookLink.title = book.description || '';
-    bookItemDiv.appendChild(bookLink);
-
-    // Add description as small text
-    if (book.description) {
-        const descDiv = document.createElement('div');
-        descDiv.className = 'book-description';
-        descDiv.textContent = book.description;
-        descDiv.style.fontSize = '0.8em';
-        descDiv.style.color = '#666';
-        descDiv.style.marginTop = '2px';
-        descDiv.style.height = '2.4em';
-        descDiv.style.overflow = 'hidden';
-        descDiv.style.textOverflow = 'ellipsis';
-        bookItemDiv.appendChild(descDiv);
-    }
-
-    return bookItemDiv;
+  return item;
 }
 
-/**
- * Adds demo books directly to the bookshelf DOM
- */
+/*--------------------------------------------------------------
+ | 5.  Insert demo books                                        
+ *--------------------------------------------------------------*/
 async function addDemoBooksToDOM() {
-    const recentBooksGrid = document.getElementById('recent-books-grid');
-    if (!recentBooksGrid) {
-        console.error(`${logPrefix} Cannot find bookshelf grid element.`);
-        return;
-    }
+  const grid = document.getElementById('recent-books-grid');
+  if (!grid) return console.error(`${logPrefix} bookshelf grid not found`);
 
-    // Clear "empty bookshelf" message if present
-    if (recentBooksGrid.innerHTML.includes('Your bookshelf is empty')) {
-        recentBooksGrid.innerHTML = '';
-    }
+  if (grid.innerHTML.includes('Your bookshelf is empty')) {
+    grid.innerHTML = '';
+  }
 
-    // Add each demo book to the bookshelf
-    DEMO_BOOKS.forEach(book => {
-        console.log(`${logPrefix} Adding demo book to DOM: ${book.title}`);
-        const bookElement = createDemoBookElement(book);
-        recentBooksGrid.appendChild(bookElement);
-    });
-
-    console.log(`${logPrefix} All demo books added to DOM.`);
+  DEMO_BOOKS.forEach(book => {
+    console.log(`${logPrefix} Injecting demo book: ${book.title}`);
+    grid.appendChild(createDemoBookElement(book));
+  });
 }
 
-/**
- * Deletes any demo books that might have been saved to IndexedDB
- * from previous versions of the app
- */
+function lockNonDemoBooks() {
+  document
+    .querySelectorAll('.book-item:not(.demo-book)')
+    .forEach(el => el.classList.add('locked-book'));
+}
+
+/*--------------------------------------------------------------
+ | 6.  Observe bookshelf mutations                             
+ *--------------------------------------------------------------*/
+function setupBookshelfObserver() {
+  const grid = document.getElementById('recent-books-grid');
+  if (!grid) return console.warn(`${logPrefix} cannot observe grid`);
+
+  new MutationObserver(lockNonDemoBooks)
+    .observe(grid, { childList:true, subtree:true });
+
+  console.log(`${logPrefix} Bookshelf observer active`);
+}
+
+/*--------------------------------------------------------------
+ | 7.  Clean up old persistent demo blobs                       
+ *--------------------------------------------------------------*/
 async function cleanupOldDemoBooks() {
-    console.log(`${logPrefix} Checking for old demo books in IndexedDB to clean up...`);
-    
-    try {
-        // Get all books from IndexedDB
-        const allBooks = await getAllBooksMetadata();
-        
-        // Find books that look like demo books
-        const demoBooksToDelete = allBooks.filter(book => 
-            // Identify by known demo IDs
-            DEMO_BOOKS.some(demoBook => demoBook.id === book.id) ||
-            // Or by the isDemo flag that was previously used
-            book.isDemo === true ||
-            // Or by ID patterns like "demo-" prefix
-            (book.id && book.id.toString().includes('demo-'))
-        );
-        
-        if (demoBooksToDelete.length > 0) {
-            console.log(`${logPrefix} Found ${demoBooksToDelete.length} old demo book(s) to clean up:`, 
-                demoBooksToDelete.map(b => b.title || b.id));
-                
-            // Delete them one by one
-            for (const book of demoBooksToDelete) {
-                await deleteBook(book.id);
-                console.log(`${logPrefix} Deleted old demo book: ${book.title || book.id}`);
-            }
-            
-            console.log(`${logPrefix} Successfully cleaned up all old demo books from IndexedDB.`);
-        } else {
-            console.log(`${logPrefix} No old demo books found in IndexedDB.`);
-        }
-    } catch (error) {
-        console.error(`${logPrefix} Error cleaning up old demo books:`, error);
+  console.log(`${logPrefix} Cleaning legacy demo blobs…`);
+  try {
+    const all = await getAllBooksMetadata();
+    const toDel = all.filter(rec =>
+      DEMO_BOOKS.some(d => d.id === rec.id) ||
+      rec.isDemo === true ||
+      String(rec.id).startsWith('demo-')
+    );
+    for (const rec of toDel) {
+      await deleteBook(rec.id);
+      console.log(`${logPrefix} Removed legacy demo blob: ${rec.title||rec.id}`);
     }
+  } catch (err) {
+    console.error(`${logPrefix} cleanup failed:`, err);
+  }
 }
 
-// Start the demo loading process
+/*--------------------------------------------------------------
+ | 8.  Initialise demo mode                                     
+ *--------------------------------------------------------------*/
 async function initDemo() {
-    // Add the CSS styles
-    addDemoBookStyles();
-    addLockedBookStyles();
-    
-    // Set up the MutationObserver to watch for bookshelf changes
-    setupBookshelfObserver();
+  addDemoBookStyles();
+  setupBookshelfObserver();
 
-    console.log(`${logPrefix} Starting demo initialization...`);
-    
-    // Wait for the initial bookshelf render
-    await dbReady;
-    
-    // Clean up any old demo books from previous versions of the app
-    await cleanupOldDemoBooks();
-    
-    // First, let the regular bookshelf render (it will show user's books)
-    // Then we add our demo books directly to the DOM
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Add demo books to the DOM
-    await addDemoBooksToDOM();
-    
-    // Lock any non-demo books
-    lockNonDemoBooks();
-    
-    console.log(`${logPrefix} Demo initialization complete.`);
+  console.log(`${logPrefix} Waiting for bookshelf render…`);
+  await dbReady;                    
+  await cleanupOldDemoBooks();
+
+  // preload the ZIP + EPUB libraries so attachCoverImage never stalls
+  await preloadEpubDependencies();
+
+  // tiny pause so the UI settles
+  await new Promise(r => setTimeout(r, 500));
+
+  // now extract covers in parallel and inject
+  await Promise.all(DEMO_BOOKS.map(attachCoverImage));
+  await addDemoBooksToDOM();
+  lockNonDemoBooks();
+
+  console.log(`${logPrefix} Demo initialization complete.`);
 }
 
-// Start the initialization
-initDemo(); 
+/*--------------------------------------------------------------
+ | 9.  Revoke blob-URLs on unload                               
+ *--------------------------------------------------------------*/
+window.addEventListener('beforeunload', () => {
+  DEMO_BOOKS.forEach(b => {
+    if (b.coverImage?.startsWith('blob:')) URL.revokeObjectURL(b.coverImage);
+  });
+});
+
+/*--------------------------------------------------------------*/
+initDemo();
