@@ -247,6 +247,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fetch book data from database
     async function getBookData(bookId) {
+        if (window.IS_DEMO_MODE && typeof window.getDemoBookFile === 'function') {
+            console.log(`readerJS: Demo mode active. Attempting to load demo book ID: ${bookId} from static file.`);
+            const demoBookData = await window.getDemoBookFile(bookId);
+            if (demoBookData) {
+                console.log(`readerJS: Successfully fetched demo book data for ${bookId} from static file.`);
+                // Ensure the content is a Blob, which loadBookWithProcessor expects
+                if (!(demoBookData.content instanceof Blob)) {
+                    showError(`Demo book data for ${bookId} is not in the expected Blob format.`);
+                    return null;
+                }
+                return demoBookData; // This object should have a `content` property (Blob)
+            }
+            console.log(`readerJS: Demo book ID ${bookId} not found by getDemoBookFile or not in demo mode. Falling back to IndexedDB.`);
+        }
+
         try {
             console.log(`readerJS: Fetching book with ID: ${bookId} from IndexedDB...`);
             const bookData = await getBook(bookId);

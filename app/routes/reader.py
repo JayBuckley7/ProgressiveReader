@@ -46,6 +46,20 @@ def reader(book_id: str, item_index: int):
     )
 
 
+@reader_bp.route("/demo/read/<book_id>/<int:item_index>", endpoint="read_demo_item")
+def reader_demo(book_id: str, item_index: int):
+    return render_template(
+        "reader.html",
+        book_id          = book_id,
+        current_index    = item_index,
+        is_demo          = True,        # -- new flag
+        model_name       = "demo",
+        show_jlpt_filter = False,
+        jlpt_enabled     = False,
+        openai_key_configured = False,
+    )
+
+
 # ──────────────────────────────────────────────────────────────────────────
 #  Legacy /image/ route (should never be called)
 # ──────────────────────────────────────────────────────────────────────────

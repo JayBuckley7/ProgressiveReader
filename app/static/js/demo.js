@@ -1,5 +1,5 @@
 /* ──────────────────────────────────────────────────────────────
- * demo.js  – lightweight “ephemeral demo” loader
+ * demo.js  – lightweight "ephemeral demo" loader
  * ────────────────────────────────────────────────────────────── */
 
 import { ready as dbReady }               from './dbService.js';
@@ -158,7 +158,7 @@ function createDemoBookElement(book) {
 
   // title link
   const link = document.createElement('a');
-  link.href        = `/read/${book.id}/0`;
+  link.href        = `/demo/read/${book.id}/0`;
   link.textContent = book.title;
   link.style.cssText = `
     display:block;padding:8px 0 2px 0;

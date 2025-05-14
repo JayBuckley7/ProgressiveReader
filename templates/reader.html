@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% if is_demo %}
+  <script>window.IS_DEMO_MODE = true;</script>
+  <script src="{{ url_for('static', filename='js/demo_reader.js') }}"></script>
+{% endif %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPUB Content</title>
