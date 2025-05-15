@@ -446,9 +446,11 @@ export function wireUpToggle(contentElement: HTMLElement): void {
         return;
     }
     
-    // Store original content for restoration
-    const originalContent = contentElement.innerHTML;
-    contentElement.setAttribute('data-original-content', originalContent);
+    // DO NOT set data-original-content here. 
+    // It should be set by highlightContent when it's actually about to modify the content,
+    // or if we explicitly want to save the state before the first highlight operation triggered by the toggle.
+    // const originalContent = contentElement.innerHTML; 
+    // contentElement.setAttribute('data-original-content', originalContent);
     
     toggleCheckbox.addEventListener('change', async function() {
         const isEnabled = this.checked;
@@ -465,10 +467,8 @@ export function wireUpToggle(contentElement: HTMLElement): void {
             
             if (data.success) {
                 if (isEnabled) {
-                    // Save current content before highlighting if not already saved
-                    if (!contentElement.getAttribute('data-original-content')) {
-                        contentElement.setAttribute('data-original-content', contentElement.innerHTML);
-                    }
+                    // highlightContent will handle setting data-original-content if it's not already set
+                    // and if it's operating on stable content due to the deferral logic in jlptHighlighter.js.
                     await highlightContent(contentElement);
                 } else {
                     // Remove highlighting by restoring original content

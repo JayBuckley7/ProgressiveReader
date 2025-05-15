@@ -107,9 +107,11 @@ function initJlptHighlighter(config) {
     trueOriginalServerContentForJlpt = config.trueOriginalServerContent;
 
     // Save original content for restoring later
-    if (contentAreaJlpt) {
-        contentAreaJlpt.setAttribute('data-original-content', contentAreaJlpt.innerHTML);
-    }
+    // This initial save might be too early if contentArea is not yet populated.
+    // The TypeScript module's highlightContent will handle saving the attribute more reliably.
+    // if (contentAreaJlpt) {
+    //     contentAreaJlpt.setAttribute('data-original-content', contentAreaJlpt.innerHTML);
+    // }
 
     _selectDOMElementsForJlpt();
     
@@ -117,31 +119,71 @@ function initJlptHighlighter(config) {
         console.warn("JLPT toggle checkbox not found, highlighter not fully initialized.");
     } else {
         // Initialize and wire up the TypeScript implementation
-        if (window.jpHighlighter) {
+        if (window.jpHighlighter && typeof window.jpHighlighter.initialize === 'function') {
             window.jpHighlighter.initialize(contentAreaJlpt).then(() => {
-                window.jpHighlighter.wireUpToggle(contentAreaJlpt);
+                if (typeof window.jpHighlighter.wireUpToggle === 'function') {
+                    window.jpHighlighter.wireUpToggle(contentAreaJlpt);
+                } else {
+                    console.error("JP Highlighter module's wireUpToggle not found!");
+                }
                 
+                // If checkbox is checked on load, apply highlights AFTER actual content is loaded.
                 if (jlptToggleCheckbox.checked) {
-                    console.log("JLPT highlighting enabled on page load, applying highlights...");
-                    if (contentAreaJlpt) {
-                        window.jpHighlighter.highlightContent(contentAreaJlpt);
+                    console.log("JLPT highlighting was enabled on page load. Waiting for content to apply...");
+                    
+                    const applyInitialHighlights = (event) => {
+                        // Check again in case the user unchecked it while content was loading
+                        if (jlptToggleCheckbox.checked && contentAreaJlpt) {
+                            console.log("ebookContentLoaded received (or init), applying initial JLPT highlights.", event ? event.detail : '');
+                            if (window.jpHighlighter && typeof window.jpHighlighter.highlightContent === 'function'){
+                                window.jpHighlighter.highlightContent(contentAreaJlpt);
+                            } else {
+                                console.error("JP Highlighter module's highlightContent not found during initial application!");
+                            }
+                        }
+                        // Remove this specific listener after it runs or if checkbox got unchecked
+                        document.removeEventListener('ebookContentLoaded', applyInitialHighlights);
+                    };
+
+                    // Check if content might already be loaded (e.g. navigating back to a page)
+                    // A simple check: if it's not the loading placeholder. This is a heuristic.
+                    if (contentAreaJlpt && !contentAreaJlpt.innerHTML.includes("Loading content from storage") && contentAreaJlpt.innerHTML.trim() !== "") {
+                        applyInitialHighlights(null); // Pass null event if called directly
                     } else {
-                        console.error("Cannot apply JLPT highlights on load: contentArea not ready.");
+                        document.addEventListener('ebookContentLoaded', applyInitialHighlights, { once: true });
                     }
                 }
+            }).catch(error => {
+                console.error("Error initializing JP Highlighter module:", error);
+                 // Fallback to old implementation if TypeScript init fails
+                _legacyInitFallback();
             });
         } else {
-            console.error("JP Highlighter module not loaded!");
-            // Fallback to old implementation
-            _attachJlptEventListeners();
-            if (jlptToggleCheckbox.checked) {
-                console.log("Using legacy JLPT highlighting (TypeScript module not loaded)");
-                if (contentAreaJlpt) fetchAndApplyJlptHighlights();
-                else console.error("Cannot apply JLPT highlights on load: contentArea not ready.");
-            }
+            console.error("JP Highlighter module (window.jpHighlighter) or its initialize function not loaded!");
+            _legacyInitFallback();
         }
     }
     console.log("JlptHighlighter initialized.");
+}
+
+function _legacyInitFallback() {
+    console.log("Falling back to legacy JLPT highlighter initialization.");
+    _attachJlptEventListeners(); // This is currently empty, relies on TS version mostly
+    if (jlptToggleCheckbox && jlptToggleCheckbox.checked) {
+        console.log("Using legacy JLPT highlighting (TypeScript module not loaded or init failed)");
+        // For legacy, also ensure content is loaded before applying
+        const applyLegacyInitialHighlights = () => {
+            if (jlptToggleCheckbox.checked && contentAreaJlpt) {
+                fetchAndApplyJlptHighlights();
+            }
+            document.removeEventListener('ebookContentLoaded', applyLegacyInitialHighlights);
+        };
+        if (contentAreaJlpt && !contentAreaJlpt.innerHTML.includes("Loading content from storage") && contentAreaJlpt.innerHTML.trim() !== "") {
+            applyLegacyInitialHighlights();
+        } else {
+            document.addEventListener('ebookContentLoaded', applyLegacyInitialHighlights, { once: true });
+        }
+    }
 }
 
 // Legacy implementation kept for fallback
