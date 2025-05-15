@@ -153,7 +153,9 @@ async function fetchAndApplyJlptHighlights() {
     
     const getCookieFunc = window.appUtils ? window.appUtils.getCookie : getCookie;
     const jpdbApiKey = getCookieFunc('jpdb_api_key')?.trim();
-    if (!jpdbApiKey) {
+    
+    // In demo mode, we don't need a real key as calls are mocked.
+    if (!jpdbApiKey && !window.IS_DEMO_MODE) { 
         alert('JPDB API Key is not set. Please set it in settings.');
         if (jlptToggleCheckbox) jlptToggleCheckbox.checked = false;
         return;

@@ -251,7 +251,12 @@ async function initDemoReader() {
 
     // Modify Server Key Status for demo mode in Settings Modal
     const apiKeyInput = document.getElementById('openai-key');
+    const modelSelect = document.getElementById('openai-model');
+    const jpdbApiKeyInput = document.getElementById('jpdb-api-key'); // Added for JLPT settings
+
     if (apiKeyInput) {
+        apiKeyInput.disabled = true;
+        apiKeyInput.title = 'Disabled in Demo Mode';
         const statusParagraph = apiKeyInput.nextElementSibling; // This should be the <p> tag
 
         if (statusParagraph && statusParagraph.tagName === 'P' && statusParagraph.textContent.includes('Server Key Status:')) {
@@ -275,6 +280,35 @@ async function initDemoReader() {
         }
     } else {
         console.warn('[DemoReader] Could not find OpenAI key input field (openai-key) in settings modal.');
+    }
+
+    if (modelSelect) {
+        modelSelect.disabled = true;
+        modelSelect.title = 'Disabled in Demo Mode';
+        console.log('[DemoReader] Disabled OpenAI Model select in Settings Modal for demo mode.');
+    } else {
+        console.warn('[DemoReader] Could not find OpenAI model select field (openai-model) in settings modal.');
+    }
+
+    if (jpdbApiKeyInput) {
+        jpdbApiKeyInput.disabled = true;
+        jpdbApiKeyInput.title = 'Disabled in Demo Mode';
+        // Optionally, clear the value or set a placeholder
+        // jpdbApiKeyInput.value = ''; 
+        // jpdbApiKeyInput.placeholder = 'Disabled in Demo';
+        console.log('[DemoReader] Disabled JPDB API Key input in Settings Modal for demo mode.');
+    } else {
+        console.warn('[DemoReader] Could not find JPDB API Key input field (jpdb-api-key) in settings modal.');
+    }
+
+    // Set a dummy JPDB API key cookie in demo mode to prevent alerts from highlighter if it checks cookies.
+    // The actual API calls are mocked, so this key is not used.
+    if (window.IS_DEMO_MODE) {
+        const jpdbCookie = getCookie('jpdb_api_key');
+        if (!jpdbCookie || jpdbCookie.trim() === '') {
+            document.cookie = "jpdb_api_key=demo_mode_key;path=/";
+            console.log('[DemoReader] Set dummy jpdb_api_key cookie for demo mode.');
+        }
     }
 }
 

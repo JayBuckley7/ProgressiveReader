@@ -156,17 +156,26 @@ function createDemoBookElement(book) {
   }
   item.appendChild(coverBox);
 
-  // title link
-  const link = document.createElement('a');
-  link.href        = `/demo/read/${book.id}/0`;
-  link.textContent = book.title;
-  link.style.cssText = `
+  // book title (not a link itself anymore)
+  const titleElement = document.createElement('p'); // Using <p> for consistency
+  titleElement.textContent = book.title;
+  titleElement.style.cssText = `
     display:block;padding:8px 0 2px 0;
     font-weight:700;color:#333;text-decoration:none;
-  `;
-  item.appendChild(link);
+  `; // Retain styling but it's not an <a>
+  item.appendChild(titleElement);
 
-  return item;
+  // Create the main link that wraps the item
+  const linkWrapper = document.createElement('a');
+  linkWrapper.href = `/demo/read/${book.id}/0`;
+  linkWrapper.className = 'book-item-link'; // For consistency and potential styling
+  linkWrapper.setAttribute('aria-label', `Read ${book.title || 'Untitled Demo Book'}`);
+  linkWrapper.style.textDecoration = 'none'; // Ensure no underline for the wrapper
+  linkWrapper.style.color = 'inherit'; // Inherit color to avoid default link blue on everything
+
+  linkWrapper.appendChild(item);
+
+  return linkWrapper; // Return the link that now wraps the item
 }
 
 /*--------------------------------------------------------------

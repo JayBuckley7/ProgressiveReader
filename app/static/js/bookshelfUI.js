@@ -60,6 +60,13 @@ export async function renderBookshelf() {
 
         filteredBooksMetadata.forEach(book => {
             console.log(`${logPrefix} Processing book:`, book);
+
+            // Create the link element first
+            const bookLink = document.createElement('a');
+            bookLink.href = `/read/${book.id}/0`; 
+            bookLink.className = 'book-item-link'; // Add a class for potential styling
+            bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
+
             const bookItemDiv = document.createElement('div');
             bookItemDiv.className = 'book-item';
             bookItemDiv.dataset.bookId = book.id;
@@ -96,17 +103,18 @@ export async function renderBookshelf() {
                 bookItemDiv.appendChild(noCoverDiv);
             }
 
-            const bookLink = document.createElement('a');
-            // Point to the correct reader route with the starting index 0
-            bookLink.href = `/read/${book.id}/0`; 
-            bookLink.textContent = book.title || 'Untitled Book';
-            bookItemDiv.appendChild(bookLink);
+            // Add title text to the book item div, not as a separate link
+            const titleElement = document.createElement('p'); // Or h3, span, etc.
+            titleElement.className = 'book-item-title';
+            titleElement.textContent = book.title || 'Untitled Book';
+            bookItemDiv.appendChild(titleElement);
 
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
             deleteBtn.textContent = 'X';
             deleteBtn.setAttribute('aria-label', `Delete ${book.title || 'Untitled Book'}`); // Accessibility
             deleteBtn.onclick = async (e) => {
+                e.preventDefault(); // Prevent link navigation when clicking delete
                 e.stopPropagation(); // Prevent triggering link navigation
                 if (confirm(`Are you sure you want to delete "${book.title}"? This cannot be undone.`)) {
                     try {
@@ -121,7 +129,9 @@ export async function renderBookshelf() {
             };
             bookItemDiv.appendChild(deleteBtn);
 
-            recentBooksGrid.appendChild(bookItemDiv);
+            // Append the book item div to the link, then the link to the grid
+            bookLink.appendChild(bookItemDiv);
+            recentBooksGrid.appendChild(bookLink);
         });
 
         console.log(`${logPrefix} Finished rendering books.`);

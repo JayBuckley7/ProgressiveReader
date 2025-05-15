@@ -337,7 +337,7 @@ function _attachEventListeners() {
 
     if (translateButton) {
         translateButton.addEventListener('click', () => {
-            if (!apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
+            if (!window.IS_DEMO_MODE && !apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
                  alert('Please configure your OpenAI API key in Settings.'); return;
             }
             const settings = {
@@ -351,7 +351,7 @@ function _attachEventListeners() {
 
     if (translateCefrButton) {
         translateCefrButton.addEventListener('click', () => {
-             if (!apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
+             if (!window.IS_DEMO_MODE && !apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
                  alert('Please configure your OpenAI API key in Settings.'); return;
             }
             const cefrIndex = getCookieFunc('cefr_index') || (defaultSettings ? defaultSettings.cefrIndex : 3);
