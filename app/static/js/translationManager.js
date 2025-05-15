@@ -340,6 +340,7 @@ function _attachEventListeners() {
             if (!window.IS_DEMO_MODE && !apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
                  alert('Please configure your OpenAI API key in Settings.'); return;
             }
+            localStorage.setItem('lastTranslationMethod', 'standard'); // Store method
             const settings = {
                 api_key: getCookieFunc('openai_api_key') || '',
                 model: getCookieFunc('openai_model') || serverDefaultModelForTranslation,
@@ -354,6 +355,7 @@ function _attachEventListeners() {
              if (!window.IS_DEMO_MODE && !apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
                  alert('Please configure your OpenAI API key in Settings.'); return;
             }
+            localStorage.setItem('lastTranslationMethod', 'cefr'); // Store method
             const cefrIndex = getCookieFunc('cefr_index') || (defaultSettings ? defaultSettings.cefrIndex : 3);
             const settings = {
                 api_key: getCookieFunc('openai_api_key') || '',
@@ -528,5 +530,39 @@ window.translationManager = {
     getOriginalPageContent: () => originalPageContent,
     getTrueOriginalServerContent: () => trueOriginalServerContent,
     setOriginalPageContent: (content) => { originalPageContent = content; }, // For highlighter to restore to
-    setContentAreaHTML: (html) => { if(contentArea) contentArea.innerHTML = html; }
+    setContentAreaHTML: (html) => { if(contentArea) contentArea.innerHTML = html; },
+    triggerTranslation: (method) => { // New function for smart translate
+        const getCookieFunc = window.appUtils ? window.appUtils.getCookie : getCookie;
+        const defaultSettings = window.settingsModalManager ? window.settingsModalManager.DEFAULT_SETTINGS_MODAL : DEFAULT_SETTINGS_MODAL;
+        
+        if (!window.IS_DEMO_MODE && !apiKeyIsConfigured && !getCookieFunc('openai_api_key')) {
+            alert('Please configure your OpenAI API key in Settings.'); return;
+        }
+
+        let effectiveMethod = method;
+        if (window.IS_DEMO_MODE && method === 'standard') {
+            console.log('[TranslationManager] Demo mode: Forcing standard translate to CEFR C2.');
+            effectiveMethod = 'cefr'; 
+            // The CEFR level will be set to C2 equivalent below if effectiveMethod is 'cefr'
+        }
+
+        let settings = {
+            api_key: getCookieFunc('openai_api_key') || '',
+            model: getCookieFunc('openai_model') || serverDefaultModelForTranslation,
+            target_language: getCookieFunc('target_language') || (defaultSettings ? defaultSettings.language : 'Japanese'),
+        };
+
+        if (effectiveMethod === 'cefr') {
+            let cefrIndexToUse = getCookieFunc('cefr_index') || (defaultSettings ? defaultSettings.cefrIndex : 3); // Default B2
+            // If it was a standard call forced to CEFR in demo, ensure C2 is used.
+            if (window.IS_DEMO_MODE && method === 'standard') {
+                cefrIndexToUse = 5; // Index for C2 (A1=0, A2=1, B1=2, B2=3, C1=4, C2=5)
+            }
+            settings.cefr_level = CEFR_LEVELS_TRANSLATION[cefrIndexToUse];
+            localStorage.setItem('lastTranslationMethod', 'cefr'); 
+        } else { // This 'else' handles the original 'standard' method if not in demo or not forced
+            localStorage.setItem('lastTranslationMethod', 'standard'); 
+        }
+        callTranslateAPI(settings);
+    }
 }; 

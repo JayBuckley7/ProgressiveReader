@@ -6,12 +6,11 @@
     <div class="nav-left">
         <button id="toggle-drawer-btn" class="toggle-btn" title="Table of Contents" aria-label="Toggle Table of Contents">&#9776;</button>
         <button id="toggle-settings-btn" class="toggle-btn" title="Settings" aria-label="Toggle Settings">&#9881;</button>
-        <a href="{{ url_for('main.index') }}">Back to Upload</a>
-        <!-- Autoload Preference Checkbox -->
-        <div class="autoload-pref">
-            <input type="checkbox" id="autoload-checkbox" title="Automatically load cached translations when navigating">
-            <label for="autoload-checkbox">Autoload Translations</label>
-        </div>
+        <a href="{{ url_for('main.index') }}">Back to Bookshelf</a>
+        
+        <button id="smart-translate-btn" class="toggle-btn" title="Translate using the last selected method (Standard or CEFR). Choose method in Settings." aria-label="Translate page using last method">Translate</button>
+
+        <!-- Autoload Preference Checkbox REMOVED -->
 
         <!-- JLPT Highlighting Toggle (Visibility controlled by JS) -->
         {# Only render if jlpt_enabled is passed and true, or handled by JS config #}
@@ -23,7 +22,7 @@
     </div>
     {% else %}
     {# Placeholder for bottom-left content #}
-    <a href="{{ url_for('main.index') }}">Back to Upload</a>
+    <a href="{{ url_for('main.index') }}">Back to Bookshelf</a>
     {% endif %}
 
     <span>Page {{ current_index + 1 }} of {{ total_items }}</span>

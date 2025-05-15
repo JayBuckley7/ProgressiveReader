@@ -458,4 +458,90 @@ document.addEventListener('DOMContentLoaded', () => {
         
         return document.body.dataset.bookId;
     }
+
+    // --- Swipe Controls ---
+    let touchstartX = 0;
+    let touchendX = 0;
+    let touchstartY = 0;
+    let touchendY = 0;
+    const swipeThreshold = 50; // Minimum distance for a swipe
+    const swipeMaxVertical = 75; // Maximum vertical travel for a horizontal swipe
+
+    const contentWrapper = document.querySelector('.content-wrapper') || document.body;
+
+    function handleGesture() {
+        const swipeLength = touchendX - touchstartX;
+        const verticalSwipeLength = Math.abs(touchendY - touchstartY);
+
+        if (verticalSwipeLength > swipeMaxVertical) {
+            console.log('Swipe discarded: too much vertical movement.');
+            return;
+        }
+
+        // We only care about horizontal swipes beyond the threshold
+        if (Math.abs(swipeLength) > swipeThreshold) {
+            const currentIndex = Number(config.currentIndex) || 0;
+            const navSpan = document.querySelector('.navigation span[data-total-items]');
+            const totalChapters = navSpan ? parseInt(navSpan.dataset.totalItems, 10) : 0;
+
+            if (totalChapters === 0) {
+                console.warn("Swipe: Total chapters not available or zero.");
+                return;
+            }
+
+            const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
+
+            if (swipeLength < 0) { // Negative swipeLength: Finger pulled from Right to Left (e.g., right edge to center)
+                // ACTION: Go to NEXT page
+                if (currentIndex < totalChapters - 1) {
+                    console.log('Swipe R->L (Next Page)');
+                    window.location.href = `${baseUrl}/${currentIndex + 1}`;
+                } else {
+                    console.log('Swipe R->L: Already on the last page.');
+                }
+            } else if (swipeLength > 0) { // Positive swipeLength: Finger pulled from Left to Right (e.g., left edge to center)
+                // ACTION: Go to PREVIOUS page
+                if (currentIndex > 0) {
+                    console.log('Swipe L->R (Previous Page)');
+                    window.location.href = `${baseUrl}/${currentIndex - 1}`;
+                } else {
+                    console.log('Swipe L->R: Already on the first page.');
+                }
+            }
+        }
+    }
+
+    contentWrapper.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    }, { passive: true }); // Use passive for scroll performance if not preventing default
+
+    contentWrapper.addEventListener('touchend', e => {
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        // It's important to check if the event target is not an interactive element
+        // to avoid hijacking clicks on buttons, links, or input fields within the content.
+        const interactiveElements = ['A', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'];
+        if (e.target && interactiveElements.includes(e.target.tagName)) {
+            console.log('Swipe ignored: touch ended on an interactive element.');
+            return;
+        }
+        handleGesture();
+    }, { passive: true }); // Use passive for scroll performance if not preventing default
+
+    // --- Smart Translate Button Logic ---
+    const smartTranslateButton = document.getElementById('smart-translate-btn');
+    if (smartTranslateButton) {
+        smartTranslateButton.addEventListener('click', () => {
+            if (window.translationManager && typeof window.translationManager.triggerTranslation === 'function') {
+                const lastMethod = localStorage.getItem('lastTranslationMethod') || 'standard'; // Default to standard
+                console.log(`Smart translate called with method: ${lastMethod}`);
+                window.translationManager.triggerTranslation(lastMethod);
+            } else {
+                console.error('Smart translate: translationManager.triggerTranslation is not available.');
+                alert('Translate function is not available at the moment.');
+            }
+        });
+    }
+
 }); 

@@ -8,12 +8,13 @@ let nothingKeyInput, somethingKeyInput, hardKeyInput, goodKeyInput, easyKeyInput
 let showPopupOnHoverCheckbox, touchscreenSupportCheckbox, disableFadeAnimationCheckbox;
 let customPopupCssInput, exportSettingsBtn, importSettingsBtn;
 let panelNavButtons, settingPanels;
+let autoloadCheckbox;
 
 const CEFR_LEVELS_SETTINGS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const DEFAULT_SETTINGS_MODAL = { 
     apiKey: '', 
     // model will be set from serverDefaultModel passed to init or readerInit
-    language: 'Spanish', 
+    language: 'Japanese', 
     cefrIndex: 3, 
     jpdbApiKey: '', 
     userTheme: 'system',
@@ -77,6 +78,7 @@ function _selectDOMElements() {
     importSettingsBtn = document.getElementById('import-settings-btn');
     panelNavButtons = document.querySelectorAll('.panel-nav-btn');
     settingPanels = document.querySelectorAll('.settings-panel-content');
+    autoloadCheckbox = document.getElementById('autoload-checkbox');
 }
 
 function _updateCefrOutput() {
@@ -149,24 +151,18 @@ function _loadSettingsToUI() {
         try {
             // Try to parse as JSON first (for new format)
             const parsedKeybind = JSON.parse(keybindValue);
-            
-            // Format the keybind
-            const parts = [];
-            if (parsedKeybind.modifiers && parsedKeybind.modifiers.length > 0) {
-                parts.push(...parsedKeybind.modifiers);
-            }
-            if (parsedKeybind.key) {
-                parts.push(parsedKeybind.key);
-            }
-            
-            const keyDisplay = parts.length > 0 ? parts.join('+') : '';
-            if (parsedKeybind.code) {
-                return keyDisplay + (keyDisplay ? ` (${parsedKeybind.code})` : parsedKeybind.code);
-            }
-            return keyDisplay || 'None';
+            return keybindToString(parsedKeybind); // Pass object to keybindToString
         } catch (e) {
-            // If parsing fails, it's the old format - just return as is
-            return keybindValue;
+            // If parsing fails, it's an old format string (likely an event.code)
+            if (keybindValue === 'ShiftLeft') return 'Left Shift';
+            if (keybindValue === 'ShiftRight') return 'Right Shift';
+            if (keybindValue === 'ControlLeft') return 'Left Control';
+            if (keybindValue === 'ControlRight') return 'Right Control';
+            if (keybindValue === 'AltLeft') return 'Left Alt';
+            if (keybindValue === 'AltRight') return 'Right Alt';
+            if (keybindValue === 'MetaLeft') return 'Left Cmd/Win';
+            if (keybindValue === 'MetaRight') return 'Right Cmd/Win';
+            return keybindValue; // Fallback: return the string as is
         }
     }
     
@@ -188,6 +184,11 @@ function _loadSettingsToUI() {
     if(disableFadeAnimationCheckbox) disableFadeAnimationCheckbox.checked = localStorage.getItem('disableFadeAnimation') === null ? DEFAULT_SETTINGS_MODAL.disableFadeAnimation : localStorage.getItem('disableFadeAnimation') === 'true';
     if(customPopupCssInput) customPopupCssInput.value = localStorage.getItem('customPopupCSS') || DEFAULT_SETTINGS_MODAL.customPopupCSS;
     
+    // Load Autoload Translations preference
+    if (autoloadCheckbox && window.storageManager && typeof window.storageManager.getAutoloadPreference === 'function') {
+        autoloadCheckbox.checked = window.storageManager.getAutoloadPreference();
+    }
+
     _updateCefrOutput();
     _updateJlptToggleVisibility();
     console.log("Settings loaded into UI.");
@@ -272,31 +273,75 @@ function _attachEventListeners() {
 
     function keybindToString(bind) {
         if (!bind || bind === 'None') return 'None';
-        // Assuming bind is an object like { key: 'A', code: 'KeyA', modifiers: ['Shift'] }
+
+        // This function now expects 'bind' to be an object.
+        // String-form keybinds should be handled by keybindToStringForLoad.
+        if (typeof bind === 'string') {
+            // Fallback for safety, though keybindToStringForLoad should map common strings.
+            if (bind === 'ShiftLeft') return 'Left Shift';
+            if (bind === 'ShiftRight') return 'Right Shift';
+            if (bind === 'ControlLeft') return 'Left Control';
+            if (bind === 'ControlRight') return 'Right Control';
+            if (bind === 'AltLeft') return 'Left Alt';
+            if (bind === 'AltRight') return 'Right Alt';
+            if (bind === 'MetaLeft') return 'Left Cmd/Win';
+            if (bind === 'MetaRight') return 'Right Cmd/Win';
+            return bind; // Return unmapped string as is
+        }
+
+        // Handle standalone modifier keys from object form {key, code, modifiers}
+        if (bind.key && MODIFIERS.includes(bind.key) && (!bind.modifiers || bind.modifiers.length === 0)) {
+            if (bind.code === 'ShiftLeft') return 'Left Shift';
+            if (bind.code === 'ShiftRight') return 'Right Shift';
+            if (bind.code === 'ControlLeft') return 'Left Control';
+            if (bind.code === 'ControlRight') return 'Right Control';
+            if (bind.code === 'AltLeft') return 'Left Alt';
+            if (bind.code === 'AltRight') return 'Right Alt';
+            if (bind.code === 'MetaLeft') return 'Left Cmd/Win';
+            if (bind.code === 'MetaRight') return 'Right Cmd/Win';
+            // Fallback for generic modifier key if code doesn't match specifics
+            return bind.key.charAt(0).toUpperCase() + bind.key.slice(1); // e.g., 'Shift'
+        }
+
+        // For combinations
         const parts = [];
         if (bind.modifiers && bind.modifiers.length > 0) {
-            parts.push(...bind.modifiers);
+            parts.push(...bind.modifiers.map(m => {
+                if (m === 'Meta') return 'Cmd/Win';
+                if (m === 'Control') return 'Ctrl';
+                return m.charAt(0).toUpperCase() + m.slice(1);
+            }));
         }
-        if (bind.key && !MODIFIERS.includes(bind.key)) { // Avoid showing modifier key twice
-             // Use code if key is a modifier, otherwise use key
-            parts.push(MODIFIERS.includes(bind.key) ? bind.code : bind.key);
-        } else if (bind.code) {
-             parts.push(bind.code); // Fallback to code if key is just a modifier or missing
-        }
-
-        // Use code for the parenthesized part as it's layout independent
-        const codeParts = [];
-        if (bind.modifiers && bind.modifiers.length > 0) {
-             codeParts.push(...bind.modifiers);
-        }
-         if (bind.code) {
-             codeParts.push(bind.code);
-         }
         
-        const keyDisplay = parts.length > 0 ? parts.join('+') : 'None';
-        const codeDisplay = codeParts.length > 0 ? ` (${codeParts.join('+')})` : '';
+        let mainKeyDisplay = bind.key || '';
+        if (bind.key === ' ') mainKeyDisplay = 'Space';
+        else if (bind.key && bind.key.startsWith('Arrow')) mainKeyDisplay = bind.key.replace('Arrow', ''); // ArrowUp -> Up
+        // Add more key display normalizations if needed (e.g. Enter, Tab, Escape)
+        else if (bind.key === 'Escape') mainKeyDisplay = 'Esc';
 
-        return `${keyDisplay}${codeDisplay}`;
+        if (mainKeyDisplay) {
+            // Only add mainKeyDisplay if it's not a modifier already listed in parts,
+            // or if it is a modifier but it's the sole key (already handled by standalone logic).
+            const capitalizedMainKey = mainKeyDisplay.charAt(0).toUpperCase() + mainKeyDisplay.slice(1);
+            if (!MODIFIERS.includes(mainKeyDisplay) && !MODIFIERS.includes(capitalizedMainKey)) {
+                parts.push(mainKeyDisplay);
+            } else if (MODIFIERS.includes(mainKeyDisplay) && parts.length === 0) {
+                 // This case should be covered by standalone modifier logic above.
+                 // If it reaches here, it means a modifier key as main part of a combo,
+                 // e.g. from a faulty construction. Display its common name.
+                 if (mainKeyDisplay === 'Meta') parts.push('Cmd/Win');
+                 else if (mainKeyDisplay === 'Control') parts.push('Ctrl');
+                 else parts.push(capitalizedMainKey);
+            } else if (mainKeyDisplay && !parts.map(p => p.toLowerCase()).includes(mainKeyDisplay.toLowerCase())) {
+                 // If it's a modifier like 'Shift' and parts is ['Ctrl'], add 'Shift' -> 'Ctrl+Shift'
+                 parts.push(mainKeyDisplay);
+            }
+        } else if (bind.code) { // Fallback if key is not useful (e.g. empty)
+            parts.push(bind.code);
+        }
+        
+        // Remove duplicates that might arise from complex logic, then join
+        return parts.length > 0 ? [...new Set(parts)].join('+') : 'None';
     }
 
     function parseKeybindString(keybindString) {
@@ -508,6 +553,14 @@ function _attachEventListeners() {
                 window.jpHighlighter.Popup.get().updateStyle(customPopupCssInput.value);
                 console.log('Custom popup CSS updated live.');
             }
+        });
+    }
+
+    // Listener for Autoload Translations checkbox
+    if (autoloadCheckbox && window.storageManager && typeof window.storageManager.saveAutoloadPreference === 'function') {
+        autoloadCheckbox.addEventListener('change', () => {
+            window.storageManager.saveAutoloadPreference(autoloadCheckbox.checked);
+            console.log('Autoload preference saved:', autoloadCheckbox.checked);
         });
     }
 

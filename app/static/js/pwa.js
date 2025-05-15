@@ -1,4 +1,28 @@
 // PWA functionality
+
+// --- Cookie Helper Functions ---
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+// --- End Cookie Helper Functions ---
+
 document.addEventListener('DOMContentLoaded', () => {
   // Register Service Worker
   if ('serviceWorker' in navigator) {
@@ -45,17 +69,25 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Function to show install promotion when appropriate
   function showInstallPromotion() {
-    // Check if we have an install button in the DOM
+    // Check if user has already dismissed the prompt
+    if (getCookie('pwaInstallDismissed') === 'true') {
+        console.log('PWA install prompt previously dismissed by user.');
+        return;
+    }
+
+    // Check if we have an install button and container in the DOM
     const installButton = document.getElementById('pwa-install-button');
+    const dismissButton = document.getElementById('pwa-dismiss-button');
+    const promptContainer = document.getElementById('pwa-prompt-container');
     
-    if (installButton && deferredPrompt) {
-      // Make the button visible
-      installButton.style.display = 'block';
+    if (promptContainer && installButton && dismissButton && deferredPrompt) {
+      // Make the prompt container visible
+      promptContainer.style.display = 'block';
       
       // Handle the install button click
       installButton.addEventListener('click', (e) => {
-        // Hide the install button
-        installButton.style.display = 'none';
+        // Hide the prompt container
+        promptContainer.style.display = 'none';
         
         // Show the prompt
         deferredPrompt.prompt();
@@ -65,12 +97,23 @@ document.addEventListener('DOMContentLoaded', () => {
           if (choiceResult.outcome === 'accepted') {
             console.log('User accepted the install prompt');
           } else {
-            console.log('User dismissed the install prompt');
+            console.log('User dismissed the browser install prompt');
+            // Optionally, set cookie here too if browser prompt is dismissed
+            // setCookie('pwaInstallDismissed', 'true', 365);
           }
           // Clear the deferredPrompt variable
           deferredPrompt = null;
         });
       });
+
+      // Handle the dismiss button click
+      dismissButton.addEventListener('click', (e) => {
+        console.log('User clicked PWA dismiss button.');
+        promptContainer.style.display = 'none';
+        setCookie('pwaInstallDismissed', 'true', 365); // Dismiss for 1 year
+        deferredPrompt = null; // Don't show again this session
+      });
+
     }
   }
   

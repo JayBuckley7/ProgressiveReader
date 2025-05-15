@@ -247,6 +247,21 @@ body.drawer-open { margin-left: 280px; }
     filter: var(--filter-brighter); /* Use theme variable for hover */
 }
 
+/* Style for the Smart Translate button in the navigation */
+#smart-translate-btn {
+    background-color: transparent;
+    color: var(--color-link-default);
+    border: 1px solid var(--color-link-default);
+    padding: 5px 10px; /* Ensure consistent padding with other nav items */
+}
+
+#smart-translate-btn:hover {
+    background-color: var(--color-input-background); /* Subtle fill on hover */
+    color: var(--color-link-default);
+    border-color: var(--color-link-default);
+    filter: var(--filter-brighter); /* Keep the brightness filter */
+}
+
 /* Settings Modal Styles - Now uses global theme variables */
 #settings-modal {
     /* Removed modal-specific theme variables */

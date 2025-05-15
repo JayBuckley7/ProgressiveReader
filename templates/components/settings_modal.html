@@ -7,13 +7,14 @@
     <div class="panel-nav">
         <button type="button" class="panel-nav-btn active-panel-btn" data-panel="general-panel-content">General</button>
         <button type="button" class="panel-nav-btn" data-panel="jlpt-panel-content">JLPT</button>
+        <button type="button" class="panel-nav-btn" data-panel="accessibility-panel-content">Accessibility</button>
     </div>
 
     <form id="settings-form">
         <!-- General Panel Content -->
         <div id="general-panel-content" class="settings-panel-content active">
             <label for="openai-key">OpenAI API Key (Cookie):</label>
-            <input type="password" id="openai-key" name="openai-key" placeholder="Stored in browser cookie (if set)">
+            <input type="text" id="openai-key" name="openai-key" placeholder="Stored in browser cookie (if set)">
             <p style="font-size: 0.8em; margin-top: 5px;">
                 Server Key Status:
                 {% if openai_key_configured %}<span style="color: green;">Configured</span> <small>(Will be used if cookie key is empty)</small>
@@ -37,10 +38,11 @@
 
             <label for="target-language">Target Language:</label>
             <select id="target-language" name="target-language">
+                <option value="English">English</option>
                 <option value="Spanish">Spanish</option>
                 <option value="French">French</option>
                 <option value="German">German</option>
-                <option value="Japanese">Japanese</option>
+                <option value="Japanese" selected>Japanese</option>
                 <option value="Mandarin Chinese">Mandarin Chinese</option>
                 <option value="Korean">Korean</option>
                 <!-- Add more languages -->
@@ -50,6 +52,12 @@
                 <label for="cefr-level">Target CEFR Level:</label>
                 <input type="range" id="cefr-level" name="cefr-level" min="0" max="5" step="1" value="3"> <!-- 0:A1, 1:A2, 2:B1, 3:B2, 4:C1, 5:C2 -->
                 <span id="cefr-output">B2</span> <!-- Default output -->
+            </div>
+
+            <div>
+                <label for="autoload-checkbox">Autoload Translations:</label>
+                <input type="checkbox" id="autoload-checkbox" name="autoload-checkbox" title="Automatically load cached translations when navigating pages">
+                <p class="notes">If checked, cached translations will be loaded automatically when you navigate to a new page.</p>
             </div>
 
             <div>
@@ -65,12 +73,15 @@
         <!-- JLPT Panel Content -->
         <div id="jlpt-panel-content" class="settings-panel-content">
             <label for="jpdb-api-key">JPDB API Key (Cookie):</label>
-            <input type="password" id="jpdb-api-key" name="jpdb-api-key" placeholder="Your JPDB API Key (required for highlighting)">
+            <input type="text" id="jpdb-api-key" name="jpdb-api-key" placeholder="Your JPDB API Key (required for highlighting)">
             <p class="notes">Used for JLPT highlighting. Stored in a browser cookie.</p>
 
             <label for="mining-deck-id">JPDB Mining Deck ID (LocalStorage):</label>
             <input type="text" id="mining-deck-id" name="mining-deck-id" placeholder="e.g., 12345 or 'My Mining Deck'">
             <p class="notes">Default deck ID for mining new words to JPDB. Stored in browser localStorage.</p>
+            <p class="notes">
+                <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Learn more about JLPT highlighting features">Learn more about JLPT highlighting</a> (opens in new tab)
+            </p>
             
             <hr>
             <h4>Additional Mining Settings:</h4>
@@ -119,6 +130,11 @@
             <input type="text" id="easy-key" name="easy-key" readonly>
 
             <hr>
+            <!-- Accessibility Settings moved to their own panel -->
+        </div>
+
+        <!-- Accessibility Panel Content -->
+        <div id="accessibility-panel-content" class="settings-panel-content">
             <h4>Accessibility Settings:</h4>
             <label for="show-popup-on-hover">Show Popup on Hover:</label>
             <input type="checkbox" id="show-popup-on-hover" name="show-popup-on-hover" checked>
@@ -152,6 +168,9 @@
         <!-- <button type="button" id="save-settings-btn">Save & Close</button> REMOVED -->
     </form>
     <hr style="margin: 20px 0;">
+    <p class="notes" style="text-align: center; margin-bottom: 10px;">
+        The "Translate" button in the top navigation bar uses the method (Standard or CEFR) last selected here.
+    </p>
     <div class="button-group">
         <button id="translate-btn">Translate Page</button>
         <button id="translate-cefr-btn">Translate Page (CEFR)</button>

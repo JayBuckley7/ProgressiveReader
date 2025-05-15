@@ -112,20 +112,39 @@ window.fetch = async (input, init) => {
   if (url.endsWith('/api/translate')) {
     const requestBody = init && init.body ? JSON.parse(init.body) : {};
     const targetLanguage = requestBody.target_language || 'Spanish';
-    const cefrLevel = requestBody.cefr_level || 'A1';
     const itemIndex = requestBody.item_index !== undefined ? requestBody.item_index : pageConfig.currentIndex;
+    // Determine initial cefrLevel based on request or default to A1 if not specified
+    let cefrLevel = requestBody.cefr_level || 'A1'; 
 
-    console.log(`[DemoReader] Mocking /api/translate for index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${cefrLevel}`);
+    console.log(`[DemoReader] Mocking /api/translate for index: ${itemIndex}, lang: ${targetLanguage}, requested cefr: ${requestBody.cefr_level || 'not specified'}`);
 
-    const mockEntry = mockTranslateData.find(entry =>
+    let effectiveCefrForDemoLookup = cefrLevel;
+    if (window.IS_DEMO_MODE && cefrLevel === "ALL") {
+        console.log(`[DemoReader] Translation CEFR level is "ALL" in demo mode, using "C2" for mock data lookup.`);
+        effectiveCefrForDemoLookup = "C2";
+    }
+
+    let mockEntry = mockTranslateData.find(entry =>
       entry.item_index === itemIndex &&
       entry.target_language === targetLanguage &&
-      entry.cefr_level === cefrLevel
+      entry.cefr_level === effectiveCefrForDemoLookup
     );
+
+    // Fallback: If C2 was used (because original was ALL) and no C2 data found, try to find actual "ALL" data.
+    if (!mockEntry && cefrLevel === "ALL") { 
+        console.log(`[DemoReader] No mock translation data found for CEFR level ${effectiveCefrForDemoLookup} (mapped from ALL). Trying cefr_level: "ALL" mock data.`);
+        mockEntry = mockTranslateData.find(entry =>
+            entry.item_index === itemIndex &&
+            entry.target_language === targetLanguage &&
+            entry.cefr_level === "ALL"
+        );
+    } else if (!mockEntry) {
+        console.log(`[DemoReader] No specific mock translation data found for requested/mapped CEFR level: ${effectiveCefrForDemoLookup}.`);
+    }
 
     if (mockEntry) {
       if (mockEntry.response_json_stream && Array.isArray(mockEntry.response_json_stream)) {
-        console.log('[DemoReader] Found matching mock translation stream entry:', mockEntry);
+        console.log('[DemoReader] Using mock translation stream entry:', mockEntry);
         const stream = new ReadableStream({
           async start(controller) {
             for (const chunk of mockEntry.response_json_stream) {
@@ -137,18 +156,41 @@ window.fetch = async (input, init) => {
         });
         return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
       } else if (mockEntry.response_json) {
-        console.log('[DemoReader] Found matching mock translation entry (non-streamed):', mockEntry);
-        return new Response(
-          JSON.stringify(mockEntry.response_json),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        );
+        console.log('[DemoReader] Using mock translation entry (non-streamed JSON), providing as a simple stream:', mockEntry);
+        const simpleStreamData = `data: ${JSON.stringify(mockEntry.response_json)}\n\ndata: [DONE]\n\n`;
+        const stream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode(simpleStreamData));
+                controller.close();
+            }
+        });
+        return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+      } else {
+        // mockEntry exists but is malformed (no stream or json data property)
+        console.warn('[DemoReader] Found mockEntry but it is malformed. Using generic stream response.', mockEntry);
+        const genericData = { translated_text: `[Malformed Mock for index ${itemIndex}, ${targetLanguage}, ${effectiveCefrForDemoLookup}]` };
+        const genericStreamData = `data: ${JSON.stringify(genericData)}\n\ndata: [DONE]\n\n`;
+        const stream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode(genericStreamData));
+                controller.close();
+            }
+        });
+        return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
       }
-    } 
-    console.warn('[DemoReader] No matching mock translation. Generic response.');
-    return new Response(
-        JSON.stringify({ translated_text: `[Generic Demo for index ${itemIndex}, ${targetLanguage}, ${cefrLevel}]` }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    } else {
+      // No mockEntry found at all (after all lookups)
+      console.warn('[DemoReader] No mock translation data found at all. Using generic stream response.');
+      const genericData = { translated_text: `[Generic Demo for index ${itemIndex}, ${targetLanguage}, ${effectiveCefrForDemoLookup}]` };
+      const genericStreamData = `data: ${JSON.stringify(genericData)}\n\ndata: [DONE]\n\n`;
+      const stream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode(genericStreamData));
+                controller.close();
+            }
+        });
+      return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+    }
   }
 
   // ── JPDB JLPT token data ───────────────────────────
@@ -168,18 +210,29 @@ window.fetch = async (input, init) => {
 
     console.log(`[DemoReader] Mocking /api/get_jpdb_data for index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${finalCefrLevel}`);
 
+    let effectiveCefrForDemoLookup = finalCefrLevel;
+    if (window.IS_DEMO_MODE && finalCefrLevel === "ALL") {
+        console.log(`[DemoReader] CEFR level is "ALL" in demo mode, using "C2" for mock data lookup.`);
+        effectiveCefrForDemoLookup = "C2";
+    }
+
     let mockEntry = mockHighlightData.find(entry =>
       entry.item_index === itemIndex &&
       entry.target_language === targetLanguage &&
-      entry.cefr_level === finalCefrLevel
+      entry.cefr_level === effectiveCefrForDemoLookup
     );
-    if (!mockEntry) {
-      console.log(`[DemoReader] No exact CEFR match for ${finalCefrLevel}. Trying cefr_level: \"ALL\".`);
-      mockEntry = mockHighlightData.find(entry =>
-        entry.item_index === itemIndex &&
-        entry.target_language === targetLanguage &&
-        entry.cefr_level === "ALL"
-      );
+
+    // Fallback: If C2 was used (because original was ALL) and no C2 data found, try to find actual "ALL" data.
+    // Or, if the original request was for a specific level (not ALL) and it wasn't found, this won't run.
+    if (!mockEntry && finalCefrLevel === "ALL") { 
+        console.log(`[DemoReader] No mock data found for CEFR level ${effectiveCefrForDemoLookup} (mapped from ALL). Trying cefr_level: "ALL" mock data.`);
+        mockEntry = mockHighlightData.find(entry =>
+            entry.item_index === itemIndex &&
+            entry.target_language === targetLanguage &&
+            entry.cefr_level === "ALL" 
+        );
+    } else if (!mockEntry) {
+        console.log(`[DemoReader] No mock data found for originally requested/mapped CEFR level: ${effectiveCefrForDemoLookup}.`);
     }
 
     if (mockEntry) {
