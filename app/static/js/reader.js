@@ -43,93 +43,89 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update navigation total items count - target the specific element from the template
     function updateNavigationCounts(totalChapters) {
         console.log(`readerJS: Updating navigation with total chapters: ${totalChapters}`);
-        const currentIndex = config.currentIndex
+        const currentIndex = config.currentIndex; // This is 0-based from config
         
-        // Direct targeting for the navigation_bar macro element
-        const NavSpans = document.querySelectorAll('.navigation span');
-        //nav spans looks like this
-        //{NavSpans[0]} = JLP-toggle-prev
-        //{NavSpans[1]} = PageSpan 1 of 2 
-        //{NavSpans[2]} = PageSpan 2 of 2
-
-        // update the page counters
-        let updated = 0;
-        NavSpans.forEach(span => {
-            if (span.dataset.role === 'page-counter' || (span.textContent && span.textContent.match(/Page \d+ of \d+/i))) {
-                const oldText = span.textContent;
-                // Use 0-based indexing (Page 0 of N) to match URL
-                const newText = `Page ${currentIndex} of ${totalChapters - 1}`;
-                span.textContent = newText;
-                span.dataset.currentIndex = currentIndex;
-                span.dataset.totalItems = totalChapters;
-                console.log(`readerJS: Updated navigation counter from "${oldText}" to "${newText}"`);
-                updated++;
-            }
+        // Target the specific span for page count
+        document.querySelectorAll('.navigation .nav-right span[data-role="page-counter"]').forEach(span => {
+            const oldText = span.textContent;
+            // Display 1-based indexing for user-friendliness (e.g., Page 1 of N)
+            // totalChapters is the count, so last page is totalChapters - 1 (0-indexed)
+            const newText = `Page ${currentIndex + 1} of ${totalChapters}`; 
+            span.textContent = newText;
+            // Store 0-based current_index and 1-based total_items if needed, but textContent is primary for display
+            span.dataset.currentIndex = currentIndex; // Store 0-based index
+            span.dataset.totalItems = totalChapters;    // Store total count
+            console.log(`readerJS: Updated navigation counter from "${oldText}" to "${newText}"`);
         });
-
-        //update the prev and next buttons
-        updatePrevNextButtons(totalChapters);
-        console.log(`readerJS: Updated ${updated} navigation elements with total: ${totalChapters}`);
+        // update the prev and next buttons - This was causing a loop, should be called separately
+        // updatePrevNextButtons(totalChapters); 
+        // console.log(`readerJS: Updated navigation elements with total: ${totalChapters}`); // Redundant log line
     }
+
     function updatePrevNextButtons(totalChapters) {
-        const currentIndex = Number(config.currentIndex) || 0;
-        const bookId = config.bookId; // Ensure bookId is available, e.g., from config
+        const currentIndex = Number(config.currentIndex) || 0; // 0-based
+        const bookId = config.bookId; 
         const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
     
         document.querySelectorAll('.navigation').forEach(nav => {
             const navRight = nav.querySelector('.nav-right');
             if (!navRight) return;
     
-            navRight.innerHTML = ''; // Clear existing buttons/links
+            navRight.innerHTML = ''; // Clear existing content
     
-            // -- Previous --------------------------------------------------------
+            // -- Previous Button/Link --
             if (currentIndex > 0) {
                 const aPrev = document.createElement('a');
                 aPrev.textContent = 'Previous';
-                aPrev.href = `${baseUrl}/${currentIndex - 1}`; // Keep href for context/SEO/open in new tab
+                aPrev.href = `${baseUrl}/${currentIndex - 1}`;
                 aPrev.dataset.nav = 'prev';
                 aPrev.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log('Prev button clicked, calling navigate(-1)');
                     navigate(-1);
                 });
                 navRight.appendChild(aPrev);
             } else {
                 const btnPrev = document.createElement('button');
                 btnPrev.type = 'button';
-                btnPrev.className = 'disabled-nav-btn';
+                btnPrev.className = 'disabled-nav-btn'; // Use class from navigation.html
                 btnPrev.disabled = true;
                 btnPrev.textContent = 'Previous';
                 navRight.appendChild(btnPrev);
             }
     
-            const divider = document.createElement('span');
-            divider.textContent = ' | ';
-            divider.style.margin = '0 0.5em'; // Add some spacing around the divider
-            navRight.appendChild(divider);
+            // -- Page Count Span --
+            const pageCountSpan = document.createElement('span');
+            pageCountSpan.dataset.role = 'page-counter';
+            // Initial text will be updated by updateNavigationCounts, but set a placeholder
+            pageCountSpan.textContent = `Page ${currentIndex + 1} of ${totalChapters}`; 
+            pageCountSpan.style.margin = '0 0.8em'; // Add some spacing
+            navRight.appendChild(pageCountSpan);
     
-            // -- Next ------------------------------------------------------------
+            // -- Next Button/Link --
+            // totalChapters is the count, so last valid index is totalChapters - 1
             if (currentIndex < totalChapters - 1) {
                 const aNext = document.createElement('a');
                 aNext.textContent = 'Next';
-                aNext.href = `${baseUrl}/${currentIndex + 1}`; // Keep href for context/SEO/open in new tab
+                aNext.href = `${baseUrl}/${currentIndex + 1}`;
                 aNext.dataset.nav = 'next';
                 aNext.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log('Next button clicked, calling navigate(+1)');
-                    navigate(+1);
+                    navigate(1);
                 });
                 navRight.appendChild(aNext);
             } else {
                 const btnNext = document.createElement('button');
                 btnNext.type = 'button';
-                btnNext.className = 'disabled-nav-btn';
+                btnNext.className = 'disabled-nav-btn'; // Use class from navigation.html
                 btnNext.disabled = true;
                 btnNext.textContent = 'Next';
                 navRight.appendChild(btnNext);
             }
         });
+        // Call updateNavigationCounts separately after DOM for page counter is established
+        updateNavigationCounts(totalChapters); 
     }
+
     // Handle TOC rendering for the side drawer
     function renderTableOfContents(chapterTitles, epubWrapper) {
         // From the template, the TOC container is:
@@ -333,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Update navigation with total chapter count
-            updateNavigationCounts(totalChapters);
+            updatePrevNextButtons(totalChapters); // This function will now also call updateNavigationCounts
             
             // Get chapter titles for TOC rendering
             let chapterTitles = [];
@@ -652,27 +648,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function navigate(delta) {
         const newIndex = Number(config.currentIndex) + delta;
         const bookId = config.bookId;
-        
-        if (!epubWrapperInstance) {
-            console.error("navigate: epubWrapperInstance is not available. Cannot load chapter content directly.");
-            // Fallback to full page load if epubWrapperInstance isn't ready (should not happen in normal flow)
-            const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
-            const fallbackUrl = `${baseUrl}/${newIndex}`;
-            window.location.href = fallbackUrl; 
+        const totalChapters = config.totalChapters; // Assuming totalChapters is stored in config
+
+        if (!epubWrapperInstance) { // Check if epubWrapperInstance is initialized
+            console.error("navigate: epubWrapperInstance is not initialized.");
+            showError("Reader not fully initialized. Please try refreshing.");
             return;
         }
 
-        const navSpan = document.querySelector('.navigation span[data-total-items]');
-        const totalChapters = navSpan ? parseInt(navSpan.dataset.totalItems, 10) : (config.totalChapters || 0);
-
-        if (totalChapters === 0) {
-             console.warn("navigate: Total chapters is zero or not available. Cannot navigate.");
-             return;
-        }
-        
-        // Ensure newIndex is within bounds (though UI should prevent this)
+        // Boundary checks for newIndex
         if (newIndex < 0 || newIndex >= totalChapters) {
-            console.warn(`navigate: Attempted to navigate to out-of-bounds index ${newIndex}. Total chapters: ${totalChapters}`);
+            console.warn(`navigate: Attempted to navigate to invalid index ${newIndex}. Total chapters: ${totalChapters}.`);
             return;
         }
 
@@ -686,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = `${baseUrl}/${newIndex}`;
                 history.pushState({ idx: newIndex, bookId: bookId }, '', url);
                 config.currentIndex = newIndex; 
-                updateNavigationCounts(totalChapters); 
+                updatePrevNextButtons(totalChapters); // This function now updates counts too
                 
                 viewerElement.scrollTop = 0;
                 document.documentElement.scrollTop = 0;

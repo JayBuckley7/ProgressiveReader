@@ -143,6 +143,10 @@ html.user-theme-dark {
     }
 }
 
+html {
+    height: 100%;
+}
+
 /* Basic styling (now uses global theme variables) */
 body {
     font-family: var(--font-family-sans);
@@ -152,12 +156,18 @@ body {
     transition: margin-left 0.3s ease, background-color 0.3s, color 0.3s; /* Added transitions */
     background-color: var(--color-background-default);
     color: var(--color-text-default);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 .content-wrapper { 
     max-width: 800px; 
     margin: auto; 
-    padding: 20px 0; 
+    padding: 20px 0;
     touch-action: pan-y;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
 p { margin-bottom: 1em; }
@@ -569,4 +579,60 @@ hr {
     color: var(--color-text-default);
     opacity: 0.5;
     cursor: default;
+}
+
+/* Styles for footer containing the bottom navigation */
+footer[aria-label="Pagination navigation"] {
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* ADDED - Wrapper for main content that can grow */
+.main-content-area {
+    flex-grow: 1;
+} 
+
+/* Responsive text in navigation */
+.short-text {
+    display: none; /* Hidden by default */
+}
+
+/* Adjust breakpoint as needed */
+@media (max-width: 768px) { 
+    .long-text {
+        display: none; /* Hide long text on smaller screens */
+    }
+    .short-text {
+        display: inline; /* Show short text on smaller screens */
+    }
+
+    /* Optional: Adjust padding/margins for nav items if they become too cramped */
+    .navigation a, .navigation span.disabled, .toggle-btn {
+        /* margin: 0 3px; */ /* Example: reduce horizontal margin */
+        /* padding: 5px 7px; */ /* Example: reduce padding */
+    }
+
+    #jlpt-toggle-container label {
+        /* Adjust if the label itself needs less space */
+    }
+}
+
+/* Further adjustments for very small screens if necessary */
+/* @media (max-width: 480px) { ... } */
+
+/* Ensure consistent height for specific top-nav items */
+.top-nav .nav-left > #toggle-drawer-btn,
+.top-nav .nav-left > #toggle-settings-btn,
+.top-nav .nav-left > a:nth-of-type(1) { /* Assumes "Bookshelf" is the first <a> tag */
+    display: inline-flex;    /* Align content within the item */
+    align-items: center;     /* Vertically center content */
+    justify-content: center; /* Horizontally center content (especially for icons) */
+    height: 36px;            /* Fixed height. Adjust if needed based on visual test. */
+    box-sizing: border-box;  /* Padding and border included in height */
+}
+
+/* Specific line-height for icon buttons to help with vertical centering of the icon character */
+.top-nav .nav-left > #toggle-drawer-btn,
+.top-nav .nav-left > #toggle-settings-btn {
+    line-height: 1; /* Helps size icon character more predictably within the height */
 } 

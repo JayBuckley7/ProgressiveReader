@@ -6,7 +6,10 @@
     <div class="nav-left">
         <button id="toggle-drawer-btn" class="toggle-btn" title="Table of Contents" aria-label="Toggle Table of Contents">&#9776;</button>
         <button id="toggle-settings-btn" class="toggle-btn" title="Settings" aria-label="Toggle Settings">&#9881;</button>
-        <a href="{{ url_for('main.index') }}">Back to Bookshelf</a>
+        <a href="{{ url_for('main.index') }}">
+            <span class="long-text">Bookshelf</span>
+            <span class="short-text">Book</span>
+        </a>
         
         <button id="smart-translate-btn" class="toggle-btn" title="Translate using the last selected method (Standard or CEFR). Choose method in Settings." aria-label="Translate page using last method">Translate</button>
 
@@ -16,16 +19,17 @@
         {# Only render if jlpt_enabled is passed and true, or handled by JS config #}
         <span id="jlpt-toggle-container">
             <input type="checkbox" id="jlpt-highlighting">
-            <label for="jlpt-highlighting">JLPT Highlighting</label>
+            <label for="jlpt-highlighting">
+                <span class="long-text">JLPT Highlighting</span>
+                <span class="short-text">JLPT</span>
+            </label>
         </span>
         <!-- End JLPT Toggle -->
     </div>
     {% else %}
-    {# Placeholder for bottom-left content #}
-    <a href="{{ url_for('main.index') }}">Back to Bookshelf</a>
+    {# Placeholder for bottom-left content - Bookshelf link removed #}
+    <div class="nav-left-bottom-placeholder" style="min-width: 100px;"></div> {# Added a placeholder to maintain balance if needed #}
     {% endif %}
-
-    <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
 
     <div class="nav-right">
         {% if current_index > 0 %}
@@ -33,7 +37,7 @@
         {% else %}
             <button type="button" class="disabled-nav-btn" disabled>Previous</button>
         {% endif %}
-        |
+        <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
         {% if current_index < total_items - 1 %}
             <a href="{{ url_for('reader.read_item', book_id=book_id, item_index=current_index + 1) }}">Next</a>
         {% else %}
