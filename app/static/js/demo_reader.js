@@ -44,10 +44,18 @@ function updatePageConfig() {
     const configElement = document.getElementById('page-config');
     if (configElement) {
         try {
-            pageConfig = JSON.parse(configElement.textContent);
+            const newConfig = JSON.parse(configElement.textContent);
+            // Check if bookId has changed to trigger mock data reload
+            if (pageConfig.bookId !== newConfig.bookId) {
+                console.log(`[DemoReader] Book ID changed from ${pageConfig.bookId} to ${newConfig.bookId}. Reloading mock data.`);
+                pageConfig = newConfig;
+                loadMockData(); // Reload data for the new book
+            } else {
+                pageConfig = newConfig;
+            }
         } catch (e) {
             console.error('[DemoReader] Failed to parse page configuration.', e);
-            pageConfig = {}; // Reset or handle error appropriately
+            pageConfig = {}; 
         }
     } else {
         console.warn('[DemoReader] Page config element not found.');
@@ -57,24 +65,40 @@ function updatePageConfig() {
 
 // Fetch mock data
 async function loadMockData() {
+  if (!pageConfig.bookId) {
+    console.warn('[DemoReader] Cannot load mock data: bookId not available in pageConfig.');
+    mockTranslateData = [];
+    mockHighlightData = [];
+    return;
+  }
+
+  const bookId = pageConfig.bookId;
+  console.log(`[DemoReader] Loading mock data for book: ${bookId}`);
+
   try {
-    const translateResponse = await fetch('/static/demo_data/mock_translate_responses.json');
+    const translatePath = `/static/demo_data/${bookId}/translate_responses.json`;
+    const translateResponse = await fetch(translatePath);
     if (translateResponse.ok) {
       mockTranslateData = await translateResponse.json();
-      console.log('[DemoReader] Loaded mock translation data:', mockTranslateData);
+      console.log(`[DemoReader] Loaded mock translation data for ${bookId}:`, mockTranslateData);
     } else {
-      console.error('[DemoReader] Failed to load mock_translate_responses.json', translateResponse.statusText);
+      console.error(`[DemoReader] Failed to load ${translatePath}`, translateResponse.statusText);
+      mockTranslateData = []; // Clear previous data on failure
     }
 
-    const highlightResponse = await fetch('/static/demo_data/mock_highlight_responses.json');
+    const highlightPath = `/static/demo_data/${bookId}/highlight_responses.json`;
+    const highlightResponse = await fetch(highlightPath);
     if (highlightResponse.ok) {
       mockHighlightData = await highlightResponse.json();
-      console.log('[DemoReader] Loaded mock highlight data:', mockHighlightData);
+      console.log(`[DemoReader] Loaded mock highlight data for ${bookId}:`, mockHighlightData);
     } else {
-      console.error('[DemoReader] Failed to load mock_highlight_responses.json', highlightResponse.statusText);
+      console.error(`[DemoReader] Failed to load ${highlightPath}`, highlightResponse.statusText);
+      mockHighlightData = []; // Clear previous data on failure
     }
   } catch (error) {
-    console.error('[DemoReader] Error loading mock data:', error);
+    console.error(`[DemoReader] Error loading mock data for ${bookId}:`, error);
+    mockTranslateData = [];
+    mockHighlightData = [];
   }
 }
 
@@ -87,15 +111,13 @@ window.fetch = async (input, init) => {
   // ── OpenAI translation ──────────────────────────────
   if (url.endsWith('/api/translate')) {
     const requestBody = init && init.body ? JSON.parse(init.body) : {};
-    const targetLanguage = requestBody.target_language || 'Spanish'; // Default if not provided
-    const cefrLevel = requestBody.cefr_level || 'A1'; // Default if not provided
-    const bookId = pageConfig.bookId;
-    const itemIndex = pageConfig.currentIndex;
+    const targetLanguage = requestBody.target_language || 'Spanish';
+    const cefrLevel = requestBody.cefr_level || 'A1';
+    const itemIndex = requestBody.item_index !== undefined ? requestBody.item_index : pageConfig.currentIndex;
 
-    console.log(`[DemoReader] Mocking /api/translate call for book: ${bookId}, index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${cefrLevel}`);
+    console.log(`[DemoReader] Mocking /api/translate for index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${cefrLevel}`);
 
     const mockEntry = mockTranslateData.find(entry =>
-      entry.book_id === bookId &&
       entry.item_index === itemIndex &&
       entry.target_language === targetLanguage &&
       entry.cefr_level === cefrLevel
@@ -108,7 +130,6 @@ window.fetch = async (input, init) => {
           async start(controller) {
             for (const chunk of mockEntry.response_json_stream) {
               controller.enqueue(new TextEncoder().encode(chunk));
-              // Simulate a small delay between chunks
               await new Promise(resolve => setTimeout(resolve, 50)); 
             }
             controller.close();
@@ -116,7 +137,6 @@ window.fetch = async (input, init) => {
         });
         return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
       } else if (mockEntry.response_json) {
-        // Fallback to non-streamed response if response_json_stream is not available
         console.log('[DemoReader] Found matching mock translation entry (non-streamed):', mockEntry);
         return new Response(
           JSON.stringify(mockEntry.response_json),
@@ -124,48 +144,38 @@ window.fetch = async (input, init) => {
         );
       }
     } 
-    // If no specific mock entry, or if the entry doesn't have a valid response type
-    console.warn('[DemoReader] No matching mock translation found or invalid mock format. Returning generic response.');
+    console.warn('[DemoReader] No matching mock translation. Generic response.');
     return new Response(
-      JSON.stringify({ translated_text: `[Generic Demo Translation for ${bookId}, page ${itemIndex}, ${targetLanguage}, ${cefrLevel}]` }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ translated_text: `[Generic Demo for index ${itemIndex}, ${targetLanguage}, ${cefrLevel}]` }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
   // ── JPDB JLPT token data ───────────────────────────
   if (url.endsWith('/api/get_jpdb_data')) {
     const requestBody = init && init.body ? JSON.parse(init.body) : {};
-    const bookId = requestBody.book_id || pageConfig.bookId;
     const itemIndex = requestBody.item_index !== undefined ? requestBody.item_index : pageConfig.currentIndex;
-    const targetLanguage = "Japanese"; // Always Japanese for JPDB highlights
-
-    // Determine CEFR level from cookie, default to a mid-level or "ALL"
+    const targetLanguage = "Japanese";
     const cefrIndexCookie = getCookie('cefr_index');
-    let currentCefrLevel = "ALL"; // Default if no cookie or invalid
+    let currentCefrLevel = "ALL";
     if (cefrIndexCookie !== null) {
       const idx = parseInt(cefrIndexCookie, 10);
       if (idx >= 0 && idx < CEFR_LEVELS_TRANSLATION.length) {
         currentCefrLevel = CEFR_LEVELS_TRANSLATION[idx];
       }
     }
-    // Allow requestBody to override if it ever sends cefr_level for this endpoint
     const finalCefrLevel = requestBody.cefr_level || currentCefrLevel;
 
-    console.log(`[DemoReader] Mocking /api/get_jpdb_data for book: ${bookId}, index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${finalCefrLevel}`);
+    console.log(`[DemoReader] Mocking /api/get_jpdb_data for index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${finalCefrLevel}`);
 
-    // First, try to find an exact match for the specific CEFR level
     let mockEntry = mockHighlightData.find(entry =>
-      entry.book_id === bookId &&
       entry.item_index === itemIndex &&
       entry.target_language === targetLanguage &&
       entry.cefr_level === finalCefrLevel
     );
-
-    // If no specific level match, try to find an "ALL" fallback for that book/page
     if (!mockEntry) {
       console.log(`[DemoReader] No exact CEFR match for ${finalCefrLevel}. Trying cefr_level: \"ALL\".`);
       mockEntry = mockHighlightData.find(entry =>
-        entry.book_id === bookId &&
         entry.item_index === itemIndex &&
         entry.target_language === targetLanguage &&
         entry.cefr_level === "ALL"
@@ -179,7 +189,7 @@ window.fetch = async (input, init) => {
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     } else {
-      console.warn('[DemoReader] No matching mock highlight data found (specific or ALL). Returning empty array.');
+      console.warn('[DemoReader] No matching mock highlight data (specific or ALL). Returning empty array.');
       return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
   }
@@ -217,8 +227,11 @@ window.getDemoBookFile = async function(bookId) {
 
 // Initialize mock data loading and other DOM manipulations
 async function initDemoReader() {
-    updatePageConfig(); // Initial page config load
-    await loadMockData(); // Load mock data from JSON files
+    updatePageConfig(); // Initial page config load, which now also triggers loadMockData if bookId is new
+    if (!mockTranslateData.length && !mockHighlightData.length && pageConfig.bookId) {
+        // If updatePageConfig didn't load data (e.g. bookId was already set but data not loaded), load it now.
+        await loadMockData();
+    }
 
     // DOM manipulations that should happen after DOM is ready
     const translateBtn = document.getElementById('translate-btn');
