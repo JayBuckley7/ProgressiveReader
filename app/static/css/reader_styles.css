@@ -153,7 +153,12 @@ body {
     background-color: var(--color-background-default);
     color: var(--color-text-default);
 }
-.content-wrapper { max-width: 800px; margin: auto; padding: 20px 0; }
+.content-wrapper { 
+    max-width: 800px; 
+    margin: auto; 
+    padding: 20px 0; 
+    touch-action: pan-y;
+}
 img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
 p { margin-bottom: 1em; }
 h1, h2, h3, h4, h5, h6 { margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3; }

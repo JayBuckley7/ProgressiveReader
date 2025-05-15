@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let config = {};
+    let epubWrapperInstance = null; // Declare epubWrapperInstance here
     try {
         config = JSON.parse(configElement.textContent);
     } catch (e) {
@@ -72,22 +73,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function updatePrevNextButtons(totalChapters) {
         const currentIndex = Number(config.currentIndex) || 0;
-        const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
+        const bookId = config.bookId; // Ensure bookId is available, e.g., from config
+        const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
     
-        // Walk over *both* nav bars (top & bottom)
         document.querySelectorAll('.navigation').forEach(nav => {
             const navRight = nav.querySelector('.nav-right');
             if (!navRight) return;
     
-            // Wipe whatever Jinja stuffed in there
-            navRight.textContent = '';
+            navRight.innerHTML = ''; // Clear existing buttons/links
     
             // -- Previous --------------------------------------------------------
             if (currentIndex > 0) {
                 const aPrev = document.createElement('a');
                 aPrev.textContent = 'Previous';
-                aPrev.href = `${baseUrl}/${currentIndex - 1}`;
+                aPrev.href = `${baseUrl}/${currentIndex - 1}`; // Keep href for context/SEO/open in new tab
                 aPrev.dataset.nav = 'prev';
+                aPrev.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('Prev button clicked, calling navigate(-1)');
+                    navigate(-1);
+                });
                 navRight.appendChild(aPrev);
             } else {
                 const btnPrev = document.createElement('button');
@@ -98,14 +103,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 navRight.appendChild(btnPrev);
             }
     
-            navRight.append(' | ');               // little divider
+            const divider = document.createElement('span');
+            divider.textContent = ' | ';
+            divider.style.margin = '0 0.5em'; // Add some spacing around the divider
+            navRight.appendChild(divider);
     
             // -- Next ------------------------------------------------------------
             if (currentIndex < totalChapters - 1) {
                 const aNext = document.createElement('a');
                 aNext.textContent = 'Next';
-                aNext.href = `${baseUrl}/${currentIndex + 1}`;
+                aNext.href = `${baseUrl}/${currentIndex + 1}`; // Keep href for context/SEO/open in new tab
                 aNext.dataset.nav = 'next';
+                aNext.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('Next button clicked, calling navigate(+1)');
+                    navigate(+1);
+                });
                 navRight.appendChild(aNext);
             } else {
                 const btnNext = document.createElement('button');
@@ -229,14 +242,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!bookData) return; // Early exit if can't get book data
             
         // Step 2: Initialize EPUB processor and load book
-        const epubWrapper = await loadBookWithProcessor(bookData);
-        if (!epubWrapper) return; // Early exit if processor fails
+        epubWrapperInstance = await loadBookWithProcessor(bookData); // Assign to shared instance
+        if (!epubWrapperInstance) return; // Early exit if processor fails
             
         // Step 3: Get and render navigation data
-        const totalChapters = await getAndRenderNavData(epubWrapper);
+        const totalChapters = await getAndRenderNavData(epubWrapperInstance); // Pass instance
         if (totalChapters <= 0) return; // Early exit if no chapters
             
-        await loadAndRenderContent(epubWrapper, bookId, currentIndex, totalChapters);
+        await loadAndRenderContent(epubWrapperInstance, bookId, currentIndex, totalChapters); // Pass instance
     };
     
     // === HELPER METHODS ===
@@ -313,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function getAndRenderNavData(epubWrapper) {
         try {
             const totalChapters = epubWrapper.getTotalChapters();
+            config.totalChapters = totalChapters; // Store totalChapters in config
             
             if (totalChapters === 0) {
                 throw new Error('No readable content found in the book.');
@@ -460,74 +474,164 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Swipe Controls ---
-    let touchstartX = 0;
-    let touchendX = 0;
-    let touchstartY = 0;
-    let touchendY = 0;
-    const swipeThreshold = 50; // Minimum distance for a swipe
-    const swipeMaxVertical = 75; // Maximum vertical travel for a horizontal swipe
+    // let touchstartX = 0;
+    // let touchendX = 0;
+    // let touchstartY = 0;
+    // let touchendY = 0;
+    // const swipeThreshold = 50; // Minimum distance for a swipe
+    // const swipeMaxVertical = 75; // Maximum vertical travel for a horizontal swipe
 
     const contentWrapper = document.querySelector('.content-wrapper') || document.body;
 
-    function handleGesture() {
-        const swipeLength = touchendX - touchstartX;
-        const verticalSwipeLength = Math.abs(touchendY - touchstartY);
+    // New pointer event based swipe logic
+    let startX, startY, downTime, isSwiping = false;
+    const minLock = 10;       // px before we "lock" direction
+    const minSwipe = 60;      // px before we treat it as a page swipe
+    const minVelocity = 0.3;  // px/ms
 
-        if (verticalSwipeLength > swipeMaxVertical) {
-            console.log('Swipe discarded: too much vertical movement.');
+    // function handleGesture() {
+    //     const swipeLength = touchendX - touchstartX;
+    //     const verticalSwipeLength = Math.abs(touchendY - touchstartY);
+
+    //     if (verticalSwipeLength > swipeMaxVertical) {
+    //         console.log('Swipe discarded: too much vertical movement.');
+    //         return;
+    //     }
+
+    //     // We only care about horizontal swipes beyond the threshold
+    //     if (Math.abs(swipeLength) > swipeThreshold) {
+    //         const currentIndex = Number(config.currentIndex) || 0;
+    //         const navSpan = document.querySelector('.navigation span[data-total-items]');
+    //         const totalChapters = navSpan ? parseInt(navSpan.dataset.totalItems, 10) : 0;
+
+    //         if (totalChapters === 0) {
+    //             console.warn("Swipe: Total chapters not available or zero.");
+    //             return;
+    //         }
+
+    //         const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
+
+    //         if (swipeLength < 0) { // Negative swipeLength: Finger pulled from Right to Left (e.g., right edge to center)
+    //             // ACTION: Go to NEXT page
+    //             if (currentIndex < totalChapters - 1) {
+    //                 console.log('Swipe R->L (Next Page)');
+    //                 window.location.href = `${baseUrl}/${currentIndex + 1}`;
+    //             } else {
+    //                 console.log('Swipe R->L: Already on the last page.');
+    //             }
+    //         } else if (swipeLength > 0) { // Positive swipeLength: Finger pulled from Left to Right (e.g., left edge to center)
+    //             // ACTION: Go to PREVIOUS page
+    //             if (currentIndex > 0) {
+    //                 console.log('Swipe L->R (Previous Page)');
+    //                 window.location.href = `${baseUrl}/${currentIndex - 1}`;
+    //             } else {
+    //                 console.log('Swipe L->R: Already on the first page.');
+    //             }
+    //         }
+    //     }
+    // }
+
+    // contentWrapper.addEventListener('touchstart', e => {
+    //     touchstartX = e.changedTouches[0].screenX;
+    //     touchstartY = e.changedTouches[0].screenY;
+    // }, { passive: true }); // Use passive for scroll performance if not preventing default
+
+    // contentWrapper.addEventListener('touchend', e => {
+    //     touchendX = e.changedTouches[0].screenX;
+    //     touchendY = e.changedTouches[0].screenY;
+    //     // It's important to check if the event target is not an interactive element
+    //     // to avoid hijacking clicks on buttons, links, or input fields within the content.
+    //     const interactiveElements = ['A', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'];
+    //     if (e.target && interactiveElements.includes(e.target.tagName)) {
+    //         console.log('Swipe ignored: touch ended on an interactive element.');
+    //         return;
+    //     }
+    //     handleGesture();
+    // }, { passive: true }); // Use passive for scroll performance if not preventing default
+
+    contentWrapper.addEventListener('pointerdown', e =>{
+      if(e.pointerType !== 'touch') return;
+      // Guard interactive elements
+      if(e.target.closest('a, button, input, textarea, select')) {
+        console.log('Swipe ignored: pointer down on an interactive element.');
+        return;
+      }
+      ({ clientX:startX, clientY:startY } = e);
+      downTime = e.timeStamp; // For velocity calculation later
+      isSwiping = false;
+      // Potentially prevent text selection during swipe attempt
+      // e.preventDefault(); // Re-evaluate if this is needed or causes issues
+    });
+
+    contentWrapper.addEventListener('pointermove', e =>{
+      if(e.pointerType !== 'touch' || startX == null) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if(!isSwiping){ // Only check for lock if not already swiping
+        if(Math.abs(dx) > minLock && Math.abs(dx) > Math.abs(dy)){ // Horizontal gesture
+          isSwiping = true;          // Lock horizontal gesture
+          // Prevent default only when we are sure it's a swipe, to allow vertical scroll otherwise
+          if (e.cancelable) e.preventDefault(); // Check if event is cancelable
+        } else if (Math.abs(dy) > minLock) { // Vertical gesture, ensure we don't lock
+          startX = null; // Reset to allow scrolling
+          startY = null;
+          // Do not set isSwiping = true
+        }
+        // If neither dx nor dy is greater than minLock, do nothing yet
+      } else { // Already swiping (horizontally locked)
+         if (e.cancelable) e.preventDefault(); // Continue preventing default for the locked swipe
+      }
+    });
+
+    contentWrapper.addEventListener('pointerup', e =>{
+      if(e.pointerType !== 'touch' || startX == null || !isSwiping) { // Ensure it was a swipe attempt
+        startX = null; // Reset startX here for all cases after pointerup
+        startY = null;
+        isSwiping = false; // Reset swiping state
+        return;
+      }
+
+      const dx = e.clientX - startX;
+      const dt = e.timeStamp - downTime;
+      const v = (dt > 0) ? Math.abs(dx) / dt : 0; // Avoid division by zero if timeStamp is the same
+
+      if(Math.abs(dx) > minSwipe && v > minVelocity){
+        const currentIndex = Number(config.currentIndex) || 0;
+        const navSpan = document.querySelector('.navigation span[data-total-items]');
+        const totalChapters = navSpan ? parseInt(navSpan.dataset.totalItems, 10) : (config.totalChapters || 0);
+
+        if (totalChapters === 0) {
+            console.warn("Swipe: Total chapters not available or zero.");
+            startX = startY = null; // Reset
+            isSwiping = false;
             return;
         }
 
-        // We only care about horizontal swipes beyond the threshold
-        if (Math.abs(swipeLength) > swipeThreshold) {
-            const currentIndex = Number(config.currentIndex) || 0;
-            const navSpan = document.querySelector('.navigation span[data-total-items]');
-            const totalChapters = navSpan ? parseInt(navSpan.dataset.totalItems, 10) : 0;
-
-            if (totalChapters === 0) {
-                console.warn("Swipe: Total chapters not available or zero.");
-                return;
+        // const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
+        if (dx < 0) {
+            if (currentIndex < totalChapters - 1) {
+                console.log('Swipe R->L (Next Page) via Pointer - calling navigate(+1)');
+                navigate(+1);
+                // window.location.href = `${baseUrl}/${currentIndex + 1}`;
+            } else {
+                console.log('Swipe R->L: Already on the last page.');
             }
-
-            const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${config.bookId}` : `/read/${config.bookId}`;
-
-            if (swipeLength < 0) { // Negative swipeLength: Finger pulled from Right to Left (e.g., right edge to center)
-                // ACTION: Go to NEXT page
-                if (currentIndex < totalChapters - 1) {
-                    console.log('Swipe R->L (Next Page)');
-                    window.location.href = `${baseUrl}/${currentIndex + 1}`;
-                } else {
-                    console.log('Swipe R->L: Already on the last page.');
-                }
-            } else if (swipeLength > 0) { // Positive swipeLength: Finger pulled from Left to Right (e.g., left edge to center)
-                // ACTION: Go to PREVIOUS page
-                if (currentIndex > 0) {
-                    console.log('Swipe L->R (Previous Page)');
-                    window.location.href = `${baseUrl}/${currentIndex - 1}`;
-                } else {
-                    console.log('Swipe L->R: Already on the first page.');
-                }
+        } else {
+            if (currentIndex > 0) {
+                console.log('Swipe L->R (Previous Page) via Pointer - calling navigate(-1)');
+                navigate(-1);
+                // window.location.href = `${baseUrl}/${currentIndex - 1}`;
+            } else {
+                console.log('Swipe L->R: Already on the first page.');
             }
         }
-    }
+      }
+      startX = startY = null; // Reset coordinates
+      isSwiping = false; // Reset swiping state
+    });
 
-    contentWrapper.addEventListener('touchstart', e => {
-        touchstartX = e.changedTouches[0].screenX;
-        touchstartY = e.changedTouches[0].screenY;
-    }, { passive: true }); // Use passive for scroll performance if not preventing default
-
-    contentWrapper.addEventListener('touchend', e => {
-        touchendX = e.changedTouches[0].screenX;
-        touchendY = e.changedTouches[0].screenY;
-        // It's important to check if the event target is not an interactive element
-        // to avoid hijacking clicks on buttons, links, or input fields within the content.
-        const interactiveElements = ['A', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'];
-        if (e.target && interactiveElements.includes(e.target.tagName)) {
-            console.log('Swipe ignored: touch ended on an interactive element.');
-            return;
-        }
-        handleGesture();
-    }, { passive: true }); // Use passive for scroll performance if not preventing default
 
     // --- Smart Translate Button Logic ---
     const smartTranslateButton = document.getElementById('smart-translate-btn');
@@ -542,6 +646,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Translate function is not available at the moment.');
             }
         });
+    }
+
+    // New navigate function for partial updates
+    async function navigate(delta) {
+        const newIndex = Number(config.currentIndex) + delta;
+        const bookId = config.bookId;
+        
+        if (!epubWrapperInstance) {
+            console.error("navigate: epubWrapperInstance is not available. Cannot load chapter content directly.");
+            // Fallback to full page load if epubWrapperInstance isn't ready (should not happen in normal flow)
+            const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
+            const fallbackUrl = `${baseUrl}/${newIndex}`;
+            window.location.href = fallbackUrl; 
+            return;
+        }
+
+        const navSpan = document.querySelector('.navigation span[data-total-items]');
+        const totalChapters = navSpan ? parseInt(navSpan.dataset.totalItems, 10) : (config.totalChapters || 0);
+
+        if (totalChapters === 0) {
+             console.warn("navigate: Total chapters is zero or not available. Cannot navigate.");
+             return;
+        }
+        
+        // Ensure newIndex is within bounds (though UI should prevent this)
+        if (newIndex < 0 || newIndex >= totalChapters) {
+            console.warn(`navigate: Attempted to navigate to out-of-bounds index ${newIndex}. Total chapters: ${totalChapters}`);
+            return;
+        }
+
+        try {
+            console.log(`navigate: Loading content for index ${newIndex} for book ${bookId}`);
+            
+            const contentLoaded = await loadAndRenderContent(epubWrapperInstance, bookId, newIndex, totalChapters);
+
+            if (contentLoaded) {
+                const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
+                const url = `${baseUrl}/${newIndex}`;
+                history.pushState({ idx: newIndex, bookId: bookId }, '', url);
+                config.currentIndex = newIndex; 
+                updateNavigationCounts(totalChapters); 
+                
+                viewerElement.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+                console.log(`navigate: Successfully navigated to index ${newIndex}`);
+            } else {
+                console.error(`navigate: loadAndRenderContent failed for index ${newIndex}.`);
+                viewerElement.innerHTML = `<p>Error loading content for chapter ${newIndex + 1}. Please try refreshing.</p>`;
+            }
+
+        } catch (error) {
+            console.error('Error during navigate function execution:', error);
+            viewerElement.innerHTML = `<p>Error navigating to chapter: ${error.message}. Please try refreshing.</p>`;
+        }
     }
 
 }); 
