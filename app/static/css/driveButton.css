@@ -1,0 +1,74 @@
+/* app/static/css/driveButton.css */
+.drive-connect-button {
+  /* Base styles from btn and btn-secondary will likely still apply if class is kept */
+  /* We ensure our structural and appearance styles take precedence or augment */
+  min-width: 70px;
+  min-height: 60px;
+  box-sizing: border-box;
+  padding: 8px 4px; /* Default padding, can be overridden by states if needed */
+  
+  /* Flex container properties - common to most states */
+  display: flex;
+  align-items: center; /* Default horizontal alignment */
+  justify-content: center; /* Default vertical alignment */
+  
+  text-align: center; /* Ensure text within is centered if not flex item */
+  transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  border-radius: 8px; /* A moderate border-radius for the button itself */
+  /* cursor: pointer; inherited from button type */
+}
+
+/* Layout for when image and text are stacked (connected state) */
+.drive-connect-button.layout-vertical {
+  flex-direction: column;
+}
+
+/* Profile picture styles */
+.drive-connect-button .profile-picture {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%; /* Circular image */
+}
+
+/* Text span styles (name or status) */
+.drive-connect-button .status-text {
+  font-size: 10px;
+  margin-top: 0; /* Reset margin */
+  line-height: 1.2;
+}
+
+/* Margin for profile picture when text is below it in vertical layout */
+.drive-connect-button.layout-vertical .profile-picture + .status-text {
+  margin-top: 4px; /* Space between image and text */
+}
+
+
+/* Specific states */
+
+/* State: Disconnected */
+.drive-connect-button.state-disconnected {
+  /* Specific styles if needed, e.g., background color or text style */
+  /* For now, assumes text content "Connect Drive" is set by JS */
+}
+
+/* State: Connecting */
+.drive-connect-button.state-connecting {
+  /* Specific styles if needed, e.g., slightly different background or opacity */
+  /* For now, assumes text content "Connecting..." is set by JS */
+  cursor: wait;
+}
+
+/* State: Connected */
+.drive-connect-button.state-connected {
+  /* Specific styles for the connected button appearance */
+  /* For example, if we want a different background when connected */
+  /* background-color: #4CAF50; */ /* Example: green background */
+  /* color: white; */
+}
+
+/* Ensure existing Bootstrap button classes (if used) don't overly conflict */
+/* For example, if .btn sets padding, our padding here will override it */
+/* If .btn sets display: inline-block, our display: flex will override it */
+
+
+</rewritten_file> 

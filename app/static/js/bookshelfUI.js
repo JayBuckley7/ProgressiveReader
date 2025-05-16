@@ -7,8 +7,9 @@ const logPrefix = '[BookshelfUI]';
 
 /**
  * Renders the list of books from IndexedDB onto the bookshelf grid.
+ * @param {object} driveSync - The driveSync module for checking connection status.
  */
-export async function renderBookshelf() {
+export async function renderBookshelf(driveSync) {
     if (!recentBooksGrid) {
         console.error(`${logPrefix} Bookshelf grid element not found.`);
         return;
@@ -111,16 +112,18 @@ export async function renderBookshelf() {
 
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'X';
-            deleteBtn.setAttribute('aria-label', `Delete ${book.title || 'Untitled Book'}`); // Accessibility
+            deleteBtn.innerHTML = '&#10005;'; // Simple X symbol, or use an SVG
+            deleteBtn.setAttribute('aria-label', `Delete ${book.title || 'Untitled Book'}`);
+            deleteBtn.title = `Delete "${book.title}"`;
+            deleteBtn.dataset.bookId = book.id; // It might be useful to have bookId here too
             deleteBtn.onclick = async (e) => {
-                e.preventDefault(); // Prevent link navigation when clicking delete
-                e.stopPropagation(); // Prevent triggering link navigation
+                e.preventDefault(); 
+                e.stopPropagation(); 
                 if (confirm(`Are you sure you want to delete "${book.title}"? This cannot be undone.`)) {
                     try {
                         await deleteBook(book.id);
                         console.log(`${logPrefix} Book ${book.id} deleted from DB.`);
-                        renderBookshelf(); // Re-render the shelf after deletion
+                        renderBookshelf(driveSync); // Re-render: ensure driveSync is passed here too!
                     } catch (err) {
                         console.error(`${logPrefix} Error deleting book:`, err);
                         alert(`Failed to delete book: ${err.message || 'Unknown error'}`);
@@ -128,6 +131,21 @@ export async function renderBookshelf() {
                 }
             };
             bookItemDiv.appendChild(deleteBtn);
+
+            // Add Upload to Drive button if Drive is connected
+            if (driveSync && driveSync.isConnected()) {
+                const uploadDriveBtn = document.createElement('button');
+                uploadDriveBtn.className = 'btn-upload-drive action-btn'; 
+                uploadDriveBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                    </svg>`;
+                uploadDriveBtn.title = `Upload "${book.title}" to Google Drive`;
+                uploadDriveBtn.setAttribute('aria-label', `Upload ${book.title || 'Untitled Book'} to Google Drive`);
+                uploadDriveBtn.dataset.bookId = book.id;
+                uploadDriveBtn.dataset.bookTitle = book.title || 'Untitled Book';
+                bookItemDiv.appendChild(uploadDriveBtn);
+            }
 
             // Append the book item div to the link, then the link to the grid
             bookLink.appendChild(bookItemDiv);

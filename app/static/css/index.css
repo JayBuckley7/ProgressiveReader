@@ -247,6 +247,43 @@ body {
     background-color: #c0392b;
 }
 
+/* Styles for the "Upload to Drive" button on book cards */
+.book-item .btn-upload-drive {
+    display: none; /* Hidden by default, shown on .book-item:hover */
+    position: absolute;
+    top: 0.5rem;
+    right: 2.8rem; /* Positioned to the left of the delete button. Adjust if delete button size/padding changes. */
+    z-index: 10;
+    background-color: #4285F4; /* Google Blue */
+    color: white; /* This should make the SVG icon white if it uses fill="currentColor" */
+    border: none;
+    padding: 0.3rem 0.6rem; /* Match delete button padding */
+    border-radius: 50px;    /* Match delete button shape */
+    cursor: pointer;
+    font-size: 0.8em;       /* Match delete button font size */
+    transition: background-color 0.2s, opacity 0.2s;
+    opacity: 0.8; /* Slightly transparent until direct hover */
+    line-height: 0; /* Aligns SVGs better if they have intrinsic line height issues */
+}
+
+.book-item:hover .btn-upload-drive {
+    display: inline-flex; /* Use inline-flex for better SVG alignment */
+    align-items: center;
+    justify-content: center;
+    opacity: 1; /* Fully opaque when book item is hovered and button is shown */
+}
+
+.book-item .btn-upload-drive:hover {
+    background-color: #3578E5; /* Darker Google Blue on direct hover */
+    opacity: 1; /* Ensure full opacity on direct hover */
+}
+
+.book-item .btn-upload-drive svg {
+    width: 1em; /* Control icon size relative to font-size */
+    height: 1em; /* Control icon size relative to font-size */
+    fill: currentColor; /* Inherit color from parent (.btn-upload-drive -> white) */
+}
+
 .error-message, .success-message {
     padding: 0.75rem;
     margin-top: 1rem;
