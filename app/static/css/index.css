@@ -315,6 +315,12 @@ body {
     opacity: 1;
 }
 
+.book-item .btn-save-offline svg {
+    width: 1em; /* Control icon size relative to font-size */
+    height: 1em; /* Control icon size relative to font-size */
+    fill: currentColor; /* Inherit color from parent (.btn-save-offline -> white) */
+}
+
 .error-message, .success-message {
     padding: 0.75rem;
     margin-top: 1rem;

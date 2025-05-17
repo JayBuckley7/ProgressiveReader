@@ -159,14 +159,13 @@ export async function renderBookshelf(driveSync) {
 
             if (book.isRemoteOnly) {
                 const saveBtn = document.createElement('button');
-                saveBtn.className = 'btn-save-offline action-btn';
+                saveBtn.className = 'btn-save-offline action-btn'; // Specific class for styling, common base class
                 saveBtn.innerHTML = `
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
                         <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z"/>
-                    </svg>`;
-                saveBtn.title = `Save "${book.title}" offline`;
+                    </svg>`; // Restored download icon, icon-only
+                saveBtn.title = `Save "${book.title}" offline`; // Tooltip
                 saveBtn.setAttribute('aria-label', `Save ${book.title || 'Untitled Book'} offline`);
-                saveBtn.textContent = 'Save Offline';
 
                 saveBtn.addEventListener('click', async (e) => {
                     e.preventDefault();
