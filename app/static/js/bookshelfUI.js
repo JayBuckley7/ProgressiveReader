@@ -1,4 +1,4 @@
-import { getAllBooksMetadata, deleteBook } from './dbService.js';
+import { getAllBooksMetadata, deleteBook, addBook } from './dbService.js';
 
 const recentBooksGrid = document.getElementById('recent-books-grid');
 
@@ -27,6 +27,30 @@ export async function renderBookshelf(driveSync) {
     try {
         console.log(`${logPrefix} Calling getAllBooksMetadata...`);
         const booksMetadata = await getAllBooksMetadata();
+
+        let remoteBooks = [];
+        if (driveSync && driveSync.isConnected && driveSync.isConnected()) {
+            try {
+                remoteBooks = await driveSync.listRemoteBooks();
+            } catch (err) {
+                console.warn(`${logPrefix} Failed to list remote books:`, err);
+            }
+        }
+
+        // Add remote-only entries that are not already stored locally
+        const localIds = new Set(booksMetadata.map(b => b.id));
+        for (const rb of remoteBooks) {
+            if (!localIds.has(rb.id)) {
+                booksMetadata.push({
+                    id: rb.id,
+                    title: rb.title,
+                    lastOpened: null,
+                    coverImageBlob: null,
+                    isDemo: false,
+                    isRemoteOnly: true
+                });
+            }
+        }
         
         // Log the books before filtering
         console.log(`${logPrefix} All books before filtering:`, 
@@ -64,13 +88,14 @@ export async function renderBookshelf(driveSync) {
 
             // Create the link element first
             const bookLink = document.createElement('a');
-            bookLink.href = `/read/${book.id}/0`; 
+            bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/0`;
             bookLink.className = 'book-item-link'; // Add a class for potential styling
             bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
 
             const bookItemDiv = document.createElement('div');
             bookItemDiv.className = 'book-item';
             bookItemDiv.dataset.bookId = book.id;
+            if (book.isRemoteOnly) bookItemDiv.classList.add('remote');
             bookItemDiv.setAttribute('role', 'listitem'); // Set listitem role
 
             // Log before checking for the blob
@@ -132,8 +157,44 @@ export async function renderBookshelf(driveSync) {
             };
             bookItemDiv.appendChild(deleteBtn);
 
-            // Add Upload to Drive button if Drive is connected
-            if (driveSync && driveSync.isConnected()) {
+            if (book.isRemoteOnly) {
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn-save-offline action-btn';
+                saveBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
+                        <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z"/>
+                    </svg>`;
+                saveBtn.title = `Save "${book.title}" offline`;
+                saveBtn.setAttribute('aria-label', `Save ${book.title || 'Untitled Book'} offline`);
+                saveBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        const blob = await driveSync.downloadBook(book.id);
+                        await addBook(book.title, blob, book.id);
+                        await renderBookshelf(driveSync);
+                    } catch (err) {
+                        console.error(`${logPrefix} Save offline failed:`, err);
+                        alert('Failed to save book offline');
+                    }
+                });
+                bookItemDiv.appendChild(saveBtn);
+
+                bookLink.addEventListener('click', async (ev) => {
+                    ev.preventDefault();
+                    try {
+                        const blob = await driveSync.downloadBook(book.id);
+                        await addBook(book.title, blob, book.id);
+                        window.location.href = `/read/${book.id}/0`;
+                    } catch (err) {
+                        console.error(`${logPrefix} Failed to load remote book`, err);
+                        alert('Failed to load book from Drive');
+                    }
+                });
+            }
+
+            // Add Upload to Drive button if Drive is connected and book is local
+            if (driveSync && driveSync.isConnected() && !book.isRemoteOnly) {
                 const uploadDriveBtn = document.createElement('button');
                 uploadDriveBtn.className = 'btn-upload-drive action-btn'; 
                 uploadDriveBtn.innerHTML = `

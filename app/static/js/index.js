@@ -114,7 +114,10 @@ async function initializeApp() {
             }
         }
         window.addEventListener('drive-sync-start', () => showBanner('Syncing…', 'syncing'));
-        window.addEventListener('drive-sync-complete', () => showBanner('Up to date', 'idle', 4000));
+        window.addEventListener('drive-sync-complete', () => {
+            showBanner('Up to date', 'idle', 4000);
+            renderBookshelf(driveSync);
+        });
         window.addEventListener('drive-offline', () => showBanner('Offline', 'offline'));
         window.addEventListener('drive-online', () => {
             showBanner('Online', 'idle', 2000)

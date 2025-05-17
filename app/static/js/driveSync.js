@@ -706,7 +706,7 @@ export function disconnect(){
   window.dispatchEvent(new Event('drive-disconnect'));
 }
 
-export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect };
+export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive };
 
 // Client ID Shim
 if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
@@ -793,4 +793,29 @@ export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
         console.error('[DriveSync] uploadBookToDrive: Error during upload process:', error);
         throw error; // Re-throw to allow the caller (e.g., UI) to handle it
     }
+}
+
+// ── 11. Lightweight metadata listing and on‑demand download ────────────
+export async function listRemoteBooks() {
+    if (!isConnected()) return [];
+    const folder = await seedDriveFolder();
+    const query = `'${folder}' in parents and mimeType='application/epub+zip' and trashed=false`;
+    try {
+        const res = await driveFilesList(query, 'files(id,name,md5Checksum,modifiedTime)');
+        return (res.files || []).map(f => ({
+            id: f.id,
+            title: f.name.replace(/\.epub$/i, ''),
+            md5: f.md5Checksum,
+            modified: f.modifiedTime
+        }));
+    } catch (err) {
+        console.error('[DriveSync] listRemoteBooks failed:', err);
+        return [];
+    }
+}
+
+export async function downloadBook(bookId) {
+    if (!isConnected()) throw new Error('Not connected to Google Drive');
+    const buf = await downloadFile(bookId);
+    return new Blob([buf], { type: EPUB_MIME_TYPE });
 }
