@@ -10,6 +10,7 @@
   "dependencies": {
     "epubjs": "^0.3.93",
     "jsdom": "^26.1.0",
+    "jszip": "^3.10.1",
     "portfinder": "^1.0.37",
     "ts-node": "^10.9.1",
     "xmldom": "^0.6.0"
