@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - test-deploy
 
 jobs:
   build-and-deploy:
@@ -40,10 +41,11 @@ jobs:
           node tests/test_epub_processor.js
 
       - name: Submit build to Google Cloud Build
+        if: steps.vars.outputs.SERVICE_NAME != ''
         run: |
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
-            --substitutions=COMMIT_SHA=${{ github.sha }} \
+            --substitutions=COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.vars.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.vars.outputs.ENVIRONMENT }} \
             --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .
