@@ -81,8 +81,10 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 4.  **Run the Flask application:**
     ```bash
-    python app.py
+    python run.py
     ```
+    Alternatively, you can use `flask run` if you have the `FLASK_APP` environment
+    variable set to `run.py`.
 
 5.  Open your web browser and navigate to `http://127.0.0.1:5000` (or the address provided by Flask).
 
