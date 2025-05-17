@@ -166,6 +166,8 @@ export async function renderBookshelf(driveSync) {
                     </svg>`;
                 saveBtn.title = `Save "${book.title}" offline`;
                 saveBtn.setAttribute('aria-label', `Save ${book.title || 'Untitled Book'} offline`);
+                saveBtn.textContent = 'Save Offline';
+
                 saveBtn.addEventListener('click', async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -192,6 +194,7 @@ export async function renderBookshelf(driveSync) {
                     }
                 });
             }
+
 
             // Add Upload to Drive button if Drive is connected and book is local
             if (driveSync && driveSync.isConnected() && !book.isRemoteOnly) {
