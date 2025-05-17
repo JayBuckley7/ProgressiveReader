@@ -99,6 +99,15 @@ The application now includes an enhanced JP Highlighter module that provides imp
 7.  Click on a title in the drawer to jump to that section.
 8.  Click "Back to Upload" or the close button ('×') in the drawer to return to the upload page (this will clear the current book session).
 
+## Running Tests
+
+Run the Python test suite using:
+
+```bash
+python -m unittest discover -s tests
+```
+
+
 ## Technologies Used
 
 - **Backend**: Flask (Python web framework)

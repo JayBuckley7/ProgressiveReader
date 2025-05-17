@@ -172,7 +172,8 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
                 lastOpened: null, // Initialize lastOpened timestamp
                 coverImageBlob: coverImageBlob, // Store the Blob itself
                 isDemo: isDemo, // Flag indicating if this is a demo book
-                fileType: fileType,
+                fileType: fileType, // From add-txt-and-docx-file-support branch
+                driveId: additionalMetadata.driveId || null, // From test-deploy branch
                 ...additionalMetadata // Spread any other metadata
              };
 
@@ -403,6 +404,34 @@ export async function updateLastOpened(bookId) {
              console.error(`Transaction error updating last opened for book ID ${bookId}:`, event.target.error);
              reject(new Error(`Transaction error updating last opened timestamp: ${event.target.error?.message}`));
          };
+    });
+}
+
+/**
+ * Update arbitrary metadata fields for a book.
+ * @param {string} bookId - Book ID.
+ * @param {object} updates - Fields to merge into the existing record.
+ * @returns {Promise<boolean>} Resolves true if updated, false if book not found.
+ */
+export async function updateBookMetadata(bookId, updates = {}) {
+    if (typeof bookId !== 'string' || bookId.length === 0) {
+        console.error('[DBService] Invalid bookId provided to updateBookMetadata:', bookId);
+        throw new Error('[DBService] Invalid book ID for metadata update.');
+    }
+    const db = await _getDB();
+    const tx = db.transaction(BOOK_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(BOOK_STORE_NAME);
+    const getReq = store.get(bookId);
+    return new Promise((resolve, reject) => {
+        getReq.onsuccess = () => {
+            const data = getReq.result;
+            if (!data) { resolve(false); return; }
+            Object.assign(data, updates);
+            const putReq = store.put(data);
+            putReq.onsuccess = () => resolve(true);
+            putReq.onerror = e => reject(new Error(`Error updating book metadata: ${e.target.error?.message}`));
+        };
+        getReq.onerror = e => reject(new Error(`Error fetching book for metadata update: ${e.target.error?.message}`));
     });
 }
 
