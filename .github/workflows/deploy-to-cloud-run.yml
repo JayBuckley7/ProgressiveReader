@@ -1,9 +1,18 @@
+#  ┌─────────────────────────────────────────────────────────┐
+#  │  Deploy to Cloud Run via Cloud Build                   │
+#  │  • main         → auto-build + deploy to production    │
+#  │  • other branch → manual "Run workflow" → dev deploy   │
+#  └─────────────────────────────────────────────────────────┘
+
 name: Deploy to Cloud Run via Cloud Build
 
 on:
+  # Automatic path
   push:
-    branches:
-      - main
+    branches: [ main ]
+
+  # Manual path (adds the "Run workflow" button on every branch)
+  workflow_dispatch: {}
 
 jobs:
   build-and-deploy:
@@ -29,11 +38,33 @@ jobs:
         with:
           project_id: floofgg
 
-      - name: Submit build to Google Cloud Build
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install deps & run unit-tests
         run: |
-          gcloud builds submit \
-            --project=floofgg \
-            --config=cloudbuild.yaml \
-            --substitutions=COMMIT_SHA=${{ github.sha }} \
-            --gcs-log-dir=gs://floofgg_cloudbuild/logs \
+          set -e                       # fail fast
+          npm ci
+          node tests/test_epub_processor.js
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "SERVICE_NAME=progressive-reader-prod" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=prod"                    >> $GITHUB_OUTPUT
+          else
+            echo "SERVICE_NAME=progressive-reader-dev"  >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=dev"                     >> $GITHUB_OUTPUT
+          fi
+
+      - name: Submit build to Cloud Build
+        run: |
+          gcloud builds submit \\
+            --project=floofgg \\
+            --config=cloudbuild.yaml \\
+            --substitutions=COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \\
+            --gcs-log-dir=gs://floofgg_cloudbuild/logs \\
             .
