@@ -653,6 +653,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookId = config.bookId;
         const totalChapters = config.totalChapters; // Assuming totalChapters is stored in config
 
+        if (window.ttsManager && typeof window.ttsManager.stopSpeaking === 'function') {
+            window.ttsManager.stopSpeaking();
+        }
+
         if (!epubWrapperInstance) { // Check if epubWrapperInstance is initialized
             console.error("navigate: epubWrapperInstance is not initialized.");
             showError("Reader not fully initialized. Please try refreshing.");
