@@ -36,7 +36,7 @@ def upload_file():
     if file.filename == '':
         return jsonify({'success': False, 'message': 'No selected file'}), 400
     
-    if file and file.filename.endswith('.epub'):
+    if file and file.filename.lower().endswith(('.epub', '.txt', '.docx')):
         # No longer saving the file to the server.
         # The client will handle storage in IndexedDB.
         # This endpoint now exists purely to maintain familiar upload terminology
@@ -44,7 +44,7 @@ def upload_file():
         current_app.logger.info(f"MOCK UPLOAD in main.py: Client sent '{file.filename}' - directing to client processing")
         return jsonify({'success': True, 'message': 'File ready for client-side processing.'})
     else:
-        return jsonify({'success': False, 'message': 'Invalid file type, please upload an EPUB.'}), 400
+        return jsonify({'success': False, 'message': 'Invalid file type, please upload an EPUB, TXT, or DOCX file.'}), 400
 
 # Route removed as reading is handled by /read/<book_id>/<item_index> in reader.py
 # @main_bp.route('/read/<int:bookId>')

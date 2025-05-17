@@ -1,5 +1,6 @@
 import { ready as dbServiceReady, getBook, getProgress, saveProgress, updateLastOpened } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
+import { TextProcessorWrapper } from './textProcessor.js';
 
 
 // readerJS.js
@@ -296,21 +297,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize EPUB processor and load book
     async function loadBookWithProcessor(bookData) {
         try {
-            console.log('readerJS: Creating EpubProcessorWrapper...');
-            
-            if (typeof EpubProcessorWrapper === 'undefined') {
-                throw new Error("EpubProcessorWrapper is undefined. Check import/export and script loading.");
-            }
-            
             const bookBinaryContent = await bookData.content.arrayBuffer();
-            const epubWrapper = new EpubProcessorWrapper();
-            const loadSuccess = await epubWrapper.loadBook(bookBinaryContent);
-            
-            if (!loadSuccess) {
-                throw new Error('Failed to load book with EpubProcessorWrapper.');
+            let wrapper;
+            if (bookData.fileType === 'txt' || bookData.fileType === 'docx') {
+                wrapper = new TextProcessorWrapper();
+                const loaded = await wrapper.loadBook(bookBinaryContent, { fileType: bookData.fileType });
+                if (!loaded) {
+                    throw new Error('Failed to load book with TextProcessorWrapper.');
+                }
+            } else {
+                wrapper = new EpubProcessorWrapper();
+                const loaded = await wrapper.loadBook(bookBinaryContent);
+                if (!loaded) {
+                    throw new Error('Failed to load book with EpubProcessorWrapper.');
+                }
             }
-            
-            return epubWrapper;
+
+            return wrapper;
         } catch (error) {
             console.error(`readerJS: Error loading book with processor: ${error.message}`);
             showError(`Could not load book content: ${error.message}`);
