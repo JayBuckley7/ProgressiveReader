@@ -125,21 +125,25 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
     const db = await _getDB();
     let coverImageBlob = null;
 
-    // Try to extract cover image before adding to DB
+    // Try to extract metadata (title & cover image) before adding to DB
     try {
         const epubProcessor = new EpubProcessorWrapper();
         const arrayBuffer = await contentBlob.arrayBuffer();
         const loaded = await epubProcessor.loadBook(arrayBuffer);
         if (loaded) {
+            const parsedTitle = epubProcessor.getBookTitle();
+            if (parsedTitle && parsedTitle !== 'Untitled Book') {
+                title = parsedTitle;
+            }
             coverImageBlob = await epubProcessor.getCoverBlob();
             if (coverImageBlob) {
                 console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
             }
         } else {
-            console.warn(`[DBService] EpubProcessor failed to load book "${title}" for cover extraction.`);
+            console.warn(`[DBService] EpubProcessor failed to load book "${title}" for metadata extraction.`);
         }
     } catch (error) {
-        console.error(`[DBService] Error during cover extraction for "${title}":`, error);
+        console.error(`[DBService] Error during metadata extraction for "${title}":`, error);
     }
 
     const transaction = db.transaction(BOOK_STORE_NAME, 'readwrite');

@@ -284,6 +284,37 @@ body {
     fill: currentColor; /* Inherit color from parent (.btn-upload-drive -> white) */
 }
 
+/* Styles for the "Save Offline" button on cloud book cards */
+.book-item .btn-save-offline {
+    display: none;
+    position: absolute;
+    top: 0.5rem;
+    right: 2.8rem;
+    z-index: 10;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background-color 0.2s, opacity 0.2s;
+    opacity: 0.8;
+    line-height: 0;
+}
+
+.book-item:hover .btn-save-offline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+}
+
+.book-item .btn-save-offline:hover {
+    background-color: #1e874b;
+    opacity: 1;
+}
+
 .error-message, .success-message {
     padding: 0.75rem;
     margin-top: 1rem;
