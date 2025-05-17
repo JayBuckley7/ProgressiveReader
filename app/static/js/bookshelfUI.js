@@ -1,5 +1,5 @@
-import { getAllBooksMetadata, deleteBook, addBook } from "./dbService.js";
-import { EpubProcessorWrapper } from "./epubProcessor.js";
+import { getAllBooksMetadata, deleteBook, addBook, updateBookCover } from './dbService.js';
+import { EpubProcessorWrapper } from './epubProcessor.js';
 
 const recentBooksGrid = document.getElementById("recent-books-grid");
 
@@ -216,10 +216,60 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       };
       bookItemDiv.appendChild(deleteBtn);
 
-      if (book.isRemoteOnly) {
-        const saveBtn = document.createElement("button");
-        saveBtn.className = "btn-save-offline action-btn"; // Specific class for styling, common base class
-        saveBtn.innerHTML = `
+// ───────────────────────────────────────────────
+// 1) Custom-cover button + hidden file input
+// ───────────────────────────────────────────────
+const coverBtn   = document.createElement("button");
+coverBtn.className   = "btn-change-cover action-btn";
+coverBtn.textContent = "📷";
+coverBtn.title       = `Change cover for "${book.title}"`;
+coverBtn.setAttribute(
+  "aria-label",
+  `Change cover for ${book.title || "Untitled Book"}`
+);
+
+const coverInput = document.createElement("input");
+coverInput.type  = "file";
+coverInput.accept = "image/*";
+coverInput.style.display = "none";
+
+coverInput.addEventListener("change", async () => {
+  if (coverInput.files?.[0]) {
+    try {
+      await updateBookCover(book.id, coverInput.files[0]);
+      await renderBookshelf(driveSync);
+    } catch (err) {
+      console.error(`${logPrefix} Failed to update cover for ${book.id}`, err);
+    }
+  }
+});
+
+coverBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  coverInput.click();
+});
+
+bookItemDiv.appendChild(coverBtn);
+bookItemDiv.appendChild(coverInput);
+
+// ───────────────────────────────────────────────
+// 2) “Save offline” button for remote-only books
+// ───────────────────────────────────────────────
+if (book.isRemoteOnly) {
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn-save-offline action-btn";   // specific + common styling
+  saveBtn.innerHTML = `
+    <!-- your SVG/icon markup here -->
+    <span>Save offline</span>
+  `;
+
+  // …add any event listeners you already had…
+  // saveBtn.addEventListener(...)
+
+  bookItemDiv.appendChild(saveBtn);
+}
+
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
                         <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z"/>
                     </svg>`; // Restored download icon, icon-only

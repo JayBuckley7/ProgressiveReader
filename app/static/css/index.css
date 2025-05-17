@@ -350,6 +350,45 @@ body {
   fill: currentColor; /* Inherit color from parent (.btn-save-offline -> white) */
 }
 
+/* ────────────────────────────────────────────────
+   Change-cover button on each book card
+   ──────────────────────────────────────────────── */
+.book-item .btn-change-cover {
+  display: none;                     /* hidden until hover */
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+
+  /* visual */
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 50px;
+  font-size: 0.8em;
+  cursor: pointer;
+
+  /* fx */
+  opacity: 0.8;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.book-item:hover .btn-change-cover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+}
+
+.book-item .btn-change-cover:hover {
+  background-color: #5a6268;
+  opacity: 1;
+}
+
+/* ────────────────────────────────────────────────
+   Flash-message blocks
+   ──────────────────────────────────────────────── */
 .error-message,
 .success-message {
   padding: 0.75rem;
@@ -357,15 +396,18 @@ body {
   border-radius: 6px;
   text-align: center;
 }
+
 .error-message {
   color: #c0392b;
   background-color: #fbeae5;
   border: 1px solid #e74c3c;
 }
+
 .success-message {
   color: #27ae60;
   background-color: #eaf7f0;
   border: 1px solid #2ecc71;
+}
 }
 
 .flash-messages {

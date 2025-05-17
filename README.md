@@ -47,6 +47,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
 - **Table of Contents**: Extracts the ToC and provides a collapsible side drawer for navigation.
 - **Chapter Navigation**: "Previous" and "Next" buttons allow sequential reading.
 - **Session-Based**: Stores book structure (spine, ToC) and current state in the user's session.
+- **Custom Covers**: Use the camera icon on a book card to upload a cover image.
 
 ## Getting Started
 
