@@ -321,6 +321,36 @@ body {
     fill: currentColor; /* Inherit color from parent (.btn-save-offline -> white) */
 }
 
+/* Button for changing the cover image on a book card */
+.book-item .btn-change-cover {
+    display: none;
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    z-index: 10;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background-color 0.2s, opacity 0.2s;
+    opacity: 0.8;
+}
+
+.book-item:hover .btn-change-cover {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+}
+
+.book-item .btn-change-cover:hover {
+    background-color: #5a6268;
+    opacity: 1;
+}
+
 .error-message, .success-message {
     padding: 0.75rem;
     margin-top: 1rem;

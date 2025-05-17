@@ -1,4 +1,4 @@
-import { getAllBooksMetadata, deleteBook, addBook } from './dbService.js';
+import { getAllBooksMetadata, deleteBook, addBook, updateBookCover } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 
 const recentBooksGrid = document.getElementById('recent-books-grid');
@@ -188,6 +188,38 @@ export async function renderBookshelf(driveSync) {
                 }
             };
             bookItemDiv.appendChild(deleteBtn);
+
+            // Button to change or add a custom cover image
+            const coverBtn = document.createElement('button');
+            coverBtn.className = 'btn-change-cover action-btn';
+            coverBtn.textContent = "📷";
+            coverBtn.title = `Change cover for "${book.title}"`;
+            coverBtn.setAttribute('aria-label', `Change cover for ${book.title || 'Untitled Book'}`);
+
+            const coverInput = document.createElement('input');
+            coverInput.type = 'file';
+            coverInput.accept = 'image/*';
+            coverInput.style.display = 'none';
+
+            coverInput.addEventListener('change', async () => {
+                if (coverInput.files && coverInput.files[0]) {
+                    try {
+                        await updateBookCover(book.id, coverInput.files[0]);
+                        await renderBookshelf(driveSync);
+                    } catch (err) {
+                        console.error(`${logPrefix} Failed to update cover for ${book.id}`, err);
+                    }
+                }
+            });
+
+            coverBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                coverInput.click();
+            });
+
+            bookItemDiv.appendChild(coverBtn);
+            bookItemDiv.appendChild(coverInput);
 
             if (book.isRemoteOnly) {
                 const saveBtn = document.createElement('button');
