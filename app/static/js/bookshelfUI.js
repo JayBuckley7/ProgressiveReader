@@ -1,4 +1,5 @@
 import { getAllBooksMetadata, deleteBook, addBook } from './dbService.js';
+import { EpubProcessorWrapper } from './epubProcessor.js';
 
 const recentBooksGrid = document.getElementById('recent-books-grid');
 
@@ -38,7 +39,11 @@ export async function renderBookshelf(driveSync) {
         }
 
         // Add remote-only entries that are not already stored locally
-        const localIds = new Set(booksMetadata.map(b => b.id));
+        const localIds = new Set();
+        booksMetadata.forEach(b => {
+            localIds.add(b.id);
+            if (b.driveId) localIds.add(b.driveId);
+        });
         for (const rb of remoteBooks) {
             if (!localIds.has(rb.id)) {
                 booksMetadata.push({
@@ -47,7 +52,8 @@ export async function renderBookshelf(driveSync) {
                     lastOpened: null,
                     coverImageBlob: null,
                     isDemo: false,
-                    isRemoteOnly: true
+                    isRemoteOnly: true,
+                    driveId: rb.id
                 });
             }
         }
@@ -122,11 +128,32 @@ export async function renderBookshelf(driveSync) {
                 // Fallback to placeholder if no cover image Blob
                 const noCoverDiv = document.createElement('div');
                 noCoverDiv.className = 'no-cover';
-                // Improve accessibility of placeholder
-                noCoverDiv.setAttribute('role', 'img'); 
+                noCoverDiv.setAttribute('role', 'img');
                 noCoverDiv.setAttribute('aria-label', 'Cover placeholder');
-                noCoverDiv.textContent = 'No Cover'; 
+                noCoverDiv.textContent = 'No Cover';
                 bookItemDiv.appendChild(noCoverDiv);
+
+                if (book.isRemoteOnly && driveSync && driveSync.isConnected()) {
+                    // Attempt to fetch cover image from Drive
+                    (async () => {
+                        try {
+                            const blob = await driveSync.downloadBook(book.id);
+                            const proc = new EpubProcessorWrapper();
+                            await proc.loadBook(await blob.arrayBuffer());
+                            const cover = await proc.getCoverBlob();
+                            if (cover) {
+                                const img = document.createElement('img');
+                                img.src = URL.createObjectURL(cover);
+                                img.alt = `Cover for ${book.title}`;
+                                img.loading = 'lazy';
+                                img.onload = () => URL.revokeObjectURL(img.src);
+                                bookItemDiv.replaceChild(img, noCoverDiv);
+                            }
+                        } catch (e) {
+                            console.warn('Failed to fetch remote cover for', book.id, e);
+                        }
+                    })();
+                }
             }
 
             // Add title text to the book item div, not as a separate link
@@ -195,8 +222,8 @@ export async function renderBookshelf(driveSync) {
             }
 
 
-            // Add Upload to Drive button if Drive is connected and book is local
-            if (driveSync && driveSync.isConnected() && !book.isRemoteOnly) {
+            // Add Upload to Drive button if Drive is connected, book is local, and not already uploaded
+            if (driveSync && driveSync.isConnected() && !book.isRemoteOnly && !book.driveId) {
                 const uploadDriveBtn = document.createElement('button');
                 uploadDriveBtn.className = 'btn-upload-drive action-btn'; 
                 uploadDriveBtn.innerHTML = `
