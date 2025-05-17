@@ -165,6 +165,18 @@ This application is configured for deployment to Google Cloud Run.
     - Replace placeholders with your actual keys/secrets.
 
 4.  After deployment, `gcloud` will output the URL of your deployed service.
+
+### Deploy Scripts
+
+For convenience, two shell scripts are provided in the `scripts` directory:
+
+```bash
+./scripts/deploy-prod.sh  # Deploys to the production service
+./scripts/deploy-test.sh  # Deploys to the test service
+```
+
+Both scripts deploy using the `us-central1` region and assume your `gcloud`
+configuration is already authenticated and set to the correct project.
 ## Custom Domain
 
 To use `dev.progressivereader.net` with this Cloud Run service:
