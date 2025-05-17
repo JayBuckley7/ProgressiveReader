@@ -105,4 +105,17 @@ function openDatabase() {
     });
 }
 
+// Expose functions for other modules
+window.storageManager = {
+    getTranslationCacheKey,
+    saveTranslationToLocal,
+    loadTranslationFromLocal,
+    removeTranslationFromLocal,
+    saveReadingProgress,
+    getReadingProgress,
+    getAutoloadPreference,
+    saveAutoloadPreference,
+    openDatabase
+};
+
 // … (everything else in the original file remains unchanged)
