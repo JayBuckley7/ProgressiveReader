@@ -175,13 +175,13 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                         if (ruby.start > fragment.start) {
                             splitFragment(fragments, fragmentIndex, ruby.start);
                             insertAfter(<rt></rt>, fragment.node);
-                            fragment = fragment = fragments[++fragmentIndex];
+                            fragment = fragments[++fragmentIndex];
                         }
 
                         if (ruby.end < fragment.end) {
                             splitFragment(fragments, fragmentIndex, ruby.end);
                             insertAfter(<rt class='jpdb-furi'>{ruby.text}</rt>, fragment.node);
-                            fragment = fragment = fragments[++fragmentIndex];
+                            fragment = fragments[++fragmentIndex];
                         } else {
                             insertAfter(<rt class='jpdb-furi'>{ruby.text}</rt>, fragment.node);
                         }
