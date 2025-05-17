@@ -41,7 +41,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 ## Features
 
-- **EPUB Upload**: Upload `.epub` files via a web form.
+- **File Upload**: Upload `.epub`, `.txt`, or `.docx` files via a web form.
 - **In-Memory Processing**: EPUB files are processed in memory using temporary files, avoiding permanent server storage.
 - **Web-Based Reading**: Displays EPUB content chapter by chapter in the browser.
 - **Table of Contents**: Extracts the ToC and provides a collapsible side drawer for navigation.
@@ -91,8 +91,8 @@ The application now includes an enhanced JP Highlighter module that provides imp
 ## Usage
 
 1.  Visit the home page (`/`).
-2.  Use the "Choose File" button to select an `.epub` file from your computer.
-3.  Click "Upload EPUB".
+2.  Use the "Choose File" button to select an `.epub`, `.txt`, or `.docx` file from your computer.
+3.  Click "Upload File".
 4.  The first chapter/section of the book will be displayed.
 5.  Use the "Previous" and "Next" buttons at the top or bottom to navigate through sections.
 6.  Click the hamburger icon (☰) in the top-left corner to open the Table of Contents drawer.
