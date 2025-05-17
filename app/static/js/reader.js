@@ -1,5 +1,6 @@
 import { ready as dbServiceReady, getBook, getProgress, saveProgress, updateLastOpened } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
+import { TextProcessorWrapper } from './textProcessor.js';
 
 
 // readerJS.js
@@ -44,13 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateNavigationCounts(totalChapters) {
         console.log(`readerJS: Updating navigation with total chapters: ${totalChapters}`);
         const currentIndex = config.currentIndex; // This is 0-based from config
+        const pageTotal = config.pageCount || totalChapters;
         
         // Target the specific span for page count
         document.querySelectorAll('.navigation .nav-right span[data-role="page-counter"]').forEach(span => {
             const oldText = span.textContent;
             // Display 1-based indexing for user-friendliness (e.g., Page 1 of N)
             // totalChapters is the count, so last page is totalChapters - 1 (0-indexed)
-            const newText = `Page ${currentIndex + 1} of ${totalChapters}`; 
+            const newText = `Page ${currentIndex + 1} of ${pageTotal}`;
             span.textContent = newText;
             // Store 0-based current_index and 1-based total_items if needed, but textContent is primary for display
             span.dataset.currentIndex = currentIndex; // Store 0-based index
@@ -64,8 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updatePrevNextButtons(totalChapters) {
         const currentIndex = Number(config.currentIndex) || 0; // 0-based
-        const bookId = config.bookId; 
+        const bookId = config.bookId;
         const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
+        const pageTotal = config.pageCount || totalChapters;
     
         document.querySelectorAll('.navigation').forEach(nav => {
             const navRight = nav.querySelector('.nav-right');
@@ -97,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pageCountSpan = document.createElement('span');
             pageCountSpan.dataset.role = 'page-counter';
             // Initial text will be updated by updateNavigationCounts, but set a placeholder
-            pageCountSpan.textContent = `Page ${currentIndex + 1} of ${totalChapters}`; 
+            pageCountSpan.textContent = `Page ${currentIndex + 1} of ${pageTotal}`;
             pageCountSpan.style.margin = '0 0.8em'; // Add some spacing
             navRight.appendChild(pageCountSpan);
     
@@ -236,6 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Step 1: Get book data from database
         const bookData = await getBookData(bookId);
         if (!bookData) return; // Early exit if can't get book data
+        if (bookData.fileType) config.fileType = bookData.fileType;
+        if (bookData.pageCount) config.pageCount = bookData.pageCount;
             
         // Step 2: Initialize EPUB processor and load book
         epubWrapperInstance = await loadBookWithProcessor(bookData); // Assign to shared instance
@@ -296,21 +301,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize EPUB processor and load book
     async function loadBookWithProcessor(bookData) {
         try {
-            console.log('readerJS: Creating EpubProcessorWrapper...');
-            
-            if (typeof EpubProcessorWrapper === 'undefined') {
-                throw new Error("EpubProcessorWrapper is undefined. Check import/export and script loading.");
-            }
-            
             const bookBinaryContent = await bookData.content.arrayBuffer();
-            const epubWrapper = new EpubProcessorWrapper();
-            const loadSuccess = await epubWrapper.loadBook(bookBinaryContent);
-            
-            if (!loadSuccess) {
-                throw new Error('Failed to load book with EpubProcessorWrapper.');
+            let wrapper;
+            if (bookData.fileType === 'txt' || bookData.fileType === 'docx') {
+                wrapper = new TextProcessorWrapper();
+                const loaded = await wrapper.loadBook(bookBinaryContent, { fileType: bookData.fileType });
+                if (!loaded) {
+                    throw new Error('Failed to load book with TextProcessorWrapper.');
+                }
+            } else {
+                wrapper = new EpubProcessorWrapper();
+                const loaded = await wrapper.loadBook(bookBinaryContent);
+                if (!loaded) {
+                    throw new Error('Failed to load book with EpubProcessorWrapper.');
+                }
             }
-            
-            return epubWrapper;
+
+            return wrapper;
         } catch (error) {
             console.error(`readerJS: Error loading book with processor: ${error.message}`);
             showError(`Could not load book content: ${error.message}`);
@@ -323,6 +330,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const totalChapters = epubWrapper.getTotalChapters();
             config.totalChapters = totalChapters; // Store totalChapters in config
+            if (typeof epubWrapper.getPageCount === 'function') {
+                const pc = epubWrapper.getPageCount();
+                if (pc) config.pageCount = pc;
+            }
             
             if (totalChapters === 0) {
                 throw new Error('No readable content found in the book.');

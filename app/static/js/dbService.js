@@ -124,26 +124,29 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
     }
     const db = await _getDB();
     let coverImageBlob = null;
+    const fileType = (additionalMetadata && additionalMetadata.fileType) ? additionalMetadata.fileType : 'epub';
 
     // Try to extract metadata (title & cover image) before adding to DB
-    try {
-        const epubProcessor = new EpubProcessorWrapper();
-        const arrayBuffer = await contentBlob.arrayBuffer();
-        const loaded = await epubProcessor.loadBook(arrayBuffer);
-        if (loaded) {
-            const parsedTitle = epubProcessor.getBookTitle();
-            if (parsedTitle && parsedTitle !== 'Untitled Book') {
-                title = parsedTitle;
+    if (fileType === 'epub') {
+        try {
+            const epubProcessor = new EpubProcessorWrapper();
+            const arrayBuffer = await contentBlob.arrayBuffer();
+            const loaded = await epubProcessor.loadBook(arrayBuffer);
+            if (loaded) {
+                const parsedTitle = epubProcessor.getBookTitle();
+                if (parsedTitle && parsedTitle !== 'Untitled Book') {
+                    title = parsedTitle;
+                }
+                coverImageBlob = await epubProcessor.getCoverBlob();
+                if (coverImageBlob) {
+                    console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
+                }
+            } else {
+                console.warn(`[DBService] EpubProcessor failed to load book "${title}" for metadata extraction.`);
             }
-            coverImageBlob = await epubProcessor.getCoverBlob();
-            if (coverImageBlob) {
-                console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
-            }
-        } else {
-            console.warn(`[DBService] EpubProcessor failed to load book "${title}" for metadata extraction.`);
+        } catch (error) {
+            console.error(`[DBService] Error during metadata extraction for "${title}":`, error);
         }
-    } catch (error) {
-        console.error(`[DBService] Error during metadata extraction for "${title}":`, error);
     }
 
     const transaction = db.transaction(BOOK_STORE_NAME, 'readwrite');
@@ -169,6 +172,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
                 lastOpened: null, // Initialize lastOpened timestamp
                 coverImageBlob: coverImageBlob, // Store the Blob itself
                 isDemo: isDemo, // Flag indicating if this is a demo book
+                fileType: fileType,
                 ...additionalMetadata // Spread any other metadata
              };
 
@@ -251,9 +255,10 @@ export async function getAllBooksMetadata() {
                     title: book.title,
                     lastOpened: book.lastOpened,
                     addedDate: book.addedDate,
-                    coverImageBlob: book.coverImageBlob, // Include the cover Blob
-                    isDemo: book.isDemo || false // Include the isDemo flag, default to false for existing books
-                    // Omit book.content
+                    coverImageBlob: book.coverImageBlob,
+                    isDemo: book.isDemo || false,
+                    fileType: book.fileType || 'epub',
+                    pageCount: book.pageCount || null
                 }));
                
                 // Log demo books for debugging

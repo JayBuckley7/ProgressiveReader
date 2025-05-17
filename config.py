@@ -7,7 +7,7 @@ class Config:
     UPLOAD_FOLDER = 'user_epubs'
     # Derive COVER_EXPORT_FOLDER from UPLOAD_FOLDER
     COVER_EXPORT_FOLDER = UPLOAD_FOLDER 
-    ALLOWED_EXTENSIONS = {'epub'}
+    ALLOWED_EXTENSIONS = {'epub', 'txt', 'docx'}
     # JPDB API Limits (can be configured here)
     MAX_BYTES_PER_API_BATCH = 15000 
     MAX_SEGMENTS_PER_API_BATCH = 75
