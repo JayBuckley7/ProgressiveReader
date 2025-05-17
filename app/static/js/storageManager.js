@@ -31,10 +31,17 @@ function removeTranslationFromLocal(bookId, itemIndex) {
 }
 
 // --- Reading Progress Management ---
+import { updateLastOpened } from './dbService.js';
+
 function saveReadingProgress(bookId, itemIndex) {
     if (bookId === null || itemIndex === null) return;
     const progressKey = `reading_progress_${bookId}`;
-    localStorage.setItem(progressKey, itemIndex.toString());
+    const record = { index: itemIndex, dttm_mod: Date.now() };
+    try {
+        localStorage.setItem(progressKey, JSON.stringify(record));
+    } catch (e) {
+        console.error('Failed to save reading progress to localStorage:', e);
+    }
 
     // --- Drive Sync: queue progress upload ---
     if (window.driveSync && typeof window.driveSync.isConnected === 'function' && window.driveSync.isConnected()) {
@@ -55,13 +62,38 @@ function saveReadingProgress(bookId, itemIndex) {
                 .catch(err => console.error('Sync registration failed:', err));
         });
     }
+
+    // Update last opened timestamp in IndexedDB
+    if (typeof updateLastOpened === 'function') {
+        updateLastOpened(bookId).catch(err => {
+            console.error('Failed to update last opened timestamp:', err);
+        });
+    }
 }
 
 function getReadingProgress(bookId) {
+    const meta = getReadingProgressMeta(bookId);
+    return meta ? meta.index : null;
+}
+
+function getReadingProgressMeta(bookId) {
     if (bookId === null) return null;
     const progressKey = `reading_progress_${bookId}`;
-    const savedIndex = localStorage.getItem(progressKey);
-    return savedIndex !== null ? parseInt(savedIndex, 10) : null; // Ensure base 10
+    const raw = localStorage.getItem(progressKey);
+    if (raw === null) return null;
+    try {
+        const obj = JSON.parse(raw);
+        if (typeof obj === 'object' && obj !== null && obj.hasOwnProperty('index')) {
+            return { index: parseInt(obj.index, 10), dttm_mod: obj.dttm_mod || 0 };
+        }
+    } catch (e) {
+        // Fall back to old format
+        const idx = parseInt(raw, 10);
+        if (!Number.isNaN(idx)) {
+            return { index: idx, dttm_mod: 0 };
+        }
+    }
+    return null;
 }
 
 // --- Autoload Preference ---
@@ -313,6 +345,23 @@ async function removeFromOutbox(id) {
     }
 }
 
+// Merge progress data from cloud with local storage
+function mergeProgress(progressObj) {
+    if (!progressObj || !progressObj.bookId) return;
+    const localMeta = getReadingProgressMeta(progressObj.bookId);
+    const remoteTs = progressObj.ts || 0;
+    if (!localMeta || remoteTs > (localMeta.dttm_mod || 0)) {
+        saveReadingProgress(progressObj.bookId, progressObj.cfi);
+        const key = `reading_progress_${progressObj.bookId}`;
+        const record = { index: progressObj.cfi, dttm_mod: remoteTs };
+        try {
+            localStorage.setItem(key, JSON.stringify(record));
+        } catch (e) {
+            console.error('Failed to merge progress from cloud:', e);
+        }
+    }
+}
+
 // Check if we're currently offline
 function isOffline() {
     return !navigator.onLine;
@@ -329,6 +378,8 @@ window.storageManager = {
     // Reading progress
     saveReadingProgress,
     getReadingProgress,
+    getReadingProgressMeta,
+    mergeProgress,
     
     // Preferences
     getAutoloadPreference,
