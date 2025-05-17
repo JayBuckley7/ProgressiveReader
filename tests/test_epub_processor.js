@@ -393,6 +393,7 @@ Temporary files for detailed diff saved to: ${tempDir}`);
         }
         
         console.log(`\nTest completed. Successes: ${successCount}, Failures: ${failCount}`);
+        process.exit(failCount > 0 ? 1 : 0);
     } catch (error) {
         console.error("An error occurred during the test:", error);
     }
