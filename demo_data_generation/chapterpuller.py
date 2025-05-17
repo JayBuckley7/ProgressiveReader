@@ -110,7 +110,9 @@ def build_mock_translate(epub_path: str):
         print(f"[MockGen] ERROR: No demo folder mapping for '{book_title}'. Aborting.")
         return
 
-    demo_path = os.path.join(os.getcwd(), demo_folder)
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    demo_base = os.path.join(repo_root, 'app', 'static', 'demo_data')
+    demo_path = os.path.join(demo_base, demo_folder)
     os.makedirs(demo_path, exist_ok=True)
     print(f"[MockGen] Writing mock translations to '{demo_path}'")
 
@@ -147,6 +149,7 @@ def build_mock_translate(epub_path: str):
 
                 stream_lines = generate_mock_stream(original_html, translated_html)
                 entry = {
+                    "book_id": demo_folder,
                     "item_index": idx,
                     "target_language": lang_name,
                     "cefr_level": cefr,
@@ -155,11 +158,19 @@ def build_mock_translate(epub_path: str):
                 entries.append(entry)
                 time.sleep(0.2)  # basic throttle
 
-    # 4. Write a single JSON file per book
-    out_file = os.path.join(demo_path, "mock_translate_responses.json")
+    # 4. Append to the book's JSON file under app/static/demo_data
+    out_file = os.path.join(demo_path, "translate_responses.json")
+    if os.path.isfile(out_file):
+        try:
+            existing = json.load(open(out_file, encoding="utf-8"))
+        except Exception:
+            existing = []
+    else:
+        existing = []
+    existing.extend(entries)
     with open(out_file, "w", encoding="utf-8") as fp:
-        json.dump(entries, fp, ensure_ascii=False, indent=2)
-    print(f"[MockGen] Mock file written: {out_file} (total {len(entries)} entries)")
+        json.dump(existing, fp, ensure_ascii=False, indent=2)
+    print(f"[MockGen] Mock file written: {out_file} (total {len(existing)} entries)")
 
 
 # ── Entrypoint ─────────────────────────────────────────────────────────
