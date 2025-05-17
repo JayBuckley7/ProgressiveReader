@@ -73,6 +73,7 @@ function getAutoloadPreference() {
 
 function saveAutoloadPreference(isChecked) {
     localStorage.setItem('autoload_preference', isChecked);
+    // console.log("Autoload preference saved:", isChecked);
 }
 
 // --- PWA Offline Support ---
@@ -88,21 +89,262 @@ const STORES = {
 function openDatabase() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = event => reject(event.target.error);
-        request.onsuccess = event => resolve(event.target.result);
+        
+        request.onerror = event => {
+            console.error('Error opening database:', event.target.error);
+            reject(event.target.error);
+        };
+        
+        request.onsuccess = event => {
+            resolve(event.target.result);
+        };
+        
         request.onupgradeneeded = event => {
             const db = event.target.result;
+            
+            // Create object stores if they don't exist
             if (!db.objectStoreNames.contains(STORES.BOOKS)) {
                 db.createObjectStore(STORES.BOOKS, { keyPath: 'id' });
+                console.log('Books store created');
             }
+            
             if (!db.objectStoreNames.contains(STORES.CONTENT)) {
-                db.createObjectStore(STORES.CONTENT, { keyPath: ['bookId', 'index'] });
+                db.createObjectStore(STORES.CONTENT, { keyPath: 'key' });
+                console.log('Content store created');
             }
+            
             if (!db.objectStoreNames.contains(STORES.OUTBOX)) {
-                db.createObjectStore(STORES.OUTBOX, { autoIncrement: true });
+                db.createObjectStore(STORES.OUTBOX, { 
+                    keyPath: 'id',
+                    autoIncrement: true 
+                });
+                console.log('Outbox store created');
             }
         };
     });
 }
 
-// … (everything else in the original file remains unchanged)
+// Store book data for offline access
+async function storeBookForOffline(bookId, bookData) {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.BOOKS], 'readwrite');
+        const booksStore = transaction.objectStore(STORES.BOOKS);
+        
+        // Combine the book ID with the book data
+        const bookRecord = {
+            ...bookData,
+            id: bookId,
+            timestamp: Date.now()
+        };
+        
+        await booksStore.put(bookRecord);
+        console.log(`Book ${bookId} stored for offline access`);
+        return true;
+    } catch (error) {
+        console.error('Error storing book for offline access:', error);
+        return false;
+    }
+}
+
+// Store page content for offline access
+async function storePageContent(bookId, itemIndex, content) {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.CONTENT], 'readwrite');
+        const contentStore = transaction.objectStore(STORES.CONTENT);
+        
+        const key = `${bookId}_${itemIndex}`;
+        const contentRecord = {
+            key,
+            bookId,
+            itemIndex,
+            content,
+            timestamp: Date.now()
+        };
+        
+        await contentStore.put(contentRecord);
+        console.log(`Content for book ${bookId}, page ${itemIndex} stored for offline access`);
+        return true;
+    } catch (error) {
+        console.error('Error storing page content for offline access:', error);
+        return false;
+    }
+}
+
+// Get book data for offline access
+async function getOfflineBook(bookId) {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.BOOKS], 'readonly');
+        const booksStore = transaction.objectStore(STORES.BOOKS);
+        
+        return new Promise((resolve, reject) => {
+            const request = booksStore.get(bookId);
+            
+            request.onsuccess = event => {
+                resolve(event.target.result);
+            };
+            
+            request.onerror = event => {
+                console.error('Error getting book:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    } catch (error) {
+        console.error('Error accessing offline book database:', error);
+        return null;
+    }
+}
+
+// Get page content for offline access
+async function getOfflinePageContent(bookId, itemIndex) {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.CONTENT], 'readonly');
+        const contentStore = transaction.objectStore(STORES.CONTENT);
+        
+        const key = `${bookId}_${itemIndex}`;
+        
+        return new Promise((resolve, reject) => {
+            const request = contentStore.get(key);
+            
+            request.onsuccess = event => {
+                resolve(event.target.result?.content || null);
+            };
+            
+            request.onerror = event => {
+                console.error('Error getting page content:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    } catch (error) {
+        console.error('Error accessing offline content database:', error);
+        return null;
+    }
+}
+
+// Get all books for offline access
+async function getAllOfflineBooks() {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.BOOKS], 'readonly');
+        const booksStore = transaction.objectStore(STORES.BOOKS);
+        
+        return new Promise((resolve, reject) => {
+            const request = booksStore.getAll();
+            
+            request.onsuccess = event => {
+                resolve(event.target.result || []);
+            };
+            
+            request.onerror = event => {
+                console.error('Error getting all books:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    } catch (error) {
+        console.error('Error accessing offline books database:', error);
+        return [];
+    }
+}
+
+// Store reading progress in the outbox for background sync
+async function storeProgressInOutbox(bookId, itemIndex) {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.OUTBOX], 'readwrite');
+        const outboxStore = transaction.objectStore(STORES.OUTBOX);
+        
+        const progressRecord = {
+            type: 'reading_progress',
+            bookId,
+            itemIndex,
+            timestamp: Date.now()
+        };
+        
+        await outboxStore.add(progressRecord);
+        console.log(`Reading progress for book ${bookId}, page ${itemIndex} queued for sync`);
+        return true;
+    } catch (error) {
+        console.error('Error storing reading progress in outbox:', error);
+        return false;
+    }
+}
+
+// Get all records from the outbox for background sync
+async function getOutboxRecords() {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.OUTBOX], 'readonly');
+        const outboxStore = transaction.objectStore(STORES.OUTBOX);
+        
+        return new Promise((resolve, reject) => {
+            const request = outboxStore.getAll();
+            
+            request.onsuccess = event => {
+                resolve(event.target.result || []);
+            };
+            
+            request.onerror = event => {
+                console.error('Error getting outbox records:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    } catch (error) {
+        console.error('Error accessing outbox database:', error);
+        return [];
+    }
+}
+
+// Remove a record from the outbox after successful sync
+async function removeFromOutbox(id) {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction([STORES.OUTBOX], 'readwrite');
+        const outboxStore = transaction.objectStore(STORES.OUTBOX);
+        
+        await outboxStore.delete(id);
+        console.log(`Outbox record ${id} removed after successful sync`);
+        return true;
+    } catch (error) {
+        console.error('Error removing record from outbox:', error);
+        return false;
+    }
+}
+
+// Check if we're currently offline
+function isOffline() {
+    return !navigator.onLine;
+}
+
+// Make functions available globally or via an object
+window.storageManager = {
+    // Translation cache
+    getTranslationCacheKey,
+    saveTranslationToLocal,
+    loadTranslationFromLocal,
+    removeTranslationFromLocal,
+    
+    // Reading progress
+    saveReadingProgress,
+    getReadingProgress,
+    
+    // Preferences
+    getAutoloadPreference,
+    saveAutoloadPreference,
+    
+    // PWA offline support
+    openDatabase,
+    storeBookForOffline,
+    storePageContent,
+    getOfflineBook,
+    getOfflinePageContent,
+    getAllOfflineBooks,
+    storeProgressInOutbox,
+    getOutboxRecords,
+    removeFromOutbox,
+    isOffline
+};
+
+console.log("storageManager.js loaded with PWA offline support"); 
