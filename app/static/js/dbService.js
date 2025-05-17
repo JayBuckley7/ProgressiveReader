@@ -5,9 +5,10 @@ import { EpubProcessorWrapper } from './epubProcessor.js';
  */
 
 const DB_NAME = 'ProgressiveReaderDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const BOOK_STORE_NAME = 'books';
 const PROGRESS_STORE_NAME = 'progress'; // Assuming progress is stored separately
+const FOLDER_STORE_NAME = 'folders';
 
 let dbPromise = null;
 let dbServiceReadyPromise = null; // Promise for service readiness
@@ -98,6 +99,17 @@ async function _getDB() {
                      console.log(`Object store ${PROGRESS_STORE_NAME} already exists.`);
                 }
 
+                // Create Folder object store for organizing books
+                if (!db.objectStoreNames.contains(FOLDER_STORE_NAME)) {
+                    const folderStore = db.createObjectStore(FOLDER_STORE_NAME, {
+                        keyPath: 'id'
+                    });
+                    folderStore.createIndex('name', 'name', { unique: true });
+                    console.log(`Object store ${FOLDER_STORE_NAME} created.`);
+                } else {
+                    console.log(`Object store ${FOLDER_STORE_NAME} already exists.`);
+                }
+
 
                 // Handle other version upgrades here if needed in the future
             };
@@ -174,6 +186,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
                 isDemo: isDemo, // Flag indicating if this is a demo book
                 fileType: fileType, // From add-txt-and-docx-file-support branch
                 driveId: additionalMetadata.driveId || null, // From test-deploy branch
+                folderId: additionalMetadata.folderId || null,
                 ...additionalMetadata // Spread any other metadata
              };
 
@@ -258,7 +271,8 @@ export async function getAllBooksMetadata() {
                     addedDate: book.addedDate,
                     coverImageBlob: book.coverImageBlob,
                     isDemo: book.isDemo || false,
-                    fileType: book.fileType || 'epub'
+                    fileType: book.fileType || 'epub',
+                    folderId: book.folderId || null
                 }));
                
                 // Log demo books for debugging
@@ -292,9 +306,10 @@ export async function deleteBook(bookId) {
 
     const db = await _getDB();
     // Use a single transaction for both stores
-    const transaction = db.transaction([BOOK_STORE_NAME, PROGRESS_STORE_NAME], 'readwrite');
+    const transaction = db.transaction([BOOK_STORE_NAME, PROGRESS_STORE_NAME, FOLDER_STORE_NAME], 'readwrite');
     const bookStore = transaction.objectStore(BOOK_STORE_NAME);
     const progressStore = transaction.objectStore(PROGRESS_STORE_NAME);
+    const folderStore = transaction.objectStore(FOLDER_STORE_NAME);
 
     const deleteBookRequest = bookStore.delete(bookId); // Use numeric ID
     const deleteProgressRequest = progressStore.delete(bookId); // Progress uses bookId as key
@@ -506,6 +521,86 @@ export async function getProgress(bookId) {
     });
 }
 
+// --- Folder Management -----------------------------------------------------
+
+/**
+ * Create a new folder for organizing books.
+ * @param {string} name - Folder name.
+ * @returns {Promise<object>} Newly created folder object.
+ */
+export async function createFolder(name) {
+    if (typeof name !== 'string' || name.trim().length === 0) {
+        throw new Error('[DBService] Folder name must be a non-empty string.');
+    }
+    const db = await _getDB();
+    const tx = db.transaction(FOLDER_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(FOLDER_STORE_NAME);
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+        const req = store.add({ id, name });
+        req.onsuccess = () => resolve({ id, name });
+        req.onerror = e => reject(new Error(`Error creating folder: ${e.target.error?.message}`));
+    });
+}
+
+/**
+ * Retrieve all folders.
+ * @returns {Promise<Array<object>>} Array of folder objects.
+ */
+export async function getAllFolders() {
+    const db = await _getDB();
+    const tx = db.transaction(FOLDER_STORE_NAME, 'readonly');
+    const store = tx.objectStore(FOLDER_STORE_NAME);
+    return new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = e => reject(new Error(`Error getting folders: ${e.target.error?.message}`));
+    });
+}
+
+/**
+ * Assign a book to a folder.
+ * @param {string} bookId - UUID of the book.
+ * @param {string} folderId - UUID of the folder.
+ * @returns {Promise<boolean>} True if updated, false if book not found.
+ */
+export async function assignBookToFolder(bookId, folderId) {
+    if (!bookId || !folderId) {
+        throw new Error('[DBService] bookId and folderId required.');
+    }
+    const db = await _getDB();
+    const tx = db.transaction(BOOK_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(BOOK_STORE_NAME);
+    return new Promise((resolve, reject) => {
+        const getReq = store.get(bookId);
+        getReq.onsuccess = () => {
+            const data = getReq.result;
+            if (!data) { resolve(false); return; }
+            data.folderId = folderId;
+            const putReq = store.put(data);
+            putReq.onsuccess = () => resolve(true);
+            putReq.onerror = e => reject(new Error(`Error assigning folder: ${e.target.error?.message}`));
+        };
+        getReq.onerror = e => reject(new Error(`Error fetching book for folder assign: ${e.target.error?.message}`));
+    });
+}
+
+/**
+ * Delete a folder by its ID.
+ * @param {string} folderId - Folder UUID.
+ * @returns {Promise<void>}
+ */
+export async function deleteFolder(folderId) {
+    const db = await _getDB();
+    const tx = db.transaction(FOLDER_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(FOLDER_STORE_NAME);
+    return new Promise((resolve, reject) => {
+        const req = store.delete(folderId);
+        req.onsuccess = () => resolve();
+        req.onerror = e => reject(new Error(`Error deleting folder: ${e.target.error?.message}`));
+    });
+}
+
 
 // --- Utility to clear all data (for development/testing) ---
 
@@ -516,27 +611,32 @@ export async function getProgress(bookId) {
 export async function clearAllData() {
     console.warn("Clearing all data from IndexedDB!");
     const db = await _getDB();
-    const transaction = db.transaction([BOOK_STORE_NAME, PROGRESS_STORE_NAME], 'readwrite');
+    const transaction = db.transaction([BOOK_STORE_NAME, PROGRESS_STORE_NAME, FOLDER_STORE_NAME], 'readwrite');
     const bookStore = transaction.objectStore(BOOK_STORE_NAME);
     const progressStore = transaction.objectStore(PROGRESS_STORE_NAME);
+    const folderStore = transaction.objectStore(FOLDER_STORE_NAME);
 
     const clearBooksRequest = bookStore.clear();
     const clearProgressRequest = progressStore.clear();
+    const clearFoldersRequest = folderStore.clear();
 
      return new Promise((resolve, reject) => {
         let booksCleared = false;
         let progressCleared = false;
+        let foldersCleared = false;
 
          clearBooksRequest.onsuccess = () => { booksCleared = true; console.log("Book store cleared."); };
          clearBooksRequest.onerror = (event) => { console.error("Error clearing book store:", event.target.error); };
 
          clearProgressRequest.onsuccess = () => { progressCleared = true; console.log("Progress store cleared."); };
          clearProgressRequest.onerror = (event) => { console.error("Error clearing progress store:", event.target.error); };
+         clearFoldersRequest.onsuccess = () => { foldersCleared = true; console.log("Folder store cleared."); };
+         clearFoldersRequest.onerror = (event) => { console.error("Error clearing folder store:", event.target.error); };
 
          transaction.oncomplete = () => {
-             if (booksCleared && progressCleared) {
-                 console.log("All data cleared successfully.");
-                 resolve();
+             if (booksCleared && progressCleared && foldersCleared) {
+                console.log("All data cleared successfully.");
+                resolve();
              } else {
                   console.error("Transaction completed, but one or more stores may not have cleared.");
                   reject(new Error("Failed to clear one or more data stores."));
