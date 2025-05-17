@@ -47,7 +47,7 @@ jobs:
         run: |
           set -e                       # fail fast
           npm ci
-          node tests/test_epub_processor.js
+          node tests/test_epub_processor.js || exit 1
 
       - name: Set environment variables
         id: env
@@ -62,9 +62,9 @@ jobs:
 
       - name: Submit build to Cloud Build
         run: |
-          gcloud builds submit \\
-            --project=floofgg \\
-            --config=cloudbuild.yaml \\
-            --substitutions=COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \\
-            --gcs-log-dir=gs://floofgg_cloudbuild/logs \\
+          gcloud builds submit \
+            --project=floofgg \
+            --config=cloudbuild.yaml \
+            --substitutions=COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \
+            --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .
