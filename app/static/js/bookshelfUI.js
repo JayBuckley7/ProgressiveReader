@@ -173,8 +173,13 @@ export async function renderBookshelf(driveSync) {
                 e.stopPropagation(); 
                 if (confirm(`Are you sure you want to delete "${book.title}"? This cannot be undone.`)) {
                     try {
-                        await deleteBook(book.id);
-                        console.log(`${logPrefix} Book ${book.id} deleted from DB.`);
+                        if (book.isRemoteOnly && driveSync && driveSync.isConnected()) {
+                            await driveSync.deleteRemoteBook(book.id);
+                            console.log(`${logPrefix} Remote book ${book.id} deleted from Drive.`);
+                        } else {
+                            await deleteBook(book.id);
+                            console.log(`${logPrefix} Book ${book.id} deleted from DB.`);
+                        }
                         renderBookshelf(driveSync); // Re-render: ensure driveSync is passed here too!
                     } catch (err) {
                         console.error(`${logPrefix} Error deleting book:`, err);
