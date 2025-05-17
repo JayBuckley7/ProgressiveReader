@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - test-deploy
+  workflow_dispatch: {}
 
 jobs:
   build-and-deploy:
