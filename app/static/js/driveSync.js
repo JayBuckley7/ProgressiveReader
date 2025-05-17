@@ -1,4 +1,6 @@
 // driveSync.js – Google Drive folder‑centric sync layer
+import { updateBookMetadata } from './dbService.js';
+import { EpubProcessorWrapper } from './epubProcessor.js';
 // ****************************************************************************************
 // PUBLIC API:
 //   init()                          → bootstrap; silent if token cached
@@ -781,6 +783,13 @@ export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
 
         const createdFile = await response.json();
         console.log(`[DriveSync] uploadBookToDrive: File uploaded successfully. ID: ${createdFile.id}, Name: ${createdFile.name}`);
+
+        try {
+            await updateBookMetadata(bookId, { driveId: createdFile.id });
+            console.log('[DriveSync] Stored driveId in local metadata');
+        } catch (e) {
+            console.warn('[DriveSync] Failed to update local metadata with driveId:', e);
+        }
         
         // Optionally, dispatch an event or provide feedback
         window.dispatchEvent(new CustomEvent('drive-file-uploaded', { 
