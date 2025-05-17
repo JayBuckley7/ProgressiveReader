@@ -163,3 +163,21 @@ This application is configured for deployment to Google Cloud Run.
     - Replace placeholders with your actual keys/secrets.
 
 4.  After deployment, `gcloud` will output the URL of your deployed service.
+## Custom Domain
+
+To use `dev.progressivereader.net` with this Cloud Run service:
+
+1. Create the domain mapping:
+   ```bash
+   gcloud run domain-mappings create \
+     --service=progressive-reader \
+     --region YOUR_REGION \
+     --domain dev.progressivereader.net
+   ```
+   You can also perform this step in the Cloud Console under **Custom Domains**.
+
+2. Update your DNS records as instructed. Typically this involves adding a CNAME
+   pointing to `ghs.googlehosted.com`.
+
+3. Once DNS changes propagate, Cloud Run automatically provisions an HTTPS
+   certificate and the custom domain will be active.

@@ -29,6 +29,16 @@ jobs:
         with:
           project_id: floofgg
 
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies and run tests
+        run: |
+          npm ci
+          node tests/test_epub_processor.js
+
       - name: Submit build to Google Cloud Build
         run: |
           gcloud builds submit \
