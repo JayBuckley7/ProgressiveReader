@@ -476,6 +476,12 @@ async function driveFilesUpdate(id, patch){
   return res.json();
 }
 
+async function driveFilesDelete(id){
+  const res = await fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${id}`, { method: 'DELETE' });
+  if(!res.ok && res.status !== 404) throw new Error(`driveFilesDelete failed (${res.status})`);
+  return res;
+}
+
 async function downloadFile(id){
   const url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media`;
   const res = await fetchWithAuth(url);
@@ -708,7 +714,7 @@ export function disconnect(){
   window.dispatchEvent(new Event('drive-disconnect'));
 }
 
-export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive };
+export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive, deleteRemoteBook };
 
 // Client ID Shim
 if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
@@ -827,4 +833,15 @@ export async function downloadBook(bookId) {
     if (!isConnected()) throw new Error('Not connected to Google Drive');
     const buf = await downloadFile(bookId);
     return new Blob([buf], { type: EPUB_MIME_TYPE });
+}
+
+export async function deleteRemoteBook(bookId) {
+    if (!isConnected()) throw new Error('Not connected to Google Drive');
+    try {
+        await driveFilesDelete(bookId);
+        console.log(`[DriveSync] deleteRemoteBook: Deleted ${bookId}`);
+    } catch (err) {
+        console.error('[DriveSync] deleteRemoteBook: Error deleting', bookId, err);
+        throw err;
+    }
 }

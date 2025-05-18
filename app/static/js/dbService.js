@@ -435,6 +435,16 @@ export async function updateBookMetadata(bookId, updates = {}) {
     });
 }
 
+/**
+ * Replace a book's cover image.
+ * @param {string} bookId - ID of the book to update.
+ * @param {Blob} coverBlob - Image blob to store as the cover.
+ * @returns {Promise<boolean>} Resolves true if the cover was updated.
+ */
+export async function updateBookCover(bookId, coverBlob) {
+    return updateBookMetadata(bookId, { coverImageBlob: coverBlob });
+}
+
 
 /**
  * Saves reading progress for a book.
