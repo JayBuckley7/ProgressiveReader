@@ -33,6 +33,7 @@ export const ready = dbServiceReadyPromise;
  * @returns {Promise<IDBDatabase>} A promise that resolves with the database instance.
  */
 async function _getDB() {
+    console.log(`[DBService] _getDB() called. Attempting to open DB: ${DB_NAME}, Version: ${DB_VERSION}`);
     if (!dbPromise) {
         console.log('_getDB() - Creating new DB connection promise.');
         dbPromise = new Promise((resolve, reject) => {

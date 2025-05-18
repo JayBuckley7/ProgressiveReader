@@ -63,8 +63,13 @@
 }
 
 /* TTS highlight and controls */
-.tts-highlight {
+/* .tts-highlight { // Old class, can be removed if no longer used by fallback
     background-color: yellow;
+} */
+
+::highlight(tts-current-word) {
+    background-color: yellow; /* Or your preferred highlight color */
+    color: inherit; /* Ensures text color contrasts with new background if needed */
 }
 
 #tts-control-panel button {

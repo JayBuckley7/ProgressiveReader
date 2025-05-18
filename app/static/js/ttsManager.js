@@ -8,7 +8,7 @@ let contentText = '';
 let currentIndex = 0;
 let currentRate = 1.0;
 let textNodeMap = [];
-let highlightedSpan = null;
+const TTS_HIGHLIGHT_NAME = 'tts-current-word'; // Name for the CSS Highlight
 
 function buildIndexMap(element) {
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
@@ -32,35 +32,41 @@ function findNodeOffset(map, charIndex) {
 }
 
 function clearHighlight() {
-    if (highlightedSpan) {
-        const parent = highlightedSpan.parentNode;
-        if (parent) {
-            parent.replaceChild(highlightedSpan.firstChild, highlightedSpan);
-        }
-        highlightedSpan = null;
+    if (CSS.highlights) {
+        CSS.highlights.delete(TTS_HIGHLIGHT_NAME);
     }
 }
 
 function highlightAtIndex(index) {
     clearHighlight();
+    if (!CSS.highlights) return; // Don't attempt if API not supported
+
     const remainingText = contentText.slice(index);
-    const match = remainingText.match(/\S+/);
+    const match = remainingText.match(/\S+/); // Find the current word (any non-whitespace sequence)
     if (!match) return;
+
     const word = match[0];
-    const start = index;
-    const end = index + word.length;
+    const start = index; // Start index of the word in the full contentText
+    const end = index + word.length; // End index of the word
+
     const startPos = findNodeOffset(textNodeMap, start);
     const endPos = findNodeOffset(textNodeMap, end);
+
+    if (!startPos.node || !endPos.node) {
+        console.warn('Could not find nodes for highlighting range.');
+        return;
+    }
+    
     const range = document.createRange();
     try {
         range.setStart(startPos.node, startPos.offset);
         range.setEnd(endPos.node, endPos.offset);
-        const span = document.createElement('span');
-        span.className = 'tts-highlight';
-        range.surroundContents(span);
-        highlightedSpan = span;
+
+        const highlight = new Highlight(range);
+        CSS.highlights.set(TTS_HIGHLIGHT_NAME, highlight);
+
     } catch (err) {
-        console.warn('Unable to highlight range', err);
+        console.warn('Unable to highlight range with CSS Custom Highlight API', err);
     }
 }
 
@@ -103,12 +109,30 @@ function speakFromIndex(index) {
 function speakCurrentChapter() {
     if (isSpeaking) return;
     contentElement = document.querySelector('.chapter-content');
-    if (!contentElement) return;
-    contentText = contentElement.innerText;
-    if (!contentText) return;
+    if (!contentElement) {
+        console.error("TTS: .chapter-content element not found.");
+        return;
+    }
+    // Use textContent for potentially better performance and simpler text extraction
+    contentText = contentElement.textContent || ""; 
+    if (!contentText.trim()) {
+        console.warn("TTS: No text content found in .chapter-content.");
+        return;
+    }
 
     textNodeMap = buildIndexMap(contentElement);
     currentIndex = 0;
+
+    // Check for API support before starting
+    if (!('speechSynthesis' in window)) {
+        console.error("TTS: Web Speech API (speechSynthesis) not supported.");
+        alert("Sorry, your browser doesn't support text-to-speech.");
+        return;
+    }
+    if (!CSS.highlights) {
+        console.warn("CSS Custom Highlight API not supported. TTS will work without word highlighting.");
+    }
+
     speakFromIndex(0);
 }
 
