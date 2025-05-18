@@ -10,6 +10,8 @@ let currentRate = 1.0;
 let textNodeMap = [];
 let fallbackHighlightEl = null;
 const TTS_HIGHLIGHT_NAME = 'tts-current-word'; // Name for the CSS Highlight
+let fallbackIntervalId = null;
+const boundarySupported = 'onboundary' in SpeechSynthesisUtterance.prototype;
 
 function buildIndexMap(element) {
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
@@ -86,6 +88,32 @@ function highlightAtIndex(index) {
     }
 }
 
+function startFallbackHighlighting(startIndex) {
+    const words = contentText.slice(startIndex).match(/\S+\s*/g);
+    if (!words) return;
+    let offset = startIndex;
+    let i = 0;
+    currentIndex = offset;
+    highlightAtIndex(currentIndex);
+    fallbackIntervalId = setInterval(() => {
+        i++;
+        if (i >= words.length) {
+            stopFallbackHighlighting();
+            return;
+        }
+        offset += words[i - 1].length;
+        currentIndex = offset;
+        highlightAtIndex(currentIndex);
+    }, 300 / currentRate);
+}
+
+function stopFallbackHighlighting() {
+    if (fallbackIntervalId) {
+        clearInterval(fallbackIntervalId);
+        fallbackIntervalId = null;
+    }
+}
+
 function showControls() {
     const panel = document.getElementById('tts-control-panel');
     if (panel) panel.style.display = 'flex';
@@ -100,17 +128,22 @@ function speakFromIndex(index) {
     if (!contentElement) return;
     currentUtterance = new SpeechSynthesisUtterance(contentText.slice(index));
     currentUtterance.rate = currentRate;
-    currentUtterance.onboundary = (e) => {
-        if (e.name === 'word') {
-            currentIndex = index + e.charIndex;
-            highlightAtIndex(currentIndex);
-        }
-    };
+    if (boundarySupported) {
+        currentUtterance.onboundary = (e) => {
+            if (e.name === 'word') {
+                currentIndex = index + e.charIndex;
+                highlightAtIndex(currentIndex);
+            }
+        };
+    } else {
+        startFallbackHighlighting(index);
+    }
     currentUtterance.onend = () => {
         isSpeaking = false;
         isPaused = false;
         hideControls();
         clearHighlight();
+        stopFallbackHighlighting();
         const btn = document.getElementById('read-aloud-btn');
         if (btn) btn.textContent = 'Read Aloud';
     };
@@ -152,6 +185,10 @@ function speakCurrentChapter() {
         console.warn("[ttsManager] CSS Custom Highlight API not supported. TTS will work without word highlighting (no backup method currently).");
     }
 
+    if (!boundarySupported) {
+        console.warn("[ttsManager] SpeechSynthesisUtterance boundary events not supported. Using fallback timing for highlights.");
+    }
+
     speakFromIndex(0);
 }
 
@@ -159,6 +196,7 @@ function pauseSpeaking() {
     if (isSpeaking && !isPaused) {
         speechSynthesis.pause();
         isPaused = true;
+        stopFallbackHighlighting();
     }
 }
 
@@ -166,6 +204,9 @@ function resumeSpeaking() {
     if (isSpeaking && isPaused) {
         speechSynthesis.resume();
         isPaused = false;
+        if (!boundarySupported) {
+            startFallbackHighlighting(currentIndex);
+        }
     }
 }
 
@@ -176,6 +217,7 @@ function stopSpeaking() {
         isPaused = false;
         hideControls();
         clearHighlight();
+        stopFallbackHighlighting();
         const btn = document.getElementById('read-aloud-btn');
         if (btn) btn.textContent = 'Read Aloud';
     }
