@@ -309,6 +309,17 @@ function isOffline() {
     return !navigator.onLine;
 }
 
+// Merge reading progress data from an external source like Google Drive
+function mergeDriveProgress(progressData) {
+    if (!progressData || typeof progressData !== 'object') return;
+    for (const [bookId, itemIndex] of Object.entries(progressData)) {
+        const localIndex = getReadingProgress(bookId);
+        if (localIndex === null || itemIndex > localIndex) {
+            saveReadingProgress(bookId, itemIndex);
+        }
+    }
+}
+
 // Make functions available globally or via an object
 window.storageManager = {
     // Translation cache
@@ -335,7 +346,8 @@ window.storageManager = {
     storeProgressInOutbox,
     getOutboxRecords,
     removeFromOutbox,
-    isOffline
+    isOffline,
+    mergeDriveProgress
 };
 
 console.log("storageManager.js loaded with PWA offline support"); 

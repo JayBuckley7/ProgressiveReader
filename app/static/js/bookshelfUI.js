@@ -61,9 +61,18 @@ export async function renderBookshelf() {
         filteredBooksMetadata.forEach(book => {
             console.log(`${logPrefix} Processing book:`, book);
 
+            // Determine start page based on saved progress
+            let startIndex = 0;
+            if (window.storageManager && typeof window.storageManager.getReadingProgress === 'function') {
+                const saved = window.storageManager.getReadingProgress(book.id);
+                if (saved !== null && !isNaN(saved)) {
+                    startIndex = saved;
+                }
+            }
+
             // Create the link element first
             const bookLink = document.createElement('a');
-            bookLink.href = `/read/${book.id}/0`; 
+            bookLink.href = `/read/${book.id}/${startIndex}`;
             bookLink.className = 'book-item-link'; // Add a class for potential styling
             bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
 

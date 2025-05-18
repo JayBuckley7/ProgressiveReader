@@ -1,5 +1,7 @@
 // readerInit.js
-document.addEventListener('DOMContentLoaded', function() {
+import { saveProgress, updateLastOpened } from './dbService.js';
+
+document.addEventListener('DOMContentLoaded', async function() {
     console.log("Reader page DOMContentLoaded - Main Initializer Script");
 
     // --- Config & State from page-config JSON --- 
@@ -107,13 +109,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // --- General Page Initialization (after modules) ---
-    // Save current reading progress on page load (if storageManager is available)
+    // Save current reading progress on page load
     if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
         if (currentBookId !== null && pageCurrentIndex !== null) {
             window.storageManager.saveReadingProgress(currentBookId, pageCurrentIndex);
         }
     } else {
         console.warn("StorageManager not found, cannot save reading progress.");
+    }
+
+    // Persist progress to IndexedDB and update last opened timestamp
+    try {
+        if (currentBookId !== null && pageCurrentIndex !== null) {
+            await saveProgress(currentBookId, { index: pageCurrentIndex });
+            await updateLastOpened(currentBookId);
+        }
+    } catch (err) {
+        console.error('[ReaderInit] Error saving progress to DB:', err);
     }
     
     // --- Listen for online/offline events ---
