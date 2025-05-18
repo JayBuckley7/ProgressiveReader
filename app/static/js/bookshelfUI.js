@@ -94,7 +94,12 @@ export async function renderBookshelf(driveSync) {
 
             // Create the link element first
             const bookLink = document.createElement('a');
-            bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/0`;
+            let startIndex = 0;
+            if (window.storageManager && typeof window.storageManager.getReadingProgress === 'function') {
+                const saved = window.storageManager.getReadingProgress(book.id);
+                if (saved !== null) startIndex = saved;
+            }
+            bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/${startIndex}`;
             bookLink.className = 'book-item-link'; // Add a class for potential styling
             bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
 
@@ -213,7 +218,12 @@ export async function renderBookshelf(driveSync) {
                     try {
                         const blob = await driveSync.downloadBook(book.id);
                         await addBook(book.title, blob, book.id);
-                        window.location.href = `/read/${book.id}/0`;
+                        let startIndex = 0;
+                        if (window.storageManager && typeof window.storageManager.getReadingProgress === 'function') {
+                            const saved = window.storageManager.getReadingProgress(book.id);
+                            if (saved !== null) startIndex = saved;
+                        }
+                        window.location.href = `/read/${book.id}/${startIndex}`;
                     } catch (err) {
                         console.error(`${logPrefix} Failed to load remote book`, err);
                         alert('Failed to load book from Drive');
