@@ -145,6 +145,17 @@ async function initializeApp() {
     }
 
     const banner = document.getElementById("drive-status");
+    const driveIndicator = document.getElementById("drive-indicator");
+
+    function updateIndicator(isOn) {
+      if (!driveIndicator) return;
+      driveIndicator.className = `drive-indicator ${isOn ? "connected" : "disconnected"}`;
+      driveIndicator.setAttribute(
+        "aria-label",
+        isOn ? "Drive connected" : "Drive disconnected",
+      );
+    }
+
     function showBanner(text, cls, hideAfterMs = 0) {
       if (!banner) return;
       banner.textContent = text;
@@ -165,11 +176,13 @@ async function initializeApp() {
       showBanner("Up to date", "idle", 4000);
       renderBookshelf(driveSync, currentSearchQuery);
     });
-    window.addEventListener("drive-offline", () =>
-      showBanner("Offline", "offline"),
-    );
+    window.addEventListener("drive-offline", () => {
+      showBanner("Offline", "offline");
+      updateIndicator(false);
+    });
     window.addEventListener("drive-online", () => {
       showBanner("Online", "idle", 2000);
+      updateIndicator(true);
       driveButton?.refreshState(); // Refresh button state when coming online
     });
     window.addEventListener("drive-disconnect", () => {
@@ -177,6 +190,7 @@ async function initializeApp() {
         banner.style.display = "none";
         banner.hidden = true;
       }
+      updateIndicator(false);
       driveButton?.refreshState();
     });
 
@@ -184,6 +198,7 @@ async function initializeApp() {
       console.log(`${logPrefix} Attempting early driveSync.init()...`);
       await driveSync.init();
       driveButton?.refreshState();
+      updateIndicator(driveSync.isConnected());
 
       if (driveSync.isConnected()) {
         console.log(
@@ -200,6 +215,7 @@ async function initializeApp() {
         err.message,
       );
       driveButton?.refreshState();
+      updateIndicator(false);
     }
 
     if (driveSync && typeof driveSync.onAuthLost === "function") {
@@ -208,6 +224,7 @@ async function initializeApp() {
           `${logPrefix} Auth lost callback triggered. Resetting UI.`,
         );
         driveButton?.refreshState();
+        updateIndicator(false);
         alert("Google Drive connection lost. Please connect again.");
       });
     }
@@ -222,6 +239,7 @@ async function initializeApp() {
       alert("Critical error initializing application components.");
     }
     driveButton?.refreshState();
+    updateIndicator(false);
     const uploadButton = document.querySelector("#upload-form button"); // Note: this is the main upload button, not the card one
     if (uploadButton) {
       uploadButton.disabled = true;
