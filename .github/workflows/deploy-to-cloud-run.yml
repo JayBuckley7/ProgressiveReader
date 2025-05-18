@@ -62,9 +62,21 @@ jobs:
 
       - name: Submit build to Cloud Build
         run: |
+          echo "Current environment variables (before potential unset):"
+          env
+          echo "---"
+          echo "Attempting to unset SERVICE_URL if it exists..."
+          unset SERVICE_URL || true # Allow to continue if it does not exist
+          echo "---"
+          echo "Current environment variables (after potential unset):"
+          env
+          echo "---"
+          echo "GCloud command to be executed:"
+          set -x # Print command before execution
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
             --substitutions=COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \
             --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .
+          set +x
