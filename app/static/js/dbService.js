@@ -5,7 +5,7 @@ import { EpubProcessorWrapper } from './epubProcessor.js';
  */
 
 const DB_NAME = 'ProgressiveReaderDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bump version to add driveId index
 const BOOK_STORE_NAME = 'books';
 const PROGRESS_STORE_NAME = 'progress'; // Assuming progress is stored separately
 
@@ -78,12 +78,23 @@ async function _getDB() {
                         // autoIncrement: true, // REMOVED: ID is now the server-provided UUID
                     });
                     // Index on title for easier lookup (still useful)
-                    bookStore.createIndex('title', 'title', { unique: false }); // Title might not be unique if re-uploading the same title with a new UUID for some reason
-                    // Add other indices as needed, e.g., lastOpened
-                     bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
-                     console.log(`Object store ${BOOK_STORE_NAME} created.`);
+                    bookStore.createIndex('title', 'title', { unique: false });
+                    bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
+                    bookStore.createIndex('driveId', 'driveId', { unique: false });
+                    console.log(`Object store ${BOOK_STORE_NAME} created.`);
                 } else {
-                     console.log(`Object store ${BOOK_STORE_NAME} already exists.`);
+                    const bookStore = event.currentTarget.transaction.objectStore(BOOK_STORE_NAME);
+                    if (!bookStore.indexNames.contains('driveId')) {
+                        bookStore.createIndex('driveId', 'driveId', { unique: false });
+                        console.log('Index driveId created on existing store.');
+                    }
+                    if (!bookStore.indexNames.contains('lastOpened')) {
+                        bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
+                    }
+                    if (!bookStore.indexNames.contains('title')) {
+                        bookStore.createIndex('title', 'title', { unique: false });
+                    }
+                    console.log(`Object store ${BOOK_STORE_NAME} already exists.`);
                 }
 
 
@@ -237,6 +248,18 @@ export async function getBook(bookId) {
     });
 }
 
+/**
+ * Retrieve only metadata fields for a book.
+ * @param {string} bookId - ID of the book.
+ * @returns {Promise<object|null>} Metadata or null if not found.
+ */
+export async function getBookMetadata(bookId) {
+    const data = await getBook(bookId);
+    if (!data) return null;
+    const { content, ...meta } = data;
+    return meta;
+}
+
 
 /**
  * Retrieves all books' metadata (excluding content for efficiency).
@@ -259,7 +282,8 @@ export async function getAllBooksMetadata() {
                     addedDate: book.addedDate,
                     coverImageBlob: book.coverImageBlob,
                     isDemo: book.isDemo || false,
-                    fileType: book.fileType || 'epub'
+                    fileType: book.fileType || 'epub',
+                    driveId: book.driveId || null
                 }));
                
                 // Log demo books for debugging
@@ -444,6 +468,40 @@ export async function updateBookMetadata(bookId, updates = {}) {
  */
 export async function updateBookCover(bookId, coverBlob) {
     return updateBookMetadata(bookId, { coverImageBlob: coverBlob });
+}
+
+/**
+ * Retrieve a book record by its associated Google Drive file ID.
+ * @param {string} driveId - The Drive file ID.
+ * @returns {Promise<object|null>} Book record or null if not found.
+ */
+export async function getBookByDriveId(driveId) {
+    if (!driveId) return null;
+    const db = await _getDB();
+    const tx = db.transaction(BOOK_STORE_NAME, 'readonly');
+    const store = tx.objectStore(BOOK_STORE_NAME);
+    let index;
+    try {
+        index = store.index('driveId');
+    } catch (e) {
+        return null;
+    }
+    const req = index.get(driveId);
+    return new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = e => reject(new Error(`Error getting book by driveId: ${e.target.error?.message}`));
+    });
+}
+
+/**
+ * Delete a book using its Drive file ID if present.
+ * @param {string} driveId - Drive file ID.
+ */
+export async function deleteBookByDriveId(driveId) {
+    const rec = await getBookByDriveId(driveId);
+    if (rec) {
+        await deleteBook(rec.id);
+    }
 }
 
 

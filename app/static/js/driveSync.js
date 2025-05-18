@@ -1,5 +1,5 @@
 // driveSync.js – Google Drive folder‑centric sync layer
-import { updateBookMetadata } from './dbService.js';
+import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 // ****************************************************************************************
 // PUBLIC API:
@@ -519,12 +519,14 @@ async function importInitialFiles(){
 
   const list = await driveFilesList(
     `'${await seedDriveFolder()}' in parents and mimeType='application/epub+zip' and trashed=false`,
-    'files(id,name,md5Checksum,size,modifiedTime)'
+    'files(id,name,md5Checksum,modifiedTime,appProperties)'
   );
   const files = list.files;
   for (const f of files) {
     const buf = await downloadFile(f.id);
-    await window.idbSaveEpub(f.id, buf, f);
+    const canonicalId = f.appProperties?.progReaderBookId || f.id;
+    const blob = new Blob([buf], { type: EPUB_MIME_TYPE });
+    await addBook(f.name.replace(/\.epub$/i, ''), blob, canonicalId, { driveId: f.id, md5: f.md5Checksum, modifiedTime: f.modifiedTime });
   }
   console.info(`[DriveSync] Cold-imported ${files.length} book(s)`);
   _initialImportDone = true;
@@ -562,22 +564,22 @@ export async function runSyncLoop(){
   let added=0,updated=0,removed=0;
   let bytesDownloaded = 0;
   do{
-    const url=`https://www.googleapis.com/drive/v3/changes?pageToken=${token}&spaces=drive&fields=nextPageToken,newStartPageToken,changes(fileId,file(id,name,md5Checksum,mimeType,modifiedTime,parents),removed)`;
+    const url=`https://www.googleapis.com/drive/v3/changes?pageToken=${token}&spaces=drive&fields=nextPageToken,newStartPageToken,changes(fileId,file(id,name,md5Checksum,mimeType,modifiedTime,appProperties,parents),removed)`;
     const res = await fetchWithAuth(url);
     if(res.changes){
       for(const ch of res.changes){
         if(!ch.file) continue;
         if(!ch.file.parents?.includes(folder)) continue;
-        if(ch.removed){ await window.idbDeleteBook(ch.fileId); removed++; continue; }
+        if(ch.removed){ await deleteBookByDriveId(ch.fileId); removed++; continue; }
         if(ch.file.mimeType==='application/epub+zip'){
-          const local=await window.idbGetBookMeta(ch.fileId);
-          if(local && local.md5===ch.file.md5Checksum){
-            // possible rename
-            const newTitle=ch.file.name.replace(/\.epub$/i,'');
-            if(local.title!==newTitle){ await window.idbUpdateBookMeta(ch.fileId,{title:newTitle}); window.renderBookshelf?.(); updated++; }
-            continue;
-          }
-          const buf=await downloadFile(ch.fileId); await window.idbSaveEpub(ch.fileId,buf,ch.file); local?updated++:added++; bytesDownloaded += buf.length; continue;
+          const canonicalId = ch.file.appProperties?.progReaderBookId || ch.fileId;
+          const existing = await getBookByDriveId(ch.fileId) || await getBookMetadata(canonicalId);
+          const buf = await downloadFile(ch.fileId);
+          const blob = new Blob([buf], { type: EPUB_MIME_TYPE });
+          await addBook(ch.file.name.replace(/\.epub$/i,''), blob, canonicalId, { driveId: ch.fileId, md5: ch.file.md5Checksum, modifiedTime: ch.file.modifiedTime });
+          existing ? updated++ : added++;
+          bytesDownloaded += buf.byteLength;
+          continue;
         }
         if(ch.file.name?.endsWith('.progress.json')){
           const data=JSON.parse(new TextDecoder().decode(await downloadFile(ch.fileId)));
@@ -816,12 +818,13 @@ export async function listRemoteBooks() {
     const folder = await seedDriveFolder();
     const query = `'${folder}' in parents and mimeType='application/epub+zip' and trashed=false`;
     try {
-        const res = await driveFilesList(query, 'files(id,name,md5Checksum,modifiedTime)');
+        const res = await driveFilesList(query, 'files(id,name,md5Checksum,modifiedTime,appProperties)');
         return (res.files || []).map(f => ({
             id: f.id,
             title: f.name.replace(/\.epub$/i, ''),
             md5: f.md5Checksum,
-            modified: f.modifiedTime
+            modified: f.modifiedTime,
+            progId: f.appProperties?.progReaderBookId || null
         }));
     } catch (err) {
         console.error('[DriveSync] listRemoteBooks failed:', err);
