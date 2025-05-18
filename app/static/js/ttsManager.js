@@ -130,24 +130,25 @@ function detectBoundaryEventSupport() {
             testUtter.onboundary = () => {
                 detected = true;
             };
-            testUtter.onend = () => {
-                if (!resolved) {
-                    boundarySupported = detected;
-                    resolved = true;
-                    resolve(boundarySupported);
-                }
-            };
             speechSynthesis.speak(testUtter);
-            setTimeout(() => {
-                if (speechSynthesis.speaking) {
-                    speechSynthesis.cancel();
-                }
+            const timeoutId = setTimeout(() => {
                 if (!resolved) {
+                    if (speechSynthesis.speaking) {
+                        speechSynthesis.cancel();
+                    }
                     boundarySupported = detected;
                     resolved = true;
                     resolve(boundarySupported);
                 }
             }, 1000);
+            testUtter.onend = () => {
+                if (!resolved) {
+                    clearTimeout(timeoutId);
+                    boundarySupported = detected;
+                    resolved = true;
+                    resolve(boundarySupported);
+                }
+            };
         } catch (err) {
             console.warn('[ttsManager] Boundary detection failed:', err);
             boundarySupported = false;
