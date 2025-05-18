@@ -208,6 +208,11 @@ body {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
+.book-item.touch-hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
 .book-item img {
   max-width: 100%;
   height: clamp(150px, 18vw, 240px);
@@ -275,6 +280,11 @@ body {
   opacity: 1;
 }
 
+.book-item.touch-hover .delete-btn {
+  display: block;
+  opacity: 1;
+}
+
 .book-item .delete-btn:hover {
   background-color: #c0392b;
 }
@@ -305,6 +315,13 @@ body {
   align-items: center;
   justify-content: center;
   opacity: 1; /* Fully opaque when book item is hovered and button is shown */
+}
+
+.book-item.touch-hover .btn-upload-drive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
 }
 
 .book-item .btn-upload-drive:hover {
@@ -340,6 +357,13 @@ body {
 }
 
 .book-item:hover .btn-save-offline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+}
+
+.book-item.touch-hover .btn-save-offline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -382,6 +406,13 @@ body {
 }
 
 .book-item:hover .btn-change-cover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+}
+
+.book-item.touch-hover .btn-change-cover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
