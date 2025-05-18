@@ -505,5 +505,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    console.log('readerJS: DOMContentLoaded specific initializations complete.');
+
+    // New navigate function for partial updates
+    async function navigate(delta) {
+        const newIndex = Number(config.currentIndex) + delta;
+        const bookId = config.bookId;
+        const totalChapters = config.totalChapters; // Assuming totalChapters is stored in config
+
+        if (window.ttsManager && typeof window.ttsManager.stopSpeaking === 'function') {
+            window.ttsManager.stopSpeaking();
+        }
+
+        if (!epubWrapperInstance) { // Check if epubWrapperInstance is initialized
+            console.error("navigate: epubWrapperInstance is not initialized.");
+            showError("Reader not fully initialized. Please try refreshing.");
+            return;
+        }
+
+        // Boundary checks for newIndex
+        if (newIndex < 0 || newIndex >= totalChapters) {
+            console.warn(`navigate: Attempted to navigate to invalid index ${newIndex}. Total chapters: ${totalChapters}.`);
+            return;
+        }
+
+        try {
+            console.log(`navigate: Loading content for index ${newIndex} for book ${bookId}`);
+            
+            const contentLoaded = await loadAndRenderContent(epubWrapperInstance, bookId, newIndex, totalChapters);
+
+            if (contentLoaded) {
+                const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
+                const url = `${baseUrl}/${newIndex}`;
+                history.pushState({ idx: newIndex, bookId: bookId }, '', url);
+                config.currentIndex = newIndex; 
+                updatePrevNextButtons(totalChapters); // This function now updates counts too
+                
+                viewerElement.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+                console.log(`navigate: Successfully navigated to index ${newIndex}`);
+            } else {
+                console.error(`navigate: loadAndRenderContent failed for index ${newIndex}.`);
+                viewerElement.innerHTML = `<p>Error loading content for chapter ${newIndex + 1}. Please try refreshing.</p>`;
+            }
+
+        } catch (error) {
+            console.error('Error during navigate function execution:', error);
+            viewerElement.innerHTML = `<p>Error navigating to chapter: ${error.message}. Please try refreshing.</p>`;
+        }
+    }
 }); 

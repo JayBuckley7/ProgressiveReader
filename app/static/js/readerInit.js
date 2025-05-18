@@ -107,7 +107,13 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.warn("JlptHighlighter not found or initJlptHighlighter is not a function.");
     }
-    
+
+    if (window.ttsManager && typeof window.ttsManager.initTtsManager === 'function') {
+        window.ttsManager.initTtsManager();
+    } else {
+        console.warn("TtsManager not found or initTtsManager is not a function.");
+    }
+
     // --- General Page Initialization (after modules) ---
     // MOVED: Saving initial progress will be inside initReaderAsync
     // if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
