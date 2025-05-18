@@ -16,21 +16,24 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
     return;
   }
 
-  // Check if we're in demo mode - check for the global variable each time we render
+  // Check if we're in demo mode
   const isInDemoMode = window.IS_DEMO_MODE === true;
   console.log(`${logPrefix} Demo mode detected: ${isInDemoMode}`);
 
   console.log(`${logPrefix} Starting render...`);
-  recentBooksGrid.innerHTML = "<p>Loading bookshelf...</p>"; // Initial loading state
-  recentBooksGrid.setAttribute("role", "list"); // Set list role
-  recentBooksGrid.setAttribute("aria-live", "polite"); // Announce changes politely
+  recentBooksGrid.innerHTML = "<p>Loading bookshelf...</p>";
+  recentBooksGrid.setAttribute("role", "list");
+  recentBooksGrid.setAttribute("aria-live", "polite");
 
   try {
     console.log(`${logPrefix} Calling getAllBooksMetadata...`);
     const booksMetadata = await getAllBooksMetadata();
 
+    // ───────────────────────────────────────────────
+    // 1) Merge remote Drive metadata (if connected)
+    // ───────────────────────────────────────────────
     let remoteBooks = [];
-    if (driveSync && driveSync.isConnected && driveSync.isConnected()) {
+    if (driveSync?.isConnected?.()) {
       try {
         remoteBooks = await driveSync.listRemoteBooks();
       } catch (err) {
@@ -38,12 +41,12 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       }
     }
 
-    // Add remote-only entries that are not already stored locally
     const localIds = new Set();
     booksMetadata.forEach((b) => {
       localIds.add(b.id);
       if (b.driveId) localIds.add(b.driveId);
     });
+
     for (const rb of remoteBooks) {
       if (!localIds.has(rb.id)) {
         booksMetadata.push({
@@ -58,21 +61,12 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       }
     }
 
-    // Log the books before filtering
-    console.log(
-      `${logPrefix} All books before filtering:`,
-      booksMetadata.map((book) => ({
-        id: book.id,
-        title: book.title,
-        isDemo: book.isDemo,
-      })),
-    );
-
-    // Filter out demo books if not in demo mode
+    // Filter out demo books (unless demo mode)
     let filteredBooksMetadata = isInDemoMode
       ? booksMetadata
       : booksMetadata.filter((book) => !book.isDemo);
 
+    // Apply text search
     if (searchQuery) {
       const search = searchQuery.toLowerCase();
       filteredBooksMetadata = filteredBooksMetadata.filter((book) =>
@@ -80,14 +74,9 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       );
     }
 
-    console.log(
-      `${logPrefix} Received metadata (${booksMetadata.length} total, ${filteredBooksMetadata.length} filtered)`,
-      filteredBooksMetadata,
-    );
     recentBooksGrid.innerHTML = ""; // Clear loading state
 
-    if (!filteredBooksMetadata || filteredBooksMetadata.length === 0) {
-      console.log(`${logPrefix} No books found.`);
+    if (filteredBooksMetadata.length === 0) {
       recentBooksGrid.innerHTML =
         "<p>Your bookshelf is empty. Upload an EPUB to get started!</p>";
       return;
@@ -100,50 +89,46 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       if (dateB - dateA !== 0) return dateB - dateA;
       return a.title.localeCompare(b.title);
     });
-    console.log(`${logPrefix} Sorted metadata:`, filteredBooksMetadata);
 
+    // ───────────────────────────────────────────────
+    // 2) Render each book item
+    // ───────────────────────────────────────────────
     filteredBooksMetadata.forEach((book) => {
-      console.log(`${logPrefix} Processing book:`, book);
-
-      // Create the link element first
+      // ── Build link with reading‑progress support ─────────────────────
       const bookLink = document.createElement("a");
-      bookLink.href = book.isRemoteOnly ? "#" : `/read/${book.id}/0`;
-      bookLink.className = "book-item-link"; // Add a class for potential styling
+      let startIndex = 0;
+      if (
+        window.storageManager &&
+        typeof window.storageManager.getReadingProgress === "function"
+      ) {
+        const saved = window.storageManager.getReadingProgress(book.id);
+        if (saved !== null) startIndex = saved;
+      }
+      bookLink.href = book.isRemoteOnly
+        ? "#"
+        : `/read/${book.id}/${startIndex}`;
+      bookLink.className = "book-item-link";
       bookLink.setAttribute(
         "aria-label",
         `Read ${book.title || "Untitled Book"}`,
       );
 
+      // ── Container div ────────────────────────────────────────────────
       const bookItemDiv = document.createElement("div");
       bookItemDiv.className = "book-item";
       bookItemDiv.dataset.bookId = book.id;
       if (book.isRemoteOnly) bookItemDiv.classList.add("remote");
-      bookItemDiv.setAttribute("role", "listitem"); // Set listitem role
+      bookItemDiv.setAttribute("role", "listitem");
 
-      // Log before checking for the blob
-      console.log(
-        `${logPrefix} Book ID ${book.id}: Fetching cover - Blob exists? ${!!book.coverImageBlob}, Is Blob? ${book.coverImageBlob instanceof Blob}`,
-      );
-
-      // Check for cover image Blob
-      if (book.coverImageBlob && book.coverImageBlob instanceof Blob) {
+      // ── Cover (local Blob → img, otherwise placeholder) ──────────────
+      if (book.coverImageBlob instanceof Blob) {
         const img = document.createElement("img");
-        // Create a NEW object URL for this session
         img.src = URL.createObjectURL(book.coverImageBlob);
         img.alt = `Cover for ${book.title || "Untitled Book"}`;
-        img.loading = "lazy"; // Lazy load images
-
-        // Revoke the object URL when the image has loaded or errored to free memory
-        img.onload = () => URL.revokeObjectURL(img.src);
-        img.onerror = () => {
-          console.warn(`Failed to load cover image blob for book ${book.id}`);
-          URL.revokeObjectURL(img.src);
-          // Optionally replace img with placeholder on error
-          // img.replaceWith(createPlaceholderCover());
-        };
+        img.loading = "lazy";
+        img.onload = img.onerror = () => URL.revokeObjectURL(img.src);
         bookItemDiv.appendChild(img);
       } else {
-        // Fallback to placeholder if no cover image Blob
         const noCoverDiv = document.createElement("div");
         noCoverDiv.className = "no-cover";
         noCoverDiv.setAttribute("role", "img");
@@ -151,8 +136,8 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         noCoverDiv.textContent = "No Cover";
         bookItemDiv.appendChild(noCoverDiv);
 
-        if (book.isRemoteOnly && driveSync && driveSync.isConnected()) {
-          // Attempt to fetch cover image from Drive
+        // Try to fetch Drive cover on‑the‑fly
+        if (book.isRemoteOnly && driveSync?.isConnected?.()) {
           (async () => {
             try {
               const blob = await driveSync.downloadBook(book.id);
@@ -174,21 +159,22 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         }
       }
 
-      // Add title text to the book item div, not as a separate link
-      const titleElement = document.createElement("p"); // Or h3, span, etc.
+      // ── Title ────────────────────────────────────────────────────────
+      const titleElement = document.createElement("p");
       titleElement.className = "book-item-title";
       titleElement.textContent = book.title || "Untitled Book";
       bookItemDiv.appendChild(titleElement);
 
+      // ── Delete button ────────────────────────────────────────────────
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "delete-btn";
-      deleteBtn.innerHTML = "&#10005;"; // Simple X symbol, or use an SVG
+      deleteBtn.innerHTML = "&#10005;";
       deleteBtn.setAttribute(
         "aria-label",
         `Delete ${book.title || "Untitled Book"}`,
       );
       deleteBtn.title = `Delete "${book.title}"`;
-      deleteBtn.dataset.bookId = book.id; // It might be useful to have bookId here too
+      deleteBtn.dataset.bookId = book.id;
       deleteBtn.onclick = async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -198,7 +184,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           )
         ) {
           try {
-            if (book.isRemoteOnly && driveSync && driveSync.isConnected()) {
+            if (book.isRemoteOnly && driveSync?.isConnected?.()) {
               await driveSync.deleteRemoteBook(book.id);
               console.log(
                 `${logPrefix} Remote book ${book.id} deleted from Drive.`,
@@ -207,7 +193,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
               await deleteBook(book.id);
               console.log(`${logPrefix} Book ${book.id} deleted from DB.`);
             }
-            renderBookshelf(driveSync); // Re-render: ensure driveSync is passed here too!
+            renderBookshelf(driveSync);
           } catch (err) {
             console.error(`${logPrefix} Error deleting book:`, err);
             alert(`Failed to delete book: ${err.message || "Unknown error"}`);
@@ -216,119 +202,47 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       };
       bookItemDiv.appendChild(deleteBtn);
 
-// ───────────────────────────────────────────────
-// 1) Custom-cover button + hidden file input
-// ───────────────────────────────────────────────
-const coverBtn   = document.createElement("button");
-coverBtn.className   = "btn-change-cover action-btn";
-coverBtn.textContent = "📷";
-coverBtn.title       = `Change cover for "${book.title}"`;
-coverBtn.setAttribute(
-  "aria-label",
-  `Change cover for ${book.title || "Untitled Book"}`
-);
+      // ── Custom cover change button ─────────────────────────────────--
+      const coverBtn = document.createElement("button");
+      coverBtn.className = "btn-change-cover action-btn";
+      coverBtn.textContent = "📷";
+      coverBtn.title = `Change cover for "${book.title}"`;
+      coverBtn.setAttribute(
+        "aria-label",
+        `Change cover for ${book.title || "Untitled Book"}`,
+      );
 
-const coverInput = document.createElement("input");
-coverInput.type  = "file";
-coverInput.accept = "image/*";
-coverInput.style.display = "none";
+      const coverInput = document.createElement("input");
+      coverInput.type = "file";
+      coverInput.accept = "image/*";
+      coverInput.style.display = "none";
 
-coverInput.addEventListener("change", async () => {
-  if (coverInput.files?.[0]) {
-    try {
-      await updateBookCover(book.id, coverInput.files[0]);
-      await renderBookshelf(driveSync);
-    } catch (err) {
-      console.error(`${logPrefix} Failed to update cover for ${book.id}`, err);
-    }
-  }
-});
+      coverInput.addEventListener("change", async () => {
+        if (coverInput.files?.[0]) {
+          try {
+            await updateBookCover(book.id, coverInput.files[0]);
+            await renderBookshelf(driveSync);
+          } catch (err) {
+            console.error(
+              `${logPrefix} Failed to update cover for ${book.id}`,
+              err,
+            );
+          }
+        }
+      });
 
-coverBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  coverInput.click();
-});
+      coverBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        coverInput.click();
+      });
 
-bookItemDiv.appendChild(coverBtn);
-bookItemDiv.appendChild(coverInput);
+      bookItemDiv.appendChild(coverBtn);
+      bookItemDiv.appendChild(coverInput);
 
-// ───────────────────────────────────────────────
-// 2) “Save offline” button for remote-only books
-// ───────────────────────────────────────────────
-if (book.isRemoteOnly) {
-  const saveBtn = document.createElement("button");
-  saveBtn.className = "btn-save-offline action-btn";
-  saveBtn.innerHTML = `
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
-        <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z"/>
-    </svg>`;
-  saveBtn.title = `Save \"${book.title}\" offline`;
-  saveBtn.setAttribute(
-    "aria-label",
-    `Save ${book.title || "Untitled Book"} offline`,
-  );
-  saveBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      const blob = await driveSync.downloadBook(book.id);
-      await addBook(book.title, blob, book.id);
-      await renderBookshelf(driveSync); // Re-render after saving
-    } catch (err) {
-      console.error(`${logPrefix} Save offline failed:`, err);
-      alert("Failed to save book offline");
-    }
-  });
-  bookItemDiv.appendChild(saveBtn);
-
-  // Modify bookLink behavior for remote books: download, then open
-  bookLink.addEventListener("click", async (ev) => {
-    ev.preventDefault(); // Prevent default navigation
-    try {
-      // Download, add to local DB, then navigate
-      const blob = await driveSync.downloadBook(book.id);
-      // Ensure book.id is used to potentially overwrite if 'saved' previously by button
-      await addBook(book.title, blob, book.id); 
-      window.location.href = `/read/${book.id}/0`; // Navigate to reader
-    } catch (err) {
-      console.error(`${logPrefix} Failed to load remote book for reading:`, err);
-      alert("Failed to load book from Drive for reading. Try saving it offline first.");
-    }
-  });
-}
-
-// Add Upload to Drive button if Drive is connected, book is local, and not already uploaded
-if (
-  driveSync &&
-  driveSync.isConnected() &&
-  !book.isRemoteOnly &&
-  !book.driveId
-) {
-  const uploadDriveBtn = document.createElement("button");
-  uploadDriveBtn.className = "btn-upload-drive action-btn";
-  uploadDriveBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
-          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
-      </svg>`;
-  uploadDriveBtn.title = `Upload "${book.title}" to Google Drive`;
-  uploadDriveBtn.setAttribute(
-    "aria-label",
-    `Upload ${book.title || "Untitled Book"} to Google Drive`,
-  );
-  uploadDriveBtn.dataset.bookId = book.id;
-  uploadDriveBtn.dataset.bookTitle = book.title || "Untitled Book";
-  bookItemDiv.appendChild(uploadDriveBtn);
-}
-
-// Append the book item div to the link, then the link to the grid
-bookLink.appendChild(bookItemDiv);
-recentBooksGrid.appendChild(bookLink);
-    });
-
-    console.log(`${logPrefix} Finished rendering books.`);
-  } catch (error) {
-    console.error(`${logPrefix} Error rendering bookshelf:`, error);
-    recentBooksGrid.innerHTML = `<p>Error loading bookshelf: ${error.message || "Unknown error"}. Check console.</p>`;
-  }
-}
+      // ── Save‑offline button (remote-only) ────────────────────────────
+      if (book.isRemoteOnly) {
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn-save-offline action-btn";
+        saveBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="current

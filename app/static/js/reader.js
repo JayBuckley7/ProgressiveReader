@@ -674,7 +674,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
                 const url = `${baseUrl}/${newIndex}`;
                 history.pushState({ idx: newIndex, bookId: bookId }, '', url);
-                config.currentIndex = newIndex; 
+                config.currentIndex = newIndex;
+                if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
+                    window.storageManager.saveReadingProgress(bookId, newIndex);
+                }
                 updatePrevNextButtons(totalChapters); // This function now updates counts too
                 
                 viewerElement.scrollTop = 0;
