@@ -10,36 +10,6 @@ let currentRate = 1.0;
 let textNodeMap = [];
 const TTS_HIGHLIGHT_NAME = 'tts-current-word'; // Name for the CSS Highlight
 
-function setupMediaSession() {
-    if (!('mediaSession' in navigator)) return;
-
-    navigator.mediaSession.setActionHandler('play', () => {
-        if (isSpeaking && isPaused) {
-            resumeSpeaking();
-        } else if (!isSpeaking) {
-            speakCurrentChapter();
-        }
-    });
-
-    navigator.mediaSession.setActionHandler('pause', () => {
-        if (isSpeaking && !isPaused) {
-            pauseSpeaking();
-        }
-    });
-
-    navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Progressive Reader',
-        artist: 'Text to Speech',
-    });
-}
-
-function updatePlaybackState() {
-    if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.playbackState = isSpeaking
-        ? (isPaused ? 'paused' : 'playing')
-        : 'none';
-}
-
 function buildIndexMap(element) {
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
     const map = [];
@@ -127,7 +97,6 @@ function speakFromIndex(index) {
         clearHighlight();
         const btn = document.getElementById('read-aloud-btn');
         if (btn) btn.textContent = 'Read Aloud';
-        updatePlaybackState();
     };
     speechSynthesis.speak(currentUtterance);
     isSpeaking = true;
@@ -135,7 +104,6 @@ function speakFromIndex(index) {
     const btn = document.getElementById('read-aloud-btn');
     if (btn) btn.textContent = 'Stop';
     showControls();
-    updatePlaybackState();
 }
 
 function speakCurrentChapter() {
@@ -172,7 +140,6 @@ function pauseSpeaking() {
     if (isSpeaking && !isPaused) {
         speechSynthesis.pause();
         isPaused = true;
-        updatePlaybackState();
     }
 }
 
@@ -180,7 +147,6 @@ function resumeSpeaking() {
     if (isSpeaking && isPaused) {
         speechSynthesis.resume();
         isPaused = false;
-        updatePlaybackState();
     }
 }
 
@@ -193,7 +159,6 @@ function stopSpeaking() {
         clearHighlight();
         const btn = document.getElementById('read-aloud-btn');
         if (btn) btn.textContent = 'Read Aloud';
-        updatePlaybackState();
     }
 }
 
@@ -218,9 +183,6 @@ function initTtsManager() {
             }
         });
     }
-
-    setupMediaSession();
-    updatePlaybackState();
 
     const pauseBtn = document.getElementById('tts-pause-btn');
     const stopBtn = document.getElementById('tts-stop-btn');
