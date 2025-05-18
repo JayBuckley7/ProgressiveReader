@@ -115,7 +115,13 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       const item = document.createElement('div');
       item.className = 'book-item';
       item.dataset.bookId = book.id;
-      if (book.isRemoteOnly) item.classList.add('remote');
+      if (book.isRemoteOnly) {
+        item.classList.add('remote');
+        const badge = document.createElement('span');
+        badge.className = 'remote-indicator';
+        badge.textContent = '☁';
+        item.appendChild(badge);
+      }
       item.setAttribute('role', 'listitem');
 
       /* ─ Cover image ─ */
