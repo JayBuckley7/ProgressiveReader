@@ -246,7 +246,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalChapters = await getAndRenderNavData(epubWrapperInstance); // Pass instance
         if (totalChapters <= 0) return; // Early exit if no chapters
             
-        await loadAndRenderContent(epubWrapperInstance, bookId, currentIndex, totalChapters); // Pass instance
+        const initialContentRendered = await loadAndRenderContent(epubWrapperInstance, bookId, currentIndex, totalChapters); // Pass instance
+
+        if (initialContentRendered) {
+            // Update the browser URL to include the actual starting index
+            const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
+            const initialUrl = `${baseUrl}/${currentIndex}`;
+            history.replaceState({ idx: currentIndex, bookId: bookId }, '', initialUrl);
+            console.log(`readerJS: Initial URL updated to: ${initialUrl}`);
+            
+            // Ensure config.currentIndex is correctly set if it wasn't before (it should be from readerInit)
+            if (config.currentIndex !== currentIndex) {
+                 console.warn(`readerJS: Mismatch in config.currentIndex (${config.currentIndex}) and initial currentIndex (${currentIndex}). Updating config.`);
+                 config.currentIndex = currentIndex; // Ensure config object is also up to date.
+            }
+        } else {
+            console.error("readerJS: Initial content rendering failed. URL not updated.");
+        }
     };
     
     // === HELPER METHODS ===

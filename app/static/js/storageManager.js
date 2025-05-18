@@ -365,6 +365,56 @@ function isOffline() {
     return !navigator.onLine;
 }
 
+// New function to determine the actual starting position
+async function determineActualStartingPosition(bookId) {
+    if (!bookId) return 0;
+    let startIndex = 0;
+    let latestTimestamp = 0;
+
+    try {
+        // 1. Check IndexedDB outbox
+        const outboxRecords = await getOutboxRecords(); // Assuming this gets all records
+        const relevantOutboxRecords = outboxRecords.filter(
+            record => record.type === 'reading_progress' && record.bookId === bookId
+        );
+
+        if (relevantOutboxRecords.length > 0) {
+            const latestRecord = relevantOutboxRecords.reduce((latest, current) => {
+                return (current.timestamp > (latest.timestamp || 0)) ? current : latest;
+            }, {});
+            if (latestRecord && latestRecord.itemIndex !== undefined) {
+                startIndex = latestRecord.itemIndex;
+                latestTimestamp = latestRecord.timestamp;
+                console.log(`[StorageManager] Found progress in outbox for ${bookId}: page ${startIndex} (ts: ${latestTimestamp})`);
+            }
+        }
+
+        // 2. Check localStorage as a fallback or if it's more recent
+        const localStorageProgressMeta = getReadingProgressMeta(bookId);
+        if (localStorageProgressMeta && localStorageProgressMeta.index !== undefined) {
+            const localStorageTimestamp = localStorageProgressMeta.dttm_mod || 0;
+            if (localStorageTimestamp > latestTimestamp) { // Only use if more recent than outbox entry
+                startIndex = localStorageProgressMeta.index;
+                console.log(`[StorageManager] Found more recent progress in localStorage for ${bookId}: page ${startIndex} (ts: ${localStorageTimestamp})`);
+            } else if (latestTimestamp === 0) { // Or if outbox was empty
+                 startIndex = localStorageProgressMeta.index;
+                 console.log(`[StorageManager] Used progress from localStorage for ${bookId}: page ${startIndex} (ts: ${localStorageTimestamp}) (outbox empty/irrelevant)`);
+            }
+        }
+
+    } catch (error) {
+        console.error(`[StorageManager] Error determining starting position for ${bookId}:`, error);
+        // Fallback to localStorage directly in case of error with outbox processing
+        const localStorageProgress = getReadingProgress(bookId);
+        if (localStorageProgress !== null) {
+            startIndex = localStorageProgress;
+        }
+    }
+    
+    console.log(`[StorageManager] Final determined startIndex for ${bookId}: ${startIndex}`);
+    return startIndex;
+}
+
 // Make functions available globally or via an object
 window.storageManager = {
     // Translation cache
@@ -377,6 +427,7 @@ window.storageManager = {
     saveReadingProgress,
     getReadingProgress,
     getReadingProgressMeta,
+    determineActualStartingPosition,
     mergeProgress,
     
     // Preferences

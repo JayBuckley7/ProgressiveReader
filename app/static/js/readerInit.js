@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const apiKeyStatusConfigured = config.openaiKeyConfigured || false;
     const serverDefaultModel = config.defaultModel || 'gpt-4o-mini';
     const currentBookId = config.bookId || null; // Ensure it defaults to null if missing
-    const pageCurrentIndex = parseInt(config.currentIndex, 10) || 0;
+    // const pageCurrentIndex = parseInt(config.currentIndex, 10) || 0; // OLD - currentIndex no longer passed from server
 
     // --- DEBUGGING LOGS (Keep for now) ---
     console.log("[ReaderInit] Parsed config from #page-config:", JSON.stringify(config));
@@ -198,4 +198,62 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => notification.remove(), 300);
         }, 5000);
     }
+
+    // Asynchronously determine starting position and then initialize the reader
+    async function initReaderAsync() {
+        if (!currentBookId) {
+            console.error("[ReaderInit] CRITICAL: currentBookId is null. Cannot initialize reader.");
+            showError("Book ID is missing. Cannot load book."); // Assuming showError is available or define it
+            return;
+        }
+
+        let actualStartIndex = 0;
+        if (window.storageManager && typeof window.storageManager.determineActualStartingPosition === 'function') {
+            try {
+                actualStartIndex = await window.storageManager.determineActualStartingPosition(currentBookId);
+                console.log(`[ReaderInit] Determined actualStartIndex: ${actualStartIndex} for book ${currentBookId}`);
+            } catch (error) {
+                console.error(`[ReaderInit] Error calling determineActualStartingPosition for ${currentBookId}:`, error);
+                // Fallback to 0 or handle error appropriately
+                actualStartIndex = 0; 
+            }
+        } else {
+            console.warn("[ReaderInit] storageManager.determineActualStartingPosition not available. Defaulting to 0.");
+        }
+
+        // Prepare the initial configuration object for reader.js
+        const initialConfig = {
+            bookId: currentBookId,
+            epubProcessor: new EpubProcessorWrapper(), // Assuming EpubProcessorWrapper is globally available or imported
+            textProcessor: new TextProcessorWrapper(), // Assuming TextProcessorWrapper is globally available or imported
+            storageManager: window.storageManager,     // Pass the storageManager instance
+            openaiKeyConfigured: apiKeyStatusConfigured,
+            defaultModel: serverDefaultModel,
+            currentIndex: actualStartIndex, // Use the dynamically determined start index
+            isDemo: window.IS_DEMO_MODE === true, // Check if demo mode is set
+            // Add other necessary config properties that reader.js expects
+            // e.g., show_jlpt_filter, jlpt_enabled might come from session via page-config if still needed
+            showJlptFilter: config.showJlptFilter || false, // Get from original page config
+            jlptEnabled: config.jlptEnabled || false,     // Get from original page config
+        };
+
+        if (typeof initializeReader === 'function') {
+            console.log("[ReaderInit] Calling initializeReader with config:", initialConfig);
+            initializeReader(initialConfig); // This function should be in reader.js
+        } else {
+            console.error("[ReaderInit] CRITICAL: initializeReader function not found. Reader cannot start.");
+        }
+    }
+
+    // Helper for displaying errors if not already defined
+    function showError(message) {
+        const contentArea = document.querySelector('.epub-content');
+        if (contentArea) {
+            contentArea.innerHTML = `<p class="error-message">${message}</p>`;
+        }
+        console.error(`[ReaderInit] Error: ${message}`);
+    }
+
+    // Start the async initialization
+    initReaderAsync();
 }); 

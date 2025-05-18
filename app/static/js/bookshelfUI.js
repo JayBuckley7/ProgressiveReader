@@ -89,15 +89,16 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
 
     filtered.forEach((book) => {
       // Determine start spine index (reading progress)
-      let startIndex = 0;
-      if (window.storageManager?.getReadingProgress) {
-        const saved = window.storageManager.getReadingProgress(book.id);
-        if (saved !== null) startIndex = saved;
-      }
+      // let startIndex = 0; // No longer needed here for href
+      // if (window.storageManager?.getReadingProgress) {
+      //   const saved = window.storageManager.getReadingProgress(book.id);
+      //   if (saved !== null) startIndex = saved;
+      // }
 
       // Wrapper link
       const bookLink = document.createElement('a');
-      bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/${startIndex}`;
+      // bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/${startIndex}`; // OLD
+      bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}`; // NEW - startIndex removed
       bookLink.className = 'book-item-link';
       bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
 
@@ -239,7 +240,9 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           try {
             const blob = await driveSync.downloadBook(book.id);
             await addBook(book.title, blob, book.id);
-            window.location.href = `/read/${book.id}/${startIndex}`;
+            // OLD: window.location.href = `/read/${book.id}/${startIndex}`;
+            // NEW: The reader page will determine the start index itself.
+            window.location.href = `/read/${book.id}`; 
           } catch (err) {
             console.error(`${logPrefix} Failed to load remote book`, err);
             alert('Failed to load book from Drive');

@@ -24,21 +24,20 @@ reader_bp = Blueprint("reader", __name__)
 #  Main reader route
 # ──────────────────────────────────────────────────────────────────────────
 @reader_bp.route(
-    "/read/<book_id>/<int:item_index>",
+    "/read/<book_id>",
     endpoint="read_item",              # keep old endpoint name alive
 )
-def reader(book_id: str, item_index: int):
+def reader(book_id: str):
     """
     Serve the minimal reader shell; the browser does all EPUB work.
     """
     current_app.logger.debug(
-        "Reader view for book %s (initial chapter %d)", book_id, item_index
+        "Reader view for book %s (actual start index determined by client)", book_id
     )
 
     return render_template(
         "reader.html",
         book_id=book_id,
-        current_index=item_index,
         model_name=current_app.config.get("SERVER_DEFAULT_MODEL", "gpt-4o-mini"),
         show_jlpt_filter=session.get("show_jlpt_filter", False),
         jlpt_enabled=session.get("jlpt_highlighting_enabled", False),
@@ -46,12 +45,11 @@ def reader(book_id: str, item_index: int):
     )
 
 
-@reader_bp.route("/demo/read/<book_id>/<int:item_index>", endpoint="read_demo_item")
-def reader_demo(book_id: str, item_index: int):
+@reader_bp.route("/demo/read/<book_id>", endpoint="read_demo_item")
+def reader_demo(book_id: str):
     return render_template(
         "reader.html",
         book_id          = book_id,
-        current_index    = item_index,
         is_demo          = True,        # -- new flag
         model_name       = "demo",
         show_jlpt_filter = False,
