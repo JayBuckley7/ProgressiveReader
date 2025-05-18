@@ -138,6 +138,15 @@
     </footer>
 </div>
 
+<!-- Floating TTS Controls -->
+<div id="tts-control-panel" style="display:none; position:fixed; bottom:10px; left:50%; transform:translateX(-50%); background-color:rgba(0,0,0,0.75); color:#fff; padding:8px 12px; border-radius:8px; z-index:1000; align-items:center; gap:8px;">
+    <button id="tts-stop-btn" aria-label="Stop TTS">Stop</button>
+    <button id="tts-pause-btn" aria-label="Pause or resume TTS">Pause</button>
+    <button id="tts-speed-down" aria-label="Slower">-</button>
+    <span id="tts-speed-display">1.0x</span>
+    <button id="tts-speed-up" aria-label="Faster">+</button>
+</div>
+
 <!-- PWA Install Button -->
 <div id="pwa-prompt-container" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; background-color: #333; color: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
     <p style="margin: 0 0 10px 0; font-size: 0.9em;">Install Progressive Reader for a better experience?</p>
