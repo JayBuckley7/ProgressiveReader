@@ -113,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.warn("TtsManager not found or initTtsManager is not a function.");
     }
-
     // --- General Page Initialization (after modules) ---
     // MOVED: Saving initial progress will be inside initReaderAsync
     // if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {

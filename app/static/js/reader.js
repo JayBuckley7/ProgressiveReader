@@ -505,7 +505,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     // New navigate function for partial updates
     async function navigate(delta) {
         const newIndex = Number(config.currentIndex) + delta;
