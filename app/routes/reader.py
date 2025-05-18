@@ -15,6 +15,8 @@ from flask import (
     session,
     current_app,
     Response,
+    redirect,
+    url_for,
 )
 
 reader_bp = Blueprint("reader", __name__)
@@ -24,15 +26,25 @@ reader_bp = Blueprint("reader", __name__)
 #  Main reader route
 # ──────────────────────────────────────────────────────────────────────────
 @reader_bp.route(
-    "/read/<book_id>",
-    endpoint="read_item",              # keep old endpoint name alive
+    "/read/<book_id>/",
+    defaults={"page": None},
+    endpoint="read_item",  # keep old endpoint name alive
 )
-def reader(book_id: str):
+@reader_bp.route("/read/<book_id>/<int:page>", endpoint="read_item")
+def reader(book_id: str, page: int | None = None):
     """
     Serve the minimal reader shell; the browser does all EPUB work.
     """
+    if page is None:
+        current_app.logger.debug(
+            "No page specified for %s – redirecting to page 0", book_id
+        )
+        return redirect(url_for("reader.read_item", book_id=book_id, page=0))
+
     current_app.logger.debug(
-        "Reader view for book %s (actual start index determined by client)", book_id
+        "Reader view for book %s page %s (actual start index determined by client)",
+        book_id,
+        page,
     )
 
     return render_template(

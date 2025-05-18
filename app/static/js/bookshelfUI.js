@@ -4,6 +4,18 @@ import { EpubProcessorWrapper } from './epubProcessor.js';
 const recentBooksGrid = document.getElementById("recent-books-grid");
 const logPrefix = "[BookshelfUI]";
 
+async function openBookAtProgress(bookId, title) {
+  let startIndex = 0;
+  if (window.storageManager?.determineActualStartingPosition) {
+    try {
+      startIndex = await window.storageManager.determineActualStartingPosition(bookId);
+    } catch (err) {
+      console.warn(`${logPrefix} Failed to determine start index for ${bookId}:`, err);
+    }
+  }
+  window.location.href = `/read/${bookId}/${startIndex}`;
+}
+
 /**
  * Render the bookshelf grid.
  * @param {object} driveSync  Optional Google Drive sync helper implementing
@@ -97,8 +109,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
 
       // Wrapper link
       const bookLink = document.createElement('a');
-      // bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/${startIndex}`; // OLD
-      bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}`; // NEW - startIndex removed
+      bookLink.href = '#'; // Navigation is handled by click handler
       bookLink.className = 'book-item-link';
       bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
 
@@ -234,19 +245,23 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         };
         item.appendChild(saveBtn);
 
-        // Override default link behaviour: download then open
+        // Override default link behaviour: download then open at last position
         bookLink.onclick = async (ev) => {
           ev.preventDefault();
           try {
             const blob = await driveSync.downloadBook(book.id);
             await addBook(book.title, blob, book.id);
-            // OLD: window.location.href = `/read/${book.id}/${startIndex}`;
-            // NEW: The reader page will determine the start index itself.
-            window.location.href = `/read/${book.id}`; 
+            await openBookAtProgress(book.id, book.title);
           } catch (err) {
             console.error(`${logPrefix} Failed to load remote book`, err);
             alert('Failed to load book from Drive');
           }
+        };
+      } else {
+        // Local (or synced) book: open at last position
+        bookLink.onclick = async (ev) => {
+          ev.preventDefault();
+          await openBookAtProgress(book.id, book.title);
         };
       }
 
