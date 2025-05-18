@@ -13,6 +13,7 @@ const TTS_HIGHLIGHT_NAME = 'tts-current-word'; // Name for the CSS Highlight
 let fallbackIntervalId = null;
 let boundarySupported = false;
 let boundaryChecked = false;
+let mediaSessionSupported = 'mediaSession' in navigator;
 
 function buildIndexMap(element) {
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
@@ -158,6 +159,35 @@ function detectBoundaryEventSupport() {
     });
 }
 
+function updatePlaybackState() {
+    if (!mediaSessionSupported) return;
+    navigator.mediaSession.playbackState = isSpeaking
+        ? isPaused
+            ? 'paused'
+            : 'playing'
+        : 'none';
+}
+
+function setupMediaSession() {
+    if (!mediaSessionSupported) {
+        console.warn('[ttsManager] Media Session API not supported.');
+        return;
+    }
+    navigator.mediaSession.setActionHandler('play', () => {
+        if (isPaused) {
+            resumeSpeaking();
+        } else if (!isSpeaking) {
+            speakCurrentChapter();
+        }
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        if (isSpeaking && !isPaused) {
+            pauseSpeaking();
+        }
+    });
+    updatePlaybackState();
+}
+
 function showControls() {
     const panel = document.getElementById('tts-control-panel');
     if (panel) panel.style.display = 'flex';
@@ -190,10 +220,12 @@ function speakFromIndex(index) {
         stopFallbackHighlighting();
         const btn = document.getElementById('read-aloud-btn');
         if (btn) btn.textContent = 'Read Aloud';
+        updatePlaybackState();
     };
     speechSynthesis.speak(currentUtterance);
     isSpeaking = true;
     isPaused = false;
+    updatePlaybackState();
     const btn = document.getElementById('read-aloud-btn');
     if (btn) btn.textContent = 'Stop';
     showControls();
@@ -242,6 +274,7 @@ function pauseSpeaking() {
         speechSynthesis.pause();
         isPaused = true;
         stopFallbackHighlighting();
+        updatePlaybackState();
     }
 }
 
@@ -252,6 +285,7 @@ function resumeSpeaking() {
         if (!boundarySupported) {
             startFallbackHighlighting(currentIndex);
         }
+        updatePlaybackState();
     }
 }
 
@@ -265,6 +299,7 @@ function stopSpeaking() {
         stopFallbackHighlighting();
         const btn = document.getElementById('read-aloud-btn');
         if (btn) btn.textContent = 'Read Aloud';
+        updatePlaybackState();
     }
 }
 
@@ -279,6 +314,7 @@ function adjustRate(delta) {
 }
 
 function initTtsManager() {
+    setupMediaSession();
     const btn = document.getElementById('read-aloud-btn');
     if (btn) {
         btn.addEventListener('click', () => {
@@ -333,4 +369,6 @@ window.ttsManager = {
     pauseSpeaking,
     resumeSpeaking,
     adjustRate,
+    setupMediaSession,
+    updatePlaybackState,
 };
