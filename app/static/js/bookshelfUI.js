@@ -288,6 +288,55 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         item.appendChild(uploadBtn);
       }
 
+      // ─ Long‑press on mobile to show action buttons ─
+      (() => {
+        let longPressTimer = null;
+        let longPressTriggered = false;
+        const LONG_PRESS_MS = 500;
+
+        const startPress = (ev) => {
+          if (ev.type === 'mousedown' && ev.button !== 0) return;
+          longPressTriggered = false;
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(() => {
+            item.classList.add('touch-hover');
+            longPressTriggered = true;
+          }, LONG_PRESS_MS);
+        };
+
+        const cancelPress = (ev) => {
+          clearTimeout(longPressTimer);
+          if (longPressTriggered) {
+            ev.preventDefault();
+            ev.stopPropagation();
+          }
+        };
+
+        const endPress = (ev) => {
+          clearTimeout(longPressTimer);
+          if (longPressTriggered) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            // Hide after a short delay
+            setTimeout(() => item.classList.remove('touch-hover'), 2500);
+          }
+        };
+
+        bookLink.addEventListener('touchstart', startPress);
+        bookLink.addEventListener('mousedown', startPress);
+        bookLink.addEventListener('touchend', endPress);
+        bookLink.addEventListener('mouseup', endPress);
+        bookLink.addEventListener('touchmove', cancelPress);
+        bookLink.addEventListener('touchcancel', cancelPress);
+        bookLink.addEventListener('mouseleave', cancelPress);
+        bookLink.addEventListener('click', (e) => {
+          if (longPressTriggered) {
+            e.preventDefault();
+            longPressTriggered = false;
+          }
+        }, true);
+      })();
+
       // Assemble
       bookLink.appendChild(item);
       recentBooksGrid.appendChild(bookLink);
