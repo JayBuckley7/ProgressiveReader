@@ -63,9 +63,9 @@
 }
 
 /* TTS highlight and controls */
-/* .tts-highlight { // Old class, can be removed if no longer used by fallback
+.tts-highlight {
     background-color: yellow;
-} */
+}
 
 ::highlight(tts-current-word) {
     background-color: yellow; /* Or your preferred highlight color */

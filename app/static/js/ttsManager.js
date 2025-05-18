@@ -8,6 +8,7 @@ let contentText = '';
 let currentIndex = 0;
 let currentRate = 1.0;
 let textNodeMap = [];
+let fallbackHighlightEl = null;
 const TTS_HIGHLIGHT_NAME = 'tts-current-word'; // Name for the CSS Highlight
 
 function buildIndexMap(element) {
@@ -34,12 +35,20 @@ function findNodeOffset(map, charIndex) {
 function clearHighlight() {
     if (CSS.highlights) {
         CSS.highlights.delete(TTS_HIGHLIGHT_NAME);
+    } else if (fallbackHighlightEl) {
+        const parent = fallbackHighlightEl.parentNode;
+        if (parent) {
+            while (fallbackHighlightEl.firstChild) {
+                parent.insertBefore(fallbackHighlightEl.firstChild, fallbackHighlightEl);
+            }
+            parent.removeChild(fallbackHighlightEl);
+        }
+        fallbackHighlightEl = null;
     }
 }
 
 function highlightAtIndex(index) {
     clearHighlight();
-    if (!CSS.highlights) return; // Don't attempt if API not supported
 
     const remainingText = contentText.slice(index);
     const match = remainingText.match(/\S+/); // Find the current word (any non-whitespace sequence)
@@ -56,17 +65,24 @@ function highlightAtIndex(index) {
         console.warn('Could not find nodes for highlighting range.');
         return;
     }
-    
+
     const range = document.createRange();
     try {
         range.setStart(startPos.node, startPos.offset);
         range.setEnd(endPos.node, endPos.offset);
 
-        const highlight = new Highlight(range);
-        CSS.highlights.set(TTS_HIGHLIGHT_NAME, highlight);
+        if (CSS.highlights) {
+            const highlight = new Highlight(range);
+            CSS.highlights.set(TTS_HIGHLIGHT_NAME, highlight);
+        } else {
+            const span = document.createElement('span');
+            span.className = 'tts-highlight';
+            range.surroundContents(span);
+            fallbackHighlightEl = span;
+        }
 
     } catch (err) {
-        console.warn('Unable to highlight range with CSS Custom Highlight API', err);
+        console.warn('Unable to highlight range', err);
     }
 }
 
