@@ -33,9 +33,9 @@ if __name__ == '__main__':
     
     if is_debugging:
         # When debugging with VS Code, disable Flask's reloader to avoid conflicts
-        app.logger.info("Debugger detected: disabling Flask reloader")
-        app.run(debug=True, use_reloader=False)
+        app.logger.info("Debugger detected: disabling Flask reloader, serving on 0.0.0.0:5000")
+        app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
     else:
         # Normal mode with hot reload enabled
-        app.logger.info("Running with hot reload enabled")
-        app.run(debug=True, use_reloader=True, extra_files=extra_files) 
+        app.logger.info("Running with hot reload enabled, serving on 0.0.0.0:5000")
+        app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=True, extra_files=extra_files) 
