@@ -2,13 +2,14 @@ import { getAllBooksMetadata, deleteBook, addBook, updateBookCover } from './dbS
 import { EpubProcessorWrapper } from './epubProcessor.js';
 
 const recentBooksGrid = document.getElementById("recent-books-grid");
-
-// Standardize log prefix
 const logPrefix = "[BookshelfUI]";
 
 /**
- * Renders the list of books from IndexedDB onto the bookshelf grid.
- * @param {object} driveSync - The driveSync module for checking connection status.
+ * Render the bookshelf grid.
+ * @param {object} driveSync  Optional Google Drive sync helper implementing
+ *                            isConnected(), listRemoteBooks(), downloadBook(),
+ *                            deleteRemoteBook(), uploadBook().
+ * @param {string} searchQuery Optional search string to filter titles.
  */
 export async function renderBookshelf(driveSync, searchQuery = "") {
   if (!recentBooksGrid) {
@@ -16,22 +17,19 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
     return;
   }
 
-  // Check if we're in demo mode
   const isInDemoMode = window.IS_DEMO_MODE === true;
-  console.log(`${logPrefix} Demo mode detected: ${isInDemoMode}`);
 
-  console.log(`${logPrefix} Starting render...`);
-  recentBooksGrid.innerHTML = "<p>Loading bookshelf...</p>";
-  recentBooksGrid.setAttribute("role", "list");
-  recentBooksGrid.setAttribute("aria-live", "polite");
+  recentBooksGrid.innerHTML = '<p>Loading bookshelf…</p>';
+  recentBooksGrid.setAttribute('role', 'list');
+  recentBooksGrid.setAttribute('aria-live', 'polite');
 
   try {
-    console.log(`${logPrefix} Calling getAllBooksMetadata...`);
+    /* ─────────────────────────────────────────────────────
+       1  Gather metadata (local + remote)                  
+       ───────────────────────────────────────────────────*/
+
     const booksMetadata = await getAllBooksMetadata();
 
-    // ───────────────────────────────────────────────
-    // 1) Merge remote Drive metadata (if connected)
-    // ───────────────────────────────────────────────
     let remoteBooks = [];
     if (driveSync?.isConnected?.()) {
       try {
@@ -41,12 +39,12 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       }
     }
 
+    // Merge remote‑only entries
     const localIds = new Set();
     booksMetadata.forEach((b) => {
       localIds.add(b.id);
       if (b.driveId) localIds.add(b.driveId);
     });
-
     for (const rb of remoteBooks) {
       if (!localIds.has(rb.id)) {
         booksMetadata.push({
@@ -61,82 +59,76 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       }
     }
 
-    // Filter out demo books (unless demo mode)
-    let filteredBooksMetadata = isInDemoMode
-      ? booksMetadata
-      : booksMetadata.filter((book) => !book.isDemo);
+    /* ─────────────────────────────────────────────────────
+       2  Filter + sort                                     
+       ───────────────────────────────────────────────────*/
 
-    // Apply text search
+    let filtered = isInDemoMode ? booksMetadata : booksMetadata.filter((b) => !b.isDemo);
+
     if (searchQuery) {
-      const search = searchQuery.toLowerCase();
-      filteredBooksMetadata = filteredBooksMetadata.filter((book) =>
-        (book.title || "").toLowerCase().includes(search),
-      );
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((b) => (b.title || '').toLowerCase().includes(q));
     }
 
-    recentBooksGrid.innerHTML = ""; // Clear loading state
-
-    if (filteredBooksMetadata.length === 0) {
-      recentBooksGrid.innerHTML =
-        "<p>Your bookshelf is empty. Upload an EPUB to get started!</p>";
+    if (filtered.length === 0) {
+      recentBooksGrid.innerHTML = '<p>Your bookshelf is empty. Upload an EPUB to get started!</p>';
       return;
     }
 
-    // Sort books by lastOpened (desc), then title (asc)
-    filteredBooksMetadata.sort((a, b) => {
-      const dateA = a.lastOpened ? new Date(a.lastOpened) : new Date(0);
-      const dateB = b.lastOpened ? new Date(b.lastOpened) : new Date(0);
-      if (dateB - dateA !== 0) return dateB - dateA;
-      return a.title.localeCompare(b.title);
+    filtered.sort((a, b) => {
+      const aDate = a.lastOpened ? new Date(a.lastOpened) : new Date(0);
+      const bDate = b.lastOpened ? new Date(b.lastOpened) : new Date(0);
+      return bDate - aDate || a.title.localeCompare(b.title);
     });
 
-    // ───────────────────────────────────────────────
-    // 2) Render each book item
-    // ───────────────────────────────────────────────
-    filteredBooksMetadata.forEach((book) => {
-      // ── Build link with reading‑progress support ─────────────────────
-      const bookLink = document.createElement("a");
+    /* ─────────────────────────────────────────────────────
+       3  Render every book                                 
+       ───────────────────────────────────────────────────*/
+
+    recentBooksGrid.innerHTML = '';
+
+    filtered.forEach((book) => {
+      // Determine start spine index (reading progress)
       let startIndex = 0;
-      if (
-        window.storageManager &&
-        typeof window.storageManager.getReadingProgress === "function"
-      ) {
+      if (window.storageManager?.getReadingProgress) {
         const saved = window.storageManager.getReadingProgress(book.id);
         if (saved !== null) startIndex = saved;
       }
-      bookLink.href = book.isRemoteOnly
-        ? "#"
-        : `/read/${book.id}/${startIndex}`;
-      bookLink.className = "book-item-link";
-      bookLink.setAttribute(
-        "aria-label",
-        `Read ${book.title || "Untitled Book"}`,
-      );
 
-      // ── Container div ────────────────────────────────────────────────
-      const bookItemDiv = document.createElement("div");
-      bookItemDiv.className = "book-item";
-      bookItemDiv.dataset.bookId = book.id;
-      if (book.isRemoteOnly) bookItemDiv.classList.add("remote");
-      bookItemDiv.setAttribute("role", "listitem");
+      // Wrapper link
+      const bookLink = document.createElement('a');
+      bookLink.href = book.isRemoteOnly ? '#' : `/read/${book.id}/${startIndex}`;
+      bookLink.className = 'book-item-link';
+      bookLink.setAttribute('aria-label', `Read ${book.title || 'Untitled Book'}`);
 
-      // ── Cover (local Blob → img, otherwise placeholder) ──────────────
-      if (book.coverImageBlob instanceof Blob) {
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(book.coverImageBlob);
-        img.alt = `Cover for ${book.title || "Untitled Book"}`;
-        img.loading = "lazy";
+      // Container div
+      const item = document.createElement('div');
+      item.className = 'book-item';
+      item.dataset.bookId = book.id;
+      if (book.isRemoteOnly) item.classList.add('remote');
+      item.setAttribute('role', 'listitem');
+
+      /* ─ Cover image ─ */
+      const injectCover = (blob) => {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.alt = `Cover for ${book.title || 'Untitled Book'}`;
+        img.loading = 'lazy';
         img.onload = img.onerror = () => URL.revokeObjectURL(img.src);
-        bookItemDiv.appendChild(img);
-      } else {
-        const noCoverDiv = document.createElement("div");
-        noCoverDiv.className = "no-cover";
-        noCoverDiv.setAttribute("role", "img");
-        noCoverDiv.setAttribute("aria-label", "Cover placeholder");
-        noCoverDiv.textContent = "No Cover";
-        bookItemDiv.appendChild(noCoverDiv);
+        item.appendChild(img);
+      };
 
-        // Try to fetch Drive cover on‑the‑fly
+      if (book.coverImageBlob instanceof Blob) {
+        injectCover(book.coverImageBlob);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'no-cover';
+        placeholder.setAttribute('role', 'img');
+        placeholder.setAttribute('aria-label', 'Cover placeholder');
+        placeholder.textContent = 'No Cover';
+        item.appendChild(placeholder);
+
+        // Try fetching cover from Drive
         if (book.isRemoteOnly && driveSync?.isConnected?.()) {
           (async () => {
             try {
@@ -145,104 +137,147 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
               await proc.loadBook(await blob.arrayBuffer());
               const cover = await proc.getCoverBlob();
               if (cover) {
-                const img = document.createElement("img");
-                img.src = URL.createObjectURL(cover);
-                img.alt = `Cover for ${book.title}`;
-                img.loading = "lazy";
-                img.onload = () => URL.revokeObjectURL(img.src);
-                bookItemDiv.replaceChild(img, noCoverDiv);
+                injectCover(cover);
+                item.removeChild(placeholder);
               }
             } catch (e) {
-              console.warn("Failed to fetch remote cover for", book.id, e);
+              console.warn('Failed to fetch remote cover for', book.id, e);
             }
           })();
         }
       }
 
-      // ── Title ────────────────────────────────────────────────────────
-      const titleElement = document.createElement("p");
-      titleElement.className = "book-item-title";
-      titleElement.textContent = book.title || "Untitled Book";
-      bookItemDiv.appendChild(titleElement);
+      /* ─ Title ─ */
+      const titleEl = document.createElement('p');
+      titleEl.className = 'book-item-title';
+      titleEl.textContent = book.title || 'Untitled Book';
+      item.appendChild(titleEl);
 
-      // ── Delete button ────────────────────────────────────────────────
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-btn";
-      deleteBtn.innerHTML = "&#10005;";
-      deleteBtn.setAttribute(
-        "aria-label",
-        `Delete ${book.title || "Untitled Book"}`,
-      );
+      /* ─ Delete button ─ */
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.innerHTML = '&#10005;';
       deleteBtn.title = `Delete "${book.title}"`;
-      deleteBtn.dataset.bookId = book.id;
+      deleteBtn.setAttribute('aria-label', `Delete ${book.title || 'Untitled Book'}`);
       deleteBtn.onclick = async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (
-          confirm(
-            `Are you sure you want to delete "${book.title}"? This cannot be undone.`,
-          )
-        ) {
-          try {
-            if (book.isRemoteOnly && driveSync?.isConnected?.()) {
-              await driveSync.deleteRemoteBook(book.id);
-              console.log(
-                `${logPrefix} Remote book ${book.id} deleted from Drive.`,
-              );
-            } else {
-              await deleteBook(book.id);
-              console.log(`${logPrefix} Book ${book.id} deleted from DB.`);
-            }
-            renderBookshelf(driveSync);
-          } catch (err) {
-            console.error(`${logPrefix} Error deleting book:`, err);
-            alert(`Failed to delete book: ${err.message || "Unknown error"}`);
+        if (!confirm(`Delete "${book.title}"? This cannot be undone.`)) return;
+        try {
+          if (book.isRemoteOnly && driveSync?.isConnected?.()) {
+            await driveSync.deleteRemoteBook(book.id);
+          } else {
+            await deleteBook(book.id);
           }
+          renderBookshelf(driveSync);
+        } catch (err) {
+          console.error(`${logPrefix} Error deleting book:`, err);
+          alert(`Failed to delete book: ${err.message || 'Unknown error'}`);
         }
       };
-      bookItemDiv.appendChild(deleteBtn);
+      item.appendChild(deleteBtn);
 
-      // ── Custom cover change button ─────────────────────────────────--
-      const coverBtn = document.createElement("button");
-      coverBtn.className = "btn-change-cover action-btn";
-      coverBtn.textContent = "📷";
+      /* ─ Change‑cover button + hidden input ─ */
+      const coverBtn = document.createElement('button');
+      coverBtn.className = 'btn-change-cover action-btn';
+      coverBtn.textContent = '📷';
       coverBtn.title = `Change cover for "${book.title}"`;
-      coverBtn.setAttribute(
-        "aria-label",
-        `Change cover for ${book.title || "Untitled Book"}`,
-      );
+      coverBtn.setAttribute('aria-label', coverBtn.title);
 
-      const coverInput = document.createElement("input");
-      coverInput.type = "file";
-      coverInput.accept = "image/*";
-      coverInput.style.display = "none";
+      const coverInput = document.createElement('input');
+      coverInput.type = 'file';
+      coverInput.accept = 'image/*';
+      coverInput.style.display = 'none';
 
-      coverInput.addEventListener("change", async () => {
-        if (coverInput.files?.[0]) {
-          try {
-            await updateBookCover(book.id, coverInput.files[0]);
-            await renderBookshelf(driveSync);
-          } catch (err) {
-            console.error(
-              `${logPrefix} Failed to update cover for ${book.id}`,
-              err,
-            );
-          }
+      coverInput.onchange = async () => {
+        if (!coverInput.files?.[0]) return;
+        try {
+          await updateBookCover(book.id, coverInput.files[0]);
+          renderBookshelf(driveSync);
+        } catch (err) {
+          console.error(`${logPrefix} Failed to update cover for ${book.id}`, err);
         }
-      });
+      };
 
-      coverBtn.addEventListener("click", (e) => {
+      coverBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
         coverInput.click();
-      });
+      };
 
-      bookItemDiv.appendChild(coverBtn);
-      bookItemDiv.appendChild(coverInput);
+      item.appendChild(coverBtn);
+      item.appendChild(coverInput);
 
-      // ── Save‑offline button (remote-only) ────────────────────────────
+      /* ─ Remote‑only: save‑offline + custom click ─ */
       if (book.isRemoteOnly) {
-        const saveBtn = document.createElement("button");
-        saveBtn.className = "btn-save-offline action-btn";
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn-save-offline action-btn';
         saveBtn.innerHTML = `
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="current
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display:block;margin:auto;">
+            <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z" />
+          </svg>`;
+        saveBtn.title = `Save "${book.title}" offline`;
+        saveBtn.setAttribute('aria-label', saveBtn.title);
+
+        saveBtn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            const blob = await driveSync.downloadBook(book.id);
+            await addBook(book.title, blob, book.id);
+            renderBookshelf(driveSync);
+          } catch (err) {
+            console.error(`${logPrefix} Save offline failed:`, err);
+            alert('Failed to save book offline');
+          }
+        };
+        item.appendChild(saveBtn);
+
+        // Override default link behaviour: download then open
+        bookLink.onclick = async (ev) => {
+          ev.preventDefault();
+          try {
+            const blob = await driveSync.downloadBook(book.id);
+            await addBook(book.title, blob, book.id);
+            window.location.href = `/read/${book.id}/${startIndex}`;
+          } catch (err) {
+            console.error(`${logPrefix} Failed to load remote book`, err);
+            alert('Failed to load book from Drive');
+          }
+        };
+      }
+
+      /* ─ Local‑only: upload to Drive ─ */
+      if (driveSync?.isConnected?.() && !book.isRemoteOnly && !book.driveId) {
+        const uploadBtn = document.createElement('button');
+        uploadBtn.className = 'btn-upload-drive action-btn';
+        uploadBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display:block;margin:auto;">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
+          </svg>`;
+        uploadBtn.title = `Upload "${book.title}" to Google Drive`;
+        uploadBtn.setAttribute('aria-label', uploadBtn.title);
+
+        uploadBtn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            await driveSync.uploadBook(book.id);
+            renderBookshelf(driveSync);
+          } catch (err) {
+            console.error(`${logPrefix} Upload to Drive failed:`, err);
+            alert('Failed to upload to Google Drive');
+          }
+        };
+        item.appendChild(uploadBtn);
+      }
+
+      // Assemble
+      bookLink.appendChild(item);
+      recentBooksGrid.appendChild(bookLink);
+    });
+  } catch (error) {
+    console.error(`${logPrefix} Error rendering bookshelf:`, error);
+    recentBooksGrid.innerHTML = `<p>Error loading bookshelf: ${error.message || 'Unknown error'}. Check console.</p>`;
+  }
+}
