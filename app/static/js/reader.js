@@ -188,8 +188,8 @@ async function loadBookWithProcessor(bookData) {
     try {
         const bookBinaryContent = await bookData.content.arrayBuffer();
         let wrapper;
-        if (bookData.fileType === 'txt' || bookData.fileType === 'docx') { 
-            wrapper = new TextProcessorWrapper(); 
+        if (bookData.fileType === 'txt' || bookData.fileType === 'docx' || bookData.fileType === 'pdf') {
+            wrapper = new TextProcessorWrapper();
         } else { // Default to EPUB
             wrapper = new EpubProcessorWrapper(); 
         }

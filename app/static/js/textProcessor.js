@@ -87,10 +87,22 @@ class TextProcessor {
         return true;
     }
 
+    async _ensurePdfJs() {
+        if (window.pdfjsLib) return true;
+        const pdfjsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        await loadScript(pdfjsUrl);
+        if (!window.pdfjsLib) throw new Error('pdf.js failed to load');
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+        return true;
+    }
+
     async _initialize() {
         let paragraphs = [];
         if (this.fileType === 'docx') {
             paragraphs = await this._extractDocxParagraphs();
+        } else if (this.fileType === 'pdf') {
+            paragraphs = await this._extractPdfParagraphs();
         } else {
             const blob = new Blob([this.arrayBuffer]);
             const text = await blob.text();
@@ -162,6 +174,27 @@ class TextProcessor {
         return paragraphs;
     }
 
+    async _extractPdfParagraphs() {
+        await this._ensurePdfJs();
+        const loadingTask = window.pdfjsLib.getDocument({ data: this.arrayBuffer });
+        const pdf = await loadingTask.promise;
+        const paragraphs = [];
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const text = textContent.items.map(it => it.str).join(' ').trim();
+            const sizes = textContent.items.map(it => Math.abs(it.transform[0])).filter(n => !isNaN(n));
+            const style = {};
+            if (sizes.length) {
+                const avg = sizes.reduce((a, b) => a + b, 0) / sizes.length;
+                style.fontSize = avg.toFixed(2) + 'px';
+            }
+            paragraphs.push({ text, style, pageBreak: pageNum > 1 });
+        }
+        this.pageCount = pdf.numPages;
+        return paragraphs;
+    }
+
     _splitIntoChapters(paragraphs) {
         const chapters = [];
         let current = [];
@@ -220,7 +253,7 @@ class TextProcessor {
     }
 
     getChapterTitles() {
-        const prefix = this.fileType === 'docx' ? 'Page' : 'Part';
+        const prefix = (this.fileType === 'docx' || this.fileType === 'pdf') ? 'Page' : 'Part';
         return this.chapters.map((_, i) => ({ index: i, title: `${prefix} ${i + 1}`, href: '' }));
     }
 }

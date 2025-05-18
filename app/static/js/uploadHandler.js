@@ -92,7 +92,7 @@ async function handleFileSelect() {
             if (epubTitle && epubTitle !== 'Untitled Book') {
                 title = epubTitle;
             }
-        } else if (extension === 'txt' || extension === 'docx') {
+        } else if (extension === 'txt' || extension === 'docx' || extension === 'pdf') {
             processor = new TextProcessorWrapper();
             const loaded = await processor.loadBook(arrayBuffer, { fileType: extension });
             if (!loaded) {
