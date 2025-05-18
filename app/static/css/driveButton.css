@@ -66,9 +66,3 @@
   /* color: white; */
 }
 
-/* Ensure existing Bootstrap button classes (if used) don't overly conflict */
-/* For example, if .btn sets padding, our padding here will override it */
-/* If .btn sets display: inline-block, our display: flex will override it */
-
-
-</rewritten_file> 

@@ -1,7 +1,8 @@
 import { ready as dbReady, getBook } from "./dbService.js";
 import { renderBookshelf } from "./bookshelfUI.js";
 import { setupUploadForm } from "./uploadHandler.js";
-import * as driveSync from "./driveSync.js";
+import driveService from "./driveService.js";
+window.driveService = driveService;
 import { DriveButton } from "./driveButton.js"; // Import the new component
 import './storageManager.js'; // Ensure storageManager is loaded and sets window.storageManager
 
@@ -43,13 +44,13 @@ async function initializeApp() {
       typeof window.dbKeyVal,
     );
 
-    renderBookshelf(driveSync, currentSearchQuery);
+    renderBookshelf(driveService, currentSearchQuery);
     setupUploadForm();
 
     let driveButton = null;
     if (driveControlsContainer) {
       // Pass the container to DriveButton
-      driveButton = new DriveButton(driveControlsContainer, driveSync);
+      driveButton = new DriveButton(driveControlsContainer, driveService);
     } else {
       console.warn(
         `${logPrefix} Drive controls container (#drive-controls-container) not found. DriveButton not initialized.`,
@@ -59,7 +60,7 @@ async function initializeApp() {
     if (searchInput) {
       searchInput.addEventListener("input", () => {
         currentSearchQuery = searchInput.value;
-        renderBookshelf(driveSync, currentSearchQuery);
+        renderBookshelf(driveService, currentSearchQuery);
       });
     }
 
@@ -104,14 +105,14 @@ async function initializeApp() {
             }
 
             console.log(
-              `${logPrefix} Calling driveSync.uploadBookToDrive with:`,
+              `${logPrefix} Calling driveService.uploadBookToDrive with:`,
               { bookId, bookTitle, epubBlob: bookData.content },
             );
 
             uploadButton.innerHTML = "Uploading...";
 
-            // Actual call to driveSync.uploadBookToDrive
-            const uploadedFile = await driveSync.uploadBookToDrive(
+            // Actual call to driveService.uploadBookToDrive
+            const uploadedFile = await driveService.uploadBookToDrive(
               bookId,
               bookTitle,
               bookData.content,
@@ -145,6 +146,22 @@ async function initializeApp() {
     }
 
     const banner = document.getElementById("drive-status");
+    const driveIndicator = document.getElementById("drive-indicator");
+    const driveUser = document.getElementById("drive-user");
+
+    function updateIndicator(isOn) {
+      if (!driveIndicator) return;
+      driveIndicator.className = `drive-indicator ${isOn ? "connected" : "disconnected"}`;
+      driveIndicator.setAttribute(
+        "aria-label",
+        isOn ? "Drive connected" : "Drive disconnected",
+      );
+      if (driveUser) {
+        const profile = driveService.getUserProfile();
+        driveUser.textContent = isOn && profile ? `(${profile.name})` : "";
+      }
+    }
+
     function showBanner(text, cls, hideAfterMs = 0) {
       if (!banner) return;
       banner.textContent = text;
@@ -163,13 +180,15 @@ async function initializeApp() {
     );
     window.addEventListener("drive-sync-complete", () => {
       showBanner("Up to date", "idle", 4000);
-      renderBookshelf(driveSync, currentSearchQuery);
+      renderBookshelf(driveService, currentSearchQuery);
     });
-    window.addEventListener("drive-offline", () =>
-      showBanner("Offline", "offline"),
-    );
+    window.addEventListener("drive-offline", () => {
+      showBanner("Offline", "offline");
+      updateIndicator(false);
+    });
     window.addEventListener("drive-online", () => {
       showBanner("Online", "idle", 2000);
+      updateIndicator(true);
       driveButton?.refreshState(); // Refresh button state when coming online
     });
     window.addEventListener("drive-disconnect", () => {
@@ -177,37 +196,41 @@ async function initializeApp() {
         banner.style.display = "none";
         banner.hidden = true;
       }
+      updateIndicator(false);
       driveButton?.refreshState();
     });
 
     try {
-      console.log(`${logPrefix} Attempting early driveSync.init()...`);
-      await driveSync.init();
+      console.log(`${logPrefix} Attempting early driveService.init()...`);
+      await driveService.init();
       driveButton?.refreshState();
+      updateIndicator(driveService.isConnected());
 
-      if (driveSync.isConnected()) {
+      if (driveService.isConnected()) {
         console.log(
-          `${logPrefix} Early driveSync.init() successful, Drive is connected.`,
+          `${logPrefix} Early driveService.init() successful, Drive is connected.`,
         );
       } else {
         console.log(
-          `${logPrefix} Early driveSync.init() completed, but Drive is not connected.`,
+          `${logPrefix} Early driveService.init() completed, but Drive is not connected.`,
         );
       }
     } catch (err) {
       console.warn(
-        `${logPrefix} Early driveSync.init() failed or token absent:`,
+        `${logPrefix} Early driveService.init() failed or token absent:`,
         err.message,
       );
       driveButton?.refreshState();
+      updateIndicator(false);
     }
 
-    if (driveSync && typeof driveSync.onAuthLost === "function") {
-      driveSync.onAuthLost(() => {
+    if (driveService && typeof driveService.onAuthLost === "function") {
+      driveService.onAuthLost(() => {
         console.warn(
           `${logPrefix} Auth lost callback triggered. Resetting UI.`,
         );
         driveButton?.refreshState();
+        updateIndicator(false);
         alert("Google Drive connection lost. Please connect again.");
       });
     }
@@ -222,6 +245,7 @@ async function initializeApp() {
       alert("Critical error initializing application components.");
     }
     driveButton?.refreshState();
+    updateIndicator(false);
     const uploadButton = document.querySelector("#upload-form button"); // Note: this is the main upload button, not the card one
     if (uploadButton) {
       uploadButton.disabled = true;

@@ -1,5 +1,5 @@
 import { addBook } from './dbService.js';
-import * as driveSync from './driveSync.js';
+import driveService from './driveService.js';
 import { renderBookshelf } from './bookshelfUI.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { TextProcessorWrapper } from './textProcessor.js';
@@ -133,12 +133,12 @@ async function handleFileSelect() {
         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
         
         // If Drive is connected, queue upload
-        if (driveSync && driveSync.isConnected && driveSync.isConnected()) {
+        if (driveService && driveService.isConnected && driveService.isConnected()) {
             try {
-                await driveSync.queueUpload(bookIdFromDB, file);
-                console.log(`${logPrefix} Queued upload for Drive`);
+                await driveService.uploadBookToDrive(bookIdFromDB, title, file);
+                console.log(`${logPrefix} Uploaded to Drive`);
             } catch (err) {
-                console.warn(`${logPrefix} Failed to queue Drive upload:`, err);
+                console.warn(`${logPrefix} Failed to upload to Drive:`, err);
             }
         }
         

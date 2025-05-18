@@ -167,6 +167,23 @@ body {
   display: inline-block; /* Border only under text */
 }
 
+/* Small dot indicator showing Drive connection status */
+.drive-indicator {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 1rem;
+  vertical-align: middle;
+}
+.drive-indicator.connected { color: #28a745; }
+.drive-indicator.disconnected { color: #d9534f; }
+
+/* Display connected user name */
+.drive-user {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
 /* Search input inside the bookshelf section */
 #bookshelf-search {
   margin-bottom: 1rem;
@@ -201,6 +218,18 @@ body {
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
+}
+
+.book-item.remote {
+  border-style: dashed;
+}
+
+.book-item .remote-indicator {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  font-size: 1.2em;
+  color: #4285f4;
 }
 
 .book-item:hover {

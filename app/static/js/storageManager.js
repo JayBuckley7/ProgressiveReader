@@ -49,11 +49,11 @@ function saveReadingProgress(bookId, itemIndex) {
     }
 
     // --- Drive Sync: queue progress upload ---
-    if (window.driveSync && typeof window.driveSync.isConnected === 'function' && window.driveSync.isConnected()) {
+    if (window.driveService && typeof window.driveService.isConnected === 'function' && window.driveService.isConnected()) {
         try {
-            window.driveSync.queueProgressUpload(bookId, { cfi: itemIndex, ts: Date.now() });
+            window.driveService.queueProgressUpload(bookId, { cfi: itemIndex, ts: Date.now() });
         } catch (e) {
-            console.error('Drive progress upload queue failed:', e);
+            console.error('Drive progress upload failed:', e);
         }
     }
     
