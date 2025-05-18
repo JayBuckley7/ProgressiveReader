@@ -36,7 +36,7 @@ def upload_file():
             'message': 'File ready for client-side processing.'
         }), 200
     else:
-        return jsonify({'error': 'Invalid file type. Please upload an EPUB, TXT, or DOCX file.'}), 400
+        return jsonify({'error': 'Invalid file type. Please upload an EPUB, PDF, MOBI, DOCX, or TXT file.'}), 400
 
 @book_bp.route('/cover/<book_id>/<filename>') # Changed route slightly for clarity
 def serve_book_cover(book_id, filename):
