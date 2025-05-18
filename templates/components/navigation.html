@@ -1,5 +1,5 @@
 {# templates/components/navigation.html #}
-{% macro navigation_bar(position, book_id, current_index, total_items, jlpt_enabled=false) %}
+{% macro navigation_bar(position, book_id, total_items, jlpt_enabled=false) %}
 {% set is_top = position == 'top' %}
 <div class="navigation {{ 'top-nav' if is_top else 'bottom-nav' }}">
     {% if is_top %}
@@ -34,17 +34,10 @@
     {% endif %}
 
     <div class="nav-right">
-        {% if current_index > 0 %}
-            <a href="{{ url_for('reader.read_item', book_id=book_id, item_index=current_index - 1) }}">Previous</a>
-        {% else %}
-            <button type="button" class="disabled-nav-btn" disabled>Previous</button>
-        {% endif %}
-        <span>Page {{ current_index + 1 }} of {{ total_items }}</span>
-        {% if current_index < total_items - 1 %}
-            <a href="{{ url_for('reader.read_item', book_id=book_id, item_index=current_index + 1) }}">Next</a>
-        {% else %}
-            <button type="button" class="disabled-nav-btn" disabled>Next</button>
-        {% endif %}
+        {# Client-side JS will update these #}
+        <a id="prev-page-link" href="#" class="disabled-nav-btn">Previous</a> 
+        <span id="page-count-display">Page ? of ?</span>
+        <a id="next-page-link" href="#" class="disabled-nav-btn">Next</a>
     </div>
 </div>
 {% endmacro %} 

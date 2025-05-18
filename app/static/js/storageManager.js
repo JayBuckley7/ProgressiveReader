@@ -31,10 +31,22 @@ function removeTranslationFromLocal(bookId, itemIndex) {
 }
 
 // --- Reading Progress Management ---
+import { updateLastOpened } from './dbService.js';
+
 function saveReadingProgress(bookId, itemIndex) {
     if (bookId === null || itemIndex === null) return;
     const progressKey = `reading_progress_${bookId}`;
-    localStorage.setItem(progressKey, itemIndex.toString());
+    const record = { index: itemIndex, dttm_mod: Date.now() };
+    try {
+        localStorage.setItem(progressKey, JSON.stringify(record));
+    } catch (e) {
+        console.error('Failed to save reading progress to localStorage:', e);
+    }
+
+    // Update last opened timestamp in IndexedDB
+    if (typeof updateLastOpened === 'function') {
+        updateLastOpened(bookId).catch(e => console.error('Failed to update last opened timestamp:', e));
+    }
 
     // --- Drive Sync: queue progress upload ---
     if (window.driveSync && typeof window.driveSync.isConnected === 'function' && window.driveSync.isConnected()) {
@@ -58,10 +70,28 @@ function saveReadingProgress(bookId, itemIndex) {
 }
 
 function getReadingProgress(bookId) {
+    const meta = getReadingProgressMeta(bookId);
+    return meta ? meta.index : null;
+}
+
+function getReadingProgressMeta(bookId) {
     if (bookId === null) return null;
     const progressKey = `reading_progress_${bookId}`;
-    const savedIndex = localStorage.getItem(progressKey);
-    return savedIndex !== null ? parseInt(savedIndex, 10) : null; // Ensure base 10
+    const raw = localStorage.getItem(progressKey);
+    if (raw === null) return null;
+    try {
+        const obj = JSON.parse(raw);
+        if (typeof obj === 'object' && obj !== null && obj.hasOwnProperty('index')) {
+            return { index: parseInt(obj.index, 10), dttm_mod: obj.dttm_mod || 0 };
+        }
+    } catch (e) {
+        // Fall back to old format
+        const idx = parseInt(raw, 10);
+        if (!Number.isNaN(idx)) {
+            return { index: idx, dttm_mod: 0 };
+        }
+    }
+    return null;
 }
 
 // --- Autoload Preference ---
@@ -313,9 +343,76 @@ async function removeFromOutbox(id) {
     }
 }
 
+// Merge progress data from cloud with local storage
+function mergeProgress(progressObj) {
+    if (!progressObj || !progressObj.bookId) return;
+    const localMeta = getReadingProgressMeta(progressObj.bookId);
+    const remoteTs = progressObj.ts || 0;
+    if (!localMeta || remoteTs > (localMeta.dttm_mod || 0)) {
+        saveReadingProgress(progressObj.bookId, progressObj.cfi);
+        const key = `reading_progress_${progressObj.bookId}`;
+        const record = { index: progressObj.cfi, dttm_mod: remoteTs };
+        try {
+            localStorage.setItem(key, JSON.stringify(record));
+        } catch (e) {
+            console.error('Failed to merge progress from cloud:', e);
+        }
+    }
+}
+
 // Check if we're currently offline
 function isOffline() {
     return !navigator.onLine;
+}
+
+// New function to determine the actual starting position
+async function determineActualStartingPosition(bookId) {
+    if (!bookId) return 0;
+    let startIndex = 0;
+    let latestTimestamp = 0;
+
+    try {
+        // 1. Check IndexedDB outbox
+        const outboxRecords = await getOutboxRecords(); // Assuming this gets all records
+        const relevantOutboxRecords = outboxRecords.filter(
+            record => record.type === 'reading_progress' && record.bookId === bookId
+        );
+
+        if (relevantOutboxRecords.length > 0) {
+            const latestRecord = relevantOutboxRecords.reduce((latest, current) => {
+                return (current.timestamp > (latest.timestamp || 0)) ? current : latest;
+            }, {});
+            if (latestRecord && latestRecord.itemIndex !== undefined) {
+                startIndex = latestRecord.itemIndex;
+                latestTimestamp = latestRecord.timestamp;
+                console.log(`[StorageManager] Found progress in outbox for ${bookId}: page ${startIndex} (ts: ${latestTimestamp})`);
+            }
+        }
+
+        // 2. Check localStorage as a fallback or if it's more recent
+        const localStorageProgressMeta = getReadingProgressMeta(bookId);
+        if (localStorageProgressMeta && localStorageProgressMeta.index !== undefined) {
+            const localStorageTimestamp = localStorageProgressMeta.dttm_mod || 0;
+            if (localStorageTimestamp > latestTimestamp) { // Only use if more recent than outbox entry
+                startIndex = localStorageProgressMeta.index;
+                console.log(`[StorageManager] Found more recent progress in localStorage for ${bookId}: page ${startIndex} (ts: ${localStorageTimestamp})`);
+            } else if (latestTimestamp === 0) { // Or if outbox was empty
+                 startIndex = localStorageProgressMeta.index;
+                 console.log(`[StorageManager] Used progress from localStorage for ${bookId}: page ${startIndex} (ts: ${localStorageTimestamp}) (outbox empty/irrelevant)`);
+            }
+        }
+
+    } catch (error) {
+        console.error(`[StorageManager] Error determining starting position for ${bookId}:`, error);
+        // Fallback to localStorage directly in case of error with outbox processing
+        const localStorageProgress = getReadingProgress(bookId);
+        if (localStorageProgress !== null) {
+            startIndex = localStorageProgress;
+        }
+    }
+    
+    console.log(`[StorageManager] Final determined startIndex for ${bookId}: ${startIndex}`);
+    return startIndex;
 }
 
 // Make functions available globally or via an object
@@ -329,6 +426,9 @@ window.storageManager = {
     // Reading progress
     saveReadingProgress,
     getReadingProgress,
+    getReadingProgressMeta,
+    determineActualStartingPosition,
+    mergeProgress,
     
     // Preferences
     getAutoloadPreference,
@@ -346,5 +446,8 @@ window.storageManager = {
     removeFromOutbox,
     isOffline
 };
+
+// Expose mergeProgress for DriveSync backward compatibility
+window.mergeProgress = mergeProgress;
 
 console.log("storageManager.js loaded with PWA offline support"); 

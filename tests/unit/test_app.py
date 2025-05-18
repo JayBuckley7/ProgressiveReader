@@ -34,5 +34,17 @@ class AllowedFileTestCase(unittest.TestCase):
     def test_allowed_file_false(self):
         self.assertFalse(allowed_file('notes.txt'))
 
+
+class ReaderRouteTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    def test_read_route_redirects_without_index(self):
+        response = self.client.get('/read/testbook')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/read/testbook/0', response.location)
+
 if __name__ == '__main__':
     unittest.main()
