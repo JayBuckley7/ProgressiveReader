@@ -188,16 +188,20 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       item.appendChild(deleteBtn);
 
       /* ─ Change‑cover button + hidden input ─ */
-      const coverBtn = document.createElement('button');
-      coverBtn.className = 'btn-change-cover action-btn';
-      coverBtn.textContent = '📷';
-      coverBtn.title = `Change cover for "${book.title}"`;
-      coverBtn.setAttribute('aria-label', coverBtn.title);
-
       const coverInput = document.createElement('input');
       coverInput.type = 'file';
       coverInput.accept = 'image/*';
       coverInput.style.display = 'none';
+      const coverInputId = `cover-file-${book.id}`;
+      coverInput.id = coverInputId;
+
+      const coverBtn = document.createElement('label');
+      coverBtn.className = 'btn-change-cover action-btn';
+      coverBtn.textContent = '📷';
+      coverBtn.title = `Change cover for "${book.title}"`;
+      coverBtn.setAttribute('aria-label', coverBtn.title);
+      coverBtn.setAttribute('role', 'button');
+      coverBtn.htmlFor = coverInputId;
 
       coverInput.onchange = async () => {
         if (!coverInput.files?.[0]) return;
@@ -212,7 +216,6 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       coverBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        coverInput.click();
       };
 
       item.appendChild(coverBtn);
