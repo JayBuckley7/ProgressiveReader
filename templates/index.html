@@ -318,5 +318,8 @@
     ></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
     {% block body_end %}{% endblock %}
+    <footer style="text-align:center;padding:1em;">
+      <a href="{{ url_for('main.tos') }}">Terms of Service</a>
+    </footer>
   </body>
 </html>
