@@ -9,6 +9,7 @@ let currentIndex = 0;
 let currentRate = 1.0;
 let textNodeMap = [];
 let fallbackHighlightEl = null;
+
 const TTS_HIGHLIGHT_NAME = "tts-current-word"; // Name for the CSS Highlight
 let fallbackTimeoutId = null;
 const boundarySupported = "onboundary" in SpeechSynthesisUtterance.prototype;
@@ -162,6 +163,74 @@ function stopFallbackHighlighting() {
     clearTimeout(fallbackTimeoutId);
     fallbackTimeoutId = null;
   }
+}
+
+function startFallbackHighlighting(startIndex) {
+    const words = contentText.slice(startIndex).match(/\S+\s*/g);
+    if (!words) return;
+    let offset = startIndex;
+    let i = 0;
+    currentIndex = offset;
+    highlightAtIndex(currentIndex);
+    fallbackIntervalId = setInterval(() => {
+        i++;
+        if (i >= words.length) {
+            stopFallbackHighlighting();
+            return;
+        }
+        offset += words[i - 1].length;
+        currentIndex = offset;
+        highlightAtIndex(currentIndex);
+    }, 300 / currentRate);
+}
+
+function stopFallbackHighlighting() {
+    if (fallbackIntervalId) {
+        clearInterval(fallbackIntervalId);
+        fallbackIntervalId = null;
+    }
+}
+
+function detectBoundaryEventSupport() {
+    if (boundaryChecked) {
+        return Promise.resolve(boundarySupported);
+    }
+    boundaryChecked = true;
+    let detected = false;
+    let resolved = false;
+    return new Promise((resolve) => {
+        try {
+            const testUtter = new SpeechSynthesisUtterance('test');
+            testUtter.volume = 0;
+            testUtter.rate = 10;
+            testUtter.onboundary = () => {
+                detected = true;
+            };
+            testUtter.onend = () => {
+                if (!resolved) {
+                    boundarySupported = detected;
+                    resolved = true;
+                    resolve(boundarySupported);
+                }
+            };
+            speechSynthesis.speak(testUtter);
+            setTimeout(() => {
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                if (!resolved) {
+                    boundarySupported = detected;
+                    resolved = true;
+                    resolve(boundarySupported);
+                }
+            }, 1000);
+        } catch (err) {
+            console.warn('[ttsManager] Boundary detection failed:', err);
+            boundarySupported = false;
+            resolved = true;
+            resolve(false);
+        }
+    });
 }
 
 function showControls() {
