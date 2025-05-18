@@ -92,3 +92,8 @@ def demo():
         print(f"Found demo books: {demo_book_files}") # Log for debugging
 
     return render_template('demo.html', is_demo=True, demo_books=demo_book_files, openai_key_configured=True) 
+@main_bp.route('/tos')
+def tos():
+    """Render the Terms of Service page."""
+    return render_template('tos.html')
+
