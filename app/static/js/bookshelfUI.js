@@ -258,80 +258,72 @@ bookItemDiv.appendChild(coverInput);
 // ───────────────────────────────────────────────
 if (book.isRemoteOnly) {
   const saveBtn = document.createElement("button");
-  saveBtn.className = "btn-save-offline action-btn";   // specific + common styling
+  saveBtn.className = "btn-save-offline action-btn";
   saveBtn.innerHTML = `
-    <!-- your SVG/icon markup here -->
-    <span>Save offline</span>
-  `;
-
-  // …add any event listeners you already had…
-  // saveBtn.addEventListener(...)
-
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
+        <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z"/>
+    </svg>`;
+  saveBtn.title = `Save \"${book.title}\" offline`;
+  saveBtn.setAttribute(
+    "aria-label",
+    `Save ${book.title || "Untitled Book"} offline`,
+  );
+  saveBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const blob = await driveSync.downloadBook(book.id);
+      await addBook(book.title, blob, book.id);
+      await renderBookshelf(driveSync); // Re-render after saving
+    } catch (err) {
+      console.error(`${logPrefix} Save offline failed:`, err);
+      alert("Failed to save book offline");
+    }
+  });
   bookItemDiv.appendChild(saveBtn);
+
+  // Modify bookLink behavior for remote books: download, then open
+  bookLink.addEventListener("click", async (ev) => {
+    ev.preventDefault(); // Prevent default navigation
+    try {
+      // Download, add to local DB, then navigate
+      const blob = await driveSync.downloadBook(book.id);
+      // Ensure book.id is used to potentially overwrite if 'saved' previously by button
+      await addBook(book.title, blob, book.id); 
+      window.location.href = `/read/${book.id}/0`; // Navigate to reader
+    } catch (err) {
+      console.error(`${logPrefix} Failed to load remote book for reading:`, err);
+      alert("Failed to load book from Drive for reading. Try saving it offline first.");
+    }
+  });
 }
 
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
-                        <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z"/>
-                    </svg>`; // Restored download icon, icon-only
-        saveBtn.title = `Save "${book.title}" offline`; // Tooltip
-        saveBtn.setAttribute(
-          "aria-label",
-          `Save ${book.title || "Untitled Book"} offline`,
-        );
+// Add Upload to Drive button if Drive is connected, book is local, and not already uploaded
+if (
+  driveSync &&
+  driveSync.isConnected() &&
+  !book.isRemoteOnly &&
+  !book.driveId
+) {
+  const uploadDriveBtn = document.createElement("button");
+  uploadDriveBtn.className = "btn-upload-drive action-btn";
+  uploadDriveBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
+          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+      </svg>`;
+  uploadDriveBtn.title = `Upload "${book.title}" to Google Drive`;
+  uploadDriveBtn.setAttribute(
+    "aria-label",
+    `Upload ${book.title || "Untitled Book"} to Google Drive`,
+  );
+  uploadDriveBtn.dataset.bookId = book.id;
+  uploadDriveBtn.dataset.bookTitle = book.title || "Untitled Book";
+  bookItemDiv.appendChild(uploadDriveBtn);
+}
 
-        saveBtn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            const blob = await driveSync.downloadBook(book.id);
-            await addBook(book.title, blob, book.id);
-            await renderBookshelf(driveSync);
-          } catch (err) {
-            console.error(`${logPrefix} Save offline failed:`, err);
-            alert("Failed to save book offline");
-          }
-        });
-        bookItemDiv.appendChild(saveBtn);
-
-        bookLink.addEventListener("click", async (ev) => {
-          ev.preventDefault();
-          try {
-            const blob = await driveSync.downloadBook(book.id);
-            await addBook(book.title, blob, book.id);
-            window.location.href = `/read/${book.id}/0`;
-          } catch (err) {
-            console.error(`${logPrefix} Failed to load remote book`, err);
-            alert("Failed to load book from Drive");
-          }
-        });
-      }
-
-      // Add Upload to Drive button if Drive is connected, book is local, and not already uploaded
-      if (
-        driveSync &&
-        driveSync.isConnected() &&
-        !book.isRemoteOnly &&
-        !book.driveId
-      ) {
-        const uploadDriveBtn = document.createElement("button");
-        uploadDriveBtn.className = "btn-upload-drive action-btn";
-        uploadDriveBtn.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display: block; margin: auto;">
-                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
-                    </svg>`;
-        uploadDriveBtn.title = `Upload "${book.title}" to Google Drive`;
-        uploadDriveBtn.setAttribute(
-          "aria-label",
-          `Upload ${book.title || "Untitled Book"} to Google Drive`,
-        );
-        uploadDriveBtn.dataset.bookId = book.id;
-        uploadDriveBtn.dataset.bookTitle = book.title || "Untitled Book";
-        bookItemDiv.appendChild(uploadDriveBtn);
-      }
-
-      // Append the book item div to the link, then the link to the grid
-      bookLink.appendChild(bookItemDiv);
-      recentBooksGrid.appendChild(bookLink);
+// Append the book item div to the link, then the link to the grid
+bookLink.appendChild(bookItemDiv);
+recentBooksGrid.appendChild(bookLink);
     });
 
     console.log(`${logPrefix} Finished rendering books.`);
