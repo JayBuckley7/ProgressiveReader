@@ -6,12 +6,10 @@ const logPrefix = "[BookshelfUI]";
 
 async function openBookAtProgress(bookId, title) {
   let startIndex = 0;
-  if (window.storageManager?.determineActualStartingPosition) {
-    try {
-      startIndex = await window.storageManager.determineActualStartingPosition(bookId);
-    } catch (err) {
-      console.warn(`${logPrefix} Failed to determine start index for ${bookId}:`, err);
-    }
+  try {
+    startIndex = await window.storageManager.determineActualStartingPosition(bookId);
+  } catch (err) {
+    console.warn(`${logPrefix} Failed to determine start index for ${bookId}:`, err);
   }
   window.location.href = `/read/${bookId}/${startIndex}`;
 }

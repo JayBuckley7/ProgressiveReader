@@ -3,6 +3,7 @@ import { renderBookshelf } from "./bookshelfUI.js";
 import { setupUploadForm } from "./uploadHandler.js";
 import * as driveSync from "./driveSync.js";
 import { DriveButton } from "./driveButton.js"; // Import the new component
+import './storageManager.js'; // Ensure storageManager is loaded and sets window.storageManager
 
 // Standardize log prefix
 const logPrefix = "[IndexInit]";

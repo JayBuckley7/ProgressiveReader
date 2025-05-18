@@ -1,3 +1,6 @@
+import { EpubProcessorWrapper } from './epubProcessor.js';
+import { TextProcessorWrapper } from './textProcessor.js';
+import { initializeReader } from './reader.js';
 // readerInit.js
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Reader page DOMContentLoaded - Main Initializer Script");
@@ -19,8 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Use values directly from the parsed config object
     const apiKeyStatusConfigured = config.openaiKeyConfigured || false;
     const serverDefaultModel = config.defaultModel || 'gpt-4o-mini';
-    const currentBookId = config.bookId || null; // Ensure it defaults to null if missing
-    // const pageCurrentIndex = parseInt(config.currentIndex, 10) || 0; // OLD - currentIndex no longer passed from server
+    const currentBookId = config.bookId || null;
+    const urlCurrentIndex = config.currentIndex !== null ? parseInt(config.currentIndex, 10) : null;
 
     // --- DEBUGGING LOGS (Keep for now) ---
     console.log("[ReaderInit] Parsed config from #page-config:", JSON.stringify(config));
@@ -37,15 +40,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const trueOriginalServerContent = contentArea.innerHTML; // Capture pristine server content early
 
     // --- PWA Offline Support - Store content for offline use ---
-    if (currentBookId && window.storageManager) {
-        // Store the current page content for offline use
-        storeContentForOffline();
-        
-        // Handle offline mode
-        if (window.storageManager.isOffline()) {
-            showOfflineNotification();
-        }
-    }
+    // MOVED: This logic will now be inside initReaderAsync after actualStartIndex is known
+    // if (currentBookId && window.storageManager) {
+    //     storeContentForOffline(); 
+    //     if (window.storageManager.isOffline()) {
+    //         showOfflineNotification();
+    //     }
+    // }
 
     // --- Initialize Managers/Modules ---
     // Utility functions should be globally available or properly imported/passed if using modules
@@ -83,18 +84,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Translation Manager needs several pieces of page-specific data
-    if (window.translationManager && typeof window.translationManager.initTranslationManager === 'function') {
-        window.translationManager.initTranslationManager({
-            contentAreaElement: contentArea, // Pass the actual element
-            currentBookId: currentBookId,
-            pageCurrentIndex: pageCurrentIndex,
-            apiKeyStatusConfigured: apiKeyStatusConfigured,
-            serverDefaultModel: serverDefaultModel,
-            trueOriginalServerContent: trueOriginalServerContent // Pass the pristine content
-        });
-    } else {
-        console.warn("TranslationManager not found or initTranslationManager is not a function.");
-    }
+    // MOVED: This will be initialized inside initReaderAsync
+    // if (window.translationManager && typeof window.translationManager.initTranslationManager === 'function') {
+    //     window.translationManager.initTranslationManager({
+    //         contentAreaElement: contentArea, 
+    //         currentBookId: currentBookId,
+    //         pageCurrentIndex: pageCurrentIndex, // This was the undefined variable
+    //         apiKeyStatusConfigured: apiKeyStatusConfigured,
+    //         serverDefaultModel: serverDefaultModel,
+    //         trueOriginalServerContent: trueOriginalServerContent 
+    //     });
+    // } else {
+    //     console.warn("TranslationManager not found or initTranslationManager is not a function.");
+    // }
 
     // JLPT Highlighter needs content area and potentially initial content state
     if (window.jlptHighlighter && typeof window.jlptHighlighter.initJlptHighlighter === 'function') {
@@ -107,14 +109,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // --- General Page Initialization (after modules) ---
-    // Save current reading progress on page load (if storageManager is available)
-    if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
-        if (currentBookId !== null && pageCurrentIndex !== null) {
-            window.storageManager.saveReadingProgress(currentBookId, pageCurrentIndex);
-        }
-    } else {
-        console.warn("StorageManager not found, cannot save reading progress.");
-    }
+    // MOVED: Saving initial progress will be inside initReaderAsync
+    // if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
+    //     if (currentBookId !== null && pageCurrentIndex !== null) { // pageCurrentIndex was undefined
+    //         window.storageManager.saveReadingProgress(currentBookId, pageCurrentIndex);
+    //     }
+    // } else {
+    //     console.warn("StorageManager not found, cannot save reading progress.");
+    // }
     
     // --- Listen for online/offline events ---
     window.addEventListener('online', handleOnline);
@@ -125,27 +127,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Helper functions ---
     
     // Store the current page content for offline use
-    function storeContentForOffline() {
-        if (!window.storageManager) return;
+    function storeContentForOffline(bookIdToStore, indexToStore, contentToStore) { // Modified to accept params
+        if (!window.storageManager || bookIdToStore === null || indexToStore === null) return;
         
         // Store the content using IndexedDB
-        window.storageManager.storePageContent(currentBookId, pageCurrentIndex, trueOriginalServerContent)
+        window.storageManager.storePageContent(bookIdToStore, indexToStore, contentToStore)
             .then(success => {
                 if (success) {
-                    console.log(`Content for book ${currentBookId}, page ${pageCurrentIndex} stored for offline use`);
+                    console.log(`[ReaderInit] Content for book ${bookIdToStore}, page ${indexToStore} stored for offline use`);
                 }
             });
         
         // Store book metadata for offline use
         const bookMetadata = {
-            title: document.title,
+            title: document.title, // Or get from a more reliable source if page title changes
             timestamp: Date.now()
         };
         
-        window.storageManager.storeBookForOffline(currentBookId, bookMetadata)
+        window.storageManager.storeBookForOffline(bookIdToStore, bookMetadata)
             .then(success => {
                 if (success) {
-                    console.log(`Book ${currentBookId} metadata stored for offline use`);
+                    console.log(`[ReaderInit] Book ${bookIdToStore} metadata stored for offline use`);
                 }
             });
     }
@@ -203,22 +205,62 @@ document.addEventListener('DOMContentLoaded', function() {
     async function initReaderAsync() {
         if (!currentBookId) {
             console.error("[ReaderInit] CRITICAL: currentBookId is null. Cannot initialize reader.");
-            showError("Book ID is missing. Cannot load book."); // Assuming showError is available or define it
+            showError("Book ID is missing. Cannot load book.");
             return;
         }
 
         let actualStartIndex = 0;
-        if (window.storageManager && typeof window.storageManager.determineActualStartingPosition === 'function') {
-            try {
-                actualStartIndex = await window.storageManager.determineActualStartingPosition(currentBookId);
-                console.log(`[ReaderInit] Determined actualStartIndex: ${actualStartIndex} for book ${currentBookId}`);
-            } catch (error) {
-                console.error(`[ReaderInit] Error calling determineActualStartingPosition for ${currentBookId}:`, error);
-                // Fallback to 0 or handle error appropriately
-                actualStartIndex = 0; 
+
+        if (urlCurrentIndex !== null && !isNaN(urlCurrentIndex)) {
+            actualStartIndex = urlCurrentIndex;
+            console.log(`[ReaderInit] Using currentIndex from URL: ${actualStartIndex} for book ${currentBookId}`);
+        } else {
+            console.log("[ReaderInit] No valid currentIndex in URL, determining from storage...");
+            if (window.storageManager && typeof window.storageManager.determineActualStartingPosition === 'function') {
+                try {
+                    actualStartIndex = await window.storageManager.determineActualStartingPosition(currentBookId);
+                    console.log(`[ReaderInit] Determined actualStartIndex from storage: ${actualStartIndex} for book ${currentBookId}`);
+                } catch (error) {
+                    console.error(`[ReaderInit] Error calling determineActualStartingPosition for ${currentBookId}:`, error);
+                    actualStartIndex = 0; 
+                }
+            } else {
+                console.warn("[ReaderInit] storageManager.determineActualStartingPosition not available. Defaulting to 0.");
+                actualStartIndex = 0; // Default if storageManager method not found
+            }
+        }
+
+        // NOW initialize parts that needed the actualStartIndex (as pageCurrentIndex)
+        if (currentBookId && window.storageManager) {
+            // Pass trueOriginalServerContent which was captured when DOM was ready.
+            // Note: This content might not exactly match what epub.js renders for actualStartIndex if it was different from 0.
+            // This might need refinement if precise content for actualStartIndex is required for offline storage here.
+            storeContentForOffline(currentBookId, actualStartIndex, trueOriginalServerContent);
+            if (window.storageManager.isOffline()) {
+                showOfflineNotification(); // Show offline notification if applicable
+            }
+        }
+
+        if (window.translationManager && typeof window.translationManager.initTranslationManager === 'function') {
+            window.translationManager.initTranslationManager({
+                contentAreaElement: contentArea, 
+                currentBookId: currentBookId,
+                pageCurrentIndex: actualStartIndex, // Use actualStartIndex here
+                apiKeyStatusConfigured: apiKeyStatusConfigured,
+                serverDefaultModel: serverDefaultModel,
+                trueOriginalServerContent: trueOriginalServerContent 
+            });
+        } else {
+            console.warn("TranslationManager not found or initTranslationManager is not a function.");
+        }
+
+        if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
+            if (currentBookId !== null && actualStartIndex !== null) {
+                window.storageManager.saveReadingProgress(currentBookId, actualStartIndex);
+                console.log(`[ReaderInit] Saved initial reading progress for book ${currentBookId}, page ${actualStartIndex}`);
             }
         } else {
-            console.warn("[ReaderInit] storageManager.determineActualStartingPosition not available. Defaulting to 0.");
+            console.warn("StorageManager not found, cannot save initial reading progress.");
         }
 
         // Prepare the initial configuration object for reader.js

@@ -27,18 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Register Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
-      // Unregister existing service workers to force update
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for(let registration of registrations) {
-          await registration.unregister();
-          console.log('ServiceWorker unregistered to force update');
-        }
-      } catch (error) {
-        console.error('Error unregistering service worker:', error);
-      }
-      
-      // Register new service worker
+      // Register new service worker (or update existing)
       navigator.serviceWorker.register('/static/js/service-worker.js')
         .then(registration => {
           console.log('ServiceWorker registration successful with scope: ', registration.scope);

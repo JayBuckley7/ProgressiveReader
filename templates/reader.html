@@ -154,6 +154,7 @@
   "openaiKeyConfigured": {{ openai_key_configured | tojson }},
   "defaultModel": {{ model_name | tojson }},
   "bookId": {{ book_id | tojson }},
+  "currentIndex": {{ current_index | tojson }},
   "jlptEnabled": {{ jlpt_enabled | default(false) | tojson }}
 }
 </script>
