@@ -1,174 +1,321 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EPUB Reader</title>
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#4b8dff">
-    <meta name="description" content="An EPUB reader with Japanese language learning features">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ProgReader">
-    
+    <meta name="theme-color" content="#4b8dff" />
+    <meta
+      name="description"
+      content="An EPUB reader with Japanese language learning features"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="ProgReader" />
+
     <!-- PWA Manifest -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    
+    <link
+      rel="manifest"
+      href="{{ url_for('static', filename='manifest.json') }}"
+    />
+
     <!-- PWA Icons -->
-    <link rel="icon" href="{{ url_for('static', filename='icons/icon.png') }}" type="image/png">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.png') }}">
-    
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='icons/icon.png') }}"
+      type="image/png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="{{ url_for('static', filename='icons/icon.png') }}"
+    />
+
     <!-- App Stylesheets -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-    
-    <!-- Inline styles for PWA elements and new hero banner -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
+
+    <!-- Inline styles for PWA elements, Drive‑status banner and hero banner -->
     <style>
-        .offline-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        
-        .offline-notification.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        
-        #pwa-install-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4b8dff;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            cursor: pointer;
-            display: none;
-            z-index: 900;
-            font-size: 24px;
-        }
-        
-        #pwa-install-button:hover {
-            background-color: #3a7ae0;
-        }
-        
-        /* Animation removed to prevent unwanted pulsing */
-        .hero-logo {
-            /* animation removed */
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .button-like-link {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #6c757d; /* A neutral, secondary color */
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            text-align: center;
-            transition: background-color 0.3s ease;
-        }
-        
-        .button-like-link:hover {
-            background-color: #5a6268;
-            color: white;
-            text-decoration: none;
-        }
-        
-        .top-left-container {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 1001; /* Ensure it's above other content if necessary */
-        }
-        
-        .top-left-container .button-like-link {
-            padding: 8px 15px; /* Slightly smaller padding */
-            font-size: 0.9em;
-        }
+      .offline-notification {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+      }
+      .offline-notification.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      /* ── Drive‑sync status banner ───────────────────────────── */
+      #drive-status {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 6px 14px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #fff;
+        background: #4b8dff; /* default = connected */
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        z-index: 1100;
+        display: none; /* shown by index.js listeners */
+        transition: opacity 0.25s ease;
+      }
+      #drive-status.offline {
+        background: #d9534f;
+      } /* red  – offline */
+      #drive-status.syncing {
+        background: #f0ad4e;
+      } /* amber – syncing */
+      #drive-status.idle {
+        background: #5cb85c;
+      } /* green – idle‑ok */
+      /* -------------------------------------------------------- */
+      #pwa-install-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #4b8dff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        display: none;
+        z-index: 900;
+        font-size: 24px;
+      }
+      #pwa-install-button:hover {
+        background-color: #3a7ae0;
+      }
+      .hero-logo {
+        /* animation removed */
+      }
+      .button-like-link {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        text-align: center;
+        transition: background-color 0.3s ease;
+      }
+      .button-like-link:hover {
+        background-color: #5a6268;
+        color: white;
+        text-decoration: none;
+      }
+      .top-left-container {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 1001;
+      }
+      .top-left-container .button-like-link {
+        padding: 8px 15px;
+        font-size: 0.9em;
+      }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        background: #f1f3f4;
+        transition: background 0.2s ease;
+      }
+      .icon-btn:hover {
+        background: #e2e5e7;
+      }
+      .icon-btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      /* bookshelf header icon buttons */
+      .bookshelf-icons {
+        display: inline-flex;
+        gap: 6px;
+        margin-left: 8px;
+      }
+      .bookshelf-icons .icon-btn {
+        background: #e9ecef;
+      }
+
+      /* Style for user profile image if added to the connect-drive-btn */
+      #connect-drive-btn img {
+        width: 100%; /* Fill the button's width */
+        height: 100%; /* Fill the button's height */
+        object-fit: cover; /* Scale image to cover, crop if needed */
+        border-radius: 50%; /* Make the image itself circular */
+      }
+
+      /* Hide dynamic status text (e.g., user name) within drive controls */
+      #drive-controls-container .status-text {
+        display: none !important;
+      }
+
+      /* Hide "Connect Drive" text placeholder within the connect button */
+      #connect-drive-btn .button-text-placeholder {
+        display: none !important;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     {% block body_start %}{% endblock %}
-    {# Container for top-left content like the demo button #}
+
+    <!-- Container for top‑left action buttons -->
     <div class="top-left-container">
-        {% if not is_demo %}
-            <a href="{{ url_for('main.demo') }}" class="button-like-link">Try Demo</a>
-        {% endif %}
+      <a
+        href="{{ url_for('main.demo') }}"
+        class="button-like-link"
+        id="to-demo-page-link"
+        >Demo</a
+      >
+      <!-- demo button remains; Drive buttons relocated -->
     </div>
+
+    <!-- Main content below (unchanged) -->
     <main>
-        <section class="hero-banner">
-            <div class="hero-content">
-                <div class="logo-container" style="position: relative; display: inline-block;">
-                    <!-- <img src="{{ url_for('static', filename='icons/icon.png') }}" alt="Progressive Reader Logo" class="hero-logo"> -->
-                    <img src="{{ url_for('static', filename='icons/slow.gif', _external=True) }}?nocache={{ range(1, 1000000) | random }}" alt="Animation" class="hero-logo">
-                </div>
-                <h1 class="hero-headline">Your Digital Bookshelf, Reimagined.</h1>
-                <p class="hero-tagline">Upload EPUBs, read anywhere, and enhance your language learning.</p>
-                <form id="upload-form" class="hero-upload-form" action="#" method="post">
-                    <label for="file-input" class="custom-file-upload-label">
-                        <span>Select EPUB File</span>
-                    </label>
-                    <input type="file" name="file" id="file-input" accept=".epub" required>
-                    <div class="upload-progress-container" style="display: none; width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-top: 0.5rem;">
-                        <div class="upload-progress-bar" style="width: 0%; height: 10px; background-color: #4b8dff; border-radius: 4px; text-align: center; line-height: 10px; color: white; font-size: 8px;"></div>
-                    </div>
-                </form>
-                <div id="upload-status" class="hero-upload-status"></div>
+      <section class="hero-banner">
+        <div class="hero-content">
+          <div
+            class="logo-container"
+            style="position: relative; display: inline-block"
+          >
+            <img
+              src="{{ url_for('static', filename='icons/slow.gif', _external=True) }}?nocache={{ range(1, 1000000) | random }}"
+              alt="Animation"
+              class="hero-logo"
+            />
+          </div>
+          <h1 class="hero-headline">Your Digital Bookshelf, Reimagined.</h1>
+          <p class="hero-tagline">
+            Upload EPUBs, read anywhere, and enhance your language learning.
+          </p>
+          <form
+            id="upload-form"
+            class="hero-upload-form"
+            action="#"
+            method="post"
+          >
+            <label for="file-input" class="custom-file-upload-label"
+              ><span>Select EPUB File</span></label
+            >
+            <input
+              type="file"
+              name="file"
+              id="file-input"
+              accept=".epub"
+              required
+            />
+            {% include 'components/drive_button.html' %}
+            <div
+              class="upload-progress-container"
+              style="
+                display: none;
+                width: 100%;
+                background-color: #e0e0e0;
+                border-radius: 4px;
+                margin-top: 0.5rem;
+              "
+            >
+              <div
+                class="upload-progress-bar"
+                style="
+                  width: 0%;
+                  height: 10px;
+                  background-color: #4b8dff;
+                  border-radius: 4px;
+                "
+              ></div>
             </div>
-        </section>
-
-        <div class="container page-content-container"> 
-            <div class="bookshelf">
-                <h2>My Bookshelf</h2>
-                <div id="recent-books-grid" class="books-grid">
-                    <!-- Books will be listed here by JavaScript module -->
-                </div>
-            </div>
-
-            {% with messages = get_flashed_messages() %}
-              {% if messages %}
-                <div class="flash-messages">
-                    <strong>Notifications:</strong>
-                    <ul>
-                    {% for message in messages %}
-                      <li>{{ message }}</li>
-                    {% endfor %}
-                    </ul>
-                </div>
-              {% endif %}
-            {% endwith %}
+          </form>
+          <div id="upload-status" class="hero-upload-status"></div>
         </div>
+      </section>
+
+      <div class="container page-content-container">
+        <div class="bookshelf">
+          <h2>
+            My Bookshelf
+            <span class="bookshelf-icons">
+              <button id="btn-sync" class="icon-btn" title="Sync Now" hidden>
+                🔄
+              </button>
+              <button
+                id="btn-drive"
+                class="icon-btn"
+                title="Open Drive Folder"
+                hidden
+              >
+                📂
+              </button>
+            </span>
+          </h2>
+          <input
+            id="bookshelf-search"
+            type="text"
+            placeholder="Search books"
+            aria-label="Search books"
+          />
+          <div id="recent-books-grid" class="books-grid"></div>
+        </div>
+
+        {% with messages = get_flashed_messages() %} {% if messages %}
+        <div class="flash-messages">
+          <strong>Notifications:</strong>
+          <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %} {% endwith %}
+      </div>
     </main>
-    
+
     <!-- PWA Install Button -->
     <button id="pwa-install-button" aria-label="Install app">+</button>
-    
+
     <!-- App Scripts -->
-    <script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
-    
-    <!-- PWA Registration Script -->
+    <script>
+      window.GDRIVE_CLIENT_ID =
+        "49477009498-r5hl6kurct6g4snvabu10hvqvrv6jqc1.apps.googleusercontent.com";
+    </script>
+    <!-- External Libraries FIRST -->
+    <!-- <script src="{{ url_for('static', filename='js/lib/idb-keyval-iife.min.js') }}"></script> -->
+
+    <!-- Your Application Modules AFTER libraries are loaded -->
+    <script
+      type="module"
+      src="{{ url_for('static', filename='js/index.js') }}"
+    ></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
-    
     {% block body_end %}{% endblock %}
-</body>
-</html> 
+  </body>
+</html>

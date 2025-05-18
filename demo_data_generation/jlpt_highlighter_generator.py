@@ -162,14 +162,18 @@ def parse_chapter(text: str, api_key: str):
 def resolve_folder(arg: str):
     if arg.endswith('.epub'):
         key = os.path.splitext(os.path.basename(arg))[0]
-        return BOOK_FOLDER_MAP.get(key, arg)
-    return BOOK_FOLDER_MAP.get(arg, arg)
+        folder_name = BOOK_FOLDER_MAP.get(key, arg)
+    else:
+        folder_name = BOOK_FOLDER_MAP.get(arg, arg)
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    demo_base = os.path.join(repo_root, 'app', 'static', 'demo_data')
+    return os.path.join(demo_base, folder_name)
 
 
 def generate_highlights(arg: str, api_key: str):
     folder = resolve_folder(arg)
     debug(f"Folder = {folder}")
-    trans_path = os.path.join(folder, 'mock_translate_responses.json')
+    trans_path = os.path.join(folder, 'translate_responses.json')
     if not os.path.isfile(trans_path):
         raise FileNotFoundError(trans_path)
 
@@ -198,9 +202,18 @@ def generate_highlights(arg: str, api_key: str):
         })
         time.sleep(0.05)
 
-    out_file = os.path.join(folder, 'mock_highlight_responses.json')
-    json.dump(sorted(results, key=lambda d: (d['item_index'], d['cefr_level'])), open(out_file, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
-    print(f"⭐ highlights written → {out_file} ({len(results)} entries)")
+    out_file = os.path.join(folder, 'highlight_responses.json')
+    if os.path.isfile(out_file):
+        try:
+            existing = json.load(open(out_file, encoding='utf-8'))
+        except Exception:
+            existing = []
+    else:
+        existing = []
+    existing.extend(results)
+    json.dump(sorted(existing, key=lambda d: (d['item_index'], d['cefr_level'])),
+              open(out_file, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+    print(f"⭐ highlights written → {out_file} ({len(existing)} entries)")
 
 
 if __name__ == '__main__':

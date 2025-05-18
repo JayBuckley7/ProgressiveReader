@@ -701,8 +701,9 @@ function initSettingsModal(passedServerDefaultModel) {
 }
 
 window.settingsModalManager = {
+    DEFAULT_SETTINGS_MODAL,
     initSettingsModal,
     openSettingsModal,
     closeSettingsModal,
     loadSettingsToUI: _loadSettingsToUI // Expose for potential refresh
-}; 
+};

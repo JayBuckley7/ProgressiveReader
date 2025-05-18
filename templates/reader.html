@@ -94,7 +94,6 @@
     data-openai-key-configured="{{ openai_key_configured | tojson }}"
     data-server-default-model="{{ model_name | tojson }}"
     data-book-id="{{ book_id | tojson }}"
-    data-current-index="{{ current_index | tojson }}"
     data-jlpt-enabled="{{ jlpt_enabled | default(false) | tojson }}"
 >
 
@@ -111,7 +110,6 @@
         {{ navigation_bar(
             position='top',
             book_id=book_id,
-            current_index=current_index,
             total_items=0
         ) }}
     </nav>
@@ -135,7 +133,6 @@
         {{ navigation_bar(
             position='bottom',
             book_id=book_id,
-            current_index=current_index,
             total_items=0
         ) }}
     </footer>

@@ -1,6 +1,8 @@
 import { addBook } from './dbService.js';
+import * as driveSync from './driveSync.js';
 import { renderBookshelf } from './bookshelfUI.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
+import { TextProcessorWrapper } from './textProcessor.js';
 
 const uploadForm = document.getElementById('upload-form');
 const fileInput = document.getElementById('file-input');
@@ -67,39 +69,46 @@ async function handleFileSelect() {
     updateProgress(10); // Initial progress
 
     const file = fileInput.files[0];
-    const safeFilename = file.name.split(/[/\\]/).pop() || 'untitled.epub';
-    let title = safeFilename.replace(/\.epub$/i, '') || 'Untitled Book';
+    const safeFilename = file.name.split(/[/\\]/).pop() || 'untitled';
+    const extension = safeFilename.split('.').pop().toLowerCase();
+    let title = safeFilename.replace(/\.[^.]+$/, '') || 'Untitled Book';
 
     console.log(`${logPrefix} File selected: "${title}". Attempting to process.`);
 
     try {
-        updateProgress(25); // Starting EPUB processing
+        updateProgress(25); // Starting processing
 
-        // Extract metadata directly from the file using epub.js
-        const epubProcessor = new EpubProcessorWrapper();
+        let processor = null;
         const arrayBuffer = await file.arrayBuffer();
-        updateProgress(40); // File converted to ArrayBuffer
 
-        // Load and parse the EPUB
-        const loaded = await epubProcessor.loadBook(arrayBuffer);
-        if (!loaded) {
-            throw new Error('Failed to load EPUB file. It may be corrupted or in an invalid format.');
-        }
-        updateProgress(60); // EPUB loaded and parsed
-
-        // Extract the title from the EPUB metadata if available
-        const epubTitle = epubProcessor.getBookTitle();
-        if (epubTitle && epubTitle !== "Untitled Book") {
-            title = epubTitle;
+        if (extension === 'epub') {
+            processor = new EpubProcessorWrapper();
+            const loaded = await processor.loadBook(arrayBuffer);
+            if (!loaded) {
+                throw new Error('Failed to load EPUB file. It may be corrupted or in an invalid format.');
+            }
+            updateProgress(60); // EPUB loaded and parsed
+            const epubTitle = processor.getBookTitle();
+            if (epubTitle && epubTitle !== 'Untitled Book') {
+                title = epubTitle;
+            }
+        } else if (extension === 'txt' || extension === 'docx') {
+            processor = new TextProcessorWrapper();
+            const loaded = await processor.loadBook(arrayBuffer, { fileType: extension });
+            if (!loaded) {
+                throw new Error('Failed to load text file.');
+            }
+            updateProgress(60); // Text loaded and parsed
+        } else {
+            throw new Error('Unsupported file type.');
         }
         
         // Make a symbolic "upload" call to the server for UX familiarity
         // But no actual file data is sent - just HTTP headers
         const formData = new FormData();
-        // Create a tiny placeholder file (1 byte) to satisfy the 'file' field requirement
-        // This avoids sending the actual EPUB data to the server
-        const tinyPlaceholder = new Blob([0], { type: 'application/epub+zip' });
-        formData.append('file', tinyPlaceholder, file.name); 
+        const mimeType = file.type || (extension === 'epub' ? 'application/epub+zip' : 'text/plain');
+        const tinyPlaceholder = new Blob([0], { type: mimeType });
+        formData.append('file', tinyPlaceholder, file.name);
         
         try {
             await fetch('/book/upload', {
@@ -120,8 +129,18 @@ async function handleFileSelect() {
         
         updateProgress(75); // Starting IndexedDB storage
 
-        const bookIdFromDB = await addBook(title, file, bookId);
+        const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
+        
+        // If Drive is connected, queue upload
+        if (driveSync && driveSync.isConnected && driveSync.isConnected()) {
+            try {
+                await driveSync.queueUpload(bookIdFromDB, file);
+                console.log(`${logPrefix} Queued upload for Drive`);
+            } catch (err) {
+                console.warn(`${logPrefix} Failed to queue Drive upload:`, err);
+            }
+        }
         
         updateProgress(100); // Local storage complete
 
@@ -146,7 +165,7 @@ async function handleFileSelect() {
 
     } catch (error) {
         console.error(`${logPrefix} Error processing book:`, error);
-        uploadStatusDiv.textContent = `Error uploading EPUB: ${error.message || 'Unknown error'}`;
+        uploadStatusDiv.textContent = `Error uploading file: ${error.message || 'Unknown error'}`;
         uploadStatusDiv.className = 'hero-upload-status error-message';
         updateProgress(0); // Reset progress on error
     }

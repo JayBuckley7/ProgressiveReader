@@ -124,22 +124,29 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
     }
     const db = await _getDB();
     let coverImageBlob = null;
+    const fileType = (additionalMetadata && additionalMetadata.fileType) ? additionalMetadata.fileType : 'epub';
 
-    // Try to extract cover image before adding to DB
-    try {
-        const epubProcessor = new EpubProcessorWrapper();
-        const arrayBuffer = await contentBlob.arrayBuffer();
-        const loaded = await epubProcessor.loadBook(arrayBuffer);
-        if (loaded) {
-            coverImageBlob = await epubProcessor.getCoverBlob();
-            if (coverImageBlob) {
-                console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
+    // Try to extract metadata (title & cover image) before adding to DB
+    if (fileType === 'epub') {
+        try {
+            const epubProcessor = new EpubProcessorWrapper();
+            const arrayBuffer = await contentBlob.arrayBuffer();
+            const loaded = await epubProcessor.loadBook(arrayBuffer);
+            if (loaded) {
+                const parsedTitle = epubProcessor.getBookTitle();
+                if (parsedTitle && parsedTitle !== 'Untitled Book') {
+                    title = parsedTitle;
+                }
+                coverImageBlob = await epubProcessor.getCoverBlob();
+                if (coverImageBlob) {
+                    console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
+                }
+            } else {
+                console.warn(`[DBService] EpubProcessor failed to load book "${title}" for metadata extraction.`);
             }
-        } else {
-            console.warn(`[DBService] EpubProcessor failed to load book "${title}" for cover extraction.`);
+        } catch (error) {
+            console.error(`[DBService] Error during metadata extraction for "${title}":`, error);
         }
-    } catch (error) {
-        console.error(`[DBService] Error during cover extraction for "${title}":`, error);
     }
 
     const transaction = db.transaction(BOOK_STORE_NAME, 'readwrite');
@@ -165,6 +172,8 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
                 lastOpened: null, // Initialize lastOpened timestamp
                 coverImageBlob: coverImageBlob, // Store the Blob itself
                 isDemo: isDemo, // Flag indicating if this is a demo book
+                fileType: fileType, // From add-txt-and-docx-file-support branch
+                driveId: additionalMetadata.driveId || null, // From test-deploy branch
                 ...additionalMetadata // Spread any other metadata
              };
 
@@ -247,9 +256,9 @@ export async function getAllBooksMetadata() {
                     title: book.title,
                     lastOpened: book.lastOpened,
                     addedDate: book.addedDate,
-                    coverImageBlob: book.coverImageBlob, // Include the cover Blob
-                    isDemo: book.isDemo || false // Include the isDemo flag, default to false for existing books
-                    // Omit book.content
+                    coverImageBlob: book.coverImageBlob,
+                    isDemo: book.isDemo || false,
+                    fileType: book.fileType || 'epub'
                 }));
                
                 // Log demo books for debugging
@@ -396,6 +405,44 @@ export async function updateLastOpened(bookId) {
              reject(new Error(`Transaction error updating last opened timestamp: ${event.target.error?.message}`));
          };
     });
+}
+
+/**
+ * Update arbitrary metadata fields for a book.
+ * @param {string} bookId - Book ID.
+ * @param {object} updates - Fields to merge into the existing record.
+ * @returns {Promise<boolean>} Resolves true if updated, false if book not found.
+ */
+export async function updateBookMetadata(bookId, updates = {}) {
+    if (typeof bookId !== 'string' || bookId.length === 0) {
+        console.error('[DBService] Invalid bookId provided to updateBookMetadata:', bookId);
+        throw new Error('[DBService] Invalid book ID for metadata update.');
+    }
+    const db = await _getDB();
+    const tx = db.transaction(BOOK_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(BOOK_STORE_NAME);
+    const getReq = store.get(bookId);
+    return new Promise((resolve, reject) => {
+        getReq.onsuccess = () => {
+            const data = getReq.result;
+            if (!data) { resolve(false); return; }
+            Object.assign(data, updates);
+            const putReq = store.put(data);
+            putReq.onsuccess = () => resolve(true);
+            putReq.onerror = e => reject(new Error(`Error updating book metadata: ${e.target.error?.message}`));
+        };
+        getReq.onerror = e => reject(new Error(`Error fetching book for metadata update: ${e.target.error?.message}`));
+    });
+}
+
+/**
+ * Replace a book's cover image.
+ * @param {string} bookId - ID of the book to update.
+ * @param {Blob} coverBlob - Image blob to store as the cover.
+ * @returns {Promise<boolean>} Resolves true if the cover was updated.
+ */
+export async function updateBookCover(bookId, coverBlob) {
+    return updateBookMetadata(bookId, { coverImageBlob: coverBlob });
 }
 
 

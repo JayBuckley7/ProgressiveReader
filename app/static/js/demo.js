@@ -239,6 +239,12 @@ async function cleanupOldDemoBooks() {
  | 8.  Initialise demo mode                                     
  *--------------------------------------------------------------*/
 async function initDemo() {
+  const demoButton = document.getElementById('to-demo-page-link');
+  if (demoButton) {
+    demoButton.style.display = 'none';
+    console.log(`${logPrefix} "To Demo Page" link hidden as we are already in demo mode.`);
+  }
+
   addDemoBookStyles();
   setupBookshelfObserver();
 

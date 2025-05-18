@@ -41,12 +41,13 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 ## Features
 
-- **EPUB Upload**: Upload `.epub` files via a web form.
+- **File Upload**: Upload `.epub`, `.txt`, or `.docx` files via a web form.
 - **In-Memory Processing**: EPUB files are processed in memory using temporary files, avoiding permanent server storage.
 - **Web-Based Reading**: Displays EPUB content chapter by chapter in the browser.
 - **Table of Contents**: Extracts the ToC and provides a collapsible side drawer for navigation.
 - **Chapter Navigation**: "Previous" and "Next" buttons allow sequential reading.
 - **Session-Based**: Stores book structure (spine, ToC) and current state in the user's session.
+- **Custom Covers**: Use the camera icon on a book card to upload a cover image.
 
 ## Getting Started
 
@@ -81,21 +82,32 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 4.  **Run the Flask application:**
     ```bash
-    python app.py
+    python run.py
     ```
+    Alternatively, you can use `flask run` if you have the `FLASK_APP` environment
+    variable set to `run.py`.
 
 5.  Open your web browser and navigate to `http://127.0.0.1:5000` (or the address provided by Flask).
 
 ## Usage
 
 1.  Visit the home page (`/`).
-2.  Use the "Choose File" button to select an `.epub` file from your computer.
-3.  Click "Upload EPUB".
+2.  Use the "Choose File" button to select an `.epub`, `.txt`, or `.docx` file from your computer.
+3.  Click "Upload File".
 4.  The first chapter/section of the book will be displayed.
 5.  Use the "Previous" and "Next" buttons at the top or bottom to navigate through sections.
 6.  Click the hamburger icon (☰) in the top-left corner to open the Table of Contents drawer.
 7.  Click on a title in the drawer to jump to that section.
 8.  Click "Back to Upload" or the close button ('×') in the drawer to return to the upload page (this will clear the current book session).
+
+## Running Tests
+
+Run the Python test suite using:
+
+```bash
+python -m unittest discover -s tests
+```
+
 
 ## Technologies Used
 
@@ -163,3 +175,33 @@ This application is configured for deployment to Google Cloud Run.
     - Replace placeholders with your actual keys/secrets.
 
 4.  After deployment, `gcloud` will output the URL of your deployed service.
+
+### Deploy Scripts
+
+For convenience, two shell scripts are provided in the `scripts` directory:
+
+```bash
+./scripts/deploy-prod.sh  # Deploys to the production service
+./scripts/deploy-test.sh  # Deploys to the test service
+```
+
+Both scripts deploy using the `us-central1` region and assume your `gcloud`
+configuration is already authenticated and set to the correct project.
+## Custom Domain
+
+To use `dev.progressivereader.net` with this Cloud Run service:
+
+1. Create the domain mapping:
+   ```bash
+   gcloud run domain-mappings create \
+     --service=progressive-reader \
+     --region YOUR_REGION \
+     --domain dev.progressivereader.net
+   ```
+   You can also perform this step in the Cloud Console under **Custom Domains**.
+
+2. Update your DNS records as instructed. Typically this involves adding a CNAME
+   pointing to `ghs.googlehosted.com`.
+
+3. Once DNS changes propagate, Cloud Run automatically provisions an HTTPS
+   certificate and the custom domain will be active.
