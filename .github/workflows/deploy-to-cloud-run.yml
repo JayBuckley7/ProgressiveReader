@@ -53,7 +53,7 @@ jobs:
         id: env
         run: |
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "SERVICE_NAME=progressive-reader-prod" >> $GITHUB_OUTPUT
+            echo "SERVICE_NAME=progressive-reader" >> $GITHUB_OUTPUT
             echo "ENVIRONMENT=prod"                    >> $GITHUB_OUTPUT
           else
             echo "SERVICE_NAME=progressive-reader-dev"  >> $GITHUB_OUTPUT
