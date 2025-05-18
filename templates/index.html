@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EPUB Reader</title>
+    <title>Book Reader</title>
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4b8dff" />
     <meta
       name="description"
-      content="An EPUB reader with Japanese language learning features"
+      content="A book reader with language learning features"
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -215,7 +215,8 @@
           </div>
           <h1 class="hero-headline">Your Digital Bookshelf, Reimagined.</h1>
           <p class="hero-tagline">
-            Upload EPUBs, read anywhere, and enhance your language learning.
+            Upload books in EPUB, PDF, MOBI, DOCX, or TXT format, read anywhere,
+            and enhance your language learning.
           </p>
           <form
             id="upload-form"
@@ -224,13 +225,13 @@
             method="post"
           >
             <label for="file-input" class="custom-file-upload-label"
-              ><span>Select EPUB File</span></label
+              ><span>Select Book File</span></label
             >
             <input
               type="file"
               name="file"
               id="file-input"
-              accept=".epub"
+              accept=".epub,.docx,.pdf,.txt,.mobi"
               required
             />
             {% include 'components/drive_button.html' %}

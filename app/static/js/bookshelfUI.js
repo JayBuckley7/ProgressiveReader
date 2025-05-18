@@ -81,7 +81,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
     }
 
     if (filtered.length === 0) {
-      recentBooksGrid.innerHTML = '<p>Your bookshelf is empty. Upload an EPUB to get started!</p>';
+      recentBooksGrid.innerHTML = '<p>Your bookshelf is empty. Upload a document file to get started!</p>';
       return;
     }
 
