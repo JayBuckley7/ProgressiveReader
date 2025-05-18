@@ -3,6 +3,8 @@ from openai import OpenAI
 import requests
 import re
 import json
+import redis
+import hashlib
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -22,7 +24,21 @@ def translate_content():
     if content is None or target_language is None or model is None:
         return jsonify({"error": "Missing required fields: content, target_language, model"}), 400
 
-    api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY') 
+    # --- Redis duplicate request check ---
+    request_token = hashlib.sha256(
+        f"{target_language}|{cefr_level}|{model}|{content}".encode("utf-8")
+    ).hexdigest()
+    try:
+        r = redis.Redis.from_url(current_app.config['REDIS_URL'])
+        if r.exists(request_token):
+            current_app.logger.info(f"Duplicate translation request denied: {request_token}")
+            return jsonify({"error": "Duplicate translation request"}), 429
+        else:
+            r.set(request_token, 1, ex=300)
+    except Exception as redis_exc:
+        current_app.logger.warning(f"Redis check failed: {redis_exc}")
+
+    api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY')
     if not api_key_to_use: return jsonify({"error": "OpenAI API key not configured..."}), 400
     
     # Ensure system_prompt is defined or moved to config if it's complex
