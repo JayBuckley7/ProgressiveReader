@@ -60,4 +60,7 @@ Dockerfile
 .gcloudignore
 
 # User uploaded files (if not part of the app image)
-user_epubs/ 
+user_epubs/
+
+# Service account keys
+pr-ghactions-sa-key.json 

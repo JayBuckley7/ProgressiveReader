@@ -44,4 +44,7 @@ uploads/
 user_epubs/
 
 # Node.js dependencies
-node_modules/ 
+node_modules/
+
+# Service account keys
+pr-ghactions-sa-key.json 

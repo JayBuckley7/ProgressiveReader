@@ -159,4 +159,7 @@ dmypy.json
 user_epubs/
 
 # Node.js
-node_modules/ 
+node_modules/
+
+# Service account keys
+pr-ghactions-sa-key.json 

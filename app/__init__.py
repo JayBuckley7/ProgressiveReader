@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify
 from config import Config
 
 # Define a filter for logging
@@ -61,6 +61,12 @@ def create_app(config_class=Config):
     def manifest():
         return send_from_directory('static', 'manifest.json')
     # --- End PWA routes ---
+
+    # --- Health Check Endpoint ---
+    @app.route('/health')
+    def health_check():
+        return jsonify({"status": "healthy"}), 200
+    # --- End Health Check Endpoint ---
 
     # --- Import and register blueprints from routes --- 
     # (This is where we'll add them later)
