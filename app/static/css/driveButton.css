@@ -53,9 +53,29 @@
 
 /* State: Connecting */
 .drive-connect-button.state-connecting {
-  /* Specific styles if needed, e.g., slightly different background or opacity */
-  /* For now, assumes text content "Connecting..." is set by JS */
   cursor: wait;
+  position: relative;
+}
+
+/* Small spinner overlay when connecting */
+.drive-connect-button.state-connecting::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: drive-btn-spin 0.8s linear infinite;
+}
+
+@keyframes drive-btn-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* State: Connected */
@@ -69,6 +89,3 @@
 /* Ensure existing Bootstrap button classes (if used) don't overly conflict */
 /* For example, if .btn sets padding, our padding here will override it */
 /* If .btn sets display: inline-block, our display: flex will override it */
-
-
-</rewritten_file> 

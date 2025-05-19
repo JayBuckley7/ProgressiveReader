@@ -4,6 +4,11 @@ import { EpubProcessorWrapper } from './epubProcessor.js';
 const recentBooksGrid = document.getElementById("recent-books-grid");
 const logPrefix = "[BookshelfUI]";
 
+// Keep track of the last set of books we rendered so we can avoid
+// re-building the DOM when nothing has changed.
+let lastRenderedSnapshot = null;
+let lastRenderedQuery = "";
+
 async function openBookAtProgress(bookId, title) {
   let startIndex = 0;
   try {
@@ -28,10 +33,6 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
   }
 
   const isInDemoMode = window.IS_DEMO_MODE === true;
-
-  recentBooksGrid.innerHTML = '<p>Loading bookshelf…</p>';
-  recentBooksGrid.setAttribute('role', 'list');
-  recentBooksGrid.setAttribute('aria-live', 'polite');
 
   try {
     /* ─────────────────────────────────────────────────────
@@ -81,7 +82,15 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
     }
 
     if (filtered.length === 0) {
+      const snapshot = "empty";
+      if (snapshot === lastRenderedSnapshot && searchQuery === lastRenderedQuery) {
+        return; // No change from last render
+      }
+      lastRenderedSnapshot = snapshot;
+      lastRenderedQuery = searchQuery;
       recentBooksGrid.innerHTML = '<p>Your bookshelf is empty. Upload a document file to get started!</p>';
+      recentBooksGrid.setAttribute('role', 'list');
+      recentBooksGrid.setAttribute('aria-live', 'polite');
       return;
     }
 
@@ -90,6 +99,24 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       const bDate = b.lastOpened ? new Date(b.lastOpened) : new Date(0);
       return bDate - aDate || a.title.localeCompare(b.title);
     });
+
+    const snapshot = JSON.stringify(
+      filtered.map((b) => ({
+        id: b.id,
+        title: b.title,
+        lastOpened: b.lastOpened,
+        driveId: b.driveId,
+        isRemoteOnly: !!b.isRemoteOnly,
+      })),
+    );
+    if (snapshot === lastRenderedSnapshot && searchQuery === lastRenderedQuery) {
+      return; // Skip render if nothing changed
+    }
+    lastRenderedSnapshot = snapshot;
+    lastRenderedQuery = searchQuery;
+
+    recentBooksGrid.setAttribute('role', 'list');
+    recentBooksGrid.setAttribute('aria-live', 'polite');
 
     /* ─────────────────────────────────────────────────────
        3  Render every book                                 

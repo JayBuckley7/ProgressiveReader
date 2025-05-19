@@ -158,12 +158,14 @@ async function initializeApp() {
         }, hideAfterMs);
       }
     }
-    window.addEventListener("drive-sync-start", () =>
-      showBanner("Syncing…", "syncing"),
-    );
+    window.addEventListener("drive-sync-start", () => {
+      showBanner("Syncing…", "syncing");
+      driveButton?.setState("connecting");
+    });
     window.addEventListener("drive-sync-complete", () => {
       showBanner("Up to date", "idle", 4000);
       renderBookshelf(driveSync, currentSearchQuery);
+      driveButton?.refreshState();
     });
     window.addEventListener("drive-offline", () =>
       showBanner("Offline", "offline"),
