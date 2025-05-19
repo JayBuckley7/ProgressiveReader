@@ -132,13 +132,13 @@ async function handleFileSelect() {
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
         
-        // If Drive is connected, queue upload
+        // If Drive is connected, upload immediately and store driveId
         if (driveSync && driveSync.isConnected && driveSync.isConnected()) {
             try {
-                await driveSync.queueUpload(bookIdFromDB, file);
-                console.log(`${logPrefix} Queued upload for Drive`);
+                await driveSync.uploadBookToDrive(bookIdFromDB, title, file);
+                console.log(`${logPrefix} Uploaded book to Drive`);
             } catch (err) {
-                console.warn(`${logPrefix} Failed to queue Drive upload:`, err);
+                console.warn(`${logPrefix} Failed to upload to Drive:`, err);
             }
         }
         
