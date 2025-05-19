@@ -48,6 +48,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
 - **Chapter Navigation**: "Previous" and "Next" buttons allow sequential reading.
 - **Session-Based**: Stores book structure (spine, ToC) and current state in the user's session.
 - **Custom Covers**: Use the camera icon on a book card to upload a cover image.
+- **Drive Sync Covers**: When connected to Google Drive, cover images are uploaded along with the book file.
 - **PDF Parsing**: Extracts page count and estimated font size when uploading PDF files.
 
 ## Getting Started

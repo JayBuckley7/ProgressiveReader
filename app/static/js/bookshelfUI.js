@@ -217,6 +217,13 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         if (!coverInput.files?.[0]) return;
         try {
           await updateBookCover(book.id, coverInput.files[0]);
+          if (driveSync?.isConnected?.()) {
+            try {
+              await driveSync.uploadCoverToDrive(book.id, book.title, coverInput.files[0]);
+            } catch (e) {
+              console.warn(`${logPrefix} Failed to upload cover to Drive for ${book.id}`, e);
+            }
+          }
           renderBookshelf(driveSync);
         } catch (err) {
           console.error(`${logPrefix} Failed to update cover for ${book.id}`, err);
