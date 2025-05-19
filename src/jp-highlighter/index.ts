@@ -6,9 +6,13 @@ import { nonNull } from './utils/util';
 import { showError } from './components/toast';
 import { Popup } from './components/popup';
 import { Keybind } from './types'; // Corrected import path for Keybind
+import Logger from './utils/logger';
 
 let currentHover: [JpdbWord, number, number] | null = null;
 let popupKeyHeld = false; // Add popupKeyHeld state
+
+// Initialize logger debug state from a global flag if present
+Logger.setDebug((window as any).jpHighlighterDebug === true);
 
 // Use the imported config, explicitly typed
 let config: JpHighlighterConfig = getCurrentConfig(); // Change const to let so we can reassign
@@ -17,17 +21,17 @@ let config: JpHighlighterConfig = getCurrentConfig(); // Change const to let so 
 function matchesHotkey(event: KeyboardEvent | MouseEvent, hotkey: Keybind | undefined): boolean {
     const eventType = event.type;
     const eventCode = event instanceof KeyboardEvent ? event.code : `Mouse${event.button}`;
-    console.log(`matchesHotkey called with event type: ${eventType}, code: ${eventCode}`);
+    Logger.log(`matchesHotkey called with event type: ${eventType}, code: ${eventCode}`);
     
     if (!hotkey) {
-        console.log(`No hotkey provided, returning false`);
+        Logger.log('No hotkey provided, returning false');
         return false;
     }
     
-    console.log(`Checking against hotkey:`, hotkey);
+    Logger.log('Checking against hotkey:', hotkey);
     
     if (hotkey.code === 'None') {
-        console.log(`Hotkey code is 'None', returning false`);
+        Logger.log("Hotkey code is 'None', returning false");
         return false; // No binding if code is 'None'
     }
     
@@ -41,7 +45,7 @@ function matchesHotkey(event: KeyboardEvent | MouseEvent, hotkey: Keybind | unde
             (name === 'Alt' && event.altKey) ||
             (name === 'Meta' && event.metaKey);
             
-        console.log(`Checking modifier ${name}: required=${true}, pressed=${isModifierPressed}`);
+        Logger.log(`Checking modifier ${name}: required=${true}, pressed=${isModifierPressed}`);
         return isModifierPressed;
     });
     
@@ -60,12 +64,12 @@ function matchesHotkey(event: KeyboardEvent | MouseEvent, hotkey: Keybind | unde
     if (event.altKey) activeModifiers.push('Alt');
     if (event.metaKey) activeModifiers.push('Meta');
     
-    console.log(`Active modifiers: [${activeModifiers.join(', ')}]`);
-    console.log(`Code match: ${code === hotkey.code}, modifiers match: ${allModifiersMatch}, no extra modifiers: ${noExtraModifiers}`);
+    Logger.log(`Active modifiers: [${activeModifiers.join(', ')}]`);
+    Logger.log(`Code match: ${code === hotkey.code}, modifiers match: ${allModifiersMatch}, no extra modifiers: ${noExtraModifiers}`);
     
     // Match if codes match and either modifiers match (if any required) or no modifiers required and none pressed
     const result = code === hotkey.code && allModifiersMatch;
-    console.log(`matchesHotkey result: ${result}`);
+    Logger.log(`matchesHotkey result: ${result}`);
     return result;
 }
 
@@ -184,12 +188,12 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
 
 // Main function to apply JPDB highlighting to a content element
 export async function highlightContent(contentElement: HTMLElement): Promise<void> {
-    console.log('highlightContent called', contentElement);
+    Logger.log('highlightContent called', contentElement);
     
     let currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
-    console.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));
-    console.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
-    console.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
+    Logger.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));
+    Logger.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
+    Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
     
     const directCookieCheck = document.cookie.includes('jpdb_api_key=') && 
                              document.cookie.split('jpdb_api_key=')[1]?.split(';')[0]?.trim();
@@ -197,7 +201,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
         console.error('JPDB API Key is not set in config');
         if (directCookieCheck) {
-            console.log('Found API key directly in cookie, attempting to use it and reload config');
+            Logger.log('Found API key directly in cookie, attempting to use it and reload config');
             // This scenario is less likely now with centralized config, but as a safeguard:
             // Manually setting and reloading could be an option, but loadConfig should handle it.
             // For now, we rely on loadConfig having done its job. If key is still missing, alert.
@@ -217,21 +221,21 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     
     try {
         const textSegments = extractCleanTextSegments(contentElement);
-        console.log(`Extracted ${textSegments.length} text segments`);
+        Logger.log(`Extracted ${textSegments.length} text segments`);
         
         if (!textSegments || textSegments.length === 0) {
-            console.log("No text segments to highlight.");
+            Logger.log('No text segments to highlight.');
             return;
         }
         
         document.body.style.cursor = 'wait';
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
-        console.log(`Created ${paragraphs.length} paragraph fragments`);
+        Logger.log(`Created ${paragraphs.length} paragraph fragments`);
         
-        console.log('About to parse text with API...');
+        Logger.log('About to parse text with API...');
         const tokens = await parseText(textSegments); // Tokens have global offsets
-        
-        console.log(`Received ${tokens.length} tokens from API`);
+
+        Logger.log(`Received ${tokens.length} tokens from API`);
         
         for (const paragraph of paragraphs) { // A paragraph is a Fragment[]
             if (paragraph.length > 0) {
@@ -264,8 +268,14 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                         end: frag.end - globalParagraphStartOffset,
                     }));
                     
-                    if(relativeFragments.length > 0 && relativeTokens.length > 0){
-                        //console.log(`Processing paragraph. Global start: ${globalParagraphStartOffset}. Relative Fragments (first):`, JSON.stringify(relativeFragments[0]), 'Relative Tokens (first):', JSON.stringify(relativeTokens[0]));
+                    if (relativeFragments.length > 0 && relativeTokens.length > 0) {
+                        // Debug logging of first fragment/token
+                        Logger.log(
+                            `Processing paragraph. Global start: ${globalParagraphStartOffset}. Relative Fragments (first):`,
+                            JSON.stringify(relativeFragments[0]),
+                            'Relative Tokens (first):',
+                            JSON.stringify(relativeTokens[0])
+                        );
                     }
 
                     applyTokens(relativeFragments, relativeTokens);
@@ -294,22 +304,21 @@ function onWordHoverStart(event: MouseEvent): void {
     
     // Only show popup on hover if the setting is enabled OR the popup key is held
     const currentConfig = getCurrentConfig(); // Get latest config
-    console.log('onWordHoverStart: showPopupOnHover =', currentConfig.showPopupOnHover, 'popupKeyHeld =', popupKeyHeld);
+    Logger.log('onWordHoverStart: showPopupOnHover =', currentConfig.showPopupOnHover, 'popupKeyHeld =', popupKeyHeld);
     
     if (currentConfig.showPopupOnHover || popupKeyHeld) {
-        console.log('Showing popup because:', currentConfig.showPopupOnHover ? 'hover is enabled' : 'popup key is held');
+        Logger.log('Showing popup because:', currentConfig.showPopupOnHover ? 'hover is enabled' : 'popup key is held');
         if (jpdbWordElement.jpdbData) {
             Popup.get().showForWord(jpdbWordElement, event.clientX, event.clientY);
         } else {
             console.error('JpdbWord element is missing jpdbData on hover!', jpdbWordElement);
         }
     } else {
-        console.log('Not showing popup: hover is disabled and key is not held');
+        Logger.log('Not showing popup: hover is disabled and key is not held');
     }
 }
 
 function onWordHoverStop(): void {
-    // console.log('onWordHoverStop triggered'); 
     currentHover = null;
     // Do NOT call fadeOut here based on jpd-breader logic
 }
@@ -327,7 +336,7 @@ function globalKeydownListener(event: KeyboardEvent) {
         if (currentHover) {
             const [wordElement, x, y] = currentHover;
             if (wordElement.jpdbData) {
-                console.log('Showing popup because popup key was pressed while hovering a word');
+                Logger.log('Showing popup because popup key was pressed while hovering a word');
                 Popup.get().showForWord(wordElement, x, y);
             }
         }
@@ -357,7 +366,7 @@ function globalKeyupListener(event: KeyboardEvent) {
             setTimeout(() => {
                 // Double check popupKeyHeld state hasn't changed during timeout
                 if (!popupKeyHeld) {
-                    console.log('Hiding popup because popup key was released and hover is disabled');
+                    Logger.log('Hiding popup because popup key was released and hover is disabled');
                     Popup.get().fadeOut();
                 }
             }, 100); // Small delay
@@ -398,10 +407,10 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
 
         // Define a reinitialization function that will be called when settings change
         const reinitialize = () => {
-            console.log('[index.ts] reinitialize called. Calling loadConfig.');
+            Logger.log('[index.ts] reinitialize called. Calling loadConfig.');
             loadConfig(); // Call loadConfig to update the central instance in api-adapter
             // No need to assign to a local variable here if other functions use getCurrentConfig()
-            console.log('[index.ts] reinitialize: loadConfig completed. Current config from getCurrentConfig() is now:', JSON.stringify(getCurrentConfig()));
+            Logger.log('[index.ts] reinitialize: loadConfig completed. Current config from getCurrentConfig() is now:', JSON.stringify(getCurrentConfig()));
         };
 
         // Properly expose the module interface to global scope
@@ -413,6 +422,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             reinitialize, // Specific function to reload config when settings change
             wireUpToggle, // Use the actual wireUpToggle function
             highlightContent, // Use the actual highlightContent function
+            setDebug: Logger.setDebug, // Allow toggling debug logging
             Popup // Expose the Popup for direct access if needed
         };
 
@@ -432,7 +442,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             document.head.appendChild(styleElement);
         }
         
-        console.log('JP Highlighter initialized with global mousedown listener for popup.');
+        Logger.log('JP Highlighter initialized with global mousedown listener for popup.');
     } catch (error) {
         showError(error instanceof Error ? error : new Error(String(error)));
     }
@@ -495,5 +505,6 @@ export default {
     wireUpToggle,
     loadConfig,
     getCurrentConfig,
+    setDebug: Logger.setDebug,
     Popup
-}; 
+};
