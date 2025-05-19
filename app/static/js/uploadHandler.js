@@ -132,15 +132,7 @@ async function handleFileSelect() {
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
         
-        // If Drive is connected, queue upload
-        if (driveSync && driveSync.isConnected && driveSync.isConnected()) {
-            try {
-                await driveSync.queueUpload(bookIdFromDB, file);
-                console.log(`${logPrefix} Queued upload for Drive`);
-            } catch (err) {
-                console.warn(`${logPrefix} Failed to queue Drive upload:`, err);
-            }
-        }
+        // Google Drive uploads are triggered manually from the bookshelf UI
         
         updateProgress(100); // Local storage complete
 
