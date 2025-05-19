@@ -6,17 +6,14 @@ import uuid
 # Use a more descriptive name like 'main_bp' or similar
 main_bp = Blueprint('main', __name__)
 
-# Helper to clean up old temp file path from session (kept here for now as it relates to index)
-# Re-evaluated cleanup function and removed it as obsolete for persistent storage.
-# def cleanup_temp_file(path_key='temp_epub_path'):
-#     old_temp_path = session.pop(path_key, None)
-
 @main_bp.route('/')
 def index():
-    return render_template('index.html', books=[]) # Pass an empty list, JS will populate
+    """Return the index page; JavaScript fills in the book list."""
+    return render_template('index.html', books=[])
 
 @main_bp.route('/upload', methods=['POST'])
 def upload_file():
+    """Validate the uploaded file and return a JSON status message."""
     if 'file' not in request.files:
         return jsonify({'success': False, 'message': 'No file part'}), 400
     file = request.files['file']
@@ -36,8 +33,7 @@ def upload_file():
 
 @main_bp.route('/delete/<filename>', methods=['POST'])
 def delete_book(filename):
-    # This endpoint is deprecated as deletion is handled client-side.
-    # Keeping it might be useful for future API calls, but returning error for now.
+    """Return an error because deletion happens in the browser."""
     return jsonify({'success': False, 'message': 'Deletion handled client-side via IndexedDB.'}), 400
 
 # Remove old /book/cover route if it exists, as covers aren't handled yet

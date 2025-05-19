@@ -13,6 +13,7 @@ book_bp = Blueprint('book', __name__, url_prefix='/book')  # Optional: Add prefi
 
 @book_bp.route('/upload', methods=['POST'])
 def upload_file():
+    """Validate a book upload and return a JSON result."""
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
@@ -36,8 +37,9 @@ def upload_file():
 
 @book_bp.route('/cover/<book_id>/<filename>') # Changed route slightly for clarity
 def serve_book_cover(book_id, filename):
+    """Serve a stored cover image for a specific book."""
     # secure_filename is good practice, already used in original app.py
-    safe_filename = secure_filename(filename) 
+    safe_filename = secure_filename(filename)
     # Ensure current_app and os are imported
     # Use COVER_EXPORT_FOLDER from config, assuming it's same as UPLOAD_FOLDER base
     # Construct path relative to project root, same as in upload
@@ -54,6 +56,7 @@ def serve_book_cover(book_id, filename):
 
 @book_bp.route('/delete/<book_id>', methods=['POST'])
 def delete_book_route(book_id):
+    """Acknowledge a delete request; no server files are removed."""
     # MOCK DELETE ENDPOINT - No server files to delete
     # Just return success for API compatibility
     current_app.logger.info(f"MOCK DELETE: Client requested deletion of book ID {book_id}")
