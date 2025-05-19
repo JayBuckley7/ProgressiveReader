@@ -255,21 +255,21 @@ async function main() {
     
     // Ground truth directory (now relative to the script location using __dirname)
     const groundTruthDir = path.join(__dirname, 'ground_truth_data');
-    const groundTruthManifestFile = 'DCC1_chapters_manifest.json'; // Assuming this name
+    // const groundTruthManifestFile = 'DCC1_chapters_manifest.json'; // Assuming this name - REMOVED
 
     console.log(`Testing EPUB: ${epubFilePath}`);
 
-    // Read the manifest
-    let manifestData;
-    try {
-        const manifestPath = path.join(groundTruthDir, groundTruthManifestFile);
-        const manifestJson = await fs.readFile(manifestPath, 'utf-8');
-        manifestData = JSON.parse(manifestJson);
-        console.log(`Read manifest: ${groundTruthManifestFile}`);
-    } catch (error) {
-        console.error(`Failed to read or parse manifest file ${groundTruthManifestFile}:`, error);
-        return;
-    }
+    // // Read the manifest - REMOVED BLOCK
+    // let manifestData;
+    // try {
+    //     const manifestPath = path.join(groundTruthDir, groundTruthManifestFile);
+    //     const manifestJson = await fs.readFile(manifestPath, 'utf-8');
+    //     manifestData = JSON.parse(manifestJson);
+    //     console.log(`Read manifest: ${groundTruthManifestFile}`);
+    // } catch (error) {
+    //     console.error(`Failed to read or parse manifest file ${groundTruthManifestFile}:`, error);
+    //     return;
+    // }
 
     // Read the EPUB file
     let epubBuffer;
@@ -294,35 +294,42 @@ async function main() {
         const opfDoc = await readOpf(zip, opfPath);
         
         // Parse manifest and spine
-        const manifest = parseManifest(opfDoc);
-        const spine = parseSpine(opfDoc, manifest);
+        const manifest = parseManifest(opfDoc); // This is the EPUB internal manifest (list of all files)
+        const spine = parseSpine(opfDoc, manifest); // This is the ordered list of content documents
         
         console.log(`Found ${spine.length} spine items`);
         
-        // Map spine indices to our tests
-        const spineMapping = {};
-        for (const spineItem of spine) {
-            spineMapping[spineItem.index] = spineItem;
-        }
+        // Map spine indices to our tests - NO LONGER NEEDED AS WE ITERATE SPINE DIRECTLY
+        // const spineMapping = {};
+        // for (const spineItem of spine) {
+        //     spineMapping[spineItem.index] = spineItem;
+        // }
         
         // 4. Iterate and Compare Chapters
         let successCount = 0;
         let failCount = 0;
 
-        if (!manifestData || !Array.isArray(manifestData)) {
-            console.error("Manifest data is not in the expected format (array).");
-            return;
-        }
+        // if (!manifestData || !Array.isArray(manifestData)) { // REMOVED
+        //     console.error("Manifest data is not in the expected format (array).");
+        //     return;
+        // }
 
-        const totalChaptersInManifest = manifestData.length;
-        console.log(`Chapters in Manifest: ${totalChaptersInManifest}, Chapters found in EPUB: ${spine.length}`);
+        // const totalChaptersInManifest = manifestData.length; // REMOVED
+        // console.log(`Chapters in Manifest: ${totalChaptersInManifest}, Chapters found in EPUB: ${spine.length}`);
+        console.log(`Total Chapters in EPUB spine: ${spine.length}`);
 
-        for (const chapterInfo of manifestData) {
-            const index = chapterInfo.spine_index;
-            const groundTruthFilename = path.basename(chapterInfo.output_file);
+        const epubBaseName = path.basename(epubFilePath, path.extname(epubFilePath)); // e.g., "DCC1"
+
+        // for (const chapterInfo of manifestData) { // MODIFIED LOOP: Iterate over spine
+        for (const spineItem of spine) {
+            // const index = chapterInfo.spine_index; // MODIFIED: Get index from spineItem
+            const index = spineItem.index;
+            // const groundTruthFilename = path.basename(chapterInfo.output_file); // MODIFIED: Construct filename
+            // Expect ground truth file to be named e.g. DCC1_chapter_0_itemid.html
+            const groundTruthFilename = `${epubBaseName}_chapter_${spineItem.index}_${spineItem.id}.html`;
             const groundTruthPath = path.join(groundTruthDir, groundTruthFilename);
 
-            console.log(`\n--- Testing Chapter ${index} (${groundTruthFilename}) ---`);
+            console.log(`\n--- Testing Chapter ${index} (Spine ID: ${spineItem.id}, Expected GT: ${groundTruthFilename}) ---`);
 
             let jsHtml = null;
             let gtHtml = null;
@@ -331,15 +338,17 @@ async function main() {
                 // Get ground truth HTML
                 try {
                     gtHtml = await fs.readFile(groundTruthPath, 'utf-8');
+                    console.log(`Successfully read ground truth file: ${groundTruthPath}`);
                 } catch (readError) {
                     console.error(`Failed to read ground truth file: ${groundTruthPath} - ${readError.message}`);
-                    failCount++;
+                    console.warn(`Skipping comparison for chapter ${index} due to missing ground truth file.`);
+                    failCount++; // Consider if this should be a failure or a skip
                     continue; 
                 }
                 
                 // Get EPUB HTML (this is the raw full HTML content from the EPUB file)
-                const spineItem = spineMapping[index];
-                if (!spineItem) {
+                // const spineItem = spineMapping[index]; // MODIFIED: We are iterating over spineItem directly
+                if (!spineItem) { // Should not happen if iterating spine, but good for safety
                     console.error(`Spine item not found for index: ${index} in EPUB spine mapping.`);
                     failCount++;
                     continue;
@@ -401,9 +410,9 @@ Temporary files for detailed diff saved to: ${tempDir}`);
 
 // --- Entry Point ---
 const epubFile = process.argv[2] || 'DCC1.epub';
-const groundTruthFolder = process.argv[3] || 'ground_truth_data';
-const manifestFile = process.argv[4] || 'DCC1_chapters_manifest.json';
-const detailedChapter = process.argv[5] ? parseInt(process.argv[5], 10) : -1; // Optional chapter index for detailed diff
+// const groundTruthFolder = process.argv[3] || 'ground_truth_data'; // No longer needed as CLI arg
+// const manifestFile = process.argv[4] || 'DCC1_chapters_manifest.json'; // No longer needed as CLI arg
+const detailedChapter = process.argv[3] ? parseInt(process.argv[3], 10) : -1; // Adjusted index due to removed args
 
 if (isNaN(detailedChapter)) {
     console.error("Invalid chapter index provided for detailed diff. Must be a number.");
