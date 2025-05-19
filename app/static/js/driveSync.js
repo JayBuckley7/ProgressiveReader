@@ -1,6 +1,57 @@
 // driveSync.js – Google Drive folder‑centric sync layer
 import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
+
+// Client ID Shim
+if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
+    window.VITE_GDRIVE_CLIENT_ID = window.GDRIVE_CLIENT_ID;
+}
+
+// Compatibility function for any remaining references to window.idbSaveEpub
+if (typeof window !== 'undefined' && typeof window.idbSaveEpub !== 'function') {
+    window.idbSaveEpub = async function(bookId, title, metadata = {}) {
+        console.log(`[DriveSync] Legacy window.idbSaveEpub called for book: ${title} (${bookId}). Using addBookMetadataOnly instead.`);
+        try {
+            // This will be initialized properly once the addBookMetadataOnly function is defined
+            if (typeof addBookMetadataOnly === 'function') {
+                return await addBookMetadataOnly(title, bookId, {...metadata, isRemoteOnly: true});
+            } else {
+                console.warn('[DriveSync] window.idbSaveEpub called before addBookMetadataOnly is defined');
+                // Create a minimal DB entry that will be shown in the bookshelf
+                const db = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open('ProgressiveReaderDB', 2);
+                    request.onerror = e => reject(e.target.error);
+                    request.onsuccess = e => resolve(e.target.result);
+                });
+                
+                const tx = db.transaction('books', 'readwrite');
+                const store = tx.objectStore('books');
+                
+                const bookData = {
+                    id: bookId,
+                    title: title || 'Untitled Book',
+                    addedDate: new Date(),
+                    lastOpened: null,
+                    coverImageBlob: null,
+                    isDemo: false,
+                    isRemoteOnly: true,
+                    ...metadata
+                };
+                
+                await new Promise((resolve, reject) => {
+                    const request = store.put(bookData);
+                    request.onerror = e => reject(e.target.error);
+                    request.onsuccess = () => resolve();
+                });
+                return bookId;
+            }
+        } catch (error) {
+            console.error('[DriveSync] Error in compatibility function window.idbSaveEpub:', error);
+            throw error;
+        }
+    };
+}
+
 // ****************************************************************************************
 // PUBLIC API:
 //   init()                          → bootstrap; silent if token cached
@@ -527,12 +578,16 @@ async function importInitialFiles(){
   for (const f of files) {
     const canonicalId = f.appProperties?.progReaderBookId || f.id;
     // Create a metadata-only entry that will show in the bookshelf UI
-    await addBookMetadataOnly(f.name.replace(/\.epub$/i, ''), canonicalId, { 
-      driveId: f.id, 
-      md5: f.md5Checksum, 
-      modifiedTime: f.modifiedTime,
-      isRemoteOnly: true 
-    });
+    try {
+      await addBookMetadataOnly(f.name.replace(/\.epub$/i, ''), canonicalId, { 
+        driveId: f.id, 
+        md5: f.md5Checksum, 
+        modifiedTime: f.modifiedTime,
+        isRemoteOnly: true 
+      });
+    } catch (error) {
+      console.error(`[DriveSync] Failed to create metadata for book: ${f.name} (${canonicalId})`, error);
+    }
   }
   
   console.info(`[DriveSync] Imported metadata for ${files.length} remote book(s) - content will be downloaded on demand`);
@@ -809,24 +864,6 @@ export function disconnect(){
 }
 
 export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive, deleteRemoteBook };
-
-// Client ID Shim
-if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
-    window.VITE_GDRIVE_CLIENT_ID = window.GDRIVE_CLIENT_ID;
-}
-
-// Compatibility function for any remaining references to window.idbSaveEpub
-if (typeof window !== 'undefined' && typeof window.idbSaveEpub !== 'function') {
-    window.idbSaveEpub = async function(bookId, title, metadata = {}) {
-        console.log(`[DriveSync] Legacy window.idbSaveEpub called for book: ${title} (${bookId}). Using addBookMetadataOnly instead.`);
-        try {
-            return await addBookMetadataOnly(title, bookId, {...metadata, isRemoteOnly: true});
-        } catch (error) {
-            console.error('[DriveSync] Error in compatibility function window.idbSaveEpub:', error);
-            throw error;
-        }
-    };
-}
 
 // New function: uploadBookToDrive
 export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
