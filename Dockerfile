@@ -35,8 +35,7 @@ COPY --from=frontend_builder /frontend/app/static/js/dist /app/app/static/js/dis
 COPY app/ /app/app/
 COPY templates/ /app/templates/
 
-# Copy other necessary root files (e.g., app.py for Gunicorn, run.py, config.py, CSV data)
-COPY app.py . 
+# Copy other necessary root files (run.py, config.py, CSV data)
 COPY run.py . 
 COPY config.py . 
 COPY JLPT_min.csv . 
@@ -53,5 +52,5 @@ EXPOSE 8080
 # Define environment variable for the port
 ENV PORT 8080
 
-# Run app.py when the container launches using Gunicorn
-CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 "app:create_app()" 
+# Run the application with Gunicorn
+CMD exec gunicorn --bind :$PORT --workers 1 --timeout 0 "app:create_app()"
