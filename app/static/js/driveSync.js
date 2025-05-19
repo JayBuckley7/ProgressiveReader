@@ -795,13 +795,15 @@ export async function runSyncLoop(){
     
     // Get next page token for pagination
     token = responseData.nextPageToken;
-    console.log(`[DriveSync] runSyncLoop: Next page token: ${token || 'NONE - end of changes'}`);
-    
-    // If we're at the last page, save the new start page token
-    if(!token && responseData.newStartPageToken) {
-      console.log(`[DriveSync] runSyncLoop: Saving new start page token: ${responseData.newStartPageToken}`);
-      await saveChangeCursor(responseData.newStartPageToken);
-      console.log(`[DriveSync] runSyncLoop: Successfully saved new cursor for future syncs`);
+
+    // If Drive reports zero changes, and gives us another nextPageToken but no newStartPageToken,
+    // we can safely checkpoint at that token and break. This prevents endless empty polling loops.
+    if ((responseData.changes?.length || 0) === 0) {
+      console.log('[DriveSync] runSyncLoop: No changes in this page; checkpointing cursor and exiting early.');
+      if (token) {
+        await saveChangeCursor(token);
+      }
+      break;
     }
   } while(token);
   
