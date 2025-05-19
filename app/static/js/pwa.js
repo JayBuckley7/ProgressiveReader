@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       // Register new service worker (or update existing)
-      navigator.serviceWorker.register('/static/js/service-worker.js')
+      // Register the service worker using the Flask route
+      navigator.serviceWorker.register('/service-worker.js')
         .then(registration => {
           console.log('ServiceWorker registration successful with scope: ', registration.scope);
           
