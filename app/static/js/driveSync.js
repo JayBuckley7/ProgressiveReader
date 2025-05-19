@@ -590,7 +590,7 @@ export async function runSyncLoop(){
   }while(token);
   const ms=(performance.now()-startT)|0;
   console.info(`[Drive] Synced: +${added} ∆${updated} –${removed}. ${(bytesDownloaded / 1024).toFixed(1)} KiB in ${ms.toFixed(0)} ms`);
-  window.dispatchEvent(new Event('drive-sync-complete'));
+  window.dispatchEvent(new CustomEvent('drive-sync-complete', { detail: { added, updated, removed } }));
   return { added, updated, removed, bytesDownloaded, cycleMs: ms };
 }
 
