@@ -662,64 +662,147 @@ async function saveRemoteBooksToDb(files) {
 
 // ── 7. Sync loop ----------------------------------------------------------
 export async function runSyncLoop(){
+  console.log('[DriveSync] runSyncLoop: Starting sync process...');
   window.dispatchEvent(new Event('drive-sync-start'));
-  if(!isConnected()) return;
+  
+  if(!isConnected()) {
+    console.log('[DriveSync] runSyncLoop: Not connected to Google Drive. Aborting sync.');
+    return;
+  }
+  
+  console.log('[DriveSync] runSyncLoop: Checking if token refresh is needed');
   await attemptRefreshToken();
+  
   const startT=performance.now();
+  console.log('[DriveSync] runSyncLoop: Getting folder ID from Drive');
   const folder=await seedDriveFolder();
+  console.log(`[DriveSync] runSyncLoop: Using Drive folder ID: ${folder}`);
+  
+  console.log('[DriveSync] runSyncLoop: Getting change cursor');
   let token=await getChangeCursor();
+  console.log(`[DriveSync] runSyncLoop: Starting with change cursor: ${token}`);
+  
   let added=0,updated=0,removed=0;
   let bytesDownloaded = 0;
+  let iteration = 0;
+  
   do{
+    iteration++;
+    console.log(`[DriveSync] runSyncLoop: Iteration ${iteration} - Fetching changes with pageToken: ${token}`);
+    
     const url=`https://www.googleapis.com/drive/v3/changes?pageToken=${token}&spaces=drive&fields=nextPageToken,newStartPageToken,changes(fileId,file(id,name,md5Checksum,mimeType,modifiedTime,appProperties,parents),removed)`;
+    console.log(`[DriveSync] runSyncLoop: Calling Drive API: ${url.substring(0, 100)}...`);
+    
     const res = await fetchWithAuth(url);
-    if(res.changes){
-      for(const ch of res.changes){
-        if(!ch.file) continue;
-        if(!ch.file.parents?.includes(folder)) continue;
-        if(ch.removed){ await deleteBookByDriveId(ch.fileId); removed++; continue; }
+    console.log(`[DriveSync] runSyncLoop: Got response from Drive API. Status: ${res.status}`);
+    
+    const responseData = await res.json();
+    console.log(`[DriveSync] runSyncLoop: Response contains ${responseData.changes?.length || 0} changes`);
+    
+    if(responseData.changes){
+      console.log(`[DriveSync] runSyncLoop: Processing ${responseData.changes.length} changes from Drive`);
+      
+      for(const ch of responseData.changes){
+        // Skip if file is null (this happens for files we don't have access to anymore)
+        if(!ch.file) {
+          console.log(`[DriveSync] runSyncLoop: Skipping change for fileId ${ch.fileId} - file data is null`);
+          continue;
+        }
+        
+        // Skip if file is not in our app folder
+        if(!ch.file.parents?.includes(folder)) {
+          console.log(`[DriveSync] runSyncLoop: Skipping change for file "${ch.file.name}" - not in our app folder`);
+          continue;
+        }
+        
+        // Handle removed files
+        if(ch.removed){ 
+          console.log(`[DriveSync] runSyncLoop: File removal detected for fileId: ${ch.fileId}`);
+          await deleteBookByDriveId(ch.fileId); 
+          console.log(`[DriveSync] runSyncLoop: Successfully deleted book with driveId: ${ch.fileId}`);
+          removed++; 
+          continue; 
+        }
+        
+        // Handle EPUB files
         if(ch.file.mimeType==='application/epub+zip'){
+          console.log(`[DriveSync] runSyncLoop: EPUB file change detected: "${ch.file.name}" (${ch.fileId})`);
           const canonicalId = ch.file.appProperties?.progReaderBookId || ch.fileId;
+          console.log(`[DriveSync] runSyncLoop: Using canonical ID: ${canonicalId} for file ${ch.fileId}`);
+          
           const existing = await getBookByDriveId(ch.fileId) || await getBookMetadata(canonicalId);
+          console.log(`[DriveSync] runSyncLoop: Book ${canonicalId} exists locally: ${!!existing}, isRemoteOnly: ${existing?.isRemoteOnly}`);
           
           // Check if this book already exists locally (with content)
           if (existing && !existing.isRemoteOnly) {
+            console.log(`[DriveSync] runSyncLoop: Updating metadata for existing local book: ${ch.file.name}`);
             // Only update metadata for existing local books
             await updateBookMetadata(canonicalId, { 
               driveId: ch.fileId, 
               md5: ch.file.md5Checksum, 
               modifiedTime: ch.file.modifiedTime 
             });
+            console.log(`[DriveSync] runSyncLoop: Successfully updated metadata for: ${ch.file.name}`);
             updated++;
           } else if (!existing) {
+            console.log(`[DriveSync] runSyncLoop: Found new book in Drive: ${ch.file.name}`);
             // For new books, just create a placeholder entry with isRemoteOnly=true
             // This is a metadata-only entry that will be shown in the bookshelf but needs explicit download
             const title = ch.file.name.replace(/\.epub$/i,'');
             
+            console.log(`[DriveSync] runSyncLoop: Creating metadata-only entry for: "${title}" (${canonicalId})`);
             // Use a structure similar to what's in bookshelfUI.js for remote-only books
-            // Note: We use a specialized version of addBook or similar function to add metadata-only entries
-            // This is a placeholder implementation - you'll need to create this function
             await addBookMetadataOnly(title, canonicalId, { 
               driveId: ch.fileId, 
               md5: ch.file.md5Checksum, 
               modifiedTime: ch.file.modifiedTime,
               isRemoteOnly: true 
             });
+            console.log(`[DriveSync] runSyncLoop: Successfully created metadata-only entry for: "${title}"`);
             added++;
+          } else {
+            console.log(`[DriveSync] runSyncLoop: Book already exists as remote-only: "${ch.file.name}" - skipping`);
           }
           continue;
         }
+        
+        // Handle progress.json files
         if(ch.file.name?.endsWith('.progress.json')){
-          const data=JSON.parse(new TextDecoder().decode(await downloadFile(ch.fileId)));
-          await window.mergeProgress(data); updated++; continue;
+          console.log(`[DriveSync] runSyncLoop: Found progress file: ${ch.file.name}`);
+          console.log(`[DriveSync] runSyncLoop: Downloading progress data from: ${ch.fileId}`);
+          const arrayBuffer = await downloadFile(ch.fileId);
+          console.log(`[DriveSync] runSyncLoop: Downloaded ${arrayBuffer.byteLength} bytes of progress data`);
+          
+          const data=JSON.parse(new TextDecoder().decode(arrayBuffer));
+          console.log(`[DriveSync] runSyncLoop: Progress data parsed successfully for book ID: ${data.bookId || 'unknown'}`);
+          
+          console.log(`[DriveSync] runSyncLoop: Merging progress data with local storage`);
+          await window.mergeProgress(data); 
+          console.log(`[DriveSync] runSyncLoop: Progress data merged successfully`);
+          updated++; 
+          continue;
         }
+        
+        console.log(`[DriveSync] runSyncLoop: Ignoring file of type: ${ch.file.mimeType} - ${ch.file.name}`);
       }
     }
-    token=res.nextPageToken;
-    if(!token && res.newStartPageToken) await saveChangeCursor(res.newStartPageToken);
-  }while(token);
+    
+    // Get next page token for pagination
+    token = responseData.nextPageToken;
+    console.log(`[DriveSync] runSyncLoop: Next page token: ${token || 'NONE - end of changes'}`);
+    
+    // If we're at the last page, save the new start page token
+    if(!token && responseData.newStartPageToken) {
+      console.log(`[DriveSync] runSyncLoop: Saving new start page token: ${responseData.newStartPageToken}`);
+      await saveChangeCursor(responseData.newStartPageToken);
+      console.log(`[DriveSync] runSyncLoop: Successfully saved new cursor for future syncs`);
+    }
+  } while(token);
+  
   const ms=(performance.now()-startT)|0;
+  console.log(`[DriveSync] runSyncLoop: Sync completed in ${ms.toFixed(0)}ms. Stats: +${added} added, ${updated} updated, ${removed} removed.`);
   console.info(`[Drive] Synced: +${added} ∆${updated} –${removed}. ${bytesDownloaded ? (bytesDownloaded / 1024).toFixed(1) + ' KiB' : 'metadata only'} in ${ms.toFixed(0)} ms`);
+  
   window.dispatchEvent(new Event('drive-sync-complete'));
   return { added, updated, removed, bytesDownloaded, cycleMs: ms };
 }
