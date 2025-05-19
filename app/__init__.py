@@ -36,11 +36,6 @@ def create_app(config_class=Config) -> Flask:
             app.logger.error(f"Error creating upload directory {upload_folder_abs_path}: {e}")
 
 
-    # --- Example: Add a simple test route directly here for now ---
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World from create_app!'
-    # --- End Example ---
 
     # --- Add routes for PWA resources ---
     @app.route('/offline')

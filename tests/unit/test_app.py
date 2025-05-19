@@ -6,12 +6,18 @@ class AppFactoryTestCase(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
         self.app.config['TESTING'] = True
+
+        @self.app.route('/test-hello')
+        def test_hello():
+            """Dummy route used only for this unit test."""
+            return 'Hello, Test!'
+
         self.client = self.app.test_client()
 
-    def test_hello_route(self):
-        response = self.client.get('/hello')
+    def test_dummy_route(self):
+        response = self.client.get('/test-hello')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data.decode('utf-8'), 'Hello, World from create_app!')
+        self.assertEqual(response.data.decode('utf-8'), 'Hello, Test!')
 
     def test_index_route(self):
         response = self.client.get('/')
