@@ -197,6 +197,12 @@ body {
   gap: clamp(1rem, 2vw, 1.75rem);
 }
 
+/* Ensure each book card link fills its grid cell */
+.book-item-link {
+  display: block;
+  position: relative;
+}
+
 .book-item {
   background-color: #fff;
   border: 1px solid #e0e6ed;
@@ -419,7 +425,8 @@ body {
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
-  z-index: 10;
+  z-index: 20;                       /* above title/link */
+  pointer-events: auto;
 
   /* visual */
   background-color: #6c757d;
