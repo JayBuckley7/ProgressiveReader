@@ -1,3 +1,4 @@
+"""Utility to pull chapters from books for demo data."""
 import os
 import sys
 import json

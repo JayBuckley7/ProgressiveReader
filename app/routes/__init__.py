@@ -1,1 +1,1 @@
-# This file makes the 'routes' directory a Python package 
+"""Package containing the application's Flask blueprints."""

@@ -1,3 +1,4 @@
+"""Entry point for running the Flask development server."""
 from app import create_app
 import logging # Import the logging module
 import os

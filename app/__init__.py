@@ -1,3 +1,4 @@
+"""Flask application factory that registers blueprints and routes."""
 import os
 import logging
 from flask import Flask, send_from_directory, jsonify

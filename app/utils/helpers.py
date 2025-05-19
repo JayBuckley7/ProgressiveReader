@@ -1,3 +1,4 @@
+"""Helper utilities for validating file uploads."""
 from flask import current_app
 
 def allowed_file(filename):

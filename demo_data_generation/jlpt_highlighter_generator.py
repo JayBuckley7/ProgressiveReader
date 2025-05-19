@@ -1,3 +1,4 @@
+"""Script to generate JLPT highlighter demo data."""
 import os
 import sys
 import re
