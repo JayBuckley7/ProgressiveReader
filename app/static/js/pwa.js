@@ -115,12 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       if (status.state === 'granted') {
-        // Register for periodic sync
-        await registration.periodicSync.register('sync-reading-progress', {
-          // Sync every 24 hours
-          minInterval: 24 * 60 * 60 * 1000,
-        });
-        console.log('Periodic background sync registered');
+        // Periodic background sync disabled
       }
     } catch (error) {
       console.error('Periodic background sync setup failed:', error);
@@ -129,13 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Handle online/offline events
   window.addEventListener('online', () => {
-    console.log('App is online. Triggering sync...');
-    // Trigger a sync
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.sync.register('sync-reading-progress');
-      });
-    }
+    console.log('App is online.');
   });
   
   window.addEventListener('offline', () => {

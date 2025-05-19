@@ -125,22 +125,3 @@ self.addEventListener('fetch', event => {
       })
   );
 });
-
-// Handle background sync for offline functionality
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-reading-progress') {
-    event.waitUntil(syncReadingProgress());
-  }
-});
-
-// Example function to sync reading progress when back online
-async function syncReadingProgress() {
-  try {
-    // Here you would implement logic to send cached reading progress to server
-    console.log('[Service Worker] Syncing reading progress');
-    // Example: const requests = await idb.getAll('readingProgressOutbox');
-    // Then send requests to server
-  } catch (error) {
-    console.error('[Service Worker] Sync error:', error);
-  }
-} 
