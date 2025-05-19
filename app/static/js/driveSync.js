@@ -290,9 +290,12 @@ export async function seedDriveFolder(){
           console.log(`[DriveSync] seedDriveFolder: Attempting to trash ${res.files.length - 1} duplicate folder(s).`);
           for (let i = 1; i < res.files.length; i++) {
             console.log(`[DriveSync] seedDriveFolder: Trashing duplicate folder ID: ${res.files[i].id}`);
-            driveFilesUpdate(res.files[i].id, { trashed: true }).catch((err)=>{
-                console.warn(`[DriveSync] seedDriveFolder: Non-fatal error trashing duplicate folder ${res.files[i].id}:`, err.message);
-            });
+            try {
+                await driveFilesUpdate(res.files[i].id, { trashed: true });
+            } catch (err) {
+                console.warn(`[DriveSync] seedDriveFolder: Error trashing duplicate folder ${res.files[i].id}:`, err.message);
+                throw err; // propagate to outer catch
+            }
           }
       }
       return folderId;
