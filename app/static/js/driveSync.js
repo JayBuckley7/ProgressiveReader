@@ -410,13 +410,14 @@ function _markDisconnected() {
   localStorage.removeItem(TOKEN_STORE_KEY);
   localStorage.removeItem('drive.folderId'); // Ensure this matches the key used in seedDriveFolder
   clearDriveConnectedCookie();
-  // _notifyAuthLost() is typically called by the function that detects the auth loss and calls _markDisconnected or disconnect.
+  _notifyAuthLost();
 }
 async function fetchWithAuth(url, opts = {}) {
   const res = await fetch(url, { ...opts, headers: { ...authHeader(), ...(opts.headers||{}) } });
   if (res.status === 401) { // Only 401 strictly means auth is lost for sure
     console.warn('[DriveSync] Auth error 401 on', url);
     _markDisconnected();
+    _notifyAuthLost();
     throw new Error('Google Drive authorisation lost (401)');
   } else if (res.status === 403) {
     // Try to parse error body for reason
