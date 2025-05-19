@@ -179,22 +179,23 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       deleteBtn.innerHTML = '&#10005;';
       deleteBtn.title = `Delete "${book.title}"`;
       deleteBtn.setAttribute('aria-label', `Delete ${book.title || 'Untitled Book'}`);
-      deleteBtn.onclick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!confirm(`Delete "${book.title}"? This cannot be undone.`)) return;
-        try {
-          if (book.isRemoteOnly && driveSync?.isConnected?.()) {
-            await driveSync.deleteRemoteBook(book.id);
-          } else {
-            await deleteBook(book.id);
-          }
-          renderBookshelf(driveSync);
-        } catch (err) {
-          console.error(`${logPrefix} Error deleting book:`, err);
-          alert(`Failed to delete book: ${err.message || 'Unknown error'}`);
-        }
-      };
+        deleteBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!confirm(`Delete "${book.title}"? This cannot be undone.`)) return;
+            try {
+                if (driveSync?.isConnected?.() && book.driveId) {
+                    await driveSync.deleteRemoteBook(book.driveId);
+                }
+                if (!book.isRemoteOnly) {
+                    await deleteBook(book.id);
+                }
+                renderBookshelf(driveSync);
+            } catch (err) {
+                console.error(`${logPrefix} Error deleting book:`, err);
+                alert(`Failed to delete book: ${err.message || 'Unknown error'}`);
+            }
+        };
       item.appendChild(deleteBtn);
 
       /* ─ Change‑cover button + hidden input ─ */
