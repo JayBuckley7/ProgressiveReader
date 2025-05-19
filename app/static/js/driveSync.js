@@ -611,11 +611,17 @@ async function saveRemoteBooksToDb(files) {
         });
         
         if (existingBook) {
-          // Update existing book metadata
-          existingBook.driveId = f.id;
-          existingBook.md5 = f.md5Checksum;
-          existingBook.modifiedTime = f.modifiedTime;
-          existingBook.isRemoteOnly = true;
+          // Update existing book metadata WITHOUT overwriting local-content flags
+          existingBook.driveId       = f.id;
+          existingBook.md5           = f.md5Checksum;
+          existingBook.modifiedTime  = f.modifiedTime;
+          
+          // Preserve local/offline status: only mark remote-only if the book truly lacks content
+          if (!('content' in existingBook) || !(existingBook.content instanceof Blob)) {
+            existingBook.isRemoteOnly = true;
+          } else {
+            existingBook.isRemoteOnly = false; // Ensure it stays offline-capable if we have the content
+          }
           
           await new Promise((resolve, reject) => {
             const request = store.put(existingBook);
