@@ -234,6 +234,10 @@ async function initializeApp() {
 
       if (driveSync.isConnected()) {
         console.log(`${logPrefix} Early driveSync.init() successful – Drive connected.`);
+        if (!driveSync.getFolderId()) {
+          console.error(`${logPrefix} Drive folder ID is null after init – user may lack permissions.`);
+          showBanner('Drive folder unavailable', 'offline', 5000);
+        }
       } else {
         console.log(`${logPrefix} Early driveSync.init() completed – Drive not connected.`);
       }
