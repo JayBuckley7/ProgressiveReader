@@ -10,6 +10,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/translate', methods=['POST'])
 def translate_content():
+    """Translate HTML content with OpenAI and return JSON or stream events."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -126,6 +127,7 @@ def translate_content():
 
 @api_bp.route('/delete_cached_translation', methods=['POST'])
 def delete_cached_translation_route():
+    """Acknowledge removal of cached translation on the client."""
     data = request.get_json()
     item_index = data.get('item_index') 
     if item_index is None: 
@@ -135,6 +137,7 @@ def delete_cached_translation_route():
 
 @api_bp.route('/toggle_jlpt', methods=['POST'])
 def toggle_jlpt():
+    """Enable or disable JLPT highlighting in the session."""
     data = request.get_json()
     if data is None or 'enabled' not in data or not isinstance(data['enabled'], bool):
         return jsonify({'success': False, 'error': 'Invalid payload. "enabled" boolean is required.'}), 400
@@ -146,6 +149,7 @@ def toggle_jlpt():
 
 @api_bp.route('/get_jpdb_data', methods=['POST'])
 def get_jpdb_data():
+    """Fetch token and vocabulary data from JPDB for text segments."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -380,6 +384,7 @@ def get_jpdb_data():
 
 @api_bp.route('/mine_jpdb_word', methods=['POST'])
 def mine_jpdb_word():
+    """Send a request to add a vocabulary word to a JPDB deck."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -405,6 +410,7 @@ def mine_jpdb_word():
 
 @api_bp.route('/update_jpdb_word_state', methods=['POST'])
 def update_jpdb_word_state():
+    """Update the study state of a JPDB vocabulary entry."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -435,6 +441,7 @@ def update_jpdb_word_state():
 
 @api_bp.route('/review_jpdb_card', methods=['POST'])
 def review_jpdb_card():
+    """Record a review rating for a JPDB vocabulary card."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400

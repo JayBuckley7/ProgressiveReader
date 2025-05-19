@@ -6,30 +6,14 @@ import uuid
 # Use a more descriptive name like 'main_bp' or similar
 main_bp = Blueprint('main', __name__)
 
-# Helper to clean up old temp file path from session (kept here for now as it relates to index)
-# Re-evaluated cleanup function and removed it as obsolete for persistent storage.
-# def cleanup_temp_file(path_key='temp_epub_path'):
-#     old_temp_path = session.pop(path_key, None)
-
 @main_bp.route('/')
 def index():
-    # cleanup_temp_file() # Decide if this cleanup logic is still needed at the index -> Removing call
-    # This will be replaced by client-side IndexedDB logic
-    # books_dir = current_app.config['USER_EPUB_DIR']
-    # books = []
-    # if os.path.exists(books_dir):
-    #     for f in os.listdir(books_dir):
-    #         if f.endswith('.epub'):
-    #             # try to get title and author from filename
-    #             parts = os.path.splitext(f)[0].split(' - ')
-    #             title = parts[0]
-    #             author = parts[1] if len(parts) > 1 else 'Unknown Author'
-    #             books.append({'filename': f, 'title': title, 'author': author, 'id': f}) # Using filename as id for now
-    # books.sort(key=lambda b: b['title']) # Sort by title
-    return render_template('index.html', books=[]) # Pass an empty list, JS will populate
+    """Return the index page; JavaScript fills in the book list."""
+    return render_template('index.html', books=[])
 
 @main_bp.route('/upload', methods=['POST'])
 def upload_file():
+    """Validate the uploaded file and return a JSON status message."""
     if 'file' not in request.files:
         return jsonify({'success': False, 'message': 'No file part'}), 400
     file = request.files['file']
@@ -73,8 +57,7 @@ def upload_file():
 
 @main_bp.route('/delete/<filename>', methods=['POST'])
 def delete_book(filename):
-    # This endpoint is deprecated as deletion is handled client-side.
-    # Keeping it might be useful for future API calls, but returning error for now.
+    """Return an error because deletion happens in the browser."""
     return jsonify({'success': False, 'message': 'Deletion handled client-side via IndexedDB.'}), 400
 
 # Remove old /book/cover route if it exists, as covers aren't handled yet
