@@ -135,7 +135,7 @@ async function handleFileSelect() {
         // Automatically upload to Drive if connected
         if (driveSync?.isConnected?.()) {
             try {
-                await driveSync.uploadBookToDrive(bookIdFromDB, title, file);
+                await driveSync.uploadBookToDrive(bookIdFromDB, title, file, extension);
                 console.log(`${logPrefix} Auto-upload to Drive completed for ${bookIdFromDB}`);
             } catch (e) {
                 console.warn(`${logPrefix} Auto-upload to Drive failed for ${bookIdFromDB}:`, e);

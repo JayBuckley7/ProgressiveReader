@@ -49,6 +49,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
 - **Session-Based**: Stores book structure (spine, ToC) and current state in the user's session.
 - **Custom Covers**: Use the camera icon on a book card to upload a cover image.
 - **PDF Parsing**: Extracts page count and estimated font size when uploading PDF files.
+- **Google Drive Sync**: Optionally syncs your library to Google Drive while preserving each book's original file type.
 
 ## Getting Started
 
