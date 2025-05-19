@@ -1,5 +1,5 @@
 import { ready as dbReady, getBook } from "./dbService.js";
-import { renderBookshelf } from "./bookshelfUI.js";
+import { renderBookshelf } from "./bookshelf.js";
 import { setupUploadForm } from "./uploadHandler.js";
 import * as driveSync from "./driveSync.js";
 import { DriveButton } from "./driveButton.js"; // Import the new component
