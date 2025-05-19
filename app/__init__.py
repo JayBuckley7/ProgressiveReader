@@ -10,7 +10,7 @@ class FilterImageRequests(logging.Filter):
         # Filter successful GET requests for image URLs to reduce noise
         return not ('GET /image/' in msg and ' 200 ' in msg)
 
-def create_app(config_class=Config):
+def create_app(config_class=Config) -> Flask:
     app = Flask(
         __name__, 
         instance_relative_config=False,
@@ -34,13 +34,6 @@ def create_app(config_class=Config):
         except OSError as e:
             app.logger.error(f"Error creating upload directory {upload_folder_abs_path}: {e}")
 
-    # --- Register Blueprints and Extensions --- 
-    # (We will add these later)
-    # from .routes import main_bp, reader_bp, api_bp, book_bp 
-    # app.register_blueprint(main_bp)
-    # app.register_blueprint(reader_bp)
-    # app.register_blueprint(api_bp)
-    # app.register_blueprint(book_bp)
 
     # --- Example: Add a simple test route directly here for now ---
     @app.route('/hello')
@@ -81,9 +74,6 @@ def create_app(config_class=Config):
         app.register_blueprint(book.book_bp) # Register the book blueprint
         app.register_blueprint(reader.reader_bp) # Register the reader blueprint
         app.register_blueprint(api.api_bp) # Register the api blueprint
-        # Example: We'll add more blueprints like api, etc. here later
-        # from .routes import api
-        # app.register_blueprint(api.api_bp)
 
         # You might also initialize extensions here if needed
         # e.g., db.init_app(app)
