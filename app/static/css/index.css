@@ -429,7 +429,7 @@ body {
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
-  z-index: 20;                       /* above title/link */
+  z-index: 30;                       /* ensure above other controls */
   pointer-events: auto;
 
   /* visual */
