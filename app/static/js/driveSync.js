@@ -915,7 +915,8 @@ export async function init(isExplicitCall = false){
       // Cookie is false or null, so we skip auto-init
       const reason = cookieStatus === false ? "gdrive_connected cookie was 'false' (user likely disconnected previously)." : "gdrive_connected cookie not found (first visit or cookie cleared).";
       console.log(`[DriveSync] init: Auto-init: SKIPPING full initialization because ${reason} Waiting for explicit user action (e.g., clicking connect button).`);
-      _initialImportDone = true; // Prevent import attempts if user connects later in this session without a page reload
+      // Leave _initialImportDone as false so a later explicit connection can
+      // perform the initial import and capture a proper startPageToken.
       window.dispatchEvent(new Event('drive-sync-complete')); // End "syncing" state shown to user
       window.dispatchEvent(new Event('drive-disconnect')); // Ensure UI is in disconnected state
       return; // Stop further automatic initialization
