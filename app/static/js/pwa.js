@@ -32,10 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(registration => {
           console.log('ServiceWorker registration successful with scope: ', registration.scope);
           
-          // Set up periodic background sync if supported and needed
-          if ('periodicSync' in registration) {
-            setupPeriodicSync(registration);
-          }
         })
         .catch(error => {
           console.error('ServiceWorker registration failed: ', error);
@@ -106,36 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Function to set up periodic sync
-  async function setupPeriodicSync(registration) {
-    try {
-      // Request permission for periodic background sync
-      const status = await navigator.permissions.query({
-        name: 'periodic-background-sync',
-      });
-      
-      if (status.state === 'granted') {
-        // Register for periodic sync
-        await registration.periodicSync.register('sync-reading-progress', {
-          // Sync every 24 hours
-          minInterval: 24 * 60 * 60 * 1000,
-        });
-        console.log('Periodic background sync registered');
-      }
-    } catch (error) {
-      console.error('Periodic background sync setup failed:', error);
-    }
-  }
-  
   // Handle online/offline events
   window.addEventListener('online', () => {
-    console.log('App is online. Triggering sync...');
-    // Trigger a sync
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.sync.register('sync-reading-progress');
-      });
-    }
+    console.log('App is online.');
   });
   
   window.addEventListener('offline', () => {
