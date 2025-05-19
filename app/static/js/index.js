@@ -29,6 +29,8 @@ async function initializeApp() {
     "drive-controls-container",
   );
 
+  const driveLinkHeader = document.getElementById('btn-drive');
+
   // const syncBtn = document.getElementById('btn-sync'); // Now managed by DriveButton
   // const driveLink = document.getElementById('btn-drive'); // Now managed by DriveButton
 
@@ -184,6 +186,7 @@ async function initializeApp() {
       showBanner("Online", "idle", 2000);
       updateIndicator(true);
       driveButton?.refreshState(); // Refresh button state when coming online
+      updateDriveLink();
     });
     window.addEventListener("drive-disconnect", () => {
       if (banner) {
@@ -192,59 +195,59 @@ async function initializeApp() {
       }
       updateIndicator(false);
       driveButton?.refreshState();
+      updateDriveLink();
     });
 
-    try {
-      console.log(`${logPrefix} Attempting early driveSync.init()...`);
-      await driveSync.init();
-      driveButton?.refreshState();
-      updateIndicator(driveSync.isConnected());
-
+    // Helper to keep Drive folder link up-to-date
+    function updateDriveLink() {
+      if (!driveLinkHeader) return;
       if (driveSync.isConnected()) {
-        console.log(
-          `${logPrefix} Early driveSync.init() successful, Drive is connected.`,
-        );
-      } else {
-        console.log(
-          `${logPrefix} Early driveSync.init() completed, but Drive is not connected.`,
-        );
+        const folderId = driveSync.getFolderId();
+        if (folderId) {
+          driveLinkHeader.href = `https://drive.google.com/drive/folders/${folderId}`;
+          driveLinkHeader.style.display = 'inline-flex';
+          return;
+        }
       }
-    } catch (err) {
-      console.warn(
-        `${logPrefix} Early driveSync.init() failed or token absent:`,
-        err.message,
-      );
-      driveButton?.refreshState();
-      updateIndicator(false);
+      // Not connected or no folder yet ⇒ hide link
+      driveLinkHeader.style.display = 'none';
     }
 
-    if (driveSync && typeof driveSync.onAuthLost === "function") {
+    /* ─────────────── Initial silent Drive init ─────────────── */
+    console.log(`${logPrefix} Attempting early driveSync.init()…`);
+    try {
+      await driveSync.init(); // silent (auto-hydrate)
+      driveButton?.refreshState();
+      updateIndicator(driveSync.isConnected());
+      updateDriveLink();
+
+      if (driveSync.isConnected()) {
+        console.log(`${logPrefix} Early driveSync.init() successful – Drive connected.`);
+      } else {
+        console.log(`${logPrefix} Early driveSync.init() completed – Drive not connected.`);
+      }
+    } catch (err) {
+      console.warn(`${logPrefix} Early driveSync.init() failed or token absent:`, err.message);
+      driveButton?.refreshState();
+      updateIndicator(false);
+      updateDriveLink();
+    }
+
+    // Listen for auth-lost callback from driveSync module (if provided)
+    if (driveSync && typeof driveSync.onAuthLost === 'function') {
       driveSync.onAuthLost(() => {
-        console.warn(
-          `${logPrefix} Auth lost callback triggered. Resetting UI.`,
-        );
+        console.warn(`${logPrefix} Auth lost callback triggered. Resetting UI.`);
         driveButton?.refreshState();
         updateIndicator(false);
-        alert("Google Drive connection lost. Please connect again.");
+        updateDriveLink();
+        alert('Google Drive connection lost. Please connect again.');
       });
     }
 
     console.log(`${logPrefix} Application initialization complete.`);
+
   } catch (err) {
     console.error(`${logPrefix} Error during application initialization:`, err);
-    if (recentBooksGrid) {
-      recentBooksGrid.innerHTML =
-        "<p>Error initializing application. Cannot load bookshelf.</p>";
-    } else {
-      alert("Critical error initializing application components.");
-    }
-    driveButton?.refreshState();
-    updateIndicator(false);
-    const uploadButton = document.querySelector("#upload-form button"); // Note: this is the main upload button, not the card one
-    if (uploadButton) {
-      uploadButton.disabled = true;
-      uploadButton.textContent = "Error Initializing";
-    }
   }
 }
 
