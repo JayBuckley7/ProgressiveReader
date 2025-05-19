@@ -9,6 +9,7 @@ let showPopupOnHoverCheckbox, touchscreenSupportCheckbox, disableFadeAnimationCh
 let customPopupCssInput, exportSettingsBtn, importSettingsBtn;
 let panelNavButtons, settingPanels;
 let autoloadCheckbox;
+let preferDueCardsCheckbox;
 
 const CEFR_LEVELS_SETTINGS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const DEFAULT_SETTINGS_MODAL = { 
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS_MODAL = {
     neverForgetDeckId: '',
     contextWidth: 1,
     forqOnMine: false,
+    preferDueCards: false,
     showPopupKey: 'ShiftLeft',
     addKey: 'None',
     dialogKey: 'None',
@@ -79,6 +81,7 @@ function _selectDOMElements() {
     panelNavButtons = document.querySelectorAll('.panel-nav-btn');
     settingPanels = document.querySelectorAll('.settings-panel-content');
     autoloadCheckbox = document.getElementById('autoload-checkbox');
+    preferDueCardsCheckbox = document.getElementById('prefer-due-cards');
 }
 
 function _updateCefrOutput() {
@@ -108,6 +111,18 @@ function _updateJlptToggleVisibility() {
         } else {
             jlptToggleContainer.style.display = 'none';
         }
+    }
+}
+
+function _updateDueCardsVisibility() {
+    const container = document.getElementById('prefer-due-cards-container');
+    if (!container) return;
+    const getCookieFunc = window.appUtils ? window.appUtils.getCookie : getCookie;
+    const key = getCookieFunc('jpdb_api_key');
+    if (key && key !== 'demo_mode_key') {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
     }
 }
 
@@ -188,9 +203,13 @@ function _loadSettingsToUI() {
     if (autoloadCheckbox && window.storageManager && typeof window.storageManager.getAutoloadPreference === 'function') {
         autoloadCheckbox.checked = window.storageManager.getAutoloadPreference();
     }
+    if (preferDueCardsCheckbox) {
+        preferDueCardsCheckbox.checked = localStorage.getItem('prefer_due_cards') === 'true';
+    }
 
     _updateCefrOutput();
     _updateJlptToggleVisibility();
+    _updateDueCardsVisibility();
     console.log("Settings loaded into UI.");
 }
 
@@ -222,7 +241,7 @@ function _attachEventListeners() {
     // Note: ThemeSelect listener is in themeManager.js as it calls applyTheme directly.
 
     if (jpdbApiKeyInput) {
-        jpdbApiKeyInput.addEventListener('change', () => { 
+        jpdbApiKeyInput.addEventListener('change', () => {
             const apiKeyValue = jpdbApiKeyInput.value.trim();
             console.log(`JPDB API Key changed. New value length: ${apiKeyValue.length}`);
             
@@ -240,11 +259,13 @@ function _attachEventListeners() {
                 const updatedConfig = window.jpHighlighter.loadConfig();
                 console.log('New config after API key change:', updatedConfig);
             }
+            _updateDueCardsVisibility();
         });
-        
+
         // Also keep the input event for real-time saving
         jpdbApiKeyInput.addEventListener('input', () => {
             if (window.appUtils) window.appUtils.setCookie('jpdb_api_key', jpdbApiKeyInput.value.trim());
+            _updateDueCardsVisibility();
         });
     }
     if (miningDeckIdInput) miningDeckIdInput.addEventListener('input', () => localStorage.setItem('jpdbMiningDeckId', miningDeckIdInput.value.trim()));
@@ -564,6 +585,12 @@ function _attachEventListeners() {
         });
     }
 
+    if (preferDueCardsCheckbox && window.storageManager && typeof window.storageManager.savePreferDueCards === 'function') {
+        preferDueCardsCheckbox.addEventListener('change', () => {
+            window.storageManager.savePreferDueCards(preferDueCardsCheckbox.checked);
+        });
+    }
+
     // Panel Navigation
     if (panelNavButtons && settingPanels) {
         panelNavButtons.forEach(button => {
@@ -592,6 +619,7 @@ function _attachEventListeners() {
             settingsToExport.userTheme = localStorage.getItem('userTheme') || DEFAULT_SETTINGS_MODAL.userTheme;
             settingsToExport.fontSize = localStorage.getItem('readerUserFontSize') || '16'; // Using the FONT_SIZE_KEY from fontSizeManager
             settingsToExport.autoload_preference = getAutoloadPrefFunc();
+            settingsToExport.prefer_due_cards = localStorage.getItem('prefer_due_cards') === 'true';
 
             const jlptLocalStorageKeys = [
                 'jpdbMiningDeckId', 'customWordCSS', 'forqDeckId', 'blacklistDeckId', 
@@ -649,6 +677,7 @@ function _attachEventListeners() {
                             if (importedSettings.hasOwnProperty('userTheme')) localStorage.setItem('userTheme', importedSettings.userTheme);
                             if (importedSettings.hasOwnProperty('fontSize')) localStorage.setItem('readerUserFontSize', importedSettings.fontSize);
                             if (importedSettings.hasOwnProperty('autoload_preference')) saveAutoloadPrefFunc(importedSettings.autoload_preference);
+                            if (importedSettings.hasOwnProperty('prefer_due_cards')) localStorage.setItem('prefer_due_cards', importedSettings.prefer_due_cards);
 
                             const jlptLocalStorageKeys = [
                                 'jpdbMiningDeckId', 'customWordCSS', 'forqDeckId', 'blacklistDeckId', 

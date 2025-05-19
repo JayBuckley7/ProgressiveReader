@@ -1,7 +1,7 @@
 // translationManager.js
 
 let contentArea; // Set by init
-let translateButton, translateCefrButton, loadCachedBtn, revertBtn, manualLoadCachedBtn, autoloadCheckbox;
+let translateButton, translateCefrButton, loadCachedBtn, revertBtn, manualLoadCachedBtn, autoloadCheckbox, preferDueCardsCheckbox;
 
 let originalPageContent = "";
 let trueOriginalServerContent = ""; // Pristine content from server
@@ -25,6 +25,7 @@ function _selectDOMElements() {
     revertBtn = document.getElementById('revert-translation-btn');
     manualLoadCachedBtn = document.getElementById('manual-load-cached-btn');
     autoloadCheckbox = document.getElementById('autoload-checkbox');
+    preferDueCardsCheckbox = document.getElementById('prefer-due-cards');
 }
 
 function updateDisplayButtons() {
@@ -169,6 +170,21 @@ async function callTranslateAPI(payload) {
         payload.content = originalPageContent;
         // Enable streaming by default
         payload.stream = true;
+
+        const preferDue = window.storageManager ? window.storageManager.getPreferDueCards() : (preferDueCardsCheckbox && preferDueCardsCheckbox.checked);
+        if (preferDue) {
+            try {
+                const resp = await fetch('/api/due_cards', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                if (resp.ok) {
+                    const dueWords = await resp.json();
+                    if (Array.isArray(dueWords) && dueWords.length > 0) {
+                        payload.due_cards = dueWords;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch due cards:', err);
+            }
+        }
 
         if (payload.stream) {
             // Handle streaming response using EventSource
