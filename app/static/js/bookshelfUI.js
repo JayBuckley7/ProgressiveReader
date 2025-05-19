@@ -231,37 +231,29 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       coverWrapper.appendChild(coverBtn);
       item.appendChild(coverInput);
 
-      /* ─ Remote‑only: save‑offline + custom click ─ */
+      /* ─ Remote‑only handling ─ */
       if (book.isRemoteOnly) {
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn-save-offline action-btn';
-        saveBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display:block;margin:auto;">
-            <path d="M5 20h14v-2H5v2zm7-18l-7 7h4v4h6v-4h4l-7-7z" />
-          </svg>`;
-        saveBtn.title = `Save "${book.title}" offline`;
-        saveBtn.setAttribute('aria-label', saveBtn.title);
+        // Auto-download the book in the background when connected
+        if (driveSync?.isConnected?.()) {
+          (async () => {
+            try {
+              const blob = await driveSync.downloadBook(book.id);
+              await addBook(book.title, blob, book.id);
+              renderBookshelf(driveSync);
+            } catch (err) {
+              console.error(`${logPrefix} Auto-download failed:`, err);
+            }
+          })();
+        }
 
-        saveBtn.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            const blob = await driveSync.downloadBook(book.id);
-            await addBook(book.title, blob, book.id);
-            renderBookshelf(driveSync);
-          } catch (err) {
-            console.error(`${logPrefix} Save offline failed:`, err);
-            alert('Failed to save book offline');
-          }
-        };
-        item.appendChild(saveBtn);
-
-        // Override default link behaviour: download then open at last position
         bookLink.onclick = async (ev) => {
           ev.preventDefault();
           try {
-            const blob = await driveSync.downloadBook(book.id);
-            await addBook(book.title, blob, book.id);
+            let blob = null;
+            if (driveSync?.isConnected?.()) {
+              blob = await driveSync.downloadBook(book.id);
+              await addBook(book.title, blob, book.id);
+            }
             await openBookAtProgress(book.id, book.title);
           } catch (err) {
             console.error(`${logPrefix} Failed to load remote book`, err);
@@ -274,36 +266,6 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           ev.preventDefault();
           await openBookAtProgress(book.id, book.title);
         };
-      }
-
-      /* ─ Local‑only: upload to Drive ─ */
-      if (driveSync?.isConnected?.() && !book.isRemoteOnly && !book.driveId) {
-        const uploadBtn = document.createElement('button');
-        uploadBtn.className = 'btn-upload-drive action-btn';
-        uploadBtn.innerHTML = `
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" style="display:block;margin:auto;">
-            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
-          </svg>`;
-        uploadBtn.title = `Upload "${book.title}" to Google Drive`;
-        uploadBtn.setAttribute('aria-label', uploadBtn.title);
-
-        uploadBtn.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            const bookData = await getBook(book.id);
-            const epubBlob = bookData?.content;
-            if (!epubBlob) {
-              throw new Error('EPUB data not found');
-            }
-            await driveSync.uploadBookToDrive(book.id, book.title, epubBlob);
-            renderBookshelf(driveSync);
-          } catch (err) {
-            console.error(`${logPrefix} Upload to Drive failed:`, err);
-            alert('Failed to upload to Google Drive');
-          }
-        };
-        item.appendChild(uploadBtn);
       }
 
       // ─ Long‑press on mobile to show action buttons ─
