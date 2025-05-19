@@ -216,7 +216,15 @@ async function hydrateToken(){
 
   if(saved && saved.expiry && Date.now() < saved.expiry-30_000){
     console.log('[DriveSync] hydrateToken: Token loaded from localStorage and is fresh.', saved.userProfile ? 'Profile also loaded.' : 'Profile not in token.');
-    gToken = saved; 
+    gToken = saved;
+    if(!gToken.userProfile){
+      try {
+        await fetchAndStoreUserProfile(gToken.access);
+        localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(gToken));
+      } catch (err) {
+        console.warn('[DriveSync] hydrateToken: Failed to fetch profile during hydration:', err);
+      }
+    }
     setDriveConnectedCookie(true);
     startScheduler();
   } else if (saved) { 
