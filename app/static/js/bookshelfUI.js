@@ -288,17 +288,11 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           e.stopPropagation();
           try {
             const bookData = await getBook(book.id);
-            if (!bookData?.content) {
-              throw new Error('Book content not found');
+            const epubBlob = bookData?.content;
+            if (!epubBlob) {
+              throw new Error('EPUB data not found');
             }
-            const uploadedFile = await driveSync.uploadBookToDrive(
-              book.id,
-              book.title,
-              bookData.content,
-            );
-            console.log(
-              `${logPrefix} Uploaded "${book.title}" to Drive. File ID: ${uploadedFile.id}`,
-            );
+            await driveSync.uploadBookToDrive(book.id, book.title, epubBlob);
             renderBookshelf(driveSync);
           } catch (err) {
             console.error(`${logPrefix} Upload to Drive failed:`, err);
