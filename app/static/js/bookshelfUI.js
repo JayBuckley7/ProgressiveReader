@@ -124,14 +124,18 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       }
       item.setAttribute('role', 'listitem');
 
-      /* ─ Cover image ─ */
+      /* — Cover image — */
+      const coverWrapper = document.createElement("div");
+      coverWrapper.className = "book-cover-wrapper";
+      item.appendChild(coverWrapper);
+
       const injectCover = (blob) => {
         const img = document.createElement('img');
         img.src = URL.createObjectURL(blob);
         img.alt = `Cover for ${book.title || 'Untitled Book'}`;
         img.loading = 'lazy';
         img.onload = img.onerror = () => URL.revokeObjectURL(img.src);
-        item.appendChild(img);
+        coverWrapper.appendChild(img);
       };
 
       if (book.coverImageBlob instanceof Blob) {
@@ -142,7 +146,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         placeholder.setAttribute('role', 'img');
         placeholder.setAttribute('aria-label', 'Cover placeholder');
         placeholder.textContent = 'No Cover';
-        item.appendChild(placeholder);
+        coverWrapper.appendChild(placeholder);
 
         // Try fetching cover from Drive
         if (book.isRemoteOnly && driveSync?.isConnected?.()) {
@@ -154,7 +158,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
               const cover = await proc.getCoverBlob();
               if (cover) {
                 injectCover(cover);
-                item.removeChild(placeholder);
+                coverWrapper.removeChild(placeholder);
               }
             } catch (e) {
               console.warn('Failed to fetch remote cover for', book.id, e);
@@ -164,7 +168,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       }
 
       /* ─ Title ─ */
-      const titleEl = document.createElement('p');
+      const titleEl = document.createElement('label');
       titleEl.className = 'book-item-title';
       titleEl.textContent = book.title || 'Untitled Book';
       item.appendChild(titleEl);
@@ -224,7 +228,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         e.stopPropagation();
       };
 
-      item.appendChild(coverBtn);
+      coverWrapper.appendChild(coverBtn);
       item.appendChild(coverInput);
 
       /* ─ Remote‑only: save‑offline + custom click ─ */
