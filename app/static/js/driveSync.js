@@ -27,7 +27,20 @@ const SCOPES         = 'https://www.googleapis.com/auth/drive.file https://www.g
 const FOLDER_NAME    = 'ProgReader';
 const TOKEN_STORE_KEY= 'drive.token';
 const CURSOR_DEFAULT = '1';
-const EPUB_MIME_TYPE = 'application/epub+zip';
+const MIME_TYPES = {
+  epub: 'application/epub+zip',
+  pdf: 'application/pdf',
+  txt: 'text/plain',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  mobi: 'application/x-mobipocket-ebook'
+};
+
+const EPUB_MIME_TYPE = MIME_TYPES.epub;
+
+function getMimeType(ext) {
+  if (!ext) return EPUB_MIME_TYPE;
+  return MIME_TYPES[ext.toLowerCase()] || 'application/octet-stream';
+}
 
 // ── 1. Runtime state --------------------------------------------------------------------
 let gToken        = null;                 // { access, expiry }
@@ -550,14 +563,17 @@ async function downloadFile(id){
 // Download a Drive file and store it locally using addBook
 async function downloadAndStoreBook(file) {
   const canonicalId = file.appProperties?.progReaderBookId || file.id;
-  const title = file.name.replace(/\.epub$/i, '') || 'Untitled Book';
+  const ext = file.name.split('.').pop().toLowerCase();
+  const title = file.name.replace(/\.[^.]+$/i, '') || 'Untitled Book';
   const buf = await downloadFile(file.id);
-  const blob = new Blob([buf], { type: EPUB_MIME_TYPE });
+  const mimeType = getMimeType(ext);
+  const blob = new Blob([buf], { type: mimeType });
   await addBook(title, blob, canonicalId, {
     driveId: file.id,
     md5: file.md5Checksum,
     modifiedTime: file.modifiedTime,
     isRemoteOnly: false,
+    fileType: ext
   });
 }
 
@@ -720,12 +736,12 @@ export async function runSyncLoop(){
           continue; 
         }
         
-        // Handle EPUB files
-        if(ch.file.mimeType==='application/epub+zip'){
-          console.log(`[DriveSync] runSyncLoop: EPUB file change detected: "${ch.file.name}" (${ch.fileId})`);
+        // Handle book files (any non-progress file)
+        if(!ch.file.name.endsWith('.progress.json')){
+          console.log(`[DriveSync] runSyncLoop: Book change detected: "${ch.file.name}" (${ch.fileId})`);
           const canonicalId = ch.file.appProperties?.progReaderBookId || ch.fileId;
           console.log(`[DriveSync] runSyncLoop: Using canonical ID: ${canonicalId} for file ${ch.fileId}`);
-          
+
           const existing = await getBookByDriveId(ch.fileId) || await getBookMetadata(canonicalId);
           console.log(`[DriveSync] runSyncLoop: Book ${canonicalId} exists locally: ${!!existing}, isRemoteOnly: ${existing?.isRemoteOnly}`);
           
@@ -819,7 +835,8 @@ async function autoUploadLocalBooks() {
       try {
         const record = await getBook(m.id);
         if (record && record.content) {
-          await uploadBookToDrive(m.id, m.title, record.content);
+          const ft = record.fileType || m.fileType || 'epub';
+          await uploadBookToDrive(m.id, m.title, record.content, ft);
           if (record.coverImageBlob instanceof Blob) {
             await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
           }
@@ -845,11 +862,13 @@ async function autoDownloadRemoteBooks() {
   for (const m of metas) {
     if (m.isRemoteOnly && m.driveId) {
       try {
+        const ext = m.fileType || 'epub';
         await downloadAndStoreBook({
           id: m.driveId,
-          name: `${m.title}.epub`,
+          name: `${m.title}.${ext}`,
           md5Checksum: m.md5 || null,
           modifiedTime: m.modifiedTime || null,
+          mimeType: getMimeType(ext),
           appProperties: { progReaderBookId: m.id }
         });
       } catch (e) {
@@ -976,7 +995,14 @@ export function disconnect(){
 export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive, uploadCoverToDrive, deleteRemoteBook };
 
 // New function: uploadBookToDrive
-export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
+/**
+ * Upload a book to Google Drive using its original file type.
+ * @param {string} bookId    Local ID of the book.
+ * @param {string} bookTitle Title used for the Drive file name.
+ * @param {Blob}   fileBlob  Book content to upload.
+ * @param {string} [fileType='epub'] Extension representing the file type.
+ */
+export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 'epub') {
     console.log(`[DriveSync] uploadBookToDrive: Starting upload for bookId: ${bookId}, Title: ${bookTitle}`);
 
     if (!isConnected()) {
@@ -985,9 +1011,9 @@ export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
         throw new Error('Not connected to Google Drive. Please connect first.');
     }
 
-    if (!epubBlob || !(epubBlob instanceof Blob)) {
-        console.error('[DriveSync] uploadBookToDrive: Invalid EPUB blob provided.');
-        throw new Error('Invalid EPUB data for upload.');
+    if (!fileBlob || !(fileBlob instanceof Blob)) {
+        console.error('[DriveSync] uploadBookToDrive: Invalid blob provided.');
+        throw new Error('Invalid data for upload.');
     }
 
     try {
@@ -999,17 +1025,19 @@ export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
         }
         console.log(`[DriveSync] uploadBookToDrive: Using app folder ID: ${appFolderId}`);
 
-        // Sanitize bookTitle and ensure .epub extension for the filename
-        const sanitizedTitle = bookTitle.replace(/[\/\\:\*\?"<>\|]/g, '_'); // Basic sanitization
-        const fileNameInDrive = `${sanitizedTitle}.epub`;
+        // Sanitize title and preserve extension
+        const ext = (fileType || 'epub').toLowerCase();
+        const sanitizedTitle = bookTitle.replace(/[\/\\:\*\?"<>\|]/g, '_');
+        const fileNameInDrive = `${sanitizedTitle}.${ext}`;
+        const mimeType = getMimeType(ext);
 
         // 2. Prepare metadata for the new file
         const metadata = {
-            name: fileNameInDrive, 
-            mimeType: EPUB_MIME_TYPE,
+            name: fileNameInDrive,
+            mimeType: mimeType,
             parents: [appFolderId],
             appProperties: { // Store internal bookId for potential future use (e.g. preventing duplicates, linking)
-              progReaderBookId: bookId 
+              progReaderBookId: bookId
             }
         };
         console.log('[DriveSync] uploadBookToDrive: File metadata prepared:', metadata);
@@ -1017,7 +1045,7 @@ export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
         // 3. Create FormData for multipart upload
         const form = new FormData();
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', epubBlob, fileNameInDrive); // Providing filename in Blob constructor for 'file' part
+        form.append('file', fileBlob, fileNameInDrive);
 
         console.log('[DriveSync] uploadBookToDrive: FormData prepared. Initiating upload...');
 
@@ -1068,26 +1096,31 @@ export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
 export async function listRemoteBooks() {
     if (!isConnected()) return [];
     const folder = await seedDriveFolder();
-    const query = `'${folder}' in parents and mimeType='application/epub+zip' and trashed=false`;
+    const query = `'${folder}' in parents and trashed=false`;
     try {
-        const res = await driveFilesList(query, 'files(id,name,md5Checksum,modifiedTime,appProperties)');
-        return (res.files || []).map(f => ({
-            id: f.id,
-            title: f.name.replace(/\.epub$/i, ''),
-            md5: f.md5Checksum,
-            modified: f.modifiedTime,
-            progId: f.appProperties?.progReaderBookId || null
-        }));
+        const res = await driveFilesList(query, 'files(id,name,mimeType,md5Checksum,modifiedTime,appProperties)');
+        return (res.files || []).map(f => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            return {
+                id: f.id,
+                title: f.name.replace(/\.[^.]+$/i, ''),
+                md5: f.md5Checksum,
+                modified: f.modifiedTime,
+                progId: f.appProperties?.progReaderBookId || null,
+                fileType: ext,
+                mimeType: f.mimeType
+            };
+        });
     } catch (err) {
         console.error('[DriveSync] listRemoteBooks failed:', err);
         return [];
     }
 }
 
-export async function downloadBook(bookId) {
+export async function downloadBook(bookId, mimeType = EPUB_MIME_TYPE) {
     if (!isConnected()) throw new Error('Not connected to Google Drive');
     const buf = await downloadFile(bookId);
-    return new Blob([buf], { type: EPUB_MIME_TYPE });
+    return new Blob([buf], { type: mimeType });
 }
 
 export async function deleteRemoteBook(bookId) {

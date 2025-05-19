@@ -65,6 +65,8 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           isDemo: false,
           isRemoteOnly: true,
           driveId: rb.id,
+          fileType: rb.fileType,
+          mimeType: rb.mimeType
         });
       }
     }
@@ -152,7 +154,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
         if (book.isRemoteOnly && driveSync?.isConnected?.()) {
           (async () => {
             try {
-              const blob = await driveSync.downloadBook(book.id);
+              const blob = await driveSync.downloadBook(book.id, book.mimeType);
               const proc = new EpubProcessorWrapper();
               await proc.loadBook(await blob.arrayBuffer());
               const cover = await proc.getCoverBlob();
@@ -249,8 +251,8 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           try {
             let blob = null;
             if (driveSync?.isConnected?.()) {
-              blob = await driveSync.downloadBook(book.id);
-              await addBook(book.title, blob, book.id);
+              blob = await driveSync.downloadBook(book.id, book.mimeType);
+              await addBook(book.title, blob, book.id, { fileType: book.fileType });
             }
             await openBookAtProgress(book.id, book.title);
           } catch (err) {

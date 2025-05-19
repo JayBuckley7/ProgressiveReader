@@ -50,6 +50,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
 - **Custom Covers**: Use the camera icon on a book card to upload a cover image.
 - **Drive Sync Covers**: When connected to Google Drive, cover images are uploaded along with the book file.
 - **PDF Parsing**: Extracts page count and estimated font size when uploading PDF files.
+- **Google Drive Sync**: Optionally syncs your library to Google Drive while preserving each book's original file type.
 
 ## Getting Started
 
