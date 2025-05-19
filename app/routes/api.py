@@ -2,10 +2,14 @@
 from flask import Blueprint, request, jsonify, session, current_app, Response
 from openai import OpenAI
 import requests
-import re
 import json
 import redis
 import hashlib
+from app.utils.jpdb_api_helpers import (
+    validate_jpdb_request,
+    create_jpdb_batches,
+    parse_jpdb_tokens,
+)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -166,241 +170,85 @@ def due_cards():
 
     return jsonify(cards)
 
+
 @api_bp.route('/get_jpdb_data', methods=['POST'])
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments."""
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid JSON payload"}), 400
-
-    text_segments_raw = data.get('text_segments') 
-    api_key = data.get('jpdb_api_key')
-
-    if not text_segments_raw or not isinstance(text_segments_raw, list):
-        return jsonify({"error": "Missing or invalid 'text_segments' (must be a list of strings)"}), 400
-    if not all(isinstance(s, str) for s in text_segments_raw):
-        return jsonify({"error": "Invalid 'text_segments': all items must be strings"}), 400
-    if not api_key or not isinstance(api_key, str):
-        return jsonify({"error": "Missing or invalid 'jpdb_api_key'"}), 400
-
-    all_clean_segments = []
-    for segment_text in text_segments_raw:
-        normalized_segment = re.sub(r'\s+', ' ', segment_text).strip()
-        if normalized_segment: 
-            all_clean_segments.append(normalized_segment)
-    
-    if not all_clean_segments:
-        current_app.logger.info("No non-empty segments to process for JPDB.") 
+    segments, api_key, error = validate_jpdb_request(request.get_json())
+    if error:
+        return error
+    if not segments:
         return jsonify([])
 
-    MAX_BYTES_PER_API_BATCH = current_app.config['MAX_BYTES_PER_API_BATCH'] 
-    MAX_SEGMENTS_PER_API_BATCH = current_app.config['MAX_SEGMENTS_PER_API_BATCH'] 
-    TOKEN_FIELDS = current_app.config['JPDB_TOKEN_FIELDS'] 
-    VOCAB_FIELDS = current_app.config['JPDB_VOCAB_FIELDS'] 
-    jpdb_api_url = current_app.config['JPDB_API_URL'] 
-    headers = { 'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json', 'Accept': 'application/json'}
-
-    all_processed_tokens_globally_offset = []
-    current_segment_list_start_index = 0 
-    global_offset_processed_across_batches = 0 
-
-    while current_segment_list_start_index < len(all_clean_segments):
-        segments_for_this_batch = []
-        bytes_in_this_batch = 0 
-        global_offset_at_start_of_this_api_call = global_offset_processed_across_batches
-        temp_next_segment_start_index = current_segment_list_start_index
-        
-        current_app.logger.debug(f"Starting new batch creation. current_segment_list_start_index: {current_segment_list_start_index}, total_clean_segments: {len(all_clean_segments)}")
-
-        for i in range(current_segment_list_start_index, len(all_clean_segments)):
-            segment_to_consider = all_clean_segments[i]
-            segment_byte_length = len(segment_to_consider.encode('utf-8'))
-            current_app.logger.debug(f"Considering segment {i}: '{segment_to_consider[:50]}...', length: {len(segment_to_consider)}, bytes: {segment_byte_length}")
-
-            if segment_byte_length > MAX_BYTES_PER_API_BATCH:
-                current_app.logger.warning(f"Segment {i} (bytes: {segment_byte_length}) is larger than MAX_BYTES_PER_API_BATCH ({MAX_BYTES_PER_API_BATCH}). Skipping this segment.")
-                # If we skip, we need to advance global_offset_processed_across_batches and temp_next_segment_start_index
-                # to avoid reprocessing or getting stuck if this was the only segment.
-                if i == current_segment_list_start_index: # This oversized segment is the first one we are looking at for a new batch
-                    global_offset_processed_across_batches += len(segment_to_consider) # Account for its characters for global offset
-                    temp_next_segment_start_index = i + 1 # Move to the next segment
-                # If it's not the first, the batch might already have items. We just break to process the current batch.
-                # However, current logic will only put one segment in a batch if that segment itself is > MAX_BYTES_PER_API_BATCH.
-                # This ensures we don't try to send an oversized segment alone.
-                if not segments_for_this_batch: # If batch is empty, and this one is too big, we must advance.
-                     temp_next_segment_start_index = i + 1 # Ensure we move past this segment
-                     # We also need to update global_offset_processed_across_batches as if we processed it, for correct subsequent offsets.
-                     # This assumes we are effectively *dropping* this segment from being sent to JPDB.
-                     global_offset_processed_across_batches += len(segment_to_consider)
-                # If segments_for_this_batch is NOT empty, we break to process the current valid batch, and this oversized one will be considered next iteration.
-                # But the outer loop condition (current_segment_list_start_index < len(all_clean_segments)) will handle it.
-                # The current logic: if a segment is too big, it won't be added by the next `if` condition.
-                # If segments_for_this_batch is empty and this segment is too large, the `else: break` below is hit, leading to empty batch.
-                # Let's directly continue to next segment if it's too large and the batch is empty.
-                if not segments_for_this_batch:
-                    current_segment_list_start_index = i + 1 # Advance the main loop index
-                    global_offset_processed_across_batches += len(segment_to_consider) # Pretend we processed its length for offset tracking
-                    continue # Try next segment in all_clean_segments
-                else:
-                    break # Process existing batch, this oversized segment will be handled next round
-
-            if len(segments_for_this_batch) < MAX_SEGMENTS_PER_API_BATCH and \
-               bytes_in_this_batch + segment_byte_length <= MAX_BYTES_PER_API_BATCH:
-                segments_for_this_batch.append(segment_to_consider)
-                bytes_in_this_batch += segment_byte_length
-                temp_next_segment_start_index = i + 1
-                current_app.logger.debug(f"Added segment {i} to batch. Batch size: {len(segments_for_this_batch)}, bytes: {bytes_in_this_batch}")
-            else:
-                current_app.logger.debug(f"Segment {i} does not fit. Max segments: {len(segments_for_this_batch)}/{MAX_SEGMENTS_PER_API_BATCH}, Max bytes: {bytes_in_this_batch + segment_byte_length}/{MAX_BYTES_PER_API_BATCH}. Breaking to process current batch.")
-                break 
-        current_segment_list_start_index = temp_next_segment_start_index
-
-        if not segments_for_this_batch:
-            # This condition is now hit if all remaining segments were individually too large, or no segments left.
-            current_app.logger.info("No segments fit into a new JPDB batch (possibly due to segments being too large or no segments remaining).")
-            break
-
-        current_app.logger.info(f"JPDB batch: {len(segments_for_this_batch)} segments, {bytes_in_this_batch} bytes. Offset: {global_offset_at_start_of_this_api_call}") 
-        payload = { 'text': segments_for_this_batch, 'position_length_encoding': 'utf16', 'token_fields': TOKEN_FIELDS, 'vocabulary_fields': VOCAB_FIELDS}
-        
-        # --- Start Enhanced Logging ---
-        current_app.logger.debug(f"Sending payload to JPDB: {payload}")
-        # --- End Enhanced Logging ---
-        
-        response_from_jpdb = None
+    cfg = current_app.config
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    results = []
+    for batch, offset in create_jpdb_batches(
+        segments,
+        cfg['MAX_BYTES_PER_API_BATCH'],
+        cfg['MAX_SEGMENTS_PER_API_BATCH']
+    ):
+        payload = {
+            'text': batch,
+            'position_length_encoding': 'utf16',
+            'token_fields': cfg['JPDB_TOKEN_FIELDS'],
+            'vocabulary_fields': cfg['JPDB_VOCAB_FIELDS']
+        }
+        current_app.logger.info(
+            f"JPDB batch: {len(batch)} segments. Offset: {offset}"
+        )
         try:
-            response_from_jpdb = requests.post(jpdb_api_url, headers=headers, json=payload)
-            
-            # --- Start Enhanced Logging ---
-            current_app.logger.info(f"JPDB API response status: {response_from_jpdb.status_code}")
-            response_text = response_from_jpdb.text # Get text before trying to parse JSON
-            current_app.logger.debug(f"JPDB API raw response text: {response_text[:500]}...") # Log first 500 chars
-            # --- End Enhanced Logging ---
-
-            response_from_jpdb.raise_for_status() # Check for HTTP errors after logging status
-            
-            jpdb_data = response_from_jpdb.json() # Now parse JSON
-            
-            # --- Start Enhanced Logging ---
-            current_app.logger.debug(f"JPDB API parsed JSON data (sample): {str(jpdb_data)[:500]}...")
-            # --- End Enhanced Logging ---
-            
-            jpdb_vocab_list = jpdb_data.get('vocabulary', [])
-            vocab_map = []
-            for v_entry in jpdb_vocab_list:
-                # Check if entry has enough fields (example: vid, sid, state)
-                if not isinstance(v_entry, (list, tuple)) or len(v_entry) < len(VOCAB_FIELDS):
-                    current_app.logger.warning(f"Skipping malformed vocab entry: {v_entry}")
-                    vocab_map.append({ 'vid': None, 'sid': None, 'state': ['error-vocab-format'] }); continue
-                
-                # Map fields based on order defined in VOCAB_FIELDS
-                entry_data = {
-                    'vid': v_entry[VOCAB_FIELDS.index('vid')],
-                    'sid': v_entry[VOCAB_FIELDS.index('sid')],
-                    'rid': v_entry[VOCAB_FIELDS.index('rid')],
-                    'spelling': v_entry[VOCAB_FIELDS.index('spelling')],
-                    'reading': v_entry[VOCAB_FIELDS.index('reading')],
-                    'frequencyRank': v_entry[VOCAB_FIELDS.index('frequency_rank')],
-                    'partOfSpeech': v_entry[VOCAB_FIELDS.index('part_of_speech')],
-                    'meaningsChunks': v_entry[VOCAB_FIELDS.index('meanings_chunks')],
-                    'meaningsPartOfSpeech': v_entry[VOCAB_FIELDS.index('meanings_part_of_speech')],
-                    'state': v_entry[VOCAB_FIELDS.index('card_state')] or ['not-in-deck'],
-                    'pitchAccent': v_entry[VOCAB_FIELDS.index('pitch_accent')] or []
-                }
-                
-                # Construct meanings list
-                entry_data['meanings'] = []
-                if entry_data['meaningsChunks'] and entry_data['meaningsPartOfSpeech']:
-                    for i, glosses in enumerate(entry_data['meaningsChunks']):
-                        if i < len(entry_data['meaningsPartOfSpeech']):
-                            entry_data['meanings'].append({
-                                'glosses': glosses,
-                                'partOfSpeech': entry_data['meaningsPartOfSpeech'][i]
-                            })
-                
-                # Remove intermediate keys
-                del entry_data['meaningsChunks']
-                del entry_data['meaningsPartOfSpeech']
-                
-                vocab_map.append(entry_data)
-
-            tokens_data_from_api = jpdb_data.get('tokens', [])
-            if len(tokens_data_from_api) != len(segments_for_this_batch):
-                 current_app.logger.warning("JPDB API segments sent/received mismatch.")
-
-            character_offset_within_this_api_batch = 0
-            for segment_idx_in_batch, tokens_for_one_segment in enumerate(tokens_data_from_api):
-                if segment_idx_in_batch >= len(segments_for_this_batch): break
-                current_segment_text = segments_for_this_batch[segment_idx_in_batch]
-                for raw_token in tokens_for_one_segment:
-                    if not isinstance(raw_token, (list, tuple)) or len(raw_token) < len(TOKEN_FIELDS):
-                        current_app.logger.warning(f"Skipping malformed token: {raw_token}")
-                        continue
-                    
-                    vocab_idx = raw_token[TOKEN_FIELDS.index('vocabulary_index')]
-                    position_in_segment = raw_token[TOKEN_FIELDS.index('position')]
-                    length = raw_token[TOKEN_FIELDS.index('length')]
-                    furigana_data = raw_token[TOKEN_FIELDS.index('furigana')]
-
-                    if not all(isinstance(x, int) for x in [vocab_idx, position_in_segment, length]):
-                        current_app.logger.warning(f"Skipping token with invalid numeric fields: {raw_token}")
-                        continue
-                    
-                    card_data = {}
-                    try:
-                        if vocab_idx < 0: card_data = { 'state': ['unknown-negative-vocab-idx'] } # Handle negative index
-                        elif vocab_idx < len(vocab_map): card_data = vocab_map[vocab_idx]
-                        else: card_data = { 'state': ['unknown-vocab-idx-out-of-bounds'] } # Handle out-of-bounds
-                    except Exception as e:
-                        current_app.logger.error(f"Error accessing vocab_map at index {vocab_idx}: {e}")
-                        card_data = { 'state': ['error-vocab-map-access'] }; continue
-                    
-                    # Process rubies
-                    rubies = []
-                    if furigana_data and isinstance(furigana_data, list):
-                        current_offset_in_token_surface = 0
-                        for part in furigana_data:
-                            if isinstance(part, str):
-                                current_offset_in_token_surface += len(part)
-                            elif isinstance(part, list) and len(part) == 2:
-                                base_text_segment_part, ruby_text = part
-                                if isinstance(base_text_segment_part, str) and isinstance(ruby_text, str):
-                                    ruby_seg_start = current_offset_in_token_surface
-                                    ruby_seg_length = len(base_text_segment_part)
-                                    rubies.append({ 'text': ruby_text, 'start': ruby_seg_start, 'length': ruby_seg_length, 'end': ruby_seg_start + ruby_seg_length })
-                                    current_offset_in_token_surface += ruby_seg_length
-                    
-                    token_start_global = global_offset_at_start_of_this_api_call + character_offset_within_this_api_batch + position_in_segment
-                    all_processed_tokens_globally_offset.append({
-                        'start': token_start_global,
-                        'length': length,
-                        'end': token_start_global + length,
-                        'card': card_data, # Now return the full card data
-                        'rubies': rubies
-                    })
-                character_offset_within_this_api_batch += len(current_segment_text)
-            chars_processed_in_this_batch_for_global_offset = sum(len(s) for s in segments_for_this_batch)
-            global_offset_processed_across_batches += chars_processed_in_this_batch_for_global_offset 
-
+            resp = requests.post(cfg['JPDB_API_URL'], headers=headers, json=payload)
+            current_app.logger.info(f"JPDB API response status: {resp.status_code}")
+            resp.raise_for_status()
+            jpdb_data = resp.json()
+            current_app.logger.debug(
+                f"JPDB API parsed JSON data (sample): {str(jpdb_data)[:500]}..."
+            )
+            results.extend(
+                parse_jpdb_tokens(
+                    jpdb_data,
+                    batch,
+                    cfg['JPDB_TOKEN_FIELDS'],
+                    cfg['JPDB_VOCAB_FIELDS'],
+                    offset,
+                )
+            )
         except requests.exceptions.HTTPError as http_err:
-            error_detail = "Unknown error" 
-            status_code = 500
-            if response_from_jpdb is not None:
-                status_code = response_from_jpdb.status_code
-                try: error_detail = response_from_jpdb.json().get('error_message', response_from_jpdb.text)
-                except ValueError: error_detail = response_from_jpdb.text
-            current_app.logger.error(f"JPDB HTTP error: {http_err} - Detail: {error_detail}", exc_info=True) 
-            return jsonify({"error": str(http_err), "jpdb_error": error_detail, "status_code": status_code, "partial_results": all_processed_tokens_globally_offset}), status_code
-        except requests.exceptions.RequestException as req_err: 
-            current_app.logger.error(f"JPDB Request failed: {req_err}", exc_info=True) 
-            return jsonify({"error": str(req_err), "partial_results": all_processed_tokens_globally_offset}), 500
-        except Exception as e: 
-            current_app.logger.error(f"JPDB Unexpected error: {str(e)}", exc_info=True) 
-            return jsonify({"error": f"Unexpected error: {str(e)}", "partial_results": all_processed_tokens_globally_offset}), 500
-            
-    current_app.logger.info(f"JPDB data processed. Total tokens: {len(all_processed_tokens_globally_offset)}") 
-    return jsonify(all_processed_tokens_globally_offset) 
+            detail = "Unknown error"
+            status_code = resp.status_code if resp is not None else 500
+            try:
+                detail = resp.json().get('error_message', resp.text)
+            except Exception:
+                detail = resp.text
+            current_app.logger.error(
+                f"JPDB HTTP error: {http_err} - Detail: {detail}", exc_info=True
+            )
+            return jsonify({
+                'error': str(http_err),
+                'jpdb_error': detail,
+                'status_code': status_code,
+                'partial_results': results,
+            }), status_code
+        except requests.exceptions.RequestException as req_err:
+            current_app.logger.error(
+                f"JPDB Request failed: {req_err}", exc_info=True
+            )
+            return jsonify({'error': str(req_err), 'partial_results': results}), 500
+        except Exception as exc:
+            current_app.logger.error(
+                f"JPDB Unexpected error: {exc}", exc_info=True
+            )
+            return jsonify({'error': f'Unexpected error: {exc}', 'partial_results': results}), 500
 
+    current_app.logger.info(
+        f"JPDB data processed. Total tokens: {len(results)}"
+    )
+    return jsonify(results)
 @api_bp.route('/mine_jpdb_word', methods=['POST'])
 def mine_jpdb_word():
     """Send a request to add a vocabulary word to a JPDB deck."""
