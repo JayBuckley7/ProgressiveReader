@@ -1,5 +1,5 @@
 // driveSync.js – Google Drive folder‑centric sync layer
-import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata } from './dbService.js';
+import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata, getAllBooksMetadata, getBook } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 
 // Client ID Shim
@@ -510,6 +510,20 @@ async function downloadFile(id){
   return res.arrayBuffer();
 }
 
+// Download a Drive file and store it locally using addBook
+async function downloadAndStoreBook(file) {
+  const canonicalId = file.appProperties?.progReaderBookId || file.id;
+  const title = file.name.replace(/\.epub$/i, '') || 'Untitled Book';
+  const buf = await downloadFile(file.id);
+  const blob = new Blob([buf], { type: EPUB_MIME_TYPE });
+  await addBook(title, blob, canonicalId, {
+    driveId: file.id,
+    md5: file.md5Checksum,
+    modifiedTime: file.modifiedTime,
+    isRemoteOnly: false,
+  });
+}
+
 // ── 6. Cold import --------------------------------------------------------
 async function importInitialFiles(){
   if (_initialImportDone) return;
@@ -554,11 +568,16 @@ async function importInitialFiles(){
     console.log(`[DriveSync] importInitialFiles: Found ${files.length} books in Drive.`);
     
     if (files.length > 0) {
-      // Use IndexedDB directly to avoid dependency on other functions
-      await saveRemoteBooksToDb(files);
+      for (const f of files) {
+        try {
+          await downloadAndStoreBook(f);
+        } catch (e) {
+          console.error('[DriveSync] importInitialFiles: Failed to download', f.name, e);
+        }
+      }
     }
-    
-    console.info(`[DriveSync] Imported metadata for ${files.length} remote book(s) - content will be downloaded on demand`);
+
+    console.info(`[DriveSync] Imported ${files.length} remote book(s)`);
     
   } catch (err) {
     console.error('[DriveSync] importInitialFiles: Error fetching books from Drive:', err);
@@ -586,101 +605,6 @@ async function importInitialFiles(){
   }
 }
 
-// Helper function to save remote books to the IndexedDB directly
-async function saveRemoteBooksToDb(files) {
-  try {
-    // Open the database directly
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('ProgressiveReaderDB', 2);
-      request.onerror = e => reject(e.target.error);
-      request.onsuccess = e => resolve(e.target.result);
-      
-      // Handle database upgrades if needed
-      request.onupgradeneeded = (event) => {
-        console.log('[DriveSync] saveRemoteBooksToDb: Database upgrade needed, creating stores if missing...');
-        const db = event.target.result;
-        
-        // Create stores if they don't exist (first time use)
-        if (!db.objectStoreNames.contains('books')) {
-          console.log('[DriveSync] saveRemoteBooksToDb: Creating books store');
-          db.createObjectStore('books', { keyPath: 'id' });
-        }
-      };
-    });
-    
-    // Process each book
-    for (const f of files) {
-      try {
-        const canonicalId = f.appProperties?.progReaderBookId || f.id;
-        const title = f.name.replace(/\.epub$/i, '');
-        
-        // Create transaction and get objectStore
-        const tx = db.transaction('books', 'readwrite');
-        const store = tx.objectStore('books');
-        
-        // Check if book exists first
-        const existingBook = await new Promise((resolve) => {
-          const request = store.get(canonicalId);
-          request.onsuccess = (e) => resolve(e.target.result);
-          request.onerror = () => resolve(null);
-        });
-        
-        if (existingBook) {
-          // Update existing book metadata WITHOUT overwriting local-content flags
-          existingBook.driveId       = f.id;
-          existingBook.md5           = f.md5Checksum;
-          existingBook.modifiedTime  = f.modifiedTime;
-          
-          // Preserve local/offline status: only mark remote-only if the book truly lacks content
-          if (!('content' in existingBook) || !(existingBook.content instanceof Blob)) {
-            existingBook.isRemoteOnly = true;
-          } else {
-            existingBook.isRemoteOnly = false; // Ensure it stays offline-capable if we have the content
-          }
-          
-          await new Promise((resolve, reject) => {
-            const request = store.put(existingBook);
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e.target.error);
-          });
-          
-          console.log(`[DriveSync] saveRemoteBooksToDb: Updated metadata for existing book: ${title} (${canonicalId})`);
-        } else {
-          // Create new book entry
-          const bookData = {
-            id: canonicalId,
-            title: title || 'Untitled Book',
-            addedDate: new Date(),
-            lastOpened: null,
-            coverImageBlob: null,
-            isDemo: false,
-            isRemoteOnly: true,
-            driveId: f.id,
-            md5: f.md5Checksum,
-            modifiedTime: f.modifiedTime
-          };
-          
-          await new Promise((resolve, reject) => {
-            const request = store.put(bookData);
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e.target.error);
-          });
-          
-          console.log(`[DriveSync] saveRemoteBooksToDb: Added new remote book: ${title} (${canonicalId})`);
-        }
-      } catch (error) {
-        console.error(`[DriveSync] saveRemoteBooksToDb: Error processing book ${f.name}:`, error);
-      }
-    }
-    
-    console.log(`[DriveSync] saveRemoteBooksToDb: Successfully processed ${files.length} books`);
-    return true;
-  } catch (error) {
-    console.error('[DriveSync] saveRemoteBooksToDb: Critical error:', error);
-    return false;
-  }
-}
-
 // ── 7. Sync loop ----------------------------------------------------------
 export async function runSyncLoop(){
   console.log('[DriveSync] runSyncLoop: Starting sync process...');
@@ -698,6 +622,20 @@ export async function runSyncLoop(){
   console.log('[DriveSync] runSyncLoop: Getting folder ID from Drive');
   const folder=await seedDriveFolder();
   console.log(`[DriveSync] runSyncLoop: Using Drive folder ID: ${folder}`);
+
+  // Auto-upload any local books not yet synced
+  try {
+    await autoUploadLocalBooks();
+  } catch (e) {
+    console.warn('[DriveSync] autoUploadLocalBooks error:', e);
+  }
+
+  // Ensure any remote-only books are downloaded
+  try {
+    await autoDownloadRemoteBooks();
+  } catch (e) {
+    console.warn('[DriveSync] autoDownloadRemoteBooks error:', e);
+  }
   
   console.log('[DriveSync] runSyncLoop: Getting change cursor');
   let token=await getChangeCursor();
@@ -754,35 +692,24 @@ export async function runSyncLoop(){
           const existing = await getBookByDriveId(ch.fileId) || await getBookMetadata(canonicalId);
           console.log(`[DriveSync] runSyncLoop: Book ${canonicalId} exists locally: ${!!existing}, isRemoteOnly: ${existing?.isRemoteOnly}`);
           
-          // Check if this book already exists locally (with content)
+          // Check if this book already exists locally with content
           if (existing && !existing.isRemoteOnly) {
             console.log(`[DriveSync] runSyncLoop: Updating metadata for existing local book: ${ch.file.name}`);
-            // Only update metadata for existing local books
-            await updateBookMetadata(canonicalId, { 
-              driveId: ch.fileId, 
-              md5: ch.file.md5Checksum, 
-              modifiedTime: ch.file.modifiedTime 
+            await updateBookMetadata(canonicalId, {
+              driveId: ch.fileId,
+              md5: ch.file.md5Checksum,
+              modifiedTime: ch.file.modifiedTime
             });
             console.log(`[DriveSync] runSyncLoop: Successfully updated metadata for: ${ch.file.name}`);
             updated++;
-          } else if (!existing) {
-            console.log(`[DriveSync] runSyncLoop: Found new book in Drive: ${ch.file.name}`);
-            // For new books, just create a placeholder entry with isRemoteOnly=true
-            // This is a metadata-only entry that will be shown in the bookshelf but needs explicit download
-            const title = ch.file.name.replace(/\.epub$/i,'');
-            
-            console.log(`[DriveSync] runSyncLoop: Creating metadata-only entry for: "${title}" (${canonicalId})`);
-            // Use a structure similar to what's in bookshelfUI.js for remote-only books
-            await addBookMetadataOnly(title, canonicalId, { 
-              driveId: ch.fileId, 
-              md5: ch.file.md5Checksum, 
-              modifiedTime: ch.file.modifiedTime,
-              isRemoteOnly: true 
-            });
-            console.log(`[DriveSync] runSyncLoop: Successfully created metadata-only entry for: "${title}"`);
-            added++;
           } else {
-            console.log(`[DriveSync] runSyncLoop: Book already exists as remote-only: "${ch.file.name}" - skipping`);
+            console.log(`[DriveSync] runSyncLoop: Downloading new or remote-only book: ${ch.file.name}`);
+            try {
+              await downloadAndStoreBook(ch.file);
+              added++;
+            } catch (err) {
+              console.error('[DriveSync] runSyncLoop: Failed to download', ch.file.name, err);
+            }
           }
           continue;
         }
@@ -837,62 +764,6 @@ export async function runSyncLoop(){
  * @param {string} bookId - The ID of the book. 
  * @param {object} metadata - Additional metadata like driveId, md5, etc.
  */
-async function addBookMetadataOnly(title, bookId, metadata = {}) {
-  try {
-    // Import from dbService in case it's not imported at the top
-    if (typeof updateBookMetadata !== 'function') {
-      const { updateBookMetadata: updateBookMetadataFn } = await import('./dbService.js');
-      updateBookMetadata = updateBookMetadataFn;
-    }
-    
-    // First check if the book exists (by ID)
-    const existing = await getBookMetadata(bookId);
-    
-    if (existing) {
-      // If it exists, just update its metadata
-      await updateBookMetadata(bookId, {
-        ...metadata,
-        title: title || existing.title,
-        isRemoteOnly: true  // Make sure to mark it as remote-only
-      });
-    } else {
-      // If it doesn't exist, create a new metadata-only entry in the database
-      // We need to use IndexedDB directly because our regular addBook requires content
-      const db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open('ProgressiveReaderDB', 2);
-        request.onerror = e => reject(e.target.error);
-        request.onsuccess = e => resolve(e.target.result);
-      });
-      
-      const tx = db.transaction('books', 'readwrite');
-      const store = tx.objectStore('books');
-      
-      const bookData = {
-        id: bookId,
-        title: title || 'Untitled Book',
-        addedDate: new Date(),
-        lastOpened: null,
-        coverImageBlob: null,
-        isDemo: false,
-        isRemoteOnly: true,  // Mark as remote-only to indicate content needs to be downloaded
-        ...metadata
-      };
-      
-      await new Promise((resolve, reject) => {
-        const request = store.put(bookData);
-        request.onsuccess = () => resolve();
-        request.onerror = e => reject(e.target.error);
-      });
-    }
-    
-    console.log(`[DriveSync] Added metadata-only entry for remote book: ${title} (${bookId})`);
-    return bookId;
-  } catch (error) {
-    console.error('[DriveSync] Error adding metadata-only book entry:', error);
-    throw error;
-  }
-}
-
 // ── 8. Upload workers -----------------------------------------------------
 export function queueUpload(bookId,blob){uploadQueue.push({bookId,blob}); drainUploadQueue();}
 async function drainUploadQueue(){if(uploadWorkerRunning||!uploadQueue.length||!isConnected())return;
@@ -903,6 +774,41 @@ export function queueProgressUpload(bookId,data){progressQueue.push({bookId,data
 async function drainProgressQueue(){if(progressWorkerRunning||!progressQueue.length||!isConnected())return;
   progressWorkerRunning=true; while(progressQueue.length){const {bookId,data}=progressQueue.shift(); const boundary='prBound'; const meta={name:`${bookId}.progress.json`,parents:['appDataFolder']}; const body=new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(data)}\r\n--${boundary}--`],{type:`multipart/related; boundary=${boundary}`}); try{await fetchWithAuth('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:authHeader(),body});}catch(e){console.error('progress-upload',e); progressQueue.unshift({bookId,data}); break;}}
   progressWorkerRunning=false;}
+
+async function autoUploadLocalBooks() {
+  const metas = await getAllBooksMetadata();
+  for (const m of metas) {
+    if (!m.driveId && !m.isRemoteOnly) {
+      try {
+        const record = await getBook(m.id);
+        if (record && record.content) {
+          await uploadBookToDrive(m.id, m.title, record.content);
+        }
+      } catch (e) {
+        console.warn('[DriveSync] autoUploadLocalBooks: Failed for', m.id, e);
+      }
+    }
+  }
+}
+
+async function autoDownloadRemoteBooks() {
+  const metas = await getAllBooksMetadata();
+  for (const m of metas) {
+    if (m.isRemoteOnly && m.driveId) {
+      try {
+        await downloadAndStoreBook({
+          id: m.driveId,
+          name: `${m.title}.epub`,
+          md5Checksum: m.md5 || null,
+          modifiedTime: m.modifiedTime || null,
+          appProperties: { progReaderBookId: m.id }
+        });
+      } catch (e) {
+        console.warn('[DriveSync] autoDownloadRemoteBooks: Failed for', m.id, e);
+      }
+    }
+  }
+}
 
 // ── 9. Scheduler & offline handling --------------------------------------
 function startScheduler(){if(driveInterval) return; driveInterval=setInterval(()=>{if(!navigator.onLine){window.dispatchEvent(new Event('drive-offline'));return;} runSyncLoop().catch(console.error);},5*60*1000);}  // 5‑min
