@@ -235,18 +235,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
 
       /* ─ Remote‑only handling ─ */
       if (book.isRemoteOnly) {
-        // Auto-download the book in the background when connected
-        if (driveSync?.isConnected?.()) {
-          (async () => {
-            try {
-              const blob = await driveSync.downloadBook(book.id);
-              await addBook(book.title, blob, book.id);
-              renderBookshelf(driveSync);
-            } catch (err) {
-              console.error(`${logPrefix} Auto-download failed:`, err);
-            }
-          })();
-        }
+        // Auto-download handled by driveSync; no re-render here
 
         bookLink.onclick = async (ev) => {
           ev.preventDefault();
