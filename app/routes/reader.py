@@ -35,13 +35,19 @@ def reader(book_id: str, item_index: int = None):
         "Reader view for book %s (URL index: %s, actual start determined by client or this URL index)", book_id, item_index
     )
 
-    # Ensure current_index passed to template is explicitly None if item_index is None
-    template_current_index = item_index if item_index is not None else None
+    # Redirect to index 0 if no specific item index was provided.  The unit
+    # tests expect this behaviour for backward compatibility with older URLs.
+    if item_index is None:
+        return redirect(
+            url_for("reader.read_item_at_index", book_id=book_id, item_index=0)
+        )
+
+    template_current_index = item_index
 
     return render_template(
         "reader.html",
         book_id=book_id,
-        current_index=template_current_index, # Use the explicitly set None or the integer value
+        current_index=template_current_index,
         model_name=current_app.config.get("SERVER_DEFAULT_MODEL", "gpt-4o-mini"),
         show_jlpt_filter=session.get("show_jlpt_filter", False),
         jlpt_enabled=session.get("jlpt_highlighting_enabled", False),
