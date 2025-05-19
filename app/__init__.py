@@ -10,7 +10,7 @@ class FilterImageRequests(logging.Filter):
         # Filter successful GET requests for image URLs to reduce noise
         return not ('GET /image/' in msg and ' 200 ' in msg)
 
-def create_app(config_class=Config):
+def create_app(config_class=Config) -> Flask:
     app = Flask(
         __name__, 
         instance_relative_config=False,
