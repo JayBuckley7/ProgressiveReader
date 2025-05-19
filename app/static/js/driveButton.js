@@ -88,9 +88,15 @@ export class DriveButton {
                 this.connectBtnEl.classList.remove('layout-vertical'); 
                 break;
             case 'connecting':
-                this.connectBtnEl.textContent = 'Connecting…';
                 this.connectBtnEl.disabled = true;
                 this.connectBtnEl.classList.remove('layout-vertical');
+                const spinner = document.createElement('span');
+                spinner.className = 'spinner';
+                const status = document.createElement('span');
+                status.className = 'status-text';
+                status.textContent = 'Connecting…';
+                this.connectBtnEl.appendChild(spinner);
+                this.connectBtnEl.appendChild(status);
                 break;
             case 'connected':
                 this.connectBtnEl.classList.add('layout-vertical');

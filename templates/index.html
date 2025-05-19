@@ -183,6 +183,23 @@
       #connect-drive-btn .button-text-placeholder {
         display: none !important;
       }
+
+      /* Spinner used while connecting to Google */
+      #connect-drive-btn .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: drive-spin 0.8s linear infinite;
+        margin-right: 6px;
+      }
+
+      @keyframes drive-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
