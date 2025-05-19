@@ -96,6 +96,15 @@ function saveAutoloadPreference(isChecked) {
     // console.log("Autoload preference saved:", isChecked);
 }
 
+function getPreferDueCards() {
+    const pref = localStorage.getItem('prefer_due_cards');
+    return pref === 'true';
+}
+
+function savePreferDueCards(isChecked) {
+    localStorage.setItem('prefer_due_cards', isChecked);
+}
+
 // --- PWA Offline Support ---
 // IndexedDB for storing book data for offline access
 const DB_NAME = 'progressive-reader-db';
@@ -320,6 +329,8 @@ window.storageManager = {
     // Preferences
     getAutoloadPreference,
     saveAutoloadPreference,
+    getPreferDueCards,
+    savePreferDueCards,
     
     // PWA offline support
     openDatabase,

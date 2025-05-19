@@ -148,6 +148,24 @@ def toggle_jlpt():
     current_app.logger.info(f"JLPT highlighting set to: {is_enabled}")
     return jsonify({'success': True, 'jlpt_highlighting_enabled': is_enabled})
 
+@api_bp.route('/due_cards', methods=['POST'])
+def due_cards():
+    """Return JPDB due cards for the authenticated user."""
+    data = request.get_json(silent=True) or {}
+    username = data.get('username')
+    password = data.get('password')
+    cookie = data.get('cookie') or request.headers.get('Cookie')
+
+    from app.utils.jpdb_due import fetch_all_due_cards
+
+    cards = fetch_all_due_cards(username=username,
+                                password=password,
+                                cookie_string=cookie)
+    if cards is None or (isinstance(cards, list) and not cards):
+        return jsonify({'error': 'Failed to fetch cards'}), 400
+
+    return jsonify(cards)
+
 @api_bp.route('/get_jpdb_data', methods=['POST'])
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments."""

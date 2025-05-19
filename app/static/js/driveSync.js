@@ -837,9 +837,21 @@ async function autoUploadLocalBooks() {
         if (record && record.content) {
           const ft = record.fileType || m.fileType || 'epub';
           await uploadBookToDrive(m.id, m.title, record.content, ft);
+          if (record.coverImageBlob instanceof Blob) {
+            await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
+          }
         }
       } catch (e) {
         console.warn('[DriveSync] autoUploadLocalBooks: Failed for', m.id, e);
+      }
+    } else if (!m.coverDriveId && !m.isRemoteOnly) {
+      try {
+        const record = await getBook(m.id);
+        if (record && record.coverImageBlob instanceof Blob) {
+          await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
+        }
+      } catch (e) {
+        console.warn('[DriveSync] autoUploadLocalBooks: Cover upload failed for', m.id, e);
       }
     }
   }
@@ -980,7 +992,7 @@ export function disconnect(){
   window.dispatchEvent(new Event('drive-disconnect'));
 }
 
-export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive, deleteRemoteBook };
+export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfile, queueUpload, queueProgressUpload, runSyncLoop, disconnect, listRemoteBooks, downloadBook, uploadBookToDrive, uploadCoverToDrive, deleteRemoteBook };
 
 // New function: uploadBookToDrive
 /**
@@ -1118,6 +1130,81 @@ export async function deleteRemoteBook(bookId) {
         console.log(`[DriveSync] deleteRemoteBook: Deleted ${bookId}`);
     } catch (err) {
         console.error('[DriveSync] deleteRemoteBook: Error deleting', bookId, err);
+        throw err;
+    }
+}
+
+export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
+    console.log(`[DriveSync] uploadCoverToDrive: Starting upload for bookId: ${bookId}`);
+
+    if (!isConnected()) {
+        console.error('[DriveSync] uploadCoverToDrive: Not connected to Google Drive.');
+        throw new Error('Not connected to Google Drive. Please connect first.');
+    }
+
+    if (!coverBlob || !(coverBlob instanceof Blob)) {
+        console.error('[DriveSync] uploadCoverToDrive: Invalid cover blob provided.');
+        throw new Error('Invalid cover image data for upload.');
+    }
+
+    try {
+        const appFolderId = await seedDriveFolder();
+        if (!appFolderId) {
+            console.error('[DriveSync] uploadCoverToDrive: Could not get or create app folder.');
+            throw new Error('Failed to access application folder in Google Drive.');
+        }
+
+        const sanitizedTitle = bookTitle.replace(/[\/\\:*?"<>|]/g, '_');
+        let ext = '';
+        if (coverBlob.type === 'image/png') {
+            ext = '.png';
+        } else if (coverBlob.type === 'image/jpeg') {
+            ext = '.jpg';
+        } else {
+            ext = '.img';
+        }
+        const fileNameInDrive = `${sanitizedTitle}_cover${ext}`;
+
+        const metadata = {
+            name: fileNameInDrive,
+            mimeType: coverBlob.type || 'application/octet-stream',
+            parents: [appFolderId],
+            appProperties: {
+                progReaderBookId: bookId,
+                isCover: 'true'
+            }
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', coverBlob, fileNameInDrive);
+
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: authHeader(),
+            body: form,
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`[DriveSync] uploadCoverToDrive: Upload failed. Status: ${response.status}. Body: ${errorBody}`);
+            throw new Error(`Google Drive API upload error: ${response.status}`);
+        }
+
+        const createdFile = await response.json();
+        try {
+            await updateBookMetadata(bookId, { coverDriveId: createdFile.id });
+        } catch (e) {
+            console.warn('[DriveSync] Failed to store coverDriveId locally:', e);
+        }
+
+        window.dispatchEvent(new CustomEvent('drive-file-uploaded', {
+            detail: { bookId, fileId: createdFile.id, fileName: createdFile.name, type: 'cover' }
+        }));
+
+        return createdFile;
+    } catch (err) {
+        console.error('[DriveSync] uploadCoverToDrive: Error during upload process:', err);
         throw err;
     }
 }
