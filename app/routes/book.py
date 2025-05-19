@@ -8,12 +8,8 @@ import shutil
 
 # Import the helper function from utils
 from ..utils.helpers import allowed_file
-# Import the new epub utility function
-from ..utils.epub_utils import extract_and_save_cover 
-
-book_bp = Blueprint('book', __name__, url_prefix='/book') # Optional: Add prefix if desired
-
-# Moved EPUB processing/cover extraction logic to a separate utility module (app/utils/epub_utils.py)
+# Blueprint setup for book-related routes
+book_bp = Blueprint('book', __name__, url_prefix='/book')  # Optional: Add prefix if desired
 
 @book_bp.route('/upload', methods=['POST'])
 def upload_file():
