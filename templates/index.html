@@ -6,45 +6,23 @@
     <title>Book Reader</title>
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4b8dff" />
-    <meta
-      name="description"
-      content="A book reader with language learning features"
-    />
+    <meta name="description" content="A book reader with language learning features" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ProgReader" />
 
     <!-- PWA Manifest -->
-    <link
-      rel="manifest"
-      href="{{ url_for('static', filename='manifest.json') }}"
-    />
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />
 
     <!-- PWA Icons -->
-    <link
-      rel="icon"
-      href="{{ url_for('static', filename='icons/icon.png') }}"
-      type="image/png"
-    />
-    <link
-      rel="apple-touch-icon"
-      href="{{ url_for('static', filename='icons/icon.png') }}"
-    />
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.png') }}" type="image/png" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.png') }}" />
 
     <!-- App Stylesheets -->
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/index.css') }}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/pwa_prompt.css') }}"
-    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pwa_prompt.css') }}" />
 
-    <!-- Inline styles for PWA elements, Drive‑status banner and hero banner -->
+    <!-- Inline styles for PWA elements, Drive-status banner and hero banner -->
     <style>
       .offline-notification {
         position: fixed;
@@ -65,7 +43,7 @@
         opacity: 1;
         pointer-events: auto;
       }
-      /* ── Drive‑sync status banner ───────────────────────────── */
+      /* ── Drive-sync status banner ───────────────────────────── */
       #drive-status {
         position: fixed;
         top: 0;
@@ -90,7 +68,7 @@
       } /* amber – syncing */
       #drive-status.idle {
         background: #5cb85c;
-      } /* green – idle‑ok */
+      } /* green – idle-ok */
       /* -------------------------------------------------------- */
       .hero-logo {
         /* animation removed */
@@ -190,108 +168,24 @@
   <body>
     {% block body_start %}{% endblock %}
 
-    <!-- Container for top‑left action buttons -->
-    <div class="top-left-container">
-      <a
-        href="{{ url_for('main.demo') }}"
-        class="button-like-link"
-        id="to-demo-page-link"
-        >Demo</a
-      >
-      <!-- demo button remains; Drive buttons relocated -->
-    </div>
+    {% include 'components/top_actions.html' %}
 
-    <!-- Main content below (unchanged) -->
     <main>
-      <section class="hero-banner">
-        <div class="hero-content">
-          <div
-            class="logo-container"
-            style="position: relative; display: inline-block"
-          >
-            <img
-              src="{{ url_for('static', filename='icons/slow.gif', _external=True) }}?nocache={{ range(1, 1000000) | random }}"
-              alt="Animation"
-              class="hero-logo"
-            />
-          </div>
-          <h1 class="hero-headline">Your Digital Bookshelf, Reimagined.</h1>
-          <p class="hero-tagline">
-            Upload books in EPUB, PDF, MOBI, DOCX, or TXT format, read anywhere,
-            and enhance your language learning.
-          </p>
-          <form
-            id="upload-form"
-            class="hero-upload-form"
-            action="#"
-            method="post"
-          >
-            <label for="file-input" class="custom-file-upload-label"
-              ><span>Select Book File</span></label
-            >
-            <input
-              type="file"
-              name="file"
-              id="file-input"
-              accept=".epub,.docx,.pdf,.txt,.mobi"
-              required
-            />
-            {% include 'components/drive_button.html' %}
-            <div
-              class="upload-progress-container"
-              style="
-                display: none;
-                width: 100%;
-                background-color: #e0e0e0;
-                border-radius: 4px;
-                margin-top: 0.5rem;
-              "
-            >
-              <div
-                class="upload-progress-bar"
-                style="
-                  width: 0%;
-                  height: 10px;
-                  background-color: #4b8dff;
-                  border-radius: 4px;
-                "
-              ></div>
-            </div>
-          </form>
-          <div id="upload-status" class="hero-upload-status"></div>
-        </div>
-      </section>
-
+      {% include 'components/hero_banner.html' %}
       <div class="container page-content-container">
-        <div class="bookshelf">
-          <h2>
-            My Bookshelf <span id="drive-indicator" class="drive-indicator disconnected" aria-label="Drive disconnected">●</span>
-            <span class="bookshelf-icons">
-              <button id="btn-sync" class="icon-btn" title="Sync Now" hidden>
-                🔄
-              </button>
-              <a id="btn-drive" class="icon-btn" title="Open Drive Folder" hidden target="_blank" rel="noopener">📂</a>
-            </span>
-          </h2>
-          <input
-            id="bookshelf-search"
-            type="text"
-            placeholder="Search books"
-            aria-label="Search books"
-          />
-          <div id="recent-books-grid" class="books-grid"></div>
-        </div>
-
-        {% with messages = get_flashed_messages() %} {% if messages %}
-        <div class="flash-messages">
-          <strong>Notifications:</strong>
-          <ul>
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-        {% endif %} {% endwith %}
+        {% include 'components/bookshelf.html' %}
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+          <div class="flash-messages">
+            <strong>Notifications:</strong>
+            <ul>
+              {% for message in messages %}
+              <li>{{ message }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        {% endwith %}
       </div>
     </main>
 
@@ -306,73 +200,17 @@
 
     <!-- App Scripts -->
     <script>
-      window.GDRIVE_CLIENT_ID =
-        "49477009498-r5hl6kurct6g4snvabu10hvqvrv6jqc1.apps.googleusercontent.com";
+      window.GDRIVE_CLIENT_ID = "49477009498-r5hl6kurct6g4snvabu10hvqvrv6jqc1.apps.googleusercontent.com";
     </script>
     <!-- External Libraries FIRST -->
     <!-- <script src="{{ url_for('static', filename='js/lib/idb-keyval-iife.min.js') }}"></script> -->
 
     <!-- Your Application Modules AFTER libraries are loaded -->
-    <script
-      type="module"
-      src="{{ url_for('static', filename='js/index.js') }}"
-    ></script>
+    <script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/danger_zone.js') }}"></script>
     {% block body_end %}{% endblock %}
-    <footer class="site-footer" style="text-align:center;padding:0.75rem 0;border-top:1px solid #e0e6ed;background:#f8f9fa;position:fixed;bottom:0;left:0;width:100%;z-index:500;">
-      <a href="{{ url_for('main.tos') }}" target="_blank">Terms of Service</a>
-      &nbsp;|&nbsp;
-      <a href="#" id="danger-link" style="color:#d9534f;font-weight:600;">Danger Zone</a>
-    </footer>
 
-    <!-- Danger Zone Modal -->
-    <div id="danger-modal" class="modal-overlay" hidden>
-      <div class="modal-content">
-        <h3>Danger Zone</h3>
-        <p style="font-size:0.9rem;color:#c00;margin-bottom:1rem;">These actions are irreversible – proceed with caution.</p>
-        <button id="btn-logout-google" class="danger-btn">Log out of Google</button>
-        <button id="btn-clear-cache" class="danger-btn">Clear browser cache</button>
-        <button id="btn-remove-books" class="danger-btn">Remove ALL books from local database</button>
-        <button id="btn-close-danger" class="danger-btn secondary">Close</button>
-      </div>
-    </div>
-
-    <!-- Danger Zone Script -->
-    <script type="module">
-      import driveSync from '/static/js/driveSync.js';
-      import * as dbService from '/static/js/dbService.js';
-
-      const modal = document.getElementById('danger-modal');
-      const dangerLink = document.getElementById('danger-link');
-      const btnClose = document.getElementById('btn-close-danger');
-      const btnLogout = document.getElementById('btn-logout-google');
-      const btnClearCache = document.getElementById('btn-clear-cache');
-      const btnRemoveBooks = document.getElementById('btn-remove-books');
-
-      dangerLink.addEventListener('click', (e)=> { e.preventDefault(); modal.hidden = false; });
-      btnClose.addEventListener('click', ()=> modal.hidden = true);
-      modal.addEventListener('click', (e)=> { if (e.target === modal) modal.hidden = true; });
-
-      btnLogout.addEventListener('click', async ()=> {
-        if (!confirm('Disconnect Google Drive and log out?')) return;
-        try { await driveSync.disconnect(); alert('Logged out of Google.'); location.reload(); } catch(err){ alert('Failed to log out: '+err.message);} });
-
-      btnClearCache.addEventListener('click', async ()=> {
-        if (!confirm('Clear browser caches and localStorage? The page will reload.')) return;
-        try {
-          if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); }
-          localStorage.clear();
-          alert('Browser cache cleared. Reloading…');
-          location.reload();
-        } catch(err){ alert('Failed to clear caches: '+err.message);} });
-
-      btnRemoveBooks.addEventListener('click', async ()=> {
-        if (!confirm('Delete ALL books and reading progress from this device? This cannot be undone.')) return;
-        try {
-          await dbService.clearAllData();
-          alert('All books removed from local database. Reloading…');
-          location.reload();
-        } catch(err){ alert('Failed to clear local database: '+err.message);} });
-    </script>
+    {% include 'components/danger_zone.html' %}
   </body>
 </html>
