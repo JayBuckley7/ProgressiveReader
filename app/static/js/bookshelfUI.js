@@ -1,4 +1,4 @@
-import { getAllBooksMetadata, deleteBook, addBook, updateBookCover } from './dbService.js';
+import { getAllBooksMetadata, deleteBook, addBook, updateBookCover, getBook } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 
 const recentBooksGrid = document.getElementById("recent-books-grid");
@@ -18,7 +18,7 @@ async function openBookAtProgress(bookId, title) {
  * Render the bookshelf grid.
  * @param {object} driveSync  Optional Google Drive sync helper implementing
  *                            isConnected(), listRemoteBooks(), downloadBook(),
- *                            deleteRemoteBook(), uploadBook().
+ *                            deleteRemoteBook(), uploadBookToDrive().
  * @param {string} searchQuery Optional search string to filter titles.
  */
 export async function renderBookshelf(driveSync, searchQuery = "") {
@@ -287,7 +287,18 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
           e.preventDefault();
           e.stopPropagation();
           try {
-            await driveSync.uploadBook(book.id);
+            const bookData = await getBook(book.id);
+            if (!bookData?.content) {
+              throw new Error('Book content not found');
+            }
+            const uploadedFile = await driveSync.uploadBookToDrive(
+              book.id,
+              book.title,
+              bookData.content,
+            );
+            console.log(
+              `${logPrefix} Uploaded "${book.title}" to Drive. File ID: ${uploadedFile.id}`,
+            );
             renderBookshelf(driveSync);
           } catch (err) {
             console.error(`${logPrefix} Upload to Drive failed:`, err);
