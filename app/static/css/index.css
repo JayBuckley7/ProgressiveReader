@@ -420,7 +420,11 @@ body {
 /* ────────────────────────────────────────────────
    Change-cover button on each book card
    ──────────────────────────────────────────────── */
-.book-item .btn-change-cover {
+.book-cover-wrapper {
+  position: relative;
+}
+
+.book-cover-wrapper .btn-change-cover {
   display: none;                     /* hidden until hover */
   position: absolute;
   bottom: 0.5rem;
@@ -456,7 +460,7 @@ body {
   opacity: 1;
 }
 
-.book-item .btn-change-cover:hover {
+.book-cover-wrapper .btn-change-cover:hover {
   background-color: #5a6268;
   opacity: 1;
 }
