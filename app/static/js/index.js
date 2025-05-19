@@ -213,6 +213,17 @@ async function initializeApp() {
       driveLinkHeader.style.display = 'none';
     }
 
+    // Listen for auth-lost callback from driveSync module (if provided)
+    if (driveSync && typeof driveSync.onAuthLost === 'function') {
+      driveSync.onAuthLost(() => {
+        console.warn(`${logPrefix} Auth lost callback triggered. Resetting UI.`);
+        driveButton?.refreshState();
+        updateIndicator(false);
+        updateDriveLink();
+        alert('Google Drive connection lost. Please connect again.');
+      });
+    }
+
     /* ─────────────── Initial silent Drive init ─────────────── */
     console.log(`${logPrefix} Attempting early driveSync.init()…`);
     try {
@@ -231,17 +242,6 @@ async function initializeApp() {
       driveButton?.refreshState();
       updateIndicator(false);
       updateDriveLink();
-    }
-
-    // Listen for auth-lost callback from driveSync module (if provided)
-    if (driveSync && typeof driveSync.onAuthLost === 'function') {
-      driveSync.onAuthLost(() => {
-        console.warn(`${logPrefix} Auth lost callback triggered. Resetting UI.`);
-        driveButton?.refreshState();
-        updateIndicator(false);
-        updateDriveLink();
-        alert('Google Drive connection lost. Please connect again.');
-      });
     }
 
     console.log(`${logPrefix} Application initialization complete.`);
