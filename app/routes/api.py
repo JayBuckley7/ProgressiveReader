@@ -1,3 +1,4 @@
+"""Blueprint providing translation and content API routes."""
 from flask import Blueprint, request, jsonify, session, current_app, Response
 from openai import OpenAI
 import requests

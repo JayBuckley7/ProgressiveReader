@@ -1,3 +1,4 @@
+"""Blueprint routes for handling book uploads and retrieval."""
 import os
 import uuid
 from flask import Blueprint, request, jsonify, current_app, url_for, send_from_directory, abort

@@ -1,1 +1,1 @@
-# This file makes the 'utils' directory a Python package 
+"""Utility functions used across the application."""

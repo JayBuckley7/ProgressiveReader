@@ -1,3 +1,4 @@
+"""Blueprint routes for main pages and index handling."""
 from flask import Blueprint, render_template, session, request, redirect, url_for, current_app, jsonify
 import os
 import uuid

@@ -1,3 +1,4 @@
+"""Legacy utilities retained for compatibility."""
 import os
 import io
 import ebooklib
