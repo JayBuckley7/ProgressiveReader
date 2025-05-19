@@ -496,7 +496,7 @@ async function importInitialFiles(){
   if (cursor !== '1') { _initialImportDone = true; return; }
 
   await seedDriveFolder();
-  console.log('[DriveSync] Performing initial cold import of EPUBs…');
+  console.log('[DriveSync] Performing initial scan of remote EPUBs (metadata-only)…');
 
   /* first Drive history cursor */
   try {
@@ -522,14 +522,22 @@ async function importInitialFiles(){
     'files(id,name,md5Checksum,modifiedTime,appProperties)'
   );
   const files = list.files;
+  
+  // Create metadata-only entries for each remote book
   for (const f of files) {
-    const buf = await downloadFile(f.id);
     const canonicalId = f.appProperties?.progReaderBookId || f.id;
-    const blob = new Blob([buf], { type: EPUB_MIME_TYPE });
-    await addBook(f.name.replace(/\.epub$/i, ''), blob, canonicalId, { driveId: f.id, md5: f.md5Checksum, modifiedTime: f.modifiedTime });
+    // Create a metadata-only entry that will show in the bookshelf UI
+    await addBookMetadataOnly(f.name.replace(/\.epub$/i, ''), canonicalId, { 
+      driveId: f.id, 
+      md5: f.md5Checksum, 
+      modifiedTime: f.modifiedTime,
+      isRemoteOnly: true 
+    });
   }
-  console.info(`[DriveSync] Cold-imported ${files.length} book(s)`);
+  
+  console.info(`[DriveSync] Imported metadata for ${files.length} remote book(s) - content will be downloaded on demand`);
   _initialImportDone = true;
+  
   // After cold import, fetch a *new* startPageToken to effectively checkpoint *after* the cold import items.
   // This is because the Drive API treats startPageToken as "give me changes from now on".
   try {
@@ -574,11 +582,32 @@ export async function runSyncLoop(){
         if(ch.file.mimeType==='application/epub+zip'){
           const canonicalId = ch.file.appProperties?.progReaderBookId || ch.fileId;
           const existing = await getBookByDriveId(ch.fileId) || await getBookMetadata(canonicalId);
-          const buf = await downloadFile(ch.fileId);
-          const blob = new Blob([buf], { type: EPUB_MIME_TYPE });
-          await addBook(ch.file.name.replace(/\.epub$/i,''), blob, canonicalId, { driveId: ch.fileId, md5: ch.file.md5Checksum, modifiedTime: ch.file.modifiedTime });
-          existing ? updated++ : added++;
-          bytesDownloaded += buf.byteLength;
+          
+          // Check if this book already exists locally (with content)
+          if (existing && !existing.isRemoteOnly) {
+            // Only update metadata for existing local books
+            await updateBookMetadata(canonicalId, { 
+              driveId: ch.fileId, 
+              md5: ch.file.md5Checksum, 
+              modifiedTime: ch.file.modifiedTime 
+            });
+            updated++;
+          } else if (!existing) {
+            // For new books, just create a placeholder entry with isRemoteOnly=true
+            // This is a metadata-only entry that will be shown in the bookshelf but needs explicit download
+            const title = ch.file.name.replace(/\.epub$/i,'');
+            
+            // Use a structure similar to what's in bookshelfUI.js for remote-only books
+            // Note: We use a specialized version of addBook or similar function to add metadata-only entries
+            // This is a placeholder implementation - you'll need to create this function
+            await addBookMetadataOnly(title, canonicalId, { 
+              driveId: ch.fileId, 
+              md5: ch.file.md5Checksum, 
+              modifiedTime: ch.file.modifiedTime,
+              isRemoteOnly: true 
+            });
+            added++;
+          }
           continue;
         }
         if(ch.file.name?.endsWith('.progress.json')){
@@ -591,9 +620,72 @@ export async function runSyncLoop(){
     if(!token && res.newStartPageToken) await saveChangeCursor(res.newStartPageToken);
   }while(token);
   const ms=(performance.now()-startT)|0;
-  console.info(`[Drive] Synced: +${added} ∆${updated} –${removed}. ${(bytesDownloaded / 1024).toFixed(1)} KiB in ${ms.toFixed(0)} ms`);
+  console.info(`[Drive] Synced: +${added} ∆${updated} –${removed}. ${bytesDownloaded ? (bytesDownloaded / 1024).toFixed(1) + ' KiB' : 'metadata only'} in ${ms.toFixed(0)} ms`);
   window.dispatchEvent(new Event('drive-sync-complete'));
   return { added, updated, removed, bytesDownloaded, cycleMs: ms };
+}
+
+/**
+ * Adds a metadata-only entry for a remote book without downloading the content.
+ * This creates a placeholder in the local database that will show up in the bookshelf UI.
+ * @param {string} title - The title of the book.
+ * @param {string} bookId - The ID of the book. 
+ * @param {object} metadata - Additional metadata like driveId, md5, etc.
+ */
+async function addBookMetadataOnly(title, bookId, metadata = {}) {
+  try {
+    // Import from dbService in case it's not imported at the top
+    if (typeof updateBookMetadata !== 'function') {
+      const { updateBookMetadata: updateBookMetadataFn } = await import('./dbService.js');
+      updateBookMetadata = updateBookMetadataFn;
+    }
+    
+    // First check if the book exists (by ID)
+    const existing = await getBookMetadata(bookId);
+    
+    if (existing) {
+      // If it exists, just update its metadata
+      await updateBookMetadata(bookId, {
+        ...metadata,
+        title: title || existing.title,
+        isRemoteOnly: true  // Make sure to mark it as remote-only
+      });
+    } else {
+      // If it doesn't exist, create a new metadata-only entry in the database
+      // We need to use IndexedDB directly because our regular addBook requires content
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('ProgressiveReaderDB', 2);
+        request.onerror = e => reject(e.target.error);
+        request.onsuccess = e => resolve(e.target.result);
+      });
+      
+      const tx = db.transaction('books', 'readwrite');
+      const store = tx.objectStore('books');
+      
+      const bookData = {
+        id: bookId,
+        title: title || 'Untitled Book',
+        addedDate: new Date(),
+        lastOpened: null,
+        coverImageBlob: null,
+        isDemo: false,
+        isRemoteOnly: true,  // Mark as remote-only to indicate content needs to be downloaded
+        ...metadata
+      };
+      
+      await new Promise((resolve, reject) => {
+        const request = store.put(bookData);
+        request.onerror = e => reject(e.target.error);
+        request.onsuccess = () => resolve();
+      });
+    }
+    
+    console.log(`[DriveSync] Added metadata-only entry for remote book: ${title} (${bookId})`);
+    return bookId;
+  } catch (error) {
+    console.error('[DriveSync] Error adding metadata-only book entry:', error);
+    throw error;
+  }
 }
 
 // ── 8. Upload workers -----------------------------------------------------
