@@ -317,7 +317,7 @@ export async function seedDriveFolder(){
     // The `fetchWithAuth` should have already handled generic auth loss (401).
     // Specific `insufficientFilePermissions` on list/create would pass through `fetchWithAuth` without `_markDisconnected`
     // but `res.ok` would be false, leading to an error throw from `driveFilesList/Create` wrappers.
-    throw new Error(`Failed to ensure '${FOLDER_NAME}' folder: ${error.message}`);
+    throw error;
   }
 }
 

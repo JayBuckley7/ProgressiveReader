@@ -227,7 +227,9 @@ async function initializeApp() {
         console.log(`${logPrefix} Early driveSync.init() completed – Drive not connected.`);
       }
     } catch (err) {
-      console.warn(`${logPrefix} Early driveSync.init() failed or token absent:`, err.message);
+      console.warn(`${logPrefix} Early driveSync.init() failed:`, err.message);
+      // Show a brief banner so the user knows why the Drive link disappeared
+      showBanner('Drive unavailable', 'offline', 5000);
       driveButton?.refreshState();
       updateIndicator(false);
       updateDriveLink();
