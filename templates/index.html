@@ -318,8 +318,60 @@
     ></script>
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
     {% block body_end %}{% endblock %}
-    <footer style="text-align:center;padding:1em;">
-      <a href="{{ url_for('main.tos') }}">Terms of Service</a>
+    <footer class="site-footer" style="text-align:center;padding:0.75rem 0;border-top:1px solid #e0e6ed;background:#f8f9fa;position:fixed;bottom:0;left:0;width:100%;z-index:500;">
+      <a href="{{ url_for('main.tos') }}" target="_blank">Terms of Service</a>
+      &nbsp;|&nbsp;
+      <a href="#" id="danger-link" style="color:#d9534f;font-weight:600;">Danger Zone</a>
     </footer>
+
+    <!-- Danger Zone Modal -->
+    <div id="danger-modal" class="modal-overlay" hidden>
+      <div class="modal-content">
+        <h3>Danger Zone</h3>
+        <p style="font-size:0.9rem;color:#c00;margin-bottom:1rem;">These actions are irreversible – proceed with caution.</p>
+        <button id="btn-logout-google" class="danger-btn">Log out of Google</button>
+        <button id="btn-clear-cache" class="danger-btn">Clear browser cache</button>
+        <button id="btn-remove-books" class="danger-btn">Remove ALL books from local database</button>
+        <button id="btn-close-danger" class="danger-btn secondary">Close</button>
+      </div>
+    </div>
+
+    <!-- Danger Zone Script -->
+    <script type="module">
+      import driveSync from '/static/js/driveSync.js';
+      import * as dbService from '/static/js/dbService.js';
+
+      const modal = document.getElementById('danger-modal');
+      const dangerLink = document.getElementById('danger-link');
+      const btnClose = document.getElementById('btn-close-danger');
+      const btnLogout = document.getElementById('btn-logout-google');
+      const btnClearCache = document.getElementById('btn-clear-cache');
+      const btnRemoveBooks = document.getElementById('btn-remove-books');
+
+      dangerLink.addEventListener('click', (e)=> { e.preventDefault(); modal.hidden = false; });
+      btnClose.addEventListener('click', ()=> modal.hidden = true);
+      modal.addEventListener('click', (e)=> { if (e.target === modal) modal.hidden = true; });
+
+      btnLogout.addEventListener('click', async ()=> {
+        if (!confirm('Disconnect Google Drive and log out?')) return;
+        try { await driveSync.disconnect(); alert('Logged out of Google.'); location.reload(); } catch(err){ alert('Failed to log out: '+err.message);} });
+
+      btnClearCache.addEventListener('click', async ()=> {
+        if (!confirm('Clear browser caches and localStorage? The page will reload.')) return;
+        try {
+          if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); }
+          localStorage.clear();
+          alert('Browser cache cleared. Reloading…');
+          location.reload();
+        } catch(err){ alert('Failed to clear caches: '+err.message);} });
+
+      btnRemoveBooks.addEventListener('click', async ()=> {
+        if (!confirm('Delete ALL books and reading progress from this device? This cannot be undone.')) return;
+        try {
+          await dbService.clearAllData();
+          alert('All books removed from local database. Reloading…');
+          location.reload();
+        } catch(err){ alert('Failed to clear local database: '+err.message);} });
+    </script>
   </body>
 </html>
