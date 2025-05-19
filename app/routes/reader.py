@@ -28,20 +28,22 @@ reader_bp = Blueprint("reader", __name__)
 @reader_bp.route("/read/<book_id>/<int:item_index>", endpoint="read_item_at_index")
 @reader_bp.route("/read/<book_id>", defaults={'item_index': None}, endpoint="read_item_no_index")
 def reader(book_id: str, item_index: int = None):
-    """
-    Serve the minimal reader shell; the browser does all EPUB work.
-    """
-    current_app.logger.debug(
-        "Reader view for book %s (URL index: %s, actual start determined by client or this URL index)", book_id, item_index
-    )
+    """Serve the minimal reader shell. If no index is provided, redirect to 0."""
 
-    # Ensure current_index passed to template is explicitly None if item_index is None
-    template_current_index = item_index if item_index is not None else None
+    # Redirect /read/<book_id> → /read/<book_id>/0 for backward compatibility
+    if item_index is None:
+        return redirect(url_for("reader.read_item_at_index", book_id=book_id, item_index=0))
+
+    current_app.logger.debug(
+        "Reader view for book %s (URL index: %s, actual start determined by client or this URL index)",
+        book_id,
+        item_index,
+    )
 
     return render_template(
         "reader.html",
         book_id=book_id,
-        current_index=template_current_index, # Use the explicitly set None or the integer value
+        current_index=item_index,
         model_name=current_app.config.get("SERVER_DEFAULT_MODEL", "gpt-4o-mini"),
         show_jlpt_filter=session.get("show_jlpt_filter", False),
         jlpt_enabled=session.get("jlpt_highlighting_enabled", False),
