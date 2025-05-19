@@ -226,6 +226,8 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       coverBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // Manually trigger file input since preventDefault() cancels label behavior
+        coverInput.click();
       };
 
       coverWrapper.appendChild(coverBtn);
