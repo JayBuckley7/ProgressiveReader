@@ -815,6 +815,19 @@ if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
     window.VITE_GDRIVE_CLIENT_ID = window.GDRIVE_CLIENT_ID;
 }
 
+// Compatibility function for any remaining references to window.idbSaveEpub
+if (typeof window !== 'undefined' && typeof window.idbSaveEpub !== 'function') {
+    window.idbSaveEpub = async function(bookId, title, metadata = {}) {
+        console.log(`[DriveSync] Legacy window.idbSaveEpub called for book: ${title} (${bookId}). Using addBookMetadataOnly instead.`);
+        try {
+            return await addBookMetadataOnly(title, bookId, {...metadata, isRemoteOnly: true});
+        } catch (error) {
+            console.error('[DriveSync] Error in compatibility function window.idbSaveEpub:', error);
+            throw error;
+        }
+    };
+}
+
 // New function: uploadBookToDrive
 export async function uploadBookToDrive(bookId, bookTitle, epubBlob) {
     console.log(`[DriveSync] uploadBookToDrive: Starting upload for bookId: ${bookId}, Title: ${bookTitle}`);
