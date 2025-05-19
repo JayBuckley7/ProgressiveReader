@@ -7,51 +7,6 @@ if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
     window.VITE_GDRIVE_CLIENT_ID = window.GDRIVE_CLIENT_ID;
 }
 
-// Compatibility function for any remaining references to window.idbSaveEpub
-if (typeof window !== 'undefined' && typeof window.idbSaveEpub !== 'function') {
-    window.idbSaveEpub = async function(bookId, title, metadata = {}) {
-        console.log(`[DriveSync] Legacy window.idbSaveEpub called for book: ${title} (${bookId}). Using addBookMetadataOnly instead.`);
-        try {
-            // This will be initialized properly once the addBookMetadataOnly function is defined
-            if (typeof addBookMetadataOnly === 'function') {
-                return await addBookMetadataOnly(title, bookId, {...metadata, isRemoteOnly: true});
-            } else {
-                console.warn('[DriveSync] window.idbSaveEpub called before addBookMetadataOnly is defined');
-                // Create a minimal DB entry that will be shown in the bookshelf
-                const db = await new Promise((resolve, reject) => {
-                    const request = indexedDB.open('ProgressiveReaderDB', 2);
-                    request.onerror = e => reject(e.target.error);
-                    request.onsuccess = e => resolve(e.target.result);
-                });
-                
-                const tx = db.transaction('books', 'readwrite');
-                const store = tx.objectStore('books');
-                
-                const bookData = {
-                    id: bookId,
-                    title: title || 'Untitled Book',
-                    addedDate: new Date(),
-                    lastOpened: null,
-                    coverImageBlob: null,
-                    isDemo: false,
-                    isRemoteOnly: true,
-                    ...metadata
-                };
-                
-                await new Promise((resolve, reject) => {
-                    const request = store.put(bookData);
-                    request.onerror = e => reject(e.target.error);
-                    request.onsuccess = () => resolve();
-                });
-                return bookId;
-            }
-        } catch (error) {
-            console.error('[DriveSync] Error in compatibility function window.idbSaveEpub:', error);
-            throw error;
-        }
-    };
-}
-
 // ****************************************************************************************
 // PUBLIC API:
 //   init()                          → bootstrap; silent if token cached
@@ -543,8 +498,14 @@ async function downloadFile(id){
 // ── 6. Cold import --------------------------------------------------------
 async function importInitialFiles(){
   if (_initialImportDone) return;
+  console.log('[DriveSync] importInitialFiles: Starting...');
+  
   const cursor = await getChangeCursor();
-  if (cursor !== '1') { _initialImportDone = true; return; }
+  if (cursor !== '1') { 
+    console.log('[DriveSync] importInitialFiles: Not a first-time import (cursor != 1). Skipping.');
+    _initialImportDone = true; 
+    return; 
+  }
 
   await seedDriveFolder();
   console.log('[DriveSync] Performing initial scan of remote EPUBs (metadata-only)…');
@@ -568,51 +529,134 @@ async function importInitialFiles(){
     return; // Cannot proceed without a starting point for changes
   }
 
-  const list = await driveFilesList(
-    `'${await seedDriveFolder()}' in parents and mimeType='application/epub+zip' and trashed=false`,
-    'files(id,name,md5Checksum,modifiedTime,appProperties)'
-  );
-  const files = list.files;
-  
-  // Create metadata-only entries for each remote book
-  for (const f of files) {
-    const canonicalId = f.appProperties?.progReaderBookId || f.id;
-    // Create a metadata-only entry that will show in the bookshelf UI
-    try {
-      await addBookMetadataOnly(f.name.replace(/\.epub$/i, ''), canonicalId, { 
-        driveId: f.id, 
-        md5: f.md5Checksum, 
-        modifiedTime: f.modifiedTime,
-        isRemoteOnly: true 
-      });
-    } catch (error) {
-      console.error(`[DriveSync] Failed to create metadata for book: ${f.name} (${canonicalId})`, error);
+  // Fetch books from Drive
+  try {
+    const list = await driveFilesList(
+      `'${await seedDriveFolder()}' in parents and mimeType='application/epub+zip' and trashed=false`,
+      'files(id,name,md5Checksum,modifiedTime,appProperties)'
+    );
+    const files = list.files || [];
+    console.log(`[DriveSync] importInitialFiles: Found ${files.length} books in Drive.`);
+    
+    if (files.length > 0) {
+      // Use IndexedDB directly to avoid dependency on other functions
+      await saveRemoteBooksToDb(files);
     }
+    
+    console.info(`[DriveSync] Imported metadata for ${files.length} remote book(s) - content will be downloaded on demand`);
+    
+  } catch (err) {
+    console.error('[DriveSync] importInitialFiles: Error fetching books from Drive:', err);
   }
   
-  console.info(`[DriveSync] Imported metadata for ${files.length} remote book(s) - content will be downloaded on demand`);
   _initialImportDone = true;
   
   // After cold import, fetch a *new* startPageToken to effectively checkpoint *after* the cold import items.
-  // This is because the Drive API treats startPageToken as "give me changes from now on".
   try {
     const tokenRes = await fetchWithAuth('https://www.googleapis.com/drive/v3/changes/startPageToken');
     if (tokenRes.ok) {
-      const { newStartPageToken } = await tokenRes.json();
-      if (newStartPageToken) {
-        console.log('[DriveSync] importInitialFiles: Obtained new startPageToken after cold import:', newStartPageToken);
-        await saveChangeCursor(newStartPageToken);
+      const { startPageToken } = await tokenRes.json();
+      if (startPageToken) {
+        console.log('[DriveSync] importInitialFiles: Obtained new startPageToken after cold import:', startPageToken);
+        await saveChangeCursor(startPageToken);
       } else {
-        // This case should ideally not happen if tokenRes.ok is true for this specific endpoint
         console.warn('[DriveSync] importInitialFiles: startPageToken endpoint returned ok but no token in body.');
       }
     } else {
-      // Log specific error from API if not ok
       const errorText = await tokenRes.text();
       console.warn(`[DriveSync] importInitialFiles: Unable to obtain fresh startPageToken after cold import. Status: ${tokenRes.status}. Response: ${errorText}`);
     }
   } catch (e) { 
-      console.warn('[DriveSync] importInitialFiles: Error during fetch of new startPageToken:', e);
+    console.warn('[DriveSync] importInitialFiles: Error during fetch of new startPageToken:', e);
+  }
+}
+
+// Helper function to save remote books to the IndexedDB directly
+async function saveRemoteBooksToDb(files) {
+  try {
+    // Open the database directly
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('ProgressiveReaderDB', 2);
+      request.onerror = e => reject(e.target.error);
+      request.onsuccess = e => resolve(e.target.result);
+      
+      // Handle database upgrades if needed
+      request.onupgradeneeded = (event) => {
+        console.log('[DriveSync] saveRemoteBooksToDb: Database upgrade needed, creating stores if missing...');
+        const db = event.target.result;
+        
+        // Create stores if they don't exist (first time use)
+        if (!db.objectStoreNames.contains('books')) {
+          console.log('[DriveSync] saveRemoteBooksToDb: Creating books store');
+          db.createObjectStore('books', { keyPath: 'id' });
+        }
+      };
+    });
+    
+    // Process each book
+    for (const f of files) {
+      try {
+        const canonicalId = f.appProperties?.progReaderBookId || f.id;
+        const title = f.name.replace(/\.epub$/i, '');
+        
+        // Create transaction and get objectStore
+        const tx = db.transaction('books', 'readwrite');
+        const store = tx.objectStore('books');
+        
+        // Check if book exists first
+        const existingBook = await new Promise((resolve) => {
+          const request = store.get(canonicalId);
+          request.onsuccess = (e) => resolve(e.target.result);
+          request.onerror = () => resolve(null);
+        });
+        
+        if (existingBook) {
+          // Update existing book metadata
+          existingBook.driveId = f.id;
+          existingBook.md5 = f.md5Checksum;
+          existingBook.modifiedTime = f.modifiedTime;
+          existingBook.isRemoteOnly = true;
+          
+          await new Promise((resolve, reject) => {
+            const request = store.put(existingBook);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+          });
+          
+          console.log(`[DriveSync] saveRemoteBooksToDb: Updated metadata for existing book: ${title} (${canonicalId})`);
+        } else {
+          // Create new book entry
+          const bookData = {
+            id: canonicalId,
+            title: title || 'Untitled Book',
+            addedDate: new Date(),
+            lastOpened: null,
+            coverImageBlob: null,
+            isDemo: false,
+            isRemoteOnly: true,
+            driveId: f.id,
+            md5: f.md5Checksum,
+            modifiedTime: f.modifiedTime
+          };
+          
+          await new Promise((resolve, reject) => {
+            const request = store.put(bookData);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+          });
+          
+          console.log(`[DriveSync] saveRemoteBooksToDb: Added new remote book: ${title} (${canonicalId})`);
+        }
+      } catch (error) {
+        console.error(`[DriveSync] saveRemoteBooksToDb: Error processing book ${f.name}:`, error);
+      }
+    }
+    
+    console.log(`[DriveSync] saveRemoteBooksToDb: Successfully processed ${files.length} books`);
+    return true;
+  } catch (error) {
+    console.error('[DriveSync] saveRemoteBooksToDb: Critical error:', error);
+    return false;
   }
 }
 
@@ -730,8 +774,8 @@ async function addBookMetadataOnly(title, bookId, metadata = {}) {
       
       await new Promise((resolve, reject) => {
         const request = store.put(bookData);
-        request.onerror = e => reject(e.target.error);
         request.onsuccess = () => resolve();
+        request.onerror = e => reject(e.target.error);
       });
     }
     
