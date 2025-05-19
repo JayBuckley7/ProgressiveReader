@@ -206,18 +206,24 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
       const coverInputId = `cover-file-${book.id}`;
       coverInput.id = coverInputId;
 
-      const coverBtn = document.createElement('label');
+      const coverBtn = document.createElement('button');
+      coverBtn.type = 'button';
       coverBtn.className = 'btn-change-cover action-btn';
       coverBtn.textContent = '📷';
       coverBtn.title = `Change cover for "${book.title}"`;
       coverBtn.setAttribute('aria-label', coverBtn.title);
-      coverBtn.setAttribute('role', 'button');
-      coverBtn.htmlFor = coverInputId;
 
       coverInput.onchange = async () => {
         if (!coverInput.files?.[0]) return;
         try {
           await updateBookCover(book.id, coverInput.files[0]);
+          if (driveSync?.isConnected?.()) {
+            try {
+              await driveSync.uploadCoverToDrive(book.id, book.title, coverInput.files[0]);
+            } catch (e) {
+              console.warn(`${logPrefix} Failed to upload cover to Drive for ${book.id}`, e);
+            }
+          }
           renderBookshelf(driveSync);
         } catch (err) {
           console.error(`${logPrefix} Failed to update cover for ${book.id}`, err);

@@ -1,4 +1,4 @@
-import { addBook } from './dbService.js';
+import { addBook, getBook } from './dbService.js';
 import * as driveSync from './driveSync.js';
 import { renderBookshelf } from './bookshelfUI.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
@@ -132,11 +132,25 @@ async function handleFileSelect() {
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
 
+        let storedRecord = null;
+        try {
+            storedRecord = await getBook(bookIdFromDB);
+        } catch (e) {
+            console.warn(`${logPrefix} Failed fetching newly stored book for cover upload:`, e);
+        }
+
         // Automatically upload to Drive if connected
         if (driveSync?.isConnected?.()) {
             try {
                 await driveSync.uploadBookToDrive(bookIdFromDB, title, file);
                 console.log(`${logPrefix} Auto-upload to Drive completed for ${bookIdFromDB}`);
+                if (storedRecord?.coverImageBlob instanceof Blob) {
+                    try {
+                        await driveSync.uploadCoverToDrive(bookIdFromDB, title, storedRecord.coverImageBlob);
+                    } catch (e) {
+                        console.warn(`${logPrefix} Auto-upload of cover failed for ${bookIdFromDB}:`, e);
+                    }
+                }
             } catch (e) {
                 console.warn(`${logPrefix} Auto-upload to Drive failed for ${bookIdFromDB}:`, e);
             }
