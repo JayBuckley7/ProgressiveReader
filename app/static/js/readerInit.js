@@ -168,15 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => offlineNotification.remove(), 300);
         }
         
-        // Sync any offline changes
-        if (window.storageManager) {
-            // Try to sync reading progress
-            if ('serviceWorker' in navigator && 'SyncManager' in window) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.sync.register('sync-reading-progress');
-                });
-            }
-        }
+        // Sync any offline changes disabled
     }
     
     // Handle going offline

@@ -213,6 +213,17 @@ async function initializeApp() {
       driveLinkHeader.style.display = 'none';
     }
 
+    // Listen for auth-lost callback from driveSync module (if provided)
+    if (driveSync && typeof driveSync.onAuthLost === 'function') {
+      driveSync.onAuthLost(() => {
+        console.warn(`${logPrefix} Auth lost callback triggered. Resetting UI.`);
+        driveButton?.refreshState();
+        updateIndicator(false);
+        updateDriveLink();
+        alert('Google Drive connection lost. Please connect again.');
+      });
+    }
+
     /* ─────────────── Initial silent Drive init ─────────────── */
     console.log(`${logPrefix} Attempting early driveSync.init()…`);
     try {
@@ -223,25 +234,20 @@ async function initializeApp() {
 
       if (driveSync.isConnected()) {
         console.log(`${logPrefix} Early driveSync.init() successful – Drive connected.`);
+        if (!driveSync.getFolderId()) {
+          console.error(`${logPrefix} Drive folder ID is null after init – user may lack permissions.`);
+          showBanner('Drive folder unavailable', 'offline', 5000);
+        }
       } else {
         console.log(`${logPrefix} Early driveSync.init() completed – Drive not connected.`);
       }
     } catch (err) {
-      console.warn(`${logPrefix} Early driveSync.init() failed or token absent:`, err.message);
+      console.warn(`${logPrefix} Early driveSync.init() failed:`, err.message);
+      // Show a brief banner so the user knows why the Drive link disappeared
+      showBanner('Drive unavailable', 'offline', 5000);
       driveButton?.refreshState();
       updateIndicator(false);
       updateDriveLink();
-    }
-
-    // Listen for auth-lost callback from driveSync module (if provided)
-    if (driveSync && typeof driveSync.onAuthLost === 'function') {
-      driveSync.onAuthLost(() => {
-        console.warn(`${logPrefix} Auth lost callback triggered. Resetting UI.`);
-        driveButton?.refreshState();
-        updateIndicator(false);
-        updateDriveLink();
-        alert('Google Drive connection lost. Please connect again.');
-      });
     }
 
     console.log(`${logPrefix} Application initialization complete.`);

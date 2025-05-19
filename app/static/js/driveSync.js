@@ -290,9 +290,12 @@ export async function seedDriveFolder(){
           console.log(`[DriveSync] seedDriveFolder: Attempting to trash ${res.files.length - 1} duplicate folder(s).`);
           for (let i = 1; i < res.files.length; i++) {
             console.log(`[DriveSync] seedDriveFolder: Trashing duplicate folder ID: ${res.files[i].id}`);
-            driveFilesUpdate(res.files[i].id, { trashed: true }).catch((err)=>{
-                console.warn(`[DriveSync] seedDriveFolder: Non-fatal error trashing duplicate folder ${res.files[i].id}:`, err.message);
-            });
+            try {
+                await driveFilesUpdate(res.files[i].id, { trashed: true });
+            } catch (err) {
+                console.warn(`[DriveSync] seedDriveFolder: Error trashing duplicate folder ${res.files[i].id}:`, err.message);
+                throw err; // propagate to outer catch
+            }
           }
       }
       return folderId;
@@ -317,7 +320,7 @@ export async function seedDriveFolder(){
     // The `fetchWithAuth` should have already handled generic auth loss (401).
     // Specific `insufficientFilePermissions` on list/create would pass through `fetchWithAuth` without `_markDisconnected`
     // but `res.ok` would be false, leading to an error throw from `driveFilesList/Create` wrappers.
-    throw new Error(`Failed to ensure '${FOLDER_NAME}' folder: ${error.message}`);
+    throw error;
   }
 }
 
@@ -410,13 +413,14 @@ function _markDisconnected() {
   localStorage.removeItem(TOKEN_STORE_KEY);
   localStorage.removeItem('drive.folderId'); // Ensure this matches the key used in seedDriveFolder
   clearDriveConnectedCookie();
-  // _notifyAuthLost() is typically called by the function that detects the auth loss and calls _markDisconnected or disconnect.
+  _notifyAuthLost();
 }
 async function fetchWithAuth(url, opts = {}) {
   const res = await fetch(url, { ...opts, headers: { ...authHeader(), ...(opts.headers||{}) } });
   if (res.status === 401) { // Only 401 strictly means auth is lost for sure
     console.warn('[DriveSync] Auth error 401 on', url);
     _markDisconnected();
+    _notifyAuthLost();
     throw new Error('Google Drive authorisation lost (401)');
   } else if (res.status === 403) {
     // Try to parse error body for reason
@@ -433,18 +437,21 @@ async function fetchWithAuth(url, opts = {}) {
           // Other 403, treat as potentially recoverable or a different issue, but might still be auth related
           console.warn('[DriveSync] Auth error 403 on', url, errorBody);
           _markDisconnected(); // For other 403s, assume auth is compromised or broader issue
+          _notifyAuthLost();
           throw new Error(`Google Drive access error (403): ${specificError ? specificError.message : 'Forbidden'}` );
         }
       } else {
         // 403 without a specific error reason we can parse, treat as auth lost
         console.warn('[DriveSync] Auth error 403 (unparseable body) on', url);
         _markDisconnected();
+        _notifyAuthLost();
         throw new Error('Google Drive access error (403 Forbidden)');
       }
     } catch (e) {
       // Failed to parse error body from 403 response
       console.warn('[DriveSync] Auth error 403 (could not parse error body) on', url, e);
       _markDisconnected();
+      _notifyAuthLost();
       throw new Error('Google Drive access error (403 Forbidden, unreadable error)');
     }
   }
