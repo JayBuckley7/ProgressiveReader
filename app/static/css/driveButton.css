@@ -16,6 +16,7 @@
   transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out;
   border-radius: 8px; /* A moderate border-radius for the button itself */
   /* cursor: pointer; inherited from button type */
+  position: relative; /* For absolute positioning of the loading overlay */
 }
 
 /* Layout for when image and text are stacked (connected state) */
@@ -53,9 +54,29 @@
 
 /* State: Connecting */
 .drive-connect-button.state-connecting {
-  /* Specific styles if needed, e.g., slightly different background or opacity */
-  /* For now, assumes text content "Connecting..." is set by JS */
   cursor: wait;
+  position: relative;
+}
+
+/* Small spinner overlay when connecting */
+.drive-connect-button.state-connecting::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: drive-btn-spin 0.8s linear infinite;
+}
+
+@keyframes drive-btn-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Spinner element displayed during connecting state */
@@ -79,5 +100,44 @@
   /* For example, if we want a different background when connected */
   /* background-color: #4CAF50; */ /* Example: green background */
   /* color: white; */
+}
+
+/* New styles for connected-loading state */
+.loading-overlay {
+  display: none;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  bottom: -4px;
+  left: -4px;
+  border-radius: 10px;
+  background-color: rgba(75, 141, 255, 0.15);
+  border: 2px solid rgba(75, 141, 255, 0.5);
+  z-index: 1;
+  animation: pulse-border 1.5s ease-in-out infinite;
+  pointer-events: none; /* Allow clicks to pass through */
+}
+
+/* Show the loading overlay when state-connected-loading class is active */
+.drive-connect-button.state-connected-loading .loading-overlay {
+  display: block;
+}
+
+/* Spinner inside the drive-indicator in bookshelf header */
+.drive-indicator.connected-loading {
+  position: relative;
+  animation: pulse-opacity 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0% { border-color: rgba(75, 141, 255, 0.5); }
+  50% { border-color: rgba(75, 141, 255, 0.8); }
+  100% { border-color: rgba(75, 141, 255, 0.5); }
+}
+
+@keyframes pulse-opacity {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 

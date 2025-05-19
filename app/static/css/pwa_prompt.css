@@ -1,4 +1,4 @@
-# Styles for the PWA install prompt
+/*** Styles for the PWA install prompt ***/
 #pwa-prompt-container {
     display: none;
     position: fixed;

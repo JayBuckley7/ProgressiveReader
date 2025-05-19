@@ -92,12 +92,17 @@ async function initializeApp() {
         }, hideAfterMs);
       }
     }
-    window.addEventListener("drive-sync-start", () =>
-      showBanner("Syncing…", "syncing"),
-    );
-    window.addEventListener("drive-sync-complete", () => {
+    window.addEventListener("drive-sync-start", () => {
+      showBanner("Syncing…", "syncing");
+      driveButton?.setState("connecting");
+    });
+    window.addEventListener("drive-sync-complete", (event) => {
       showBanner("Up to date", "idle", 4000);
-      renderBookshelf(driveSync, currentSearchQuery);
+      const { added = 0, updated = 0, removed = 0 } = event.detail || {};
+      if (added || updated || removed) {
+        renderBookshelf(driveSync, currentSearchQuery);
+      }
+      driveButton?.refreshState();
     });
     window.addEventListener("drive-offline", () => {
       showBanner("Offline", "offline");
@@ -107,6 +112,14 @@ async function initializeApp() {
       showBanner("Online", "idle", 2000);
       updateIndicator(true);
       driveButton?.refreshState(); // Refresh button state when coming online
+      updateDriveLink();
+    });
+    window.addEventListener("drive-connected-loading", () => {
+      showBanner("Connecting...", "syncing");
+      if (driveIndicator) {
+        driveIndicator.className = "drive-indicator connected-loading";
+        driveIndicator.setAttribute("aria-label", "Drive connecting");
+      }
       updateDriveLink();
     });
     window.addEventListener("drive-disconnect", () => {

@@ -104,6 +104,23 @@ async function fetchAndStoreUserProfile(tokenToFetchWith) {
       picture: profile.picture,
       email: profile.email
     };
+    
+    // Make sure profile picture URL uses HTTPS and avoid caching issues by adding timestamp
+    if (gToken.userProfile && gToken.userProfile.picture) {
+      const pictureUrl = gToken.userProfile.picture;
+      
+      // Ensure HTTPS
+      let modifiedUrl = pictureUrl.replace(/^http:\/\//i, 'https://');
+      
+      // Add timestamp to prevent caching issues 
+      modifiedUrl = modifiedUrl.includes('?') 
+        ? `${modifiedUrl}&_t=${Date.now()}` 
+        : `${modifiedUrl}?_t=${Date.now()}`;
+        
+      gToken.userProfile.picture = modifiedUrl;
+      console.log('[DriveSync] Modified profile picture URL to:', modifiedUrl);
+    }
+    
     // Removed: await idbSet(TOKEN_STORE_KEY, gToken); // Caller will persist
     console.log('[DriveSync] User profile data attached to gToken:', gToken.userProfile);
   } catch (error) {
@@ -248,7 +265,7 @@ function authHeader(){
 // ── 2a. Silent refresh ----------------------------------------------------
 async function attemptRefreshToken(){
   if(!isConnected()) return;
-  if(Date.now() < gToken.expiry-120_000) return; // still fresh (>2 min)
+  if(Date.now() < gToken.expiry-120_000) return; // still fresh (>2 min)
   return new Promise((resolve)=>{
     google.accounts.oauth2.initTokenClient({
       client_id: window.VITE_GDRIVE_CLIENT_ID,
@@ -259,7 +276,27 @@ async function attemptRefreshToken(){
           disconnect();
           return resolve();
         }
-        gToken = { access: tok.access_token, expiry: Date.now()+tok.expires_in*1000 };
+        
+        // Preserve user profile data when refreshing token
+        const previousUserProfile = gToken.userProfile;
+        
+        gToken = { 
+          access: tok.access_token, 
+          expiry: Date.now() + tok.expires_in * 1000,
+          userProfile: previousUserProfile 
+        };
+        
+        // Try to refresh the profile data as well
+        try {
+          await fetchAndStoreUserProfile(tok.access_token);
+        } catch (profileErr) {
+          console.warn('[DriveSync] Failed to refresh profile during token refresh:', profileErr);
+          // Keep the previous profile if refresh fails
+          if (!gToken.userProfile && previousUserProfile) {
+            gToken.userProfile = previousUserProfile;
+          }
+        }
+        
         localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(gToken));
         resolve();
       }
@@ -753,7 +790,7 @@ export async function runSyncLoop(){
   console.log(`[DriveSync] runSyncLoop: Sync completed in ${ms.toFixed(0)}ms. Stats: +${added} added, ${updated} updated, ${removed} removed.`);
   console.info(`[Drive] Synced: +${added} ∆${updated} –${removed}. ${bytesDownloaded ? (bytesDownloaded / 1024).toFixed(1) + ' KiB' : 'metadata only'} in ${ms.toFixed(0)} ms`);
   
-  window.dispatchEvent(new Event('drive-sync-complete'));
+  window.dispatchEvent(new CustomEvent('drive-sync-complete', { detail: { added, updated, removed } }));
   return { added, updated, removed, bytesDownloaded, cycleMs: ms };
 }
 
@@ -825,6 +862,8 @@ export async function init(isExplicitCall = false){
   if (!isExplicitCall) { // This is an automatic call on page load
     if (cookieStatus === true) {
       console.log("[DriveSync] init: Auto-init: Cookie is true. Proceeding with token hydration and potential sync.");
+      // Immediately dispatch an event to indicate Google Drive connection is being established
+      window.dispatchEvent(new Event('drive-connected-loading'));
     } else {
       // Cookie is false or null, so we skip auto-init
       const reason = cookieStatus === false ? "gdrive_connected cookie was 'false' (user likely disconnected previously)." : "gdrive_connected cookie not found (first visit or cookie cleared).";
@@ -844,6 +883,8 @@ export async function init(isExplicitCall = false){
 
   if (isConnected()) {
     console.log("[DriveSync] init: hydrateToken reported connected. Proceeding with connected state setup (folder, import, sync).");
+    // Dispatch event to indicate Google Drive connection is confirmed
+    window.dispatchEvent(new Event('drive-connected-loading'));
     try {
       await seedDriveFolder();
       if (!_initialImportDone) { 

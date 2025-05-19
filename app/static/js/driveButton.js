@@ -66,11 +66,22 @@ export class DriveButton {
                 this.syncBtnEl.textContent = 'Sync Now';
             });
         }
-        // No specific event for driveLinkEl needed beyond its default link behavior
+
+        // Listen for early drive connection loading state
+        window.addEventListener('drive-connected-loading', () => {
+            console.log(`${this.logPrefix} Received drive-connected-loading event`);
+            this.setState('connected-loading');
+        });
+
+        // Listen for the drive-online event to remove loading state
+        window.addEventListener('drive-online', () => {
+            console.log(`${this.logPrefix} Received drive-online event`);
+            this.refreshState();
+        });
     }
 
     setState(state) { 
-        this.connectBtnEl.classList.remove('state-disconnected', 'state-connecting', 'state-connected', 'layout-vertical');
+        this.connectBtnEl.classList.remove('state-disconnected', 'state-connecting', 'state-connected', 'state-connected-loading', 'layout-vertical');
         this.connectBtnEl.classList.add(`state-${state}`);
         this.connectBtnEl.innerHTML = ''; 
         this.connectBtnEl.disabled = false;
@@ -98,24 +109,91 @@ export class DriveButton {
                 this.connectBtnEl.appendChild(spinner);
                 this.connectBtnEl.appendChild(status);
                 break;
-            case 'connected':
+            case 'connected-loading':
                 this.connectBtnEl.classList.add('layout-vertical');
+                // Add loading overlay element
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.className = 'loading-overlay';
+                this.connectBtnEl.appendChild(loadingOverlay);
+                
+                // Add Google icon or user profile if available
                 const userProfile = this.driveSync.getUserProfile();
                 if (userProfile && userProfile.picture) {
+                    console.log(`${this.logPrefix} Loading profile picture from URL:`, userProfile.picture);
                     const img = document.createElement('img');
                     img.src = userProfile.picture;
                     img.alt = userProfile.name || 'User';
                     img.className = 'profile-picture';
+                    img.crossOrigin = 'anonymous'; // Try with anonymous CORS
+                    img.onerror = (e) => {
+                        console.error(`${this.logPrefix} Error loading profile image:`, e);
+                        // Fallback to Google icon on error
+                        const iconSvg = document.createElement('div');
+                        iconSvg.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true">
+                            <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
+                            <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
+                            <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
+                            <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
+                        </svg>`;
+                        img.parentNode.replaceChild(iconSvg.firstChild, img);
+                    };
+                    img.onload = () => {
+                        console.log(`${this.logPrefix} Profile image loaded successfully`);
+                    };
                     this.connectBtnEl.appendChild(img);
+                } else {
+                    // Default Google icon if no profile yet
+                    const iconSvg = document.createElement('div');
+                    iconSvg.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true">
+                        <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
+                        <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
+                        <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
+                        <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
+                    </svg>`;
+                    this.connectBtnEl.appendChild(iconSvg.firstChild);
                 }
+                
+                // Add loading status text 
                 const textSpan = document.createElement('span');
                 textSpan.className = 'status-text';
-                if (userProfile && userProfile.name) {
-                    textSpan.textContent = `${userProfile.name.split(' ')[0]}`;
-                } else {
-                    textSpan.textContent = 'Connected';
-                }
+                textSpan.textContent = 'Syncing...';
                 this.connectBtnEl.appendChild(textSpan);
+                break;
+            case 'connected':
+                this.connectBtnEl.classList.add('layout-vertical');
+                const connectedProfile = this.driveSync.getUserProfile();
+                if (connectedProfile && connectedProfile.picture) {
+                    console.log(`${this.logPrefix} Connected state - Loading profile picture from URL:`, connectedProfile.picture);
+                    const img = document.createElement('img');
+                    img.src = connectedProfile.picture;
+                    img.alt = connectedProfile.name || 'User';
+                    img.className = 'profile-picture';
+                    img.crossOrigin = 'anonymous'; // Try with anonymous CORS
+                    img.onerror = (e) => {
+                        console.error(`${this.logPrefix} Connected state - Error loading profile image:`, e);
+                        // Fallback to Google icon on error
+                        const iconSvg = document.createElement('div');
+                        iconSvg.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true">
+                            <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
+                            <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
+                            <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
+                            <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
+                        </svg>`;
+                        img.parentNode.replaceChild(iconSvg.firstChild, img);
+                    };
+                    img.onload = () => {
+                        console.log(`${this.logPrefix} Connected state - Profile image loaded successfully`);
+                    };
+                    this.connectBtnEl.appendChild(img);
+                }
+                const connectedTextSpan = document.createElement('span');
+                connectedTextSpan.className = 'status-text';
+                if (connectedProfile && connectedProfile.name) {
+                    connectedTextSpan.textContent = `${connectedProfile.name.split(' ')[0]}`;
+                } else {
+                    connectedTextSpan.textContent = 'Connected';
+                }
+                this.connectBtnEl.appendChild(connectedTextSpan);
                 break;
             default:
                 this.connectBtnEl.innerHTML = 'Connect Drive'; // Fallback
