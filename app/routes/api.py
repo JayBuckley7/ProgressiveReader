@@ -21,7 +21,7 @@ def translate_content():
     model = data.get('model')
     user_api_key = data.get('api_key')
     cefr_level = data.get('cefr_level')
-    stream = data.get('stream', False)  # New parameter to enable streaming
+    stream = data.get('stream', False)  # Whether to stream the response
 
     if content is None or target_language is None or model is None:
         return jsonify({"error": "Missing required fields: content, target_language, model"}), 400
@@ -43,8 +43,11 @@ def translate_content():
     api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY')
     if not api_key_to_use: return jsonify({"error": "OpenAI API key not configured..."}), 400
     
-    # Ensure system_prompt is defined or moved to config if it's complex
-    system_prompt = "You are a helpful translator. You translate the provided HTML content while preserving the HTML structure. ONLY return the translated HTML content, with no introductory text, explanations, or markdown formatting like ```html." # Simplified for now
+    # Prompt instructing the model to return only translated HTML
+    system_prompt = (
+        "You are a helpful translator. You translate the provided HTML content "
+        "while preserving the tags. ONLY return the translated HTML content."
+    )
     user_prompt_prefix = f"Translate the following HTML content to {target_language}"
     if cefr_level: user_prompt_prefix += f", simplifying for CEFR level {cefr_level}. Preserve HTML tags."
     else: user_prompt_prefix += ". Preserve HTML tags."
@@ -421,8 +424,7 @@ def mine_jpdb_word():
     if vid is None or sid is None:
         return jsonify({"error": "Missing vid or sid"}), 400
 
-    # Here you would implement the JPDB mining API call
-    # For now, we'll just return a success response
+    # JPDB mining API call not yet implemented; return success for now
     current_app.logger.info(f"Mining word vid={vid}, sid={sid} to deck {mining_deck_id}")
     
     return jsonify({"success": True})
@@ -449,8 +451,7 @@ def update_jpdb_word_state():
     if state is None:
         return jsonify({"error": "Missing state"}), 400
 
-    # Here you would implement the JPDB state update API call
-    # For now, we'll just return a success response
+    # JPDB state update API not implemented; respond with success
     current_app.logger.info(f"Updating word vid={vid}, sid={sid}, flag={flag}, state={state}")
     
     # Return a mock new state for the word
@@ -477,8 +478,7 @@ def review_jpdb_card():
     if not rating or rating not in ('nothing', 'something', 'hard', 'good', 'easy', 'pass', 'fail', 'known', 'unknown'):
         return jsonify({"error": "Invalid rating"}), 400
 
-    # Here you would implement the JPDB review API call
-    # For now, we'll just return a success response
+    # JPDB review API call not implemented; return success
     current_app.logger.info(f"Reviewing card vid={vid}, sid={sid}, rating={rating}")
     
     # Return a mock new state for the word

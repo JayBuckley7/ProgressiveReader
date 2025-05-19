@@ -64,8 +64,8 @@ def reader_demo(book_id: str, item_index: int = None):
     return render_template(
         "reader.html",
         book_id          = book_id,
-        current_index    = template_current_index, # Use the explicitly set None or the integer value
-        is_demo          = True,        # -- new flag
+        current_index    = template_current_index,
+        is_demo          = True,
         model_name       = "demo",
         show_jlpt_filter = False,
         jlpt_enabled     = False,

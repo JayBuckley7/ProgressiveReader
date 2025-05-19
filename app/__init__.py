@@ -36,11 +36,10 @@ def create_app(config_class=Config) -> Flask:
             app.logger.error(f"Error creating upload directory {upload_folder_abs_path}: {e}")
 
 
-    # --- Example: Add a simple test route directly here for now ---
+    # Simple test route used by unit tests
     @app.route('/hello')
     def hello():
         return 'Hello, World from create_app!'
-    # --- End Example ---
 
     # --- Add routes for PWA resources ---
     @app.route('/offline')
@@ -62,8 +61,7 @@ def create_app(config_class=Config) -> Flask:
         return jsonify({"status": "healthy"}), 200
     # --- End Health Check Endpoint ---
 
-    # --- Import and register blueprints from routes --- 
-    # (This is where we'll add them later)
+    # Import and register blueprints
     with app.app_context():
         # Import parts of our application
         from .routes import main # Import the main blueprint
