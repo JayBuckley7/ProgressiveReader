@@ -1,0 +1,1 @@
+Transmitting user files (e.g. eBooks, PDFs, DOCX files) to any server storage is strictly forbidden, even temporarily. All processing of user files must occur on-device. Only file hashes or metadata may be transmitted or stored remotely. No part of the actual file contents may ever be sent to or stored on servers.
