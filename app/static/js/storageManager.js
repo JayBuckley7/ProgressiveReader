@@ -105,6 +105,56 @@ function savePreferDueCards(isChecked) {
     localStorage.setItem('prefer_due_cards', isChecked);
 }
 
+// --- Due Cards Cache ---
+const DUE_CARDS_KEY = 'due_cards_cache';
+const DUE_CARDS_TS_KEY = 'due_cards_timestamp';
+const DUE_CARDS_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function getCachedDueCards() {
+    const ts = parseInt(localStorage.getItem(DUE_CARDS_TS_KEY) || '0', 10);
+    if (Date.now() - ts > DUE_CARDS_TTL_MS) {
+        localStorage.removeItem(DUE_CARDS_KEY);
+        localStorage.removeItem(DUE_CARDS_TS_KEY);
+        return null;
+    }
+    const data = localStorage.getItem(DUE_CARDS_KEY);
+    if (!data) return null;
+    try {
+        return JSON.parse(data);
+    } catch (err) {
+        console.error('Failed to parse cached due cards:', err);
+        return null;
+    }
+}
+
+function saveDueCards(cards) {
+    try {
+        localStorage.setItem(DUE_CARDS_KEY, JSON.stringify(cards));
+        localStorage.setItem(DUE_CARDS_TS_KEY, Date.now().toString());
+    } catch (err) {
+        console.error('Failed to save due cards:', err);
+    }
+}
+
+async function prefetchDueCardsIfNeeded() {
+    if (!getCachedDueCards()) {
+        try {
+            const resp = await fetch('/api/due_cards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (resp.ok) {
+                const words = await resp.json();
+                if (Array.isArray(words)) {
+                    saveDueCards(words);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to prefetch due cards:', err);
+        }
+    }
+}
+
 // --- PWA Offline Support ---
 // IndexedDB for storing book data for offline access
 const DB_NAME = 'progressive-reader-db';
@@ -331,7 +381,10 @@ window.storageManager = {
     saveAutoloadPreference,
     getPreferDueCards,
     savePreferDueCards,
-    
+    getCachedDueCards,
+    saveDueCards,
+    prefetchDueCardsIfNeeded,
+
     // PWA offline support
     openDatabase,
     storeBookForOffline,

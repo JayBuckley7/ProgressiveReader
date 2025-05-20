@@ -260,6 +260,9 @@ function _attachEventListeners() {
                 console.log('New config after API key change:', updatedConfig);
             }
             _updateDueCardsVisibility();
+            if (window.storageManager && typeof window.storageManager.prefetchDueCardsIfNeeded === 'function') {
+                window.storageManager.prefetchDueCardsIfNeeded();
+            }
         });
 
         // Also keep the input event for real-time saving
