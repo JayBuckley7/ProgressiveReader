@@ -47,6 +47,9 @@ let gToken        = null;                 // { access, expiry }
 let folderId      = null;                 // Drive folder that holds all EPUBs
 let changeCursor  = CURSOR_DEFAULT;       // Drive change‑feed cursor
 let driveInterval = null;                 // setInterval handle
+let pageTokenFileId = null;               // Cached fileId for pageToken.txt in appDataFolder
+
+const pendingCoverUploads = new Set();    // Tracks book IDs for which cover upload is in progress
 
 const uploadQueue   = [];
 const progressQueue = [];
@@ -384,77 +387,126 @@ export async function seedDriveFolder(){
 
 // ── 4. Cursor helpers (stored in appDataFolder) ---------------------------
 async function getChangeCursor(){
-  if(changeCursor !== CURSOR_DEFAULT) return changeCursor;
+  console.log(`[DriveSync] getChangeCursor: Current changeCursor in memory: ${changeCursor}`);
+  if(changeCursor !== CURSOR_DEFAULT) {
+    console.log(`[DriveSync] getChangeCursor: Returning in-memory cursor: ${changeCursor}`);
+    return changeCursor;
+  }
   await seedDriveFolder(); // ensure auth
+  console.log("[DriveSync] getChangeCursor: Attempting to fetch 'pageToken.txt' from appDataFolder.");
   try{
-    const res = await driveFilesList("name='pageToken.txt' and 'appDataFolder' in parents and trashed=false",'files(id)');
-    if(!res.files.length) return CURSOR_DEFAULT;
-    const txt = await fetch(`https://www.googleapis.com/drive/v3/files/${res.files[0].id}?alt=media`,{headers:authHeader()}).then(r=>r.text());
-    changeCursor = txt || CURSOR_DEFAULT;
-  }catch(e){console.warn('getChangeCursor',e);} return changeCursor;
+    const res = await driveFilesList("name='pageToken.txt' and 'appDataFolder' in parents and trashed=false",'files(id, name)');
+    if(!res.files || !res.files.length) {
+      console.log("[DriveSync] getChangeCursor: 'pageToken.txt' not found in appDataFolder. Returning default cursor:", CURSOR_DEFAULT);
+      return CURSOR_DEFAULT;
+    }
+    const file = res.files[0];
+    console.log(`[DriveSync] getChangeCursor: Found 'pageToken.txt' with ID: ${file.id}. Fetching content.`);
+    const tokenContent = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,{headers:authHeader()}).then(r=>r.text());
+    if (tokenContent) {
+      changeCursor = tokenContent;
+      console.log(`[DriveSync] getChangeCursor: Successfully fetched and set cursor from 'pageToken.txt': ${changeCursor}`);
+    } else {
+      console.warn("[DriveSync] getChangeCursor: 'pageToken.txt' was found but its content was empty. Using default cursor:", CURSOR_DEFAULT);
+      changeCursor = CURSOR_DEFAULT;
+    }
+  }catch(e){
+    console.warn('[DriveSync] getChangeCursor: Error fetching/reading pageToken.txt:', e.message, 'Returning default cursor:', CURSOR_DEFAULT);
+    changeCursor = CURSOR_DEFAULT; // Ensure it's reset on error
+  }
+  return changeCursor;
 }
 
 async function saveChangeCursor(token) {
-  changeCursor = token;
+  console.log(`[DriveSync] saveChangeCursor: Attempting to save token: '${token}'`);
+  changeCursor = token; // Update in-memory cursor immediately
   const fileName = 'pageToken.txt';
   const mimeType = 'text/plain';
 
   try {
-    const listRes = await driveFilesList(`name='${fileName}' and 'appDataFolder' in parents and trashed=false`, 'files(id)');
-    let fileId = null;
-
-    if (listRes.files && listRes.files.length > 0) {
-      fileId = listRes.files[0].id;
-      console.log(`[DriveSync] saveChangeCursor: Found existing ${fileName} with ID: ${fileId}. Updating.`);
-      const updateUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
+    if (pageTokenFileId) {
+      console.log(`[DriveSync] saveChangeCursor: Using cached file ID for '${fileName}': ${pageTokenFileId}. Updating its content.`);
+      const updateUrl = `https://www.googleapis.com/upload/drive/v3/files/${pageTokenFileId}?uploadType=media`;
       const updateRes = await fetchWithAuth(updateUrl, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': mimeType,
-        },
+        headers: { 'Content-Type': mimeType },
         body: new Blob([token], { type: mimeType }),
       });
       if (!updateRes.ok) {
-        throw new Error(`Failed to update ${fileName}: ${updateRes.status} ${await updateRes.text()}`);
+        const errorText = await updateRes.text();
+        console.error(`[DriveSync] saveChangeCursor: Failed to update '${fileName}' (ID: ${pageTokenFileId}) using cached ID. Status: ${updateRes.status}. Response: ${errorText}`);
+        // If update fails with cached ID, the ID might be stale. Clear it and try full logic.
+        console.log(`[DriveSync] saveChangeCursor: Clearing cached pageTokenFileId (${pageTokenFileId}) due to update failure.`);
+        pageTokenFileId = null; 
+        throw new Error(`Failed to update ${fileName} (cached ID ${pageTokenFileId}): ${updateRes.status} ${errorText}`); // Rethrow to trigger full lookup/create logic if desired, or handle
       }
-      console.log(`[DriveSync] saveChangeCursor: Successfully updated ${fileName}.`);
-    } else {
-      console.log(`[DriveSync] saveChangeCursor: No existing ${fileName} found. Creating new one in two steps.`);
-      // Step 1: Create the file with metadata only
-      const meta = {
-        name: fileName,
-        parents: ['appDataFolder'], // Ensure this is in an array
-        mimeType: mimeType,
-      };
-      const createdFileMetadata = await driveFilesCreate(meta); // driveFilesCreate uses fetchWithAuth
-      const newFileId = createdFileMetadata.id;
-      console.log(`[DriveSync] saveChangeCursor: Created metadata for ${fileName} with ID: ${newFileId}. Now updating content.`);
+      console.log(`[DriveSync] saveChangeCursor: Successfully updated '${fileName}' (ID: ${pageTokenFileId}) using cached ID.`);
+      return; // Successfully updated using cached ID
+    }
 
-      // Step 2: Update the new file with content
-      const updateContentUrl = `https://www.googleapis.com/upload/drive/v3/files/${newFileId}?uploadType=media`;
-      const updateContentRes = await fetchWithAuth(updateContentUrl, {
+    console.log(`[DriveSync] saveChangeCursor: No cached pageTokenFileId. Checking for existing '${fileName}' in appDataFolder.`);
+    const listRes = await driveFilesList(`name='${fileName}' and 'appDataFolder' in parents and trashed=false`, 'files(id)');
+    
+    if (listRes.files && listRes.files.length > 0) {
+      const foundFileId = listRes.files[0].id;
+      pageTokenFileId = foundFileId; // Cache the found file ID
+      console.log(`[DriveSync] saveChangeCursor: Found existing '${fileName}' with ID: ${foundFileId}. Caching and updating its content.`);
+      const updateUrl = `https://www.googleapis.com/upload/drive/v3/files/${foundFileId}?uploadType=media`;
+      const updateRes = await fetchWithAuth(updateUrl, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': mimeType,
-        },
+        headers: { 'Content-Type': mimeType },
         body: new Blob([token], { type: mimeType }),
       });
-      if (!updateContentRes.ok) {
-        console.error(`[DriveSync] saveChangeCursor: Failed to update content for new ${fileName} (ID: ${newFileId}). Status: ${updateContentRes.status}. Response: ${await updateContentRes.text()}`);
-        // Attempt to delete the metadata-only file if content update fails
-        try {
-            await fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${newFileId}`, { method: 'DELETE' });
-            console.log(`[DriveSync] saveChangeCursor: Cleaned up metadata-only file ${newFileId}.`);
-        } catch (cleanupError) {
-            console.warn(`[DriveSync] saveChangeCursor: Failed to clean up metadata-only file ${newFileId}:`, cleanupError);
-        }
-        throw new Error(`Failed to set content for new ${fileName} after creation.`);
+      if (!updateRes.ok) {
+        const errorText = await updateRes.text();
+        console.error(`[DriveSync] saveChangeCursor: Failed to update existing '${fileName}' (ID: ${foundFileId}). Status: ${updateRes.status}. Response: ${errorText}`);
+        pageTokenFileId = null; // Clear cache on error
+        throw new Error(`Failed to update existing ${fileName}: ${updateRes.status} ${errorText}`);
       }
-      console.log(`[DriveSync] saveChangeCursor: Successfully created ${fileName} with content (ID: ${newFileId}).`);
+      console.log(`[DriveSync] saveChangeCursor: Successfully updated existing '${fileName}' (ID: ${foundFileId}).`);
+    } else {
+      console.log(`[DriveSync] saveChangeCursor: No existing '${fileName}' found by listing. Creating new one using multipart upload.`);
+      const boundary = '-------314159265358979323846';
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const close_delim = `\r\n--${boundary}--`;
+      const metadata = {
+        name: fileName,
+        parents: ['appDataFolder'],
+        mimeType: mimeType,
+      };
+      const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-_8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        `Content-Type: ${mimeType}\r\n\r\n` +
+        token +
+        close_delim;
+      const createUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+      
+      console.log(`[DriveSync] saveChangeCursor: Sending multipart request to create '${fileName}'.`);
+      const createRes = await fetchWithAuth(createUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body: multipartRequestBody,
+      });
+
+      if (!createRes.ok) {
+        const errorText = await createRes.text();
+        console.error(`[DriveSync] saveChangeCursor: Failed to create '${fileName}' using multipart upload. Status: ${createRes.status}. Response: ${errorText}`);
+        pageTokenFileId = null; // Ensure not set if creation failed
+        throw new Error(`Failed to create ${fileName} via multipart: ${createRes.status} ${errorText}`);
+      }
+      const createdFile = await createRes.json();
+      pageTokenFileId = createdFile.id; // Cache the new file ID
+      console.log(`[DriveSync] saveChangeCursor: Successfully created '${fileName}' with ID: ${createdFile.id} via multipart upload. Cached ID.`);
     }
   } catch (error) {
-    console.error(`[DriveSync] saveChangeCursor: Error saving change cursor:`, error.message);
-    throw error; // Rethrow to be caught by importInitialFiles
+    console.error(`[DriveSync] saveChangeCursor: Error saving change cursor token '${token}':`, error.message);
+    // Potentially clear pageTokenFileId here if the error is severe and suggests the file state is unknown
+    // For now, only explicit failures in update/create clear it.
+    // Rethrow to allow importInitialFiles to handle it if it needs to.
+    throw error;
   }
 }
 
@@ -466,6 +518,7 @@ function _markDisconnected() {
   console.log("[DriveSync] _markDisconnected: Marking as disconnected.");
   gToken = null;
   folderId = null;
+  pageTokenFileId = null; // Clear cached pageTokenFileId
   _initialImportDone = false; // Reset for potential re-login
   stopScheduler();
   localStorage.removeItem(TOKEN_STORE_KEY);
@@ -736,7 +789,14 @@ export async function runSyncLoop(){
           continue; 
         }
         
-        // Handle book files (any non-progress file)
+        // Skip if this is a cover image file specifically marked with appProperties
+        if (ch.file.appProperties?.isCover === 'true') {
+          console.log(`[DriveSync] runSyncLoop: Skipping change for cover file (appProperty isCover=true): "${ch.file.name}"`);
+          // Future: Could add logic here to update cached cover if necessary, but for now, just skip.
+          continue;
+        }
+        
+        // Handle book files (any non-progress, non-cover file)
         if(!ch.file.name.endsWith('.progress.json')){
           console.log(`[DriveSync] runSyncLoop: Book change detected: "${ch.file.name}" (${ch.fileId})`);
           const canonicalId = ch.file.appProperties?.progReaderBookId || ch.fileId;
@@ -836,22 +896,38 @@ async function autoUploadLocalBooks() {
         const record = await getBook(m.id);
         if (record && record.content) {
           const ft = record.fileType || m.fileType || 'epub';
+          console.log(`[DriveSync] autoUploadLocalBooks: Uploading book file for ${m.id} (${m.title})`);
           await uploadBookToDrive(m.id, m.title, record.content, ft);
-          if (record.coverImageBlob instanceof Blob) {
-            await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
+          // If book upload was successful, immediately try to upload its cover if not already tracked/uploaded
+          if (record.coverImageBlob instanceof Blob && !m.coverDriveId && !pendingCoverUploads.has(m.id)) {
+            console.log(`[DriveSync] autoUploadLocalBooks: Book ${m.id} uploaded, now attempting to upload its cover.`);
+            pendingCoverUploads.add(m.id);
+            try {
+              await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
+            } finally {
+              pendingCoverUploads.delete(m.id);
+            }
           }
         }
       } catch (e) {
-        console.warn('[DriveSync] autoUploadLocalBooks: Failed for', m.id, e);
+        console.warn('[DriveSync] autoUploadLocalBooks: Book file upload failed for', m.id, e);
       }
-    } else if (!m.coverDriveId && !m.isRemoteOnly) {
+    } else if (m.driveId && !m.coverDriveId && !m.isRemoteOnly) { // Book file exists on Drive (or has driveId), but cover doesn't
+      if (pendingCoverUploads.has(m.id)) {
+        console.log(`[DriveSync] autoUploadLocalBooks: Cover upload for ${m.id} already pending. Skipping.`);
+        continue;
+      }
       try {
         const record = await getBook(m.id);
         if (record && record.coverImageBlob instanceof Blob) {
+          console.log(`[DriveSync] autoUploadLocalBooks: Uploading cover for existing Drive book ${m.id} (${m.title})`);
+          pendingCoverUploads.add(m.id);
           await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
         }
       } catch (e) {
-        console.warn('[DriveSync] autoUploadLocalBooks: Cover upload failed for', m.id, e);
+        console.warn('[DriveSync] autoUploadLocalBooks: Cover upload for existing Drive book failed', m.id, e);
+      } finally {
+        pendingCoverUploads.delete(m.id);
       }
     }
   }
@@ -915,7 +991,6 @@ export async function init(isExplicitCall = false){
   if (isConnected()) {
     console.log("[DriveSync] init: hydrateToken reported connected. Proceeding with connected state setup (folder, import, sync).");
     // Dispatch event to indicate Google Drive connection is confirmed
-    window.dispatchEvent(new Event('drive-connected-loading'));
     try {
       await seedDriveFolder();
       if (!_initialImportDone) { 
@@ -1135,7 +1210,7 @@ export async function deleteRemoteBook(bookId) {
 }
 
 export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
-    console.log(`[DriveSync] uploadCoverToDrive: Starting upload for bookId: ${bookId}`);
+    console.log(`[DriveSync] uploadCoverToDrive: Starting cover upload for bookId: ${bookId}, Title: ${bookTitle}`);
 
     if (!isConnected()) {
         console.error('[DriveSync] uploadCoverToDrive: Not connected to Google Drive.');
@@ -1194,8 +1269,9 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
         const createdFile = await response.json();
         try {
             await updateBookMetadata(bookId, { coverDriveId: createdFile.id });
+            console.log(`[DriveSync] uploadCoverToDrive: Stored coverDriveId (${createdFile.id}) in local metadata for book: ${bookId}`);
         } catch (e) {
-            console.warn('[DriveSync] Failed to store coverDriveId locally:', e);
+            console.warn(`[DriveSync] uploadCoverToDrive: Failed to store coverDriveId locally for book: ${bookId}`, e);
         }
 
         window.dispatchEvent(new CustomEvent('drive-file-uploaded', {

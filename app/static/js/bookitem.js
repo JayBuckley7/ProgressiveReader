@@ -118,7 +118,6 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   coverInput.id = coverInputId;
 
   coverInput.addEventListener('click', function(e) {
-    console.log(`${logPrefix} coverInput: click event listener fired. Stopping propagation to prevent link navigation.`);
     e.stopPropagation();
     // DO NOT preventDefault() here, it would stop the dialog.
   });
@@ -131,7 +130,6 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   coverBtn.setAttribute('aria-label', coverBtn.title);
 
   coverInput.onchange = async () => {
-    console.log(`${logPrefix} coverInput: onchange event fired.`); // LOG
     if (!coverInput.files?.[0]) return;
     try {
       await updateBookCover(book.id, coverInput.files[0]);
@@ -149,15 +147,10 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   };
 
   coverBtn.addEventListener('click', function(e) { // LOG MODIFICATION: Used addEventListener
-    console.log(`${logPrefix} coverBtn: click event listener fired. Target: ${e.target.className}, CurrentTarget: ${this.className}`);
-    console.log(`${logPrefix} coverBtn: Is coverInput in DOM and connected? ${coverInput && coverInput.isConnected}`);
     e.preventDefault();
     e.stopImmediatePropagation();
-    console.log(`${logPrefix} coverBtn: preventDefault() and stopImmediatePropagation() called.`);
     if (coverInput) {
-        console.log(`${logPrefix} coverBtn: Calling coverInput.click()`);
         coverInput.click();
-        console.log(`${logPrefix} coverBtn: Called coverInput.click()`);
     } else {
         console.error(`${logPrefix} coverBtn: coverInput is null or undefined!`);
     }
@@ -170,7 +163,6 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   // Helper to wrap original handlers with logging
   const createLoggedClickHandler = (type, originalHandler) => {
     return async (ev) => {
-        console.log(`${logPrefix} bookLink: ${type} click handler (bubble phase) fired. Target: ${ev.target.className}, CurrentTarget: ${ev.currentTarget.className}`);
         if (ev.target.classList.contains('btn-change-cover') || ev.target.closest('.btn-change-cover')) {
             console.warn(`${logPrefix} bookLink: ${type} click handler triggered by click on or inside btn-change-cover! Propagation should have been stopped.`);
         }
@@ -247,12 +239,11 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
 
     // Capture phase click listener for bookLink (related to long-press and general capture)
     bookLink.addEventListener('click', (e) => {
-        console.log(`${logPrefix} bookLink: CAPTURE phase click listener. Target: ${e.target.className}, CurrentTarget: ${e.currentTarget.className}, longPressTriggered: ${longPressTriggered}`);
         if (e.target.classList.contains('btn-change-cover') || e.target.closest('.btn-change-cover')) {
-            console.log(`${logPrefix} bookLink: CAPTURE phase, click target IS (or is inside) btn-change-cover. NOT stopping propagation here intentionally, coverBtn handler should catch it.`);
+            // Explicitly not stopping propagation here for btn-change-cover,
+            // as its own handler should manage it.
         }
         if (longPressTriggered) {
-            console.log(`${logPrefix} bookLink: CAPTURE phase, longPressTriggered is true. Preventing default and stopping immediate propagation.`);
             e.preventDefault();
             e.stopImmediatePropagation();
             longPressTriggered = false; // Resetting the flag
