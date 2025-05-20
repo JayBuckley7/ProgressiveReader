@@ -293,6 +293,10 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error(`[ReaderInit] Error: ${message}`);
     }
 
+    if (window.storageManager && typeof window.storageManager.prefetchDueCardsIfNeeded === 'function') {
+        window.storageManager.prefetchDueCardsIfNeeded();
+    }
+
     // Start the async initialization
     initReaderAsync();
-}); 
+});

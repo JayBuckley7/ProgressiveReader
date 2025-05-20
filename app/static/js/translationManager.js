@@ -171,18 +171,14 @@ async function callTranslateAPI(payload) {
         // Enable streaming by default
         payload.stream = true;
 
-        const preferDue = window.storageManager ? window.storageManager.getPreferDueCards() : (preferDueCardsCheckbox && preferDueCardsCheckbox.checked);
-        if (preferDue) {
-            try {
-                const resp = await fetch('/api/due_cards', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-                if (resp.ok) {
-                    const dueWords = await resp.json();
-                    if (Array.isArray(dueWords) && dueWords.length > 0) {
-                        payload.due_cards = dueWords;
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch due cards:', err);
+        const preferDue = window.storageManager ? window.storageManager.getPreferDueCards()
+                                                : (preferDueCardsCheckbox && preferDueCardsCheckbox.checked);
+        if (preferDue && window.storageManager) {
+            const cached = window.storageManager.getCachedDueCards();
+            if (cached) {
+                payload.due_cards = cached;
+            } else if (typeof window.storageManager.prefetchDueCardsIfNeeded === 'function') {
+                window.storageManager.prefetchDueCardsIfNeeded();
             }
         }
 
