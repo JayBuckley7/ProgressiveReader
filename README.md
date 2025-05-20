@@ -52,6 +52,13 @@ The application now includes an enhanced JP Highlighter module that provides imp
 - **PDF Parsing**: Extracts page count and estimated font size when uploading PDF files.
 - **Google Drive Sync**: Optionally syncs your library to Google Drive while preserving each book's original file type.
 
+## Client Metadata Flow
+
+1. Google Cloud Run indexer extracts metadata from Drive files and stores it in Redis.
+2. The web client calls `/metadata/{user}/books` and merges results with IndexedDB via `metadataSync.js`.
+3. IndexedDB remains the offline source of truth while Redis provides cross-device updates when online.
+4. The bookshelf UI reads from IndexedDB to render books.
+
 ## Getting Started
 
 ### Prerequisites

@@ -3,7 +3,7 @@
  * ────────────────────────────────────────────────────────────── */
 
 import { ready as dbReady }               from './dbService.js';
-import { getAllBooksMetadata, deleteBook } from './dbService.js';
+import { getLocalBooksMetadata, deleteBook } from './dbService.js';
 import { EpubProcessorWrapper }           from './epubProcessor.js';
 
 const logPrefix = '[DemoInit]';
@@ -220,7 +220,7 @@ function setupBookshelfObserver() {
 async function cleanupOldDemoBooks() {
   console.log(`${logPrefix} Cleaning legacy demo blobs…`);
   try {
-    const all = await getAllBooksMetadata();
+    const all = await getLocalBooksMetadata();
     const toDel = all.filter(rec =>
       DEMO_BOOKS.some(d => d.id === rec.id) ||
       rec.isDemo === true ||

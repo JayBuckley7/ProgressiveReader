@@ -144,6 +144,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
     const fileType = (additionalMetadata && additionalMetadata.fileType) ? additionalMetadata.fileType : 'epub';
 
     // Try to extract metadata (title & cover image) before adding to DB
+    // TODO: Skip metadata extraction if Redis-provided metadata exists
     if (fileType === 'epub') {
         try {
             const epubProcessor = new EpubProcessorWrapper();
@@ -270,7 +271,11 @@ export async function getBookMetadata(bookId) {
  * Retrieves all books' metadata (excluding content for efficiency).
  * @returns {Promise<Array<object>>} A list of book metadata objects.
  */
-export async function getAllBooksMetadata() {
+/**
+ * Retrieves metadata for all locally stored books.
+ * @returns {Promise<Array<object>>} List of metadata objects.
+ */
+export async function getLocalBooksMetadata() {
     const db = await _getDB();
     const transaction = db.transaction(BOOK_STORE_NAME, 'readonly');
     const store = transaction.objectStore(BOOK_STORE_NAME);

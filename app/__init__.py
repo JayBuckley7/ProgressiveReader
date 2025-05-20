@@ -61,15 +61,15 @@ def create_app(config_class=Config) -> Flask:
     # (This is where we'll add them later)
     with app.app_context():
         # Import parts of our application
-        from .routes import main # Import the main blueprint
-        from .routes import book # Import the book blueprint
+        from .routes import main  # Main UI blueprint
         from .routes import reader # Import the reader blueprint
-        from .routes import api # Import the api blueprint
+        from .routes import api  # Import the api blueprint
+        from .routes import metadata  # Redis metadata endpoints
         # Register Blueprints
         app.register_blueprint(main.main_bp)
-        app.register_blueprint(book.book_bp) # Register the book blueprint
         app.register_blueprint(reader.reader_bp) # Register the reader blueprint
-        app.register_blueprint(api.api_bp) # Register the api blueprint
+        app.register_blueprint(api.api_bp)  # Register the api blueprint
+        app.register_blueprint(metadata.metadata_bp)  # Register metadata blueprint
 
         # You might also initialize extensions here if needed
         # e.g., db.init_app(app)
