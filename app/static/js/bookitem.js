@@ -78,12 +78,16 @@ export function createBookItem(book, driveSync, openBook, rerender) {
     const coverInputId = `cover-file-${book.id}`;
     coverInput.id = coverInputId;
 
-    const coverBtn = document.createElement('button');
-    coverBtn.type = 'button';
-    coverBtn.className = 'btn-change-cover action-btn';
-    coverBtn.textContent = '📷';
-    coverBtn.title = `Change cover for "${book.title}"`;
-    coverBtn.setAttribute('aria-label', coverBtn.title);
+    const coverBtn = coverWrapper.querySelector('.btn-change-cover');
+    if (coverBtn) {
+        coverBtn.title = `Change cover for "${book.title}"`;
+        coverBtn.setAttribute('aria-label', coverBtn.title);
+        coverBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            coverInput.click();
+        };
+    }
 
     coverInput.onchange = async () => {
         if (!coverInput.files?.[0]) return;
@@ -102,13 +106,6 @@ export function createBookItem(book, driveSync, openBook, rerender) {
         }
     };
 
-    coverBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        coverInput.click();
-    };
-
-    coverWrapper.appendChild(coverBtn);
     item.appendChild(coverInput);
 
     /* ─ Title ─ */
