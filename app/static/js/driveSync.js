@@ -1,5 +1,5 @@
 // driveSync.js – Google Drive folder‑centric sync layer
-import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata, getAllBooksMetadata, getBook } from './dbService.js';
+import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata, getLocalBooksMetadata, getBook } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 
 // Client ID Shim
@@ -889,7 +889,7 @@ async function drainProgressQueue(){if(progressWorkerRunning||!progressQueue.len
   progressWorkerRunning=false;}
 
 async function autoUploadLocalBooks() {
-  const metas = await getAllBooksMetadata();
+  const metas = await getLocalBooksMetadata();
   for (const m of metas) {
     if (!m.driveId && !m.isRemoteOnly) {
       try {
@@ -934,7 +934,7 @@ async function autoUploadLocalBooks() {
 }
 
 async function autoDownloadRemoteBooks() {
-  const metas = await getAllBooksMetadata();
+  const metas = await getLocalBooksMetadata();
   for (const m of metas) {
     if (m.isRemoteOnly && m.driveId) {
       try {

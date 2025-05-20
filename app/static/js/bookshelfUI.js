@@ -1,4 +1,5 @@
-import { getAllBooksMetadata, deleteBook, addBook, updateBookCover, getBook } from './dbService.js';
+import { getLocalBooksMetadata, deleteBook, addBook, updateBookCover, getBook } from './dbService.js';
+import { getMergedBooksMetadata, syncMetadata } from './metadataSync.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { createBookItem } from './bookitem.js';
 
@@ -39,38 +40,15 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
        1  Gather metadata (local + remote)                  
        ───────────────────────────────────────────────────*/
 
-    const booksMetadata = await getAllBooksMetadata();
+    const userId = driveSync?.getUserProfile?.()?.email || null;
 
-    let remoteBooks = [];
-    if (driveSync?.isConnected?.()) {
-      try {
-        remoteBooks = await driveSync.listRemoteBooks();
-      } catch (err) {
-        console.warn(`${logPrefix} Failed to list remote books:`, err);
-      }
+    if (userId && driveSync?.isConnected?.()) {
+      await syncMetadata(userId);
     }
 
-    // Merge remote‑only entries
-    const localIds = new Set();
-    booksMetadata.forEach((b) => {
-      localIds.add(b.id);
-      if (b.driveId) localIds.add(b.driveId);
-    });
-    for (const rb of remoteBooks) {
-      if (!localIds.has(rb.id)) {
-        booksMetadata.push({
-          id: rb.id,
-          title: rb.title,
-          lastOpened: null,
-          coverImageBlob: null,
-          isDemo: false,
-          isRemoteOnly: true,
-          driveId: rb.id,
-          fileType: rb.fileType,
-          mimeType: rb.mimeType
-        });
-      }
-    }
+    const booksMetadata = userId
+      ? await getMergedBooksMetadata(userId)
+      : await getLocalBooksMetadata();
 
     /* ─────────────────────────────────────────────────────
        2  Filter + sort                                     
