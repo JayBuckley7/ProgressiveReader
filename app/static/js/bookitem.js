@@ -117,6 +117,12 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   const coverInputId = `cover-file-${book.id}`;
   coverInput.id = coverInputId;
 
+  coverInput.addEventListener('click', function(e) {
+    console.log(`${logPrefix} coverInput: click event listener fired. Stopping propagation to prevent link navigation.`);
+    e.stopPropagation();
+    // DO NOT preventDefault() here, it would stop the dialog.
+  });
+
   const coverBtn = document.createElement('button');
   coverBtn.type = 'button';
   coverBtn.className = 'btn-change-cover action-btn';
@@ -125,6 +131,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   coverBtn.setAttribute('aria-label', coverBtn.title);
 
   coverInput.onchange = async () => {
+    console.log(`${logPrefix} coverInput: onchange event fired.`); // LOG
     if (!coverInput.files?.[0]) return;
     try {
       await updateBookCover(book.id, coverInput.files[0]);
@@ -141,38 +148,60 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     }
   };
 
-  coverBtn.onclick = (e) => {
+  coverBtn.addEventListener('click', function(e) { // LOG MODIFICATION: Used addEventListener
+    console.log(`${logPrefix} coverBtn: click event listener fired. Target: ${e.target.className}, CurrentTarget: ${this.className}`);
+    console.log(`${logPrefix} coverBtn: Is coverInput in DOM and connected? ${coverInput && coverInput.isConnected}`);
     e.preventDefault();
-    e.stopPropagation();
-    coverInput.click();
-  };
+    e.stopImmediatePropagation();
+    console.log(`${logPrefix} coverBtn: preventDefault() and stopImmediatePropagation() called.`);
+    if (coverInput) {
+        console.log(`${logPrefix} coverBtn: Calling coverInput.click()`);
+        coverInput.click();
+        console.log(`${logPrefix} coverBtn: Called coverInput.click()`);
+    } else {
+        console.error(`${logPrefix} coverBtn: coverInput is null or undefined!`);
+    }
+  });
 
   coverWrapper.appendChild(coverBtn);
-  item.appendChild(coverInput);
+  coverWrapper.appendChild(coverInput); // Changed from item.appendChild(coverInput)
 
   /* ─ Remote‑only handling ─ */
-  if (book.isRemoteOnly) {
-    bookLink.onclick = async (ev) => {
-      ev.preventDefault();
-      try {
-        let blob = null;
-        if (driveSync?.isConnected?.()) {
-          blob = await driveSync.downloadBook(book.id, book.mimeType);
-          // Assuming addBook is available or passed, otherwise needs import
-          await addBook(book.title, blob, book.id, { fileType: book.fileType });
+  // Helper to wrap original handlers with logging
+  const createLoggedClickHandler = (type, originalHandler) => {
+    return async (ev) => {
+        console.log(`${logPrefix} bookLink: ${type} click handler (bubble phase) fired. Target: ${ev.target.className}, CurrentTarget: ${ev.currentTarget.className}`);
+        if (ev.target.classList.contains('btn-change-cover') || ev.target.closest('.btn-change-cover')) {
+            console.warn(`${logPrefix} bookLink: ${type} click handler triggered by click on or inside btn-change-cover! Propagation should have been stopped.`);
         }
-        await openBookAtProgress(book.id, book.title);
-      } catch (err) {
-        console.error(`${logPrefix} Failed to load remote book`, err);
-        alert('Failed to load book from Drive');
-      }
+        // Call original handler logic based on type
+        if (type === 'REMOTE') {
+            ev.preventDefault();
+            try {
+                let blob = null;
+                if (driveSync?.isConnected?.()) {
+                    blob = await driveSync.downloadBook(book.id, book.mimeType);
+                    await addBook(book.title, blob, book.id, { fileType: book.fileType });
+                }
+                await openBookAtProgress(book.id, book.title);
+            } catch (err) {
+                console.error(`${logPrefix} Failed to load remote book`, err);
+                alert('Failed to load book from Drive');
+            }
+        } else if (type === 'LOCAL') {
+            ev.preventDefault();
+            await openBookAtProgress(book.id, book.title);
+        } else {
+            // Fallback to originalHandler if provided and type doesn't match
+             if (originalHandler) await originalHandler(ev);
+        }
     };
+  };
+
+  if (book.isRemoteOnly) {
+    bookLink.onclick = createLoggedClickHandler('REMOTE', async (ev_unused) => {});
   } else {
-    // Local (or synced) book: open at last position
-    bookLink.onclick = async (ev) => {
-      ev.preventDefault();
-      await openBookAtProgress(book.id, book.title);
-    };
+    bookLink.onclick = createLoggedClickHandler('LOCAL', async (ev_unused) => {});
   }
 
   // ─ Long‑press on mobile to show action buttons ─
@@ -215,12 +244,20 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     bookLink.addEventListener('touchmove', cancelPress);
     bookLink.addEventListener('touchcancel', cancelPress);
     bookLink.addEventListener('mouseleave', cancelPress);
+
+    // Capture phase click listener for bookLink (related to long-press and general capture)
     bookLink.addEventListener('click', (e) => {
-      if (longPressTriggered) {
-        e.preventDefault();
-        longPressTriggered = false;
-      }
-    }, true);
+        console.log(`${logPrefix} bookLink: CAPTURE phase click listener. Target: ${e.target.className}, CurrentTarget: ${e.currentTarget.className}, longPressTriggered: ${longPressTriggered}`);
+        if (e.target.classList.contains('btn-change-cover') || e.target.closest('.btn-change-cover')) {
+            console.log(`${logPrefix} bookLink: CAPTURE phase, click target IS (or is inside) btn-change-cover. NOT stopping propagation here intentionally, coverBtn handler should catch it.`);
+        }
+        if (longPressTriggered) {
+            console.log(`${logPrefix} bookLink: CAPTURE phase, longPressTriggered is true. Preventing default and stopping immediate propagation.`);
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            longPressTriggered = false; // Resetting the flag
+        }
+    }, true); // Capture phase
   })();
 
   // Assemble
