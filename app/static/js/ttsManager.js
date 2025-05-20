@@ -28,7 +28,7 @@ function setupMediaSession() {
     });
 
     navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Progressive Reader',
+        title: document.title || 'Progressive Reader',
         artist: 'Text to Speech',
     });
 }
@@ -129,6 +129,9 @@ function speakFromIndex(index) {
         if (btn) btn.textContent = 'Read Aloud';
         updatePlaybackState();
     };
+    // Register with the Media Session API each time we start speaking so
+    // hardware play/pause buttons can control TTS playback.
+    setupMediaSession();
     speechSynthesis.speak(currentUtterance);
     isSpeaking = true;
     isPaused = false;
