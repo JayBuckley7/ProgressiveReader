@@ -5,9 +5,10 @@ import { EpubProcessorWrapper } from './epubProcessor.js';
  */
 
 const DB_NAME = 'ProgressiveReaderDB';
-const DB_VERSION = 2; // Bump version to add driveId index
+const DB_VERSION = 3; // Bump version for new store
 const BOOK_STORE_NAME = 'books';
-const PROGRESS_STORE_NAME = 'progress'; // Assuming progress is stored separately
+const PROGRESS_STORE_NAME = 'progress';
+const USER_PROFILE_CACHE_STORE_NAME = 'userProfileCache'; // New store
 
 let dbPromise = null;
 let dbServiceReadyPromise = null; // Promise for service readiness
@@ -74,10 +75,8 @@ async function _getDB() {
                 // Create Books object store
                 if (!db.objectStoreNames.contains(BOOK_STORE_NAME)) {
                     const bookStore = db.createObjectStore(BOOK_STORE_NAME, {
-                        keyPath: 'id', // Using the provided UUID as the key
-                        // autoIncrement: true, // REMOVED: ID is now the server-provided UUID
+                        keyPath: 'id',
                     });
-                    // Index on title for easier lookup (still useful)
                     bookStore.createIndex('title', 'title', { unique: false });
                     bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
                     bookStore.createIndex('driveId', 'driveId', { unique: false });
@@ -86,32 +85,38 @@ async function _getDB() {
                     const bookStore = event.currentTarget.transaction.objectStore(BOOK_STORE_NAME);
                     if (!bookStore.indexNames.contains('driveId')) {
                         bookStore.createIndex('driveId', 'driveId', { unique: false });
-                        console.log('Index driveId created on existing store.');
+                        console.log('Index driveId created on existing books store.');
                     }
                     if (!bookStore.indexNames.contains('lastOpened')) {
                         bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
+                        console.log('Index lastOpened created on existing books store.');
                     }
                     if (!bookStore.indexNames.contains('title')) {
                         bookStore.createIndex('title', 'title', { unique: false });
+                        console.log('Index title created on existing books store.');
                     }
                     console.log(`Object store ${BOOK_STORE_NAME} already exists.`);
                 }
 
-
-                // Create Progress object store (example)
-                // Using 'bookId' which corresponds to the ID in the BOOK_STORE_NAME
+                // Create Progress object store
                  if (!db.objectStoreNames.contains(PROGRESS_STORE_NAME)) {
                      const progressStore = db.createObjectStore(PROGRESS_STORE_NAME, {
                          keyPath: 'bookId'
                      });
-                     // No additional indices needed for this simple example
                      console.log(`Object store ${PROGRESS_STORE_NAME} created.`);
                 } else {
                      console.log(`Object store ${PROGRESS_STORE_NAME} already exists.`);
                 }
 
-
-                // Handle other version upgrades here if needed in the future
+                // Create User Profile Cache object store
+                if (!db.objectStoreNames.contains(USER_PROFILE_CACHE_STORE_NAME)) {
+                    const profileCacheStore = db.createObjectStore(USER_PROFILE_CACHE_STORE_NAME, {
+                        keyPath: 'userId' // e.g., user's Google ID or email
+                    });
+                    console.log(`Object store ${USER_PROFILE_CACHE_STORE_NAME} created.`);
+                } else {
+                    console.log(`Object store ${USER_PROFILE_CACHE_STORE_NAME} already exists.`);
+                }
             };
         });
     } else {
@@ -624,3 +629,68 @@ _getDB().then(() => {
 }).catch(error => {
      console.error("Initial DB connection failed:", error);
 });
+
+/**
+ * Caches a user's profile image.
+ * @param {string} userId - The unique ID of the user (e.g., email or Google ID).
+ * @param {Blob} imageBlob - The image blob to cache.
+ * @returns {Promise<void>} A promise that resolves when the image is cached.
+ */
+export async function cacheUserProfileImage(userId, imageBlob) {
+    if (!userId || !(imageBlob instanceof Blob)) {
+        console.error('[DBService] Invalid userId or imageBlob for caching.');
+        return Promise.reject(new Error('Invalid userId or imageBlob.'));
+    }
+    const db = await _getDB();
+    const transaction = db.transaction(USER_PROFILE_CACHE_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(USER_PROFILE_CACHE_STORE_NAME);
+    const cacheEntry = { userId: userId, imageBlob: imageBlob, timestamp: new Date() };
+
+    return new Promise((resolve, reject) => {
+        const request = store.put(cacheEntry);
+        request.onsuccess = () => {
+            console.log(`[DBService] User profile image cached for userId: ${userId}`);
+            resolve();
+        };
+        request.onerror = (event) => {
+            console.error('[DBService] Error caching user profile image:', event.target.error);
+            reject(new Error(`Error caching user profile image: ${event.target.error?.message}`));
+        };
+    });
+}
+
+/**
+ * Retrieves a cached user profile image.
+ * @param {string} userId - The unique ID of the user.
+ * @returns {Promise<Blob|null>} The image blob if found and valid, otherwise null.
+ */
+export async function getCachedUserProfileImage(userId) {
+    if (!userId) {
+        console.error('[DBService] Invalid userId for retrieving cached image.');
+        return Promise.resolve(null); // Resolve with null for invalid ID
+    }
+    const db = await _getDB();
+    const transaction = db.transaction(USER_PROFILE_CACHE_STORE_NAME, 'readonly');
+    const store = transaction.objectStore(USER_PROFILE_CACHE_STORE_NAME);
+
+    return new Promise((resolve, reject) => {
+        const request = store.get(userId);
+        request.onsuccess = () => {
+            if (request.result && request.result.imageBlob instanceof Blob) {
+                // Optional: Add timestamp check for cache validity if needed in the future
+                // For now, if it exists, return it.
+                console.log(`[DBService] Retrieved cached profile image for userId: ${userId}`);
+                resolve(request.result.imageBlob);
+            } else {
+                console.log(`[DBService] No cached profile image found for userId: ${userId}`);
+                resolve(null);
+            }
+        };
+        request.onerror = (event) => {
+            console.error('[DBService] Error retrieving cached user profile image:', event.target.error);
+            // It's often better to resolve with null on read error than to reject the whole operation
+            // unless the error is critical for the application flow.
+            resolve(null); 
+        };
+    });
+}

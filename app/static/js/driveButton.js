@@ -1,3 +1,5 @@
+import { cacheUserProfileImage, getCachedUserProfileImage } from './dbService.js';
+
 export class DriveButton {
     constructor(containerElement, driveSyncModule) {
         if (!containerElement) {
@@ -80,6 +82,107 @@ export class DriveButton {
         });
     }
 
+    async _displayProfileImage(parentElement, userProfile) {
+        if (!userProfile || !userProfile.picture) {
+            this._displayDefaultIcon(parentElement);
+            return;
+        }
+
+        const userId = userProfile.email || userProfile.id;
+        if (!userId) {
+            console.warn(`${this.logPrefix} Cannot cache profile image without a userId (email/id).`);
+            this._displayDefaultIcon(parentElement);
+            return;
+        }
+        
+        try {
+            const cachedBlob = await getCachedUserProfileImage(userId);
+            if (cachedBlob) {
+                console.log(`${this.logPrefix} Displaying cached profile image for ${userId}`);
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(cachedBlob);
+                img.alt = userProfile.name || 'User';
+                img.className = 'profile-picture';
+                img.onload = () => URL.revokeObjectURL(img.src);
+                parentElement.appendChild(img);
+                return;
+            }
+        } catch (cacheError) {
+            console.error(`${this.logPrefix} Error retrieving cached profile image:`, cacheError);
+        }
+
+        console.log(`${this.logPrefix} Fetching profile picture from URL for ${userId}:`, userProfile.picture);
+        const img = document.createElement('img');
+        img.crossOrigin = 'anonymous';
+        img.src = userProfile.picture;
+        img.alt = userProfile.name || 'User';
+        img.className = 'profile-picture';
+
+        img.onload = async () => {
+            console.log(`${this.logPrefix} Profile image loaded successfully from network for ${userId}`);
+            try {
+                const response = await fetch(img.src);
+                if (!response.ok) {
+                     console.warn(`${this.logPrefix} Could not refetch image for caching. Status: ${response.status}`);
+                     this._cacheImageFromCanvas(img, userId);
+
+                } else {
+                    const blob = await response.blob();
+                    await cacheUserProfileImage(userId, blob);
+                }
+
+            } catch (fetchError) {
+                console.error(`${this.logPrefix} Error fetching image as blob for caching or during canvas conversion for ${userId}:`, fetchError);
+                 this._cacheImageFromCanvas(img, userId);
+            }
+        };
+
+        img.onerror = (e) => {
+            console.error(`${this.logPrefix} Error loading profile image from network for ${userId}:`, e);
+            if (img.parentNode) {
+                this._displayDefaultIcon(img.parentNode, img);
+            } else {
+                console.warn(`${this.logPrefix} img.parentNode is null in onerror. State likely changed.`);
+            }
+        };
+        parentElement.appendChild(img);
+    }
+
+    _cacheImageFromCanvas(imgElement, userId) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = imgElement.naturalWidth || imgElement.width;
+            canvas.height = imgElement.naturalHeight || imgElement.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgElement, 0, 0);
+            canvas.toBlob(async (blob) => {
+                if (blob) {
+                    await cacheUserProfileImage(userId, blob);
+                } else {
+                    console.warn(`${this.logPrefix} Canvas toBlob resulted in null for ${userId}.`);
+                }
+            });
+        } catch (canvasError) {
+            console.error(`${this.logPrefix} Error caching image via canvas for ${userId}:`, canvasError);
+        }
+    }
+
+    _displayDefaultIcon(parentElement, elementToReplace = null) {
+        const iconSvgContainer = document.createElement('div');
+        iconSvgContainer.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true" class="default-icon-svg">
+            <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
+            <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
+            <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
+            <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
+        </svg>`;
+        const defaultIcon = iconSvgContainer.firstChild;
+        if (elementToReplace && elementToReplace.parentNode === parentElement) {
+            parentElement.replaceChild(defaultIcon, elementToReplace);
+        } else {
+            parentElement.appendChild(defaultIcon);
+        }
+    }
+
     setState(state) { 
         this.connectBtnEl.classList.remove('state-disconnected', 'state-connecting', 'state-connected', 'state-connected-loading', 'layout-vertical');
         this.connectBtnEl.classList.add(`state-${state}`);
@@ -111,49 +214,13 @@ export class DriveButton {
                 break;
             case 'connected-loading':
                 this.connectBtnEl.classList.add('layout-vertical');
-                // Add loading overlay element
                 const loadingOverlay = document.createElement('div');
                 loadingOverlay.className = 'loading-overlay';
                 this.connectBtnEl.appendChild(loadingOverlay);
                 
-                // Add Google icon or user profile if available
                 const userProfile = this.driveSync.getUserProfile();
-                if (userProfile && userProfile.picture) {
-                    console.log(`${this.logPrefix} Loading profile picture from URL:`, userProfile.picture);
-                    const img = document.createElement('img');
-                    img.src = userProfile.picture;
-                    img.alt = userProfile.name || 'User';
-                    img.className = 'profile-picture';
-                    img.crossOrigin = 'anonymous'; // Try with anonymous CORS
-                    img.onerror = (e) => {
-                        console.error(`${this.logPrefix} Error loading profile image:`, e);
-                        // Fallback to Google icon on error
-                        const iconSvg = document.createElement('div');
-                        iconSvg.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true">
-                            <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
-                            <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
-                            <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
-                            <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
-                        </svg>`;
-                        img.parentNode.replaceChild(iconSvg.firstChild, img);
-                    };
-                    img.onload = () => {
-                        console.log(`${this.logPrefix} Profile image loaded successfully`);
-                    };
-                    this.connectBtnEl.appendChild(img);
-                } else {
-                    // Default Google icon if no profile yet
-                    const iconSvg = document.createElement('div');
-                    iconSvg.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true">
-                        <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
-                        <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
-                        <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
-                        <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
-                    </svg>`;
-                    this.connectBtnEl.appendChild(iconSvg.firstChild);
-                }
+                this._displayProfileImage(this.connectBtnEl, userProfile);
                 
-                // Add loading status text 
                 const textSpan = document.createElement('span');
                 textSpan.className = 'status-text';
                 textSpan.textContent = 'Syncing...';
@@ -162,30 +229,8 @@ export class DriveButton {
             case 'connected':
                 this.connectBtnEl.classList.add('layout-vertical');
                 const connectedProfile = this.driveSync.getUserProfile();
-                if (connectedProfile && connectedProfile.picture) {
-                    console.log(`${this.logPrefix} Connected state - Loading profile picture from URL:`, connectedProfile.picture);
-                    const img = document.createElement('img');
-                    img.src = connectedProfile.picture;
-                    img.alt = connectedProfile.name || 'User';
-                    img.className = 'profile-picture';
-                    img.crossOrigin = 'anonymous'; // Try with anonymous CORS
-                    img.onerror = (e) => {
-                        console.error(`${this.logPrefix} Connected state - Error loading profile image:`, e);
-                        // Fallback to Google icon on error
-                        const iconSvg = document.createElement('div');
-                        iconSvg.innerHTML = `<svg viewBox="0 0 533.5 544.3" width="32" height="32" aria-hidden="true">
-                            <path fill="#4285F4" d="M533.5 278.4c0-18.6-1.5-37.5-4.7-55.5H272v105h146.8c-6.3 34-25 62.6-53.3 81.8l86 66.8c50.3-46.3 81.3-114.7 81.3-198.1z"/>
-                            <path fill="#34A853" d="M272 544.3c72.4 0 133.1-23.9 177.4-64.8l-86-66.8c-24 16.1-54.7 25.6-91.4 25.6-70.2 0-129.6-47.4-150.8-111.2l-89.4 69c43.9 87 134.2 148.2 240.2 148.2z"/>
-                            <path fill="#FBBC04" d="M121.2 326.9c-10.3-30.8-10.3-64 0-94.8l-89.5-69C7 213.5 0 244.3 0 278.4s7 64.9 31.8 115.3l89.4-69z"/>
-                            <path fill="#EA4335" d="M272 109.6c39.3-.6 77.4 14 106.6 40.9l80-78.6C405.4 28.3 341.2 0 272 0 166 0 75.8 61.2 31.8 148.3l89.5 69C142.4 157 201.8 109.6 272 109.6z"/>
-                        </svg>`;
-                        img.parentNode.replaceChild(iconSvg.firstChild, img);
-                    };
-                    img.onload = () => {
-                        console.log(`${this.logPrefix} Connected state - Profile image loaded successfully`);
-                    };
-                    this.connectBtnEl.appendChild(img);
-                }
+                this._displayProfileImage(this.connectBtnEl, connectedProfile);
+                
                 const connectedTextSpan = document.createElement('span');
                 connectedTextSpan.className = 'status-text';
                 if (connectedProfile && connectedProfile.name) {
