@@ -20,6 +20,11 @@ export class EpubProcessorWrapper {
         try {
             console.log('EpubProcessorWrapper: Loading book…');
 
+            if (!(bookBinaryContent instanceof ArrayBuffer) || bookBinaryContent.byteLength < 512) {
+                console.error(`[EpubProcessor] Aborting: Book binary is too small or invalid (${bookBinaryContent.byteLength} bytes)`);
+                throw new Error('Invalid or empty book data');
+            }
+
             this.processor = this._createProcessor(bookBinaryContent);
             await this.processor.ensureReady();      // wait for internal init
 
