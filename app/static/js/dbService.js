@@ -317,14 +317,26 @@ export async function getLocalBooksMetadata() {
 /**
  * Deletes a book by its ID. Also deletes associated progress.
  * @param {number} bookId - The unique ID of the book.
+ * @param {string|null} [driveId=null] - Google Drive file ID if available.
  * @returns {Promise<void>}
  */
-export async function deleteBook(bookId) {
-     // bookId is expected to be the UUID string here
-     if (typeof bookId !== 'string' || bookId.length === 0) {
-         console.error('[DBService] Invalid bookId provided to deleteBook:', bookId);
-         throw new Error('[DBService] Invalid book ID provided for deletion (must be a non-empty string).');
-     }
+export async function deleteBook(bookId, driveId = null) {
+    // bookId is expected to be the UUID string here
+    if (typeof bookId !== 'string' || bookId.length === 0) {
+        console.error('[DBService] Invalid bookId provided to deleteBook:', bookId);
+        throw new Error('[DBService] Invalid book ID provided for deletion (must be a non-empty string).');
+    }
+
+    // 1. If connected to Drive and driveId is provided, delete from Drive first
+    if (driveId && window.driveSync?.isConnected?.()) {
+        try {
+            await window.driveSync.deleteRemoteBook(driveId);
+            console.log(`[DBService] Deleted book ${bookId} from Google Drive (file ID: ${driveId})`);
+        } catch (err) {
+            console.warn(`[DBService] Warning: Failed to delete from Drive for book ${bookId}:`, err);
+            // Proceed anyway to delete local copy
+        }
+    }
 
     const db = await _getDB();
     // Use a single transaction for both stores
@@ -332,65 +344,19 @@ export async function deleteBook(bookId) {
     const bookStore = transaction.objectStore(BOOK_STORE_NAME);
     const progressStore = transaction.objectStore(PROGRESS_STORE_NAME);
 
-    const deleteBookRequest = bookStore.delete(bookId); // Use numeric ID
-    const deleteProgressRequest = progressStore.delete(bookId); // Progress uses bookId as key
+    bookStore.delete(bookId);
+    progressStore.delete(bookId);
 
-    // Promise for IndexedDB deletion part
-    const indexedDbDeletePromise = new Promise((resolveIdxDb, rejectIdxDb) => {
+    return new Promise((resolve, reject) => {
         transaction.oncomplete = () => {
-             console.log(`[DBService] Transaction completed for deleting book ID ${bookId} from IndexedDB.`);
-             resolveIdxDb();
+            console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB.`);
+            resolve();
         };
         transaction.onerror = (event) => {
-             console.error(`[DBService] Transaction error deleting book ${bookId} from IndexedDB:`, event.target.error);
-             rejectIdxDb(new Error(`Transaction error deleting book from IndexedDB: ${event.target.error?.message}`));
+            console.error(`[DBService] Error deleting book ${bookId} from IndexedDB:`, event.target.error);
+            reject(event.target.error);
         };
-
-        // Individual request errors are mostly for logging, transaction outcome is key
-        deleteBookRequest.onerror = (event) => {
-             console.error(`[DBService] Error detail: Book store delete request for ${bookId} failed:`, event.target.error);
-        };
-        deleteProgressRequest.onerror = (event) => {
-             console.warn(`[DBService] Note: Progress store delete request for ${bookId} failed (may not exist):`, event.target.error);
-         };
     });
-
-    try {
-        await indexedDbDeletePromise;
-        console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB. Now attempting server-side deletion.`);
-
-        // Now, attempt to delete from server
-        const serverDeleteResponse = await fetch(`/book/delete/${bookId}`, {
-            method: 'POST',
-            headers: {
-                // Add any necessary headers, e.g., CSRF token if your app uses them
-                'Content-Type': 'application/json' 
-            }
-        });
-
-        if (serverDeleteResponse.ok) {
-            const result = await serverDeleteResponse.json();
-            if (result.success) {
-                console.log(`[DBService] Successfully deleted book ${bookId} from server.`);
-            } else {
-                console.warn(`[DBService] Server indicated issue deleting book ${bookId}: ${result.message}`);
-                // Decide if this should be a soft failure or throw an error
-                // For now, log a warning, as client-side data is gone.
-            }
-        } else {
-            const errorText = await serverDeleteResponse.text();
-            console.error(`[DBService] Failed to delete book ${bookId} from server. Status: ${serverDeleteResponse.status}. Response: ${errorText}`);
-            // Decide if this should throw an error, blocking UI update, or just log
-            // Throwing will make it clearer in bookshelfUI if server fails.
-            throw new Error(`Server failed to delete book files (status ${serverDeleteResponse.status}).`);
-        }
-        // If we reach here, both IndexedDB and server deletion (or attempted deletion with warning) are done.
-        return; // Resolve the main promise successfully
-
-    } catch (error) {
-        console.error(`[DBService] Overall error in deleteBook for ${bookId}:`, error);
-        throw error; // Re-throw the error to be caught by the caller (e.g., bookshelfUI)
-    }
 }
 
 
@@ -511,7 +477,7 @@ export async function getBookByDriveId(driveId) {
 export async function deleteBookByDriveId(driveId) {
     const rec = await getBookByDriveId(driveId);
     if (rec) {
-        await deleteBook(rec.id);
+        await deleteBook(rec.id, driveId);
     }
 }
 
