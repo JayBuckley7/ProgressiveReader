@@ -2,6 +2,7 @@ import { ready as dbReady, getBook } from "./dbService.js";
 import { renderBookshelf } from "./bookshelf.js";
 import { setupUploadForm } from "./uploadHandler.js";
 import * as driveSync from "./driveSync.js";
+window.driveSync = driveSync;
 import { DriveButton } from "./driveButton.js"; // Import the new component
 import './storageManager.js'; // Ensure storageManager is loaded and sets window.storageManager
 
