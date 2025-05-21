@@ -32,6 +32,34 @@ class MetadataApiTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.get_json(), [metadata])
 
+    @patch('app.routes.metadata.redis.Redis')
+    def test_delete_book(self, mock_redis_cls):
+        storage = {}
+        mock_redis = MagicMock()
+
+        def fake_get(key):
+            return storage.get(key)
+
+        def fake_set(key, value):
+            storage[key] = value
+
+        def fake_delete(key):
+            storage.pop(key, None)
+
+        mock_redis.get.side_effect = fake_get
+        mock_redis.set.side_effect = fake_set
+        mock_redis.delete.side_effect = fake_delete
+        mock_redis_cls.from_url.return_value = mock_redis
+
+        metadata = {'id': 'book1', 'title': 'Test', 'coverDriveId': 'c123'}
+        self.client.post('/metadata/user1/book/book1', json=metadata)
+
+        resp = self.client.delete('/metadata/user1/book/book1')
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get('/metadata/user1/books')
+        self.assertEqual(resp.get_json(), [])
+
 
 if __name__ == '__main__':
     unittest.main()

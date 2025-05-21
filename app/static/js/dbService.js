@@ -348,8 +348,19 @@ export async function deleteBook(bookId, driveId = null) {
     progressStore.delete(bookId);
 
     return new Promise((resolve, reject) => {
-        transaction.oncomplete = () => {
+        transaction.oncomplete = async () => {
             console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB.`);
+
+            const userId = window.driveSync?.getUserProfile?.()?.email;
+            if (userId) {
+                try {
+                    await fetch(`/metadata/${userId}/book/${bookId}`, { method: 'DELETE' });
+                    console.log(`[DBService] Deleted Redis metadata for book ${bookId}`);
+                } catch (e) {
+                    console.warn(`[DBService] Failed to delete Redis metadata for ${bookId}:`, e);
+                }
+            }
+
             resolve();
         };
         transaction.onerror = (event) => {
