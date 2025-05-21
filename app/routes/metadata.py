@@ -55,3 +55,16 @@ def delete_book(user_id, book_id):
     r.set(key_list, json.dumps(books))
 
     return jsonify({"success": True})
+
+
+@metadata_bp.route("/<user_id>/clear_all_entries", methods=["DELETE"])
+def clear_all_entries(user_id):
+    """Delete all Redis metadata entries for the specified user."""
+    r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    pattern = f"user:{user_id}:book:*"
+    book_keys = r.keys(pattern)
+    deleted_count = 0
+    if book_keys:
+        deleted_count += r.delete(*book_keys)
+    deleted_count += r.delete(f"user:{user_id}:books")
+    return jsonify({"deleted_count": deleted_count})
