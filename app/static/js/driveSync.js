@@ -26,7 +26,6 @@ if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
 const SCOPES         = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 const FOLDER_NAME    = 'ProgReader';
 const TOKEN_STORE_KEY= 'drive.token';
-const CURSOR_DEFAULT = '1';
 const MIME_TYPES = {
   epub: 'application/epub+zip',
   pdf: 'application/pdf',
@@ -45,9 +44,7 @@ function getMimeType(ext) {
 // ── 1. Runtime state --------------------------------------------------------------------
 let gToken        = null;                 // { access, expiry }
 let folderId      = null;                 // Drive folder that holds all EPUBs
-let changeCursor  = CURSOR_DEFAULT;       // Drive change‑feed cursor
 let driveInterval = null;                 // setInterval handle
-let pageTokenFileId = null;               // Cached fileId for pageToken.txt in appDataFolder
 
 const pendingCoverUploads = new Set();    // Tracks book IDs for which cover upload is in progress
 
@@ -55,7 +52,6 @@ const uploadQueue   = [];
 const progressQueue = [];
 let uploadWorkerRunning   = false;
 let progressWorkerRunning = false;
-let _initialImportDone    = false;
 
 // --- Cookie Helper Functions ---
 function setDriveConnectedCookie(status) {
@@ -385,130 +381,6 @@ export async function seedDriveFolder(){
   }
 }
 
-// ── 4. Cursor helpers (stored in appDataFolder) ---------------------------
-async function getChangeCursor(){
-  console.log(`[DriveSync] getChangeCursor: Current changeCursor in memory: ${changeCursor}`);
-  if(changeCursor !== CURSOR_DEFAULT) {
-    console.log(`[DriveSync] getChangeCursor: Returning in-memory cursor: ${changeCursor}`);
-    return changeCursor;
-  }
-  await seedDriveFolder(); // ensure auth
-  console.log("[DriveSync] getChangeCursor: Attempting to fetch 'pageToken.txt' from appDataFolder.");
-  try{
-    const res = await driveFilesList("name='pageToken.txt' and 'appDataFolder' in parents and trashed=false",'files(id, name)');
-    if(!res.files || !res.files.length) {
-      console.log("[DriveSync] getChangeCursor: 'pageToken.txt' not found in appDataFolder. Returning default cursor:", CURSOR_DEFAULT);
-      return CURSOR_DEFAULT;
-    }
-    const file = res.files[0];
-    console.log(`[DriveSync] getChangeCursor: Found 'pageToken.txt' with ID: ${file.id}. Fetching content.`);
-    const tokenContent = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,{headers:authHeader()}).then(r=>r.text());
-    if (tokenContent) {
-      changeCursor = tokenContent;
-      console.log(`[DriveSync] getChangeCursor: Successfully fetched and set cursor from 'pageToken.txt': ${changeCursor}`);
-    } else {
-      console.warn("[DriveSync] getChangeCursor: 'pageToken.txt' was found but its content was empty. Using default cursor:", CURSOR_DEFAULT);
-      changeCursor = CURSOR_DEFAULT;
-    }
-  }catch(e){
-    console.warn('[DriveSync] getChangeCursor: Error fetching/reading pageToken.txt:', e.message, 'Returning default cursor:', CURSOR_DEFAULT);
-    changeCursor = CURSOR_DEFAULT; // Ensure it's reset on error
-  }
-  return changeCursor;
-}
-
-async function saveChangeCursor(token) {
-  console.log(`[DriveSync] saveChangeCursor: Attempting to save token: '${token}'`);
-  changeCursor = token; // Update in-memory cursor immediately
-  const fileName = 'pageToken.txt';
-  const mimeType = 'text/plain';
-
-  try {
-    if (pageTokenFileId) {
-      console.log(`[DriveSync] saveChangeCursor: Using cached file ID for '${fileName}': ${pageTokenFileId}. Updating its content.`);
-      const updateUrl = `https://www.googleapis.com/upload/drive/v3/files/${pageTokenFileId}?uploadType=media`;
-      const updateRes = await fetchWithAuth(updateUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': mimeType },
-        body: new Blob([token], { type: mimeType }),
-      });
-      if (!updateRes.ok) {
-        const errorText = await updateRes.text();
-        console.error(`[DriveSync] saveChangeCursor: Failed to update '${fileName}' (ID: ${pageTokenFileId}) using cached ID. Status: ${updateRes.status}. Response: ${errorText}`);
-        // If update fails with cached ID, the ID might be stale. Clear it and try full logic.
-        console.log(`[DriveSync] saveChangeCursor: Clearing cached pageTokenFileId (${pageTokenFileId}) due to update failure.`);
-        pageTokenFileId = null; 
-        throw new Error(`Failed to update ${fileName} (cached ID ${pageTokenFileId}): ${updateRes.status} ${errorText}`); // Rethrow to trigger full lookup/create logic if desired, or handle
-      }
-      console.log(`[DriveSync] saveChangeCursor: Successfully updated '${fileName}' (ID: ${pageTokenFileId}) using cached ID.`);
-      return; // Successfully updated using cached ID
-    }
-
-    console.log(`[DriveSync] saveChangeCursor: No cached pageTokenFileId. Checking for existing '${fileName}' in appDataFolder.`);
-    const listRes = await driveFilesList(`name='${fileName}' and 'appDataFolder' in parents and trashed=false`, 'files(id)');
-    
-    if (listRes.files && listRes.files.length > 0) {
-      const foundFileId = listRes.files[0].id;
-      pageTokenFileId = foundFileId; // Cache the found file ID
-      console.log(`[DriveSync] saveChangeCursor: Found existing '${fileName}' with ID: ${foundFileId}. Caching and updating its content.`);
-      const updateUrl = `https://www.googleapis.com/upload/drive/v3/files/${foundFileId}?uploadType=media`;
-      const updateRes = await fetchWithAuth(updateUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': mimeType },
-        body: new Blob([token], { type: mimeType }),
-      });
-      if (!updateRes.ok) {
-        const errorText = await updateRes.text();
-        console.error(`[DriveSync] saveChangeCursor: Failed to update existing '${fileName}' (ID: ${foundFileId}). Status: ${updateRes.status}. Response: ${errorText}`);
-        pageTokenFileId = null; // Clear cache on error
-        throw new Error(`Failed to update existing ${fileName}: ${updateRes.status} ${errorText}`);
-      }
-      console.log(`[DriveSync] saveChangeCursor: Successfully updated existing '${fileName}' (ID: ${foundFileId}).`);
-    } else {
-      console.log(`[DriveSync] saveChangeCursor: No existing '${fileName}' found by listing. Creating new one using multipart upload.`);
-      const boundary = '-------314159265358979323846';
-      const delimiter = `\r\n--${boundary}\r\n`;
-      const close_delim = `\r\n--${boundary}--`;
-      const metadata = {
-        name: fileName,
-        parents: ['appDataFolder'],
-        mimeType: mimeType,
-      };
-      const multipartRequestBody =
-        delimiter +
-        'Content-Type: application/json; charset=UTF-_8\r\n\r\n' +
-        JSON.stringify(metadata) +
-        delimiter +
-        `Content-Type: ${mimeType}\r\n\r\n` +
-        token +
-        close_delim;
-      const createUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-      
-      console.log(`[DriveSync] saveChangeCursor: Sending multipart request to create '${fileName}'.`);
-      const createRes = await fetchWithAuth(createUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
-        body: multipartRequestBody,
-      });
-
-      if (!createRes.ok) {
-        const errorText = await createRes.text();
-        console.error(`[DriveSync] saveChangeCursor: Failed to create '${fileName}' using multipart upload. Status: ${createRes.status}. Response: ${errorText}`);
-        pageTokenFileId = null; // Ensure not set if creation failed
-        throw new Error(`Failed to create ${fileName} via multipart: ${createRes.status} ${errorText}`);
-      }
-      const createdFile = await createRes.json();
-      pageTokenFileId = createdFile.id; // Cache the new file ID
-      console.log(`[DriveSync] saveChangeCursor: Successfully created '${fileName}' with ID: ${createdFile.id} via multipart upload. Cached ID.`);
-    }
-  } catch (error) {
-    console.error(`[DriveSync] saveChangeCursor: Error saving change cursor token '${token}':`, error.message);
-    // Potentially clear pageTokenFileId here if the error is severe and suggests the file state is unknown
-    // For now, only explicit failures in update/create clear it.
-    // Rethrow to allow importInitialFiles to handle it if it needs to.
-    throw error;
-  }
-}
 
 // ── 5. Tiny Drive REST helpers -------------------------------------------
 const _authLostHandlers = [];
@@ -518,8 +390,6 @@ function _markDisconnected() {
   console.log("[DriveSync] _markDisconnected: Marking as disconnected.");
   gToken = null;
   folderId = null;
-  pageTokenFileId = null; // Clear cached pageTokenFileId
-  _initialImportDone = false; // Reset for potential re-login
   stopScheduler();
   localStorage.removeItem(TOKEN_STORE_KEY);
   localStorage.removeItem('drive.folderId'); // Ensure this matches the key used in seedDriveFolder
@@ -631,243 +501,32 @@ async function downloadAndStoreBook(file) {
 }
 
 // ── 6. Cold import --------------------------------------------------------
-async function importInitialFiles(){
-  if (_initialImportDone) return;
-  console.log('[DriveSync] importInitialFiles: Starting...');
-  
-  const cursor = await getChangeCursor();
-  if (cursor !== '1') { 
-    console.log('[DriveSync] importInitialFiles: Not a first-time import (cursor != 1). Skipping.');
-    _initialImportDone = true; 
-    return; 
-  }
-
-  await seedDriveFolder();
-  console.log('[DriveSync] Performing initial scan of remote EPUBs (metadata-only)…');
-
-  /* first Drive history cursor */
-  try {
-    const sptRes = await fetchWithAuth('https://www.googleapis.com/drive/v3/changes/startPageToken');
-    if (!sptRes.ok) {
-      const errorText = await sptRes.text();
-      throw new Error(`Failed to get initial startPageToken: ${sptRes.status} ${errorText}`);
-    }
-    const { startPageToken } = await sptRes.json();
-    if (!startPageToken) {
-        throw new Error('Initial startPageToken was empty after successful fetch.');
-    }
-    console.log('[DriveSync] importInitialFiles: Obtained initial startPageToken for sync history:', startPageToken);
-    await saveChangeCursor(startPageToken); // Save this initial cursor before listing files
-  } catch (err) {
-    console.error('[DriveSync] importInitialFiles: CRITICAL - Could not obtain and save initial startPageToken. Halting cold import.', err);
-    _initialImportDone = true; // Mark as done to prevent retries, but it failed.
-    return; // Cannot proceed without a starting point for changes
-  }
-
-  // Fetch books from Drive
-  try {
-    const list = await driveFilesList(
-      `'${await seedDriveFolder()}' in parents and mimeType='application/epub+zip' and trashed=false`,
-      'files(id,name,md5Checksum,modifiedTime,appProperties)'
-    );
-    const files = list.files || [];
-    console.log(`[DriveSync] importInitialFiles: Found ${files.length} books in Drive.`);
-    
-    if (files.length > 0) {
-      for (const f of files) {
-        try {
-          await downloadAndStoreBook(f);
-        } catch (e) {
-          console.error('[DriveSync] importInitialFiles: Failed to download', f.name, e);
-        }
-      }
-    }
-
-    console.info(`[DriveSync] Imported ${files.length} remote book(s)`);
-    
-  } catch (err) {
-    console.error('[DriveSync] importInitialFiles: Error fetching books from Drive:', err);
-  }
-  
-  _initialImportDone = true;
-  
-  // After cold import, fetch a *new* startPageToken to effectively checkpoint *after* the cold import items.
-  try {
-    const tokenRes = await fetchWithAuth('https://www.googleapis.com/drive/v3/changes/startPageToken');
-    if (tokenRes.ok) {
-      const { startPageToken } = await tokenRes.json();
-      if (startPageToken) {
-        console.log('[DriveSync] importInitialFiles: Obtained new startPageToken after cold import:', startPageToken);
-        await saveChangeCursor(startPageToken);
-      } else {
-        console.warn('[DriveSync] importInitialFiles: startPageToken endpoint returned ok but no token in body.');
-      }
-    } else {
-      const errorText = await tokenRes.text();
-      console.warn(`[DriveSync] importInitialFiles: Unable to obtain fresh startPageToken after cold import. Status: ${tokenRes.status}. Response: ${errorText}`);
-    }
-  } catch (e) { 
-    console.warn('[DriveSync] importInitialFiles: Error during fetch of new startPageToken:', e);
-  }
-}
 
 // ── 7. Sync loop ----------------------------------------------------------
 export async function runSyncLoop(){
   console.log('[DriveSync] runSyncLoop: Starting sync process...');
   window.dispatchEvent(new Event('drive-sync-start'));
-  
+
   if(!isConnected()) {
     console.log('[DriveSync] runSyncLoop: Not connected to Google Drive. Aborting sync.');
     return;
   }
-  
-  console.log('[DriveSync] runSyncLoop: Checking if token refresh is needed');
-  await attemptRefreshToken();
-  
-  const startT=performance.now();
-  console.log('[DriveSync] runSyncLoop: Getting folder ID from Drive');
-  const folder=await seedDriveFolder();
-  console.log(`[DriveSync] runSyncLoop: Using Drive folder ID: ${folder}`);
 
-  // Auto-upload any local books not yet synced
+  await attemptRefreshToken();
+
+  const startT = performance.now();
+  await seedDriveFolder();
+
   try {
     await autoUploadLocalBooks();
   } catch (e) {
     console.warn('[DriveSync] autoUploadLocalBooks error:', e);
   }
 
-  // Ensure any remote-only books are downloaded
-  try {
-    await autoDownloadRemoteBooks();
-  } catch (e) {
-    console.warn('[DriveSync] autoDownloadRemoteBooks error:', e);
-  }
-  
-  console.log('[DriveSync] runSyncLoop: Getting change cursor');
-  let token=await getChangeCursor();
-  console.log(`[DriveSync] runSyncLoop: Starting with change cursor: ${token}`);
-  
-  let added=0,updated=0,removed=0;
-  let bytesDownloaded = 0;
-  let iteration = 0;
-  
-  do{
-    iteration++;
-    console.log(`[DriveSync] runSyncLoop: Iteration ${iteration} - Fetching changes with pageToken: ${token}`);
-    
-    const url=`https://www.googleapis.com/drive/v3/changes?pageToken=${token}&spaces=drive&fields=nextPageToken,newStartPageToken,changes(fileId,file(id,name,md5Checksum,mimeType,modifiedTime,appProperties,parents),removed)`;
-    console.log(`[DriveSync] runSyncLoop: Calling Drive API: ${url.substring(0, 100)}...`);
-    
-    const res = await fetchWithAuth(url);
-    console.log(`[DriveSync] runSyncLoop: Got response from Drive API. Status: ${res.status}`);
-    
-    const responseData = await res.json();
-    console.log(`[DriveSync] runSyncLoop: Response contains ${responseData.changes?.length || 0} changes`);
-    
-    if(responseData.changes){
-      console.log(`[DriveSync] runSyncLoop: Processing ${responseData.changes.length} changes from Drive`);
-      
-      for(const ch of responseData.changes){
-        // Skip if file is null (this happens for files we don't have access to anymore)
-        if(!ch.file) {
-          console.log(`[DriveSync] runSyncLoop: Skipping change for fileId ${ch.fileId} - file data is null`);
-          continue;
-        }
-        
-        // Skip if file is not in our app folder
-        if(!ch.file.parents?.includes(folder)) {
-          console.log(`[DriveSync] runSyncLoop: Skipping change for file "${ch.file.name}" - not in our app folder`);
-          continue;
-        }
-        
-        // Handle removed files
-        if(ch.removed){ 
-          console.log(`[DriveSync] runSyncLoop: File removal detected for fileId: ${ch.fileId}`);
-          await deleteBookByDriveId(ch.fileId); 
-          console.log(`[DriveSync] runSyncLoop: Successfully deleted book with driveId: ${ch.fileId}`);
-          removed++; 
-          continue; 
-        }
-        
-        // Skip if this is a cover image file specifically marked with appProperties
-        if (ch.file.appProperties?.isCover === 'true') {
-          console.log(`[DriveSync] runSyncLoop: Skipping change for cover file (appProperty isCover=true): "${ch.file.name}"`);
-          // Future: Could add logic here to update cached cover if necessary, but for now, just skip.
-          continue;
-        }
-        
-        // Handle book files (any non-progress, non-cover file)
-        if(!ch.file.name.endsWith('.progress.json')){
-          console.log(`[DriveSync] runSyncLoop: Book change detected: "${ch.file.name}" (${ch.fileId})`);
-          const canonicalId = ch.file.appProperties?.progReaderBookId || ch.fileId;
-          console.log(`[DriveSync] runSyncLoop: Using canonical ID: ${canonicalId} for file ${ch.fileId}`);
-
-          const existing = await getBookByDriveId(ch.fileId) || await getBookMetadata(canonicalId);
-          console.log(`[DriveSync] runSyncLoop: Book ${canonicalId} exists locally: ${!!existing}, isRemoteOnly: ${existing?.isRemoteOnly}`);
-          
-          // Check if this book already exists locally with content
-          if (existing && !existing.isRemoteOnly) {
-            console.log(`[DriveSync] runSyncLoop: Updating metadata for existing local book: ${ch.file.name}`);
-            await updateBookMetadata(canonicalId, {
-              driveId: ch.fileId,
-              md5: ch.file.md5Checksum,
-              modifiedTime: ch.file.modifiedTime
-            });
-            console.log(`[DriveSync] runSyncLoop: Successfully updated metadata for: ${ch.file.name}`);
-            updated++;
-          } else {
-            console.log(`[DriveSync] runSyncLoop: Downloading new or remote-only book: ${ch.file.name}`);
-            try {
-              await downloadAndStoreBook(ch.file);
-              added++;
-            } catch (err) {
-              console.error('[DriveSync] runSyncLoop: Failed to download', ch.file.name, err);
-            }
-          }
-          continue;
-        }
-        
-        // Handle progress.json files
-        if(ch.file.name?.endsWith('.progress.json')){
-          console.log(`[DriveSync] runSyncLoop: Found progress file: ${ch.file.name}`);
-          console.log(`[DriveSync] runSyncLoop: Downloading progress data from: ${ch.fileId}`);
-          const arrayBuffer = await downloadFile(ch.fileId);
-          console.log(`[DriveSync] runSyncLoop: Downloaded ${arrayBuffer.byteLength} bytes of progress data`);
-          
-          const data=JSON.parse(new TextDecoder().decode(arrayBuffer));
-          console.log(`[DriveSync] runSyncLoop: Progress data parsed successfully for book ID: ${data.bookId || 'unknown'}`);
-          
-          console.log(`[DriveSync] runSyncLoop: Merging progress data with local storage`);
-          await window.mergeProgress(data); 
-          console.log(`[DriveSync] runSyncLoop: Progress data merged successfully`);
-          updated++; 
-          continue;
-        }
-        
-        console.log(`[DriveSync] runSyncLoop: Ignoring file of type: ${ch.file.mimeType} - ${ch.file.name}`);
-      }
-    }
-    
-    // Get next page token for pagination
-    token = responseData.nextPageToken;
-
-    // If Drive reports zero changes, and gives us another nextPageToken but no newStartPageToken,
-    // we can safely checkpoint at that token and break. This prevents endless empty polling loops.
-    if ((responseData.changes?.length || 0) === 0) {
-      console.log('[DriveSync] runSyncLoop: No changes in this page; checkpointing cursor and exiting early.');
-      if (token) {
-        await saveChangeCursor(token);
-      }
-      break;
-    }
-  } while(token);
-  
-  const ms=(performance.now()-startT)|0;
-  console.log(`[DriveSync] runSyncLoop: Sync completed in ${ms.toFixed(0)}ms. Stats: +${added} added, ${updated} updated, ${removed} removed.`);
-  console.info(`[Drive] Synced: +${added} ∆${updated} –${removed}. ${bytesDownloaded ? (bytesDownloaded / 1024).toFixed(1) + ' KiB' : 'metadata only'} in ${ms.toFixed(0)} ms`);
-  
-  window.dispatchEvent(new CustomEvent('drive-sync-complete', { detail: { added, updated, removed } }));
-  return { added, updated, removed, bytesDownloaded, cycleMs: ms };
+  const ms = (performance.now() - startT) | 0;
+  window.dispatchEvent(new CustomEvent('drive-sync-complete', { detail: { added: 0, updated: 0, removed: 0 } }));
+  console.log(`[DriveSync] runSyncLoop: Upload sync completed in ${ms}ms.`);
+  return { added: 0, updated: 0, removed: 0, bytesDownloaded: 0, cycleMs: ms };
 }
 
 /**
@@ -932,28 +591,6 @@ async function autoUploadLocalBooks() {
     }
   }
 }
-
-async function autoDownloadRemoteBooks() {
-  const metas = await getLocalBooksMetadata();
-  for (const m of metas) {
-    if (m.isRemoteOnly && m.driveId) {
-      try {
-        const ext = m.fileType || 'epub';
-        await downloadAndStoreBook({
-          id: m.driveId,
-          name: `${m.title}.${ext}`,
-          md5Checksum: m.md5 || null,
-          modifiedTime: m.modifiedTime || null,
-          mimeType: getMimeType(ext),
-          appProperties: { progReaderBookId: m.id }
-        });
-      } catch (e) {
-        console.warn('[DriveSync] autoDownloadRemoteBooks: Failed for', m.id, e);
-      }
-    }
-  }
-}
-
 // ── 9. Scheduler & offline handling --------------------------------------
 function startScheduler(){if(driveInterval) return; driveInterval=setInterval(()=>{if(!navigator.onLine){window.dispatchEvent(new Event('drive-offline'));return;} runSyncLoop().catch(console.error);},5*60*1000);}  // 5‑min
 function stopScheduler(){if(driveInterval) clearInterval(driveInterval); driveInterval=null;}
@@ -975,8 +612,6 @@ export async function init(isExplicitCall = false){
       // Cookie is false or null, so we skip auto-init
       const reason = cookieStatus === false ? "gdrive_connected cookie was 'false' (user likely disconnected previously)." : "gdrive_connected cookie not found (first visit or cookie cleared).";
       console.log(`[DriveSync] init: Auto-init: SKIPPING full initialization because ${reason} Waiting for explicit user action (e.g., clicking connect button).`);
-      // Leave _initialImportDone as false so a later explicit connection can
-      // perform the initial import and capture a proper startPageToken.
       window.dispatchEvent(new Event('drive-sync-complete')); // End "syncing" state shown to user
       window.dispatchEvent(new Event('drive-disconnect')); // Ensure UI is in disconnected state
       return; // Stop further automatic initialization
@@ -993,11 +628,7 @@ export async function init(isExplicitCall = false){
     // Dispatch event to indicate Google Drive connection is confirmed
     try {
       await seedDriveFolder();
-      if (!_initialImportDone) { 
-          await importInitialFiles(); 
-          _initialImportDone = true;
-      }
-      await runSyncLoop(); 
+      await runSyncLoop();
       startScheduler();
       window.dispatchEvent(new Event('drive-online'));
       console.log("[DriveSync] init: Completed successfully (connected state after hydrateToken).");
@@ -1024,10 +655,6 @@ export async function init(isExplicitCall = false){
           setDriveConnectedCookie(true); // Ensure cookie is set after successful explicit auth
           // Full setup after successful explicit auth
           await seedDriveFolder();
-          if (!_initialImportDone) {
-            await importInitialFiles();
-            _initialImportDone = true;
-          }
           await runSyncLoop();
           startScheduler();
           window.dispatchEvent(new Event('drive-online'));

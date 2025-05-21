@@ -1,4 +1,4 @@
-import { addBook, getBook } from './dbService.js';
+import { addBook, getBook, getBookMetadata } from './dbService.js';
 import * as driveSync from './driveSync.js';
 import { renderBookshelf } from './bookshelfUI.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
@@ -131,6 +131,20 @@ async function handleFileSelect() {
 
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
+
+        const userId = driveSync.getUserProfile()?.email;
+        if (userId) {
+            const metadata = await getBookMetadata(bookIdFromDB);
+            try {
+                await fetch(`/metadata/${userId}/book/${bookIdFromDB}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(metadata),
+                });
+            } catch (e) {
+                console.warn(`${logPrefix} Failed to POST metadata for ${bookIdFromDB}:`, e);
+            }
+        }
 
         let storedRecord = null;
         try {
