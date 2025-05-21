@@ -1,5 +1,6 @@
 // metadataSync.js - synchronize Redis metadata with IndexedDB
 import { addBook, updateBookMetadata, getLocalBooksMetadata, getBook } from './dbService.js';
+import * as driveSync from './driveSync.js';
 
 /**
  * Merge remote metadata from Redis with local IndexedDB records.
@@ -26,7 +27,23 @@ export async function getMergedBooksMetadata(userId) {
     if (!byId.has(id)) {
       const existing = await getBook(id);
       if (!existing) {
-        await addBook(title, new Blob([]), id, rest);
+        try {
+          await addBook(title, new Blob([]), id, rest);
+        } catch (err) {
+          console.warn(`[MetadataSync] Skipping invalid/corrupted book ${book.id}`, err);
+
+          const userId = driveSync.getUserProfile()?.email;
+          if (userId && book?.id) {
+            try {
+              await fetch(`/metadata/${userId}/book/${book.id}`, { method: 'DELETE' });
+              console.log(`[MetadataSync] Deleted Redis metadata for invalid book ${book.id}`);
+            } catch (e) {
+              console.warn(`[MetadataSync] Failed to delete Redis metadata for ${book.id}`, e);
+            }
+          }
+
+          continue;
+        }
       }
       await updateBookMetadata(id, rest);
       byId.set(id, { id, title, ...rest, source: 'redis', isRemoteOnly: true });
