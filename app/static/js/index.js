@@ -45,18 +45,22 @@ async function initializeApp() {
       typeof window.dbKeyVal,
     );
 
-    renderBookshelf(driveSync, currentSearchQuery);
-    setupUploadForm();
-
     let driveButton = null;
     if (driveControlsContainer) {
-      // Pass the container to DriveButton
       driveButton = new DriveButton(driveControlsContainer, driveSync);
     } else {
       console.warn(
         `${logPrefix} Drive controls container (#drive-controls-container) not found. DriveButton not initialized.`,
       );
     }
+
+    await driveSync.init();
+    driveButton?.refreshState();
+    updateIndicator(driveSync.isConnected());
+    updateDriveLink();
+
+    renderBookshelf(driveSync, currentSearchQuery);
+    setupUploadForm();
 
     if (searchInput) {
       searchInput.addEventListener("input", () => {
@@ -156,32 +160,6 @@ async function initializeApp() {
         updateDriveLink();
         alert('Google Drive connection lost. Please connect again.');
       });
-    }
-
-    /* ─────────────── Initial silent Drive init ─────────────── */
-    console.log(`${logPrefix} Attempting early driveSync.init()…`);
-    try {
-      await driveSync.init(); // silent (auto-hydrate)
-      driveButton?.refreshState();
-      updateIndicator(driveSync.isConnected());
-      updateDriveLink();
-
-      if (driveSync.isConnected()) {
-        console.log(`${logPrefix} Early driveSync.init() successful – Drive connected.`);
-        if (!driveSync.getFolderId()) {
-          console.error(`${logPrefix} Drive folder ID is null after init – user may lack permissions.`);
-          showBanner('Drive folder unavailable', 'offline', 5000);
-        }
-      } else {
-        console.log(`${logPrefix} Early driveSync.init() completed – Drive not connected.`);
-      }
-    } catch (err) {
-      console.warn(`${logPrefix} Early driveSync.init() failed:`, err.message);
-      // Show a brief banner so the user knows why the Drive link disappeared
-      showBanner('Drive unavailable', 'offline', 5000);
-      driveButton?.refreshState();
-      updateIndicator(false);
-      updateDriveLink();
     }
 
     console.log(`${logPrefix} Application initialization complete.`);
