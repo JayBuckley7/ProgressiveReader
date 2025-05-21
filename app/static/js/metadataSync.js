@@ -28,7 +28,7 @@ export async function getMergedBooksMetadata(userId) {
       const existing = await getBook(id);
       if (!existing) {
         try {
-          await addBook(title, new Blob([]), id, rest);
+          await addBook(title, new Blob([]), id, rest, false, true);
         } catch (err) {
           console.warn(`[MetadataSync] Skipping invalid/corrupted book ${book.id}`, err);
 
