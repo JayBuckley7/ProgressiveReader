@@ -38,3 +38,20 @@ def store_book(user_id, book_id):
     r.set(key_list, json.dumps(books))
     r.set(key_book, json.dumps(data))
     return jsonify({"success": True})
+
+
+@metadata_bp.route("/<user_id>/book/<book_id>", methods=["DELETE"])
+def delete_book(user_id, book_id):
+    """Delete stored metadata for a specific book."""
+    r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    key_list = f"user:{user_id}:books"
+    key_book = f"user:{user_id}:book:{book_id}"
+
+    r.delete(key_book)
+
+    raw = r.get(key_list)
+    books = json.loads(raw) if raw else []
+    books = [b for b in books if b.get("id") != book_id]
+    r.set(key_list, json.dumps(books))
+
+    return jsonify({"success": True})
