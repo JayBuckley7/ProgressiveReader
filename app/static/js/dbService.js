@@ -324,9 +324,10 @@ export async function getLocalBooksMetadata() {
  * Deletes a book by its ID. Also deletes associated progress.
  * @param {number} bookId - The unique ID of the book.
  * @param {string|null} [driveId=null] - Google Drive file ID if available.
+ * @param {object|null} [driveSync=null] - driveSync instance for remote deletion.
  * @returns {Promise<void>}
  */
-export async function deleteBook(bookId, driveId = null) {
+export async function deleteBook(bookId, driveId = null, driveSync = null) {
     // bookId is expected to be the UUID string here
     if (typeof bookId !== 'string' || bookId.length === 0) {
         console.error('[DBService] Invalid bookId provided to deleteBook:', bookId);
@@ -334,9 +335,9 @@ export async function deleteBook(bookId, driveId = null) {
     }
 
     // 1. If connected to Drive and driveId is provided, delete from Drive first
-    if (driveId && window.driveSync?.isConnected?.()) {
+    if (driveId && driveSync?.isConnected?.()) {
         try {
-            await window.driveSync.deleteRemoteBook(driveId);
+            await driveSync.deleteRemoteBook(driveId);
             console.log(`[DBService] Deleted book ${bookId} from Google Drive (file ID: ${driveId})`);
         } catch (err) {
             console.warn(`[DBService] Warning: Failed to delete from Drive for book ${bookId}:`, err);
@@ -357,7 +358,7 @@ export async function deleteBook(bookId, driveId = null) {
         transaction.oncomplete = async () => {
             console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB.`);
 
-            const userId = window.driveSync?.getUserProfile?.()?.email;
+            const userId = driveSync?.getUserProfile?.()?.email;
             if (userId) {
                 try {
                     await fetch(`/metadata/${userId}/book/${bookId}`, { method: 'DELETE' });
@@ -490,11 +491,12 @@ export async function getBookByDriveId(driveId) {
 /**
  * Delete a book using its Drive file ID if present.
  * @param {string} driveId - Drive file ID.
+ * @param {object|null} [driveSync=null] - driveSync instance for remote deletion.
  */
-export async function deleteBookByDriveId(driveId) {
+export async function deleteBookByDriveId(driveId, driveSync = null) {
     const rec = await getBookByDriveId(driveId);
     if (rec) {
-        await deleteBook(rec.id, driveId);
+        await deleteBook(rec.id, driveId, driveSync);
     }
 }
 

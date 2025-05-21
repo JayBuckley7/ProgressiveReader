@@ -95,7 +95,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     e.stopPropagation();
     if (!confirm(`Delete \"${book.title}\"? This cannot be undone.`)) return;
     try {
-      await deleteBook(book.id, book.driveId);
+      await deleteBook(book.id, book.driveId, driveSync);
       renderBookshelf(driveSync); // Re-render the bookshelf
     } catch (err) {
       console.error(`${logPrefix} Error deleting book:`, err);
