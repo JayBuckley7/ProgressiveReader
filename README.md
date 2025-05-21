@@ -89,19 +89,35 @@ The application now includes an enhanced JP Highlighter module that provides imp
     ```bash
     pip install -r requirements.txt
     ```
-4.  **Install development dependencies (optional):**
+
+4.  **Set up Environment Variables:**
+    This application uses a `.env` file for managing local environment variables. A template file `.env.template` is provided in the root of the repository.
+
+    *   Copy `.env.template` to a new file named `.env` in the project root:
+        ```bash
+        # On Windows (Command Prompt or PowerShell)
+        copy .env.template .env
+
+        # On macOS/Linux
+        cp .env.template .env
+        ```
+    *   Open the newly created `.env` file in a text editor.
+    *   Modify the placeholder values, especially `REDIS_URL`, to match your local setup or cloud services. For example, if you have a Google Cloud Redis instance, set `REDIS_URL` to its connection string (e.g., `redis://<your-redis-ip>:<port>/0`).
+    *   The `.env` file is included in `.gitignore` and should **not** be committed to version control.
+
+5.  **Install development dependencies (optional):**
     ```bash
     pip install -r requirements-dev.txt
     ```
 
-5.  **Run the Flask application:**
+6.  **Run the Flask application:**
     ```bash
     python run.py
     ```
     Alternatively, you can use `flask run` if you have the `FLASK_APP` environment
     variable set to `run.py`.
 
-6.  Open your web browser and navigate to `http://127.0.0.1:5000` (or the address provided by Flask).
+7.  Open your web browser and navigate to `http://127.0.0.1:5000` (or the address provided by Flask).
 
 ## Usage
 
