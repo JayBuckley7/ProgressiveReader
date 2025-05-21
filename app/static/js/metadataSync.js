@@ -23,7 +23,7 @@ export async function getMergedBooksMetadata(userId) {
   const byId = new Map(local.map(b => [b.id, { ...b, source: 'local' }]));
 
   for (const book of remote) {
-    const { id, title, ...rest } = book;
+    const { id, title, coverImageBlob, ...rest } = book;
     if (!byId.has(id)) {
       const existing = await getBook(id);
       if (!existing) {
