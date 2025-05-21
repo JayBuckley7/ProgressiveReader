@@ -28,8 +28,9 @@ async function initializeApp() {
   const driveControlsContainer = document.getElementById(
     "drive-controls-container",
   );
-
   const driveLinkHeader = document.getElementById('btn-drive');
+  const banner = document.getElementById("drive-status");
+  const driveIndicator = document.getElementById("drive-indicator");
 
   // const syncBtn = document.getElementById('btn-sync'); // Now managed by DriveButton
   // const driveLink = document.getElementById('btn-drive'); // Now managed by DriveButton
@@ -55,9 +56,9 @@ async function initializeApp() {
     }
 
     await driveSync.init();
-    driveButton?.refreshState();
-    updateIndicator(driveSync.isConnected());
-    updateDriveLink();
+    driveButton?.refreshState(); // Initialize button state based on sync status
+    updateIndicator(driveSync.isConnected()); // Initial indicator state
+    updateDriveLink(); // Initial drive link state
 
     renderBookshelf(driveSync, currentSearchQuery);
     setupUploadForm();
@@ -70,9 +71,6 @@ async function initializeApp() {
     }
 
     // Upload buttons removed – uploads happen automatically when connected
-
-    const banner = document.getElementById("drive-status");
-    const driveIndicator = document.getElementById("drive-indicator");
 
     function updateIndicator(isOn) {
       if (!driveIndicator) return;
