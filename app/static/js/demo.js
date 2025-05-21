@@ -227,7 +227,7 @@ async function cleanupOldDemoBooks() {
       String(rec.id).startsWith('demo-')
     );
     for (const rec of toDel) {
-      await deleteBook(rec.id);
+      await deleteBook(rec.id, rec.driveId);
       console.log(`${logPrefix} Removed legacy demo blob: ${rec.title||rec.id}`);
     }
   } catch (err) {
