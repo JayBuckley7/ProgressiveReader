@@ -135,11 +135,12 @@ async function handleFileSelect() {
         const userId = driveSync.getUserProfile()?.email;
         if (userId) {
             const metadata = await getBookMetadata(bookIdFromDB);
+            const { coverImageBlob, ...metaWithoutCover } = metadata;
             try {
                 await fetch(`/metadata/${userId}/book/${bookIdFromDB}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(metadata),
+                    body: JSON.stringify(metaWithoutCover),
                 });
             } catch (e) {
                 console.warn(`${logPrefix} Failed to POST metadata for ${bookIdFromDB}:`, e);

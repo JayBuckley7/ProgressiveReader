@@ -794,10 +794,11 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
         if (userId) {
             try {
                 const meta = await getBookMetadata(bookId);
+                const { coverImageBlob, ...metaWithoutCover } = meta;
                 await fetch(`/metadata/${userId}/book/${bookId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(meta)
+                    body: JSON.stringify(metaWithoutCover)
                 });
             } catch (e) {
                 console.warn('[DriveSync] uploadBookToDrive: Failed to update Redis metadata:', e);
@@ -928,10 +929,11 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
         if (userId) {
             try {
                 const meta = await getBookMetadata(bookId);
+                const { coverImageBlob, ...metaWithoutCover } = meta;
                 await fetch(`/metadata/${userId}/book/${bookId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(meta)
+                    body: JSON.stringify(metaWithoutCover)
                 });
             } catch (e) {
                 console.warn('[DriveSync] uploadCoverToDrive: Failed to update Redis metadata:', e);
