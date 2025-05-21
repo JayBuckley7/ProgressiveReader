@@ -18,7 +18,7 @@ def get_all_books(user_id):
 
 @metadata_bp.route("/<user_id>/book/<book_id>", methods=["POST"])
 def store_book(user_id, book_id):
-    """Store metadata for a specific book."""
+    """Store metadata for a specific book including coverDriveId."""
     data = request.get_json()
     if not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON payload"}), 400

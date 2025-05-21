@@ -1,6 +1,7 @@
 // driveSync.js – Google Drive folder‑centric sync layer
 import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata, getLocalBooksMetadata, getBook } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
+import { syncMetadata } from './metadataSync.js';
 
 // Client ID Shim
 if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
@@ -548,6 +549,14 @@ async function drainProgressQueue(){if(progressWorkerRunning||!progressQueue.len
   progressWorkerRunning=false;}
 
 async function autoUploadLocalBooks() {
+  const userId = getUserProfile()?.email;
+  if (userId) {
+    try {
+      await syncMetadata(userId);
+    } catch (e) {
+      console.warn('[DriveSync] autoUploadLocalBooks: syncMetadata failed', e);
+    }
+  }
   const metas = await getLocalBooksMetadata();
   for (const m of metas) {
     if (!m.driveId && !m.isRemoteOnly) {
@@ -780,6 +789,20 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
         } catch (e) {
             console.warn('[DriveSync] Failed to update local metadata with driveId:', e);
         }
+
+        const userId = getUserProfile()?.email;
+        if (userId) {
+            try {
+                const meta = await getBookMetadata(bookId);
+                await fetch(`/metadata/${userId}/book/${bookId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(meta)
+                });
+            } catch (e) {
+                console.warn('[DriveSync] uploadBookToDrive: Failed to update Redis metadata:', e);
+            }
+        }
         
         // Optionally, dispatch an event or provide feedback
         window.dispatchEvent(new CustomEvent('drive-file-uploaded', { 
@@ -899,6 +922,20 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
             console.log(`[DriveSync] uploadCoverToDrive: Stored coverDriveId (${createdFile.id}) in local metadata for book: ${bookId}`);
         } catch (e) {
             console.warn(`[DriveSync] uploadCoverToDrive: Failed to store coverDriveId locally for book: ${bookId}`, e);
+        }
+
+        const userId = getUserProfile()?.email;
+        if (userId) {
+            try {
+                const meta = await getBookMetadata(bookId);
+                await fetch(`/metadata/${userId}/book/${bookId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(meta)
+                });
+            } catch (e) {
+                console.warn('[DriveSync] uploadCoverToDrive: Failed to update Redis metadata:', e);
+            }
         }
 
         window.dispatchEvent(new CustomEvent('drive-file-uploaded', {
