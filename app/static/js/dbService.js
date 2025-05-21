@@ -293,7 +293,8 @@ export async function getLocalBooksMetadata() {
                     coverImageBlob: book.coverImageBlob,
                     isDemo: book.isDemo || false,
                     fileType: book.fileType || 'epub',
-                    driveId: book.driveId || null
+                    driveId: book.driveId || null,
+                    coverDriveId: book.coverDriveId || null
                 }));
                
                 // Log demo books for debugging

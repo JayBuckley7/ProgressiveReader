@@ -24,7 +24,7 @@ class MetadataApiTestCase(unittest.TestCase):
         mock_redis.set.side_effect = fake_set
         mock_redis_cls.from_url.return_value = mock_redis
 
-        metadata = {'id': 'book1', 'title': 'Test'}
+        metadata = {'id': 'book1', 'title': 'Test', 'coverDriveId': 'c123'}
         resp = self.client.post('/metadata/user1/book/book1', json=metadata)
         self.assertEqual(resp.status_code, 200)
 
