@@ -98,7 +98,7 @@ function extractCleanTextSegments(rootElement) {
 function _attachJlptEventListeners() {
     if (jlptToggleCheckbox) {
         // The toggle event handler is now managed by the TypeScript library
-        console.log("Using TypeScript implementation for JLPT highlighting");
+//         console.log("Using TypeScript implementation for JLPT highlighting");
     }
 }
 
@@ -129,12 +129,12 @@ function initJlptHighlighter(config) {
                 
                 // If checkbox is checked on load, apply highlights AFTER actual content is loaded.
                 if (jlptToggleCheckbox.checked) {
-                    console.log("JLPT highlighting was enabled on page load. Waiting for content to apply...");
+//                     console.log("JLPT highlighting was enabled on page load. Waiting for content to apply...");
                     
                     const applyInitialHighlights = (event) => {
                         // Check again in case the user unchecked it while content was loading
                         if (jlptToggleCheckbox.checked && contentAreaJlpt) {
-                            console.log("ebookContentLoaded received (or init), applying initial JLPT highlights.", event ? event.detail : '');
+//                             console.log("ebookContentLoaded received (or init), applying initial JLPT highlights.", event ? event.detail : '');
                             if (window.jpHighlighter && typeof window.jpHighlighter.highlightContent === 'function'){
                                 window.jpHighlighter.highlightContent(contentAreaJlpt);
                             } else {
@@ -163,14 +163,14 @@ function initJlptHighlighter(config) {
             _legacyInitFallback();
         }
     }
-    console.log("JlptHighlighter initialized.");
+//     console.log("JlptHighlighter initialized.");
 }
 
 function _legacyInitFallback() {
-    console.log("Falling back to legacy JLPT highlighter initialization.");
+//     console.log("Falling back to legacy JLPT highlighter initialization.");
     _attachJlptEventListeners(); // This is currently empty, relies on TS version mostly
     if (jlptToggleCheckbox && jlptToggleCheckbox.checked) {
-        console.log("Using legacy JLPT highlighting (TypeScript module not loaded or init failed)");
+//         console.log("Using legacy JLPT highlighting (TypeScript module not loaded or init failed)");
         // For legacy, also ensure content is loaded before applying
         const applyLegacyInitialHighlights = () => {
             if (jlptToggleCheckbox.checked && contentAreaJlpt) {
@@ -210,7 +210,7 @@ async function fetchAndApplyJlptHighlights() {
     const textSegments = extractCleanTextSegments(tempDiv);
 
     if (!textSegments || textSegments.length === 0) {
-        console.log("No text segments to highlight.");
+//         console.log("No text segments to highlight.");
         return;
     }
 
@@ -306,7 +306,7 @@ function removeJlptHighlights() {
     // Restore to the content as it was *before* highlighting.
     // This might be the original server content, or a translation.
     contentAreaJlpt.innerHTML = originalPageContentForJlpt || trueOriginalServerContentForJlpt;
-    console.log("JLPT highlights removed.");
+//     console.log("JLPT highlights removed.");
     if (window.translationManager) window.translationManager.updateDisplayButtons();
 }
 

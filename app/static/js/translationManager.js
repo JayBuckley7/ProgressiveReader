@@ -238,7 +238,7 @@ async function callTranslateAPI(payload) {
                             
                             // Handle status message
                             if (parsedData.status === "started") {
-                                console.log("Translation streaming started");
+//                                 console.log("Translation streaming started");
                                 // But we don't clear the content area immediately
                                 // We'll keep showing the original content until we have complete HTML
                                 continue;
@@ -483,7 +483,7 @@ function initTranslationManager(config) {
             );
             
             if (cachedTranslation && contentArea) {
-                console.log("TranslationManager: Autoloading translation from cache for book:", 
+//                 console.log("TranslationManager: Autoloading translation from cache for book:", 
                             currentBookIdForTranslation, 
                             "page:", currentPageIndexForTranslation);
                 
@@ -495,7 +495,7 @@ function initTranslationManager(config) {
                     updateDisplayButtons();
                     autoloadInitialized = true;
                 } else {
-                    console.log("TranslationManager: Delaying autoload until real content is available");
+//                     console.log("TranslationManager: Delaying autoload until real content is available");
                 }
             }
         }
@@ -503,10 +503,10 @@ function initTranslationManager(config) {
 
     // Listen for ebookContentLoaded event to update content references and handle autoload
     document.addEventListener('ebookContentLoaded', (event) => {
-        console.log("TranslationManager: Detected new content loaded", event.detail);
+//         console.log("TranslationManager: Detected new content loaded", event.detail);
         // Update the original content references when new content is loaded
         if (contentArea) {
-            console.log("TranslationManager: Updating content references from:", 
+//             console.log("TranslationManager: Updating content references from:", 
                         trueOriginalServerContent.substring(0, 50) + "...",
                         "to current content:", 
                         contentArea.innerHTML.substring(0, 50) + "...");
@@ -517,7 +517,7 @@ function initTranslationManager(config) {
             
             // Update the current page index
             currentPageIndexForTranslation = event.detail.chapterIndex;
-            console.log("TranslationManager: Updated page index to:", currentPageIndexForTranslation);
+//             console.log("TranslationManager: Updated page index to:", currentPageIndexForTranslation);
             
             // Try autoloading translations after content is loaded
             initializeAutoload();
@@ -533,7 +533,7 @@ function initTranslationManager(config) {
     initializeAutoload();
     
     updateDisplayButtons();
-    console.log("TranslationManager initialized.");
+//     console.log("TranslationManager initialized.");
 }
 
 window.translationManager = {
@@ -553,7 +553,7 @@ window.translationManager = {
 
         let effectiveMethod = method;
         if (window.IS_DEMO_MODE && method === 'standard') {
-            console.log('[TranslationManager] Demo mode: Forcing standard translate to CEFR C2.');
+//             console.log('[TranslationManager] Demo mode: Forcing standard translate to CEFR C2.');
             effectiveMethod = 'cefr'; 
             // The CEFR level will be set to C2 equivalent below if effectiveMethod is 'cefr'
         }

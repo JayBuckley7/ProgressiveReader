@@ -34,9 +34,9 @@ export const ready = dbServiceReadyPromise;
  * @returns {Promise<IDBDatabase>} A promise that resolves with the database instance.
  */
 async function _getDB() {
-    console.log(`[DBService] _getDB() called. Attempting to open DB: ${DB_NAME}, Version: ${DB_VERSION}`);
+//     console.log(`[DBService] _getDB() called. Attempting to open DB: ${DB_NAME}, Version: ${DB_VERSION}`);
     if (!dbPromise) {
-        console.log('_getDB() - Creating new DB connection promise.');
+//         console.log('_getDB() - Creating new DB connection promise.');
         dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -56,12 +56,12 @@ async function _getDB() {
             };
 
             request.onsuccess = (event) => {
-                console.log('_getDB() - request.onsuccess triggered.');
+//                 console.log('_getDB() - request.onsuccess triggered.');
                 const db = event.target.result;
-                console.log('_getDB() - DB connection successful. Resolving promise.');
+//                 console.log('_getDB() - DB connection successful. Resolving promise.');
                 if (resolveDbServiceReady) {
                     resolveDbServiceReady(db);
-                    console.log('_getDB() - dbService readiness signaled.');
+//                     console.log('_getDB() - dbService readiness signaled.');
                 } else {
                      console.warn('_getDB() - resolveDbServiceReady was not defined on success.');
                 }
@@ -69,7 +69,7 @@ async function _getDB() {
             };
 
             request.onupgradeneeded = (event) => {
-                console.log('Upgrading IndexedDB...');
+//                 console.log('Upgrading IndexedDB...');
                 const db = event.target.result;
 
                 // Create Books object store
@@ -80,22 +80,22 @@ async function _getDB() {
                     bookStore.createIndex('title', 'title', { unique: false });
                     bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
                     bookStore.createIndex('driveId', 'driveId', { unique: false });
-                    console.log(`Object store ${BOOK_STORE_NAME} created.`);
+//                     console.log(`Object store ${BOOK_STORE_NAME} created.`);
                 } else {
                     const bookStore = event.currentTarget.transaction.objectStore(BOOK_STORE_NAME);
                     if (!bookStore.indexNames.contains('driveId')) {
                         bookStore.createIndex('driveId', 'driveId', { unique: false });
-                        console.log('Index driveId created on existing books store.');
+//                         console.log('Index driveId created on existing books store.');
                     }
                     if (!bookStore.indexNames.contains('lastOpened')) {
                         bookStore.createIndex('lastOpened', 'lastOpened', { unique: false });
-                        console.log('Index lastOpened created on existing books store.');
+//                         console.log('Index lastOpened created on existing books store.');
                     }
                     if (!bookStore.indexNames.contains('title')) {
                         bookStore.createIndex('title', 'title', { unique: false });
-                        console.log('Index title created on existing books store.');
+//                         console.log('Index title created on existing books store.');
                     }
-                    console.log(`Object store ${BOOK_STORE_NAME} already exists.`);
+//                     console.log(`Object store ${BOOK_STORE_NAME} already exists.`);
                 }
 
                 // Create Progress object store
@@ -103,9 +103,9 @@ async function _getDB() {
                      const progressStore = db.createObjectStore(PROGRESS_STORE_NAME, {
                          keyPath: 'bookId'
                      });
-                     console.log(`Object store ${PROGRESS_STORE_NAME} created.`);
+//                      console.log(`Object store ${PROGRESS_STORE_NAME} created.`);
                 } else {
-                     console.log(`Object store ${PROGRESS_STORE_NAME} already exists.`);
+//                      console.log(`Object store ${PROGRESS_STORE_NAME} already exists.`);
                 }
 
                 // Create User Profile Cache object store
@@ -113,14 +113,14 @@ async function _getDB() {
                     const profileCacheStore = db.createObjectStore(USER_PROFILE_CACHE_STORE_NAME, {
                         keyPath: 'userId' // e.g., user's Google ID or email
                     });
-                    console.log(`Object store ${USER_PROFILE_CACHE_STORE_NAME} created.`);
+//                     console.log(`Object store ${USER_PROFILE_CACHE_STORE_NAME} created.`);
                 } else {
-                    console.log(`Object store ${USER_PROFILE_CACHE_STORE_NAME} already exists.`);
+//                     console.log(`Object store ${USER_PROFILE_CACHE_STORE_NAME} already exists.`);
                 }
             };
         });
     } else {
-        console.log('_getDB() - DB connection promise already exists. Waiting or using existing.');
+//         console.log('_getDB() - DB connection promise already exists. Waiting or using existing.');
     }
     // Ensure the promise resolves with the DB instance even if already created
     return dbPromise;
@@ -163,7 +163,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
             }
             coverImageBlob = await epubProcessor.getCoverBlob();
             if (coverImageBlob) {
-                console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
+//                 console.log(`[DBService] Extracted cover image Blob for "${title}". Size: ${coverImageBlob.size}`);
             }
         } catch (error) {
             console.error(`[DBService] Error during metadata extraction for "${title}":`, error);
@@ -204,7 +204,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
             const addRequest = store.put(bookData);
 
             addRequest.onsuccess = () => {
-                console.log(`[DBService] Book "${title}" (ID: ${serverBookId}) added/updated in IndexedDB.`);
+//                 console.log(`[DBService] Book "${title}" (ID: ${serverBookId}) added/updated in IndexedDB.`);
                 resolve(serverBookId); // Returns the serverBookId
             };
 
@@ -221,7 +221,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
 
         // Transaction handlers remain largely the same, but let's wrap errors
         transaction.oncomplete = () => {
-            console.log(`Transaction completed for adding book "${title}".`);
+//             console.log(`Transaction completed for adding book "${title}".`);
         };
 
         transaction.onerror = (event) => { // Added event param
@@ -305,7 +305,7 @@ export async function getLocalBooksMetadata() {
                
                 // Log demo books for debugging
                 const demoBooks = metadataList.filter(book => book.isDemo);
-                console.log(`[DBService] Found ${demoBooks.length} demo books:`, 
+//                 console.log(`[DBService] Found ${demoBooks.length} demo books:`, 
                     demoBooks.map(book => ({ id: book.id, title: book.title })));
                
                 resolve(metadataList);
@@ -338,7 +338,7 @@ export async function deleteBook(bookId, driveId = null, driveSync = null) {
     if (driveId && driveSync?.isConnected?.()) {
         try {
             await driveSync.deleteRemoteBook(driveId);
-            console.log(`[DBService] Deleted book ${bookId} from Google Drive (file ID: ${driveId})`);
+//             console.log(`[DBService] Deleted book ${bookId} from Google Drive (file ID: ${driveId})`);
         } catch (err) {
             console.warn(`[DBService] Warning: Failed to delete from Drive for book ${bookId}:`, err);
             // Proceed anyway to delete local copy
@@ -356,13 +356,13 @@ export async function deleteBook(bookId, driveId = null, driveSync = null) {
 
     return new Promise((resolve, reject) => {
         transaction.oncomplete = async () => {
-            console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB.`);
+//             console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB.`);
 
             const userId = driveSync?.getUserProfile?.()?.email;
             if (userId) {
                 try {
                     await fetch(`/metadata/${userId}/book/${bookId}`, { method: 'DELETE' });
-                    console.log(`[DBService] Deleted Redis metadata for book ${bookId}`);
+//                     console.log(`[DBService] Deleted Redis metadata for book ${bookId}`);
                 } catch (e) {
                     console.warn(`[DBService] Failed to delete Redis metadata for ${bookId}:`, e);
                 }
@@ -403,7 +403,7 @@ export async function updateLastOpened(bookId) {
                 const updateRequest = store.put(bookData);
 
                 updateRequest.onsuccess = () => {
-                    console.log(`Last opened timestamp updated for book ID ${bookId}`);
+//                     console.log(`Last opened timestamp updated for book ID ${bookId}`);
                     resolve();
                 };
                 updateRequest.onerror = (event) => {
@@ -528,7 +528,7 @@ export async function saveProgress(bookId, progressData) {
 
     return new Promise((resolve, reject) => {
         request.onsuccess = () => {
-            console.log(`Progress saved for book ID ${bookId}`);
+//             console.log(`Progress saved for book ID ${bookId}`);
             resolve();
         };
         request.onerror = (event) => {
@@ -592,15 +592,15 @@ export async function clearAllData() {
         let booksCleared = false;
         let progressCleared = false;
 
-         clearBooksRequest.onsuccess = () => { booksCleared = true; console.log("Book store cleared."); };
+//          clearBooksRequest.onsuccess = () => { booksCleared = true; console.log("Book store cleared."); };
          clearBooksRequest.onerror = (event) => { console.error("Error clearing book store:", event.target.error); };
 
-         clearProgressRequest.onsuccess = () => { progressCleared = true; console.log("Progress store cleared."); };
+//          clearProgressRequest.onsuccess = () => { progressCleared = true; console.log("Progress store cleared."); };
          clearProgressRequest.onerror = (event) => { console.error("Error clearing progress store:", event.target.error); };
 
          transaction.oncomplete = () => {
              if (booksCleared && progressCleared) {
-                 console.log("All data cleared successfully.");
+//                  console.log("All data cleared successfully.");
                  resolve();
              } else {
                   console.error("Transaction completed, but one or more stores may not have cleared.");
@@ -616,7 +616,7 @@ export async function clearAllData() {
 
 // --- Initialize DB Connection ---
 _getDB().then(() => {
-    console.log("Initial DB connection attempt finished (or already connected).");
+//     console.log("Initial DB connection attempt finished (or already connected).");
 }).catch(error => {
      console.error("Initial DB connection failed:", error);
 });
@@ -640,7 +640,7 @@ export async function cacheUserProfileImage(userId, imageBlob) {
     return new Promise((resolve, reject) => {
         const request = store.put(cacheEntry);
         request.onsuccess = () => {
-            console.log(`[DBService] User profile image cached for userId: ${userId}`);
+//             console.log(`[DBService] User profile image cached for userId: ${userId}`);
             resolve();
         };
         request.onerror = (event) => {
@@ -670,10 +670,10 @@ export async function getCachedUserProfileImage(userId) {
             if (request.result && request.result.imageBlob instanceof Blob) {
                 // Optional: Add timestamp check for cache validity if needed in the future
                 // For now, if it exists, return it.
-                console.log(`[DBService] Retrieved cached profile image for userId: ${userId}`);
+//                 console.log(`[DBService] Retrieved cached profile image for userId: ${userId}`);
                 resolve(request.result.imageBlob);
             } else {
-                console.log(`[DBService] No cached profile image found for userId: ${userId}`);
+//                 console.log(`[DBService] No cached profile image found for userId: ${userId}`);
                 resolve(null);
             }
         };

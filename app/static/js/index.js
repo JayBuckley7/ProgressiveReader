@@ -13,9 +13,9 @@ const logPrefix = "[IndexInit]";
  * Initializes the application logic after the DOM is ready and DB service is available.
  */
 async function initializeApp() {
-  console.log(`${logPrefix} DOM Content Loaded. Waiting for DB service...`);
+//   console.log(`${logPrefix} DOM Content Loaded. Waiting for DB service...`);
   // Log availability of window.dbKeyVal before dbReady
-  console.log(
+//   console.log(
     `${logPrefix} Initial check: window.dbKeyVal available:`,
     !!window.dbKeyVal,
     "window.dbKeyVal type:",
@@ -38,9 +38,9 @@ async function initializeApp() {
 
   try {
     await dbReady;
-    console.log(`${logPrefix} DB service is ready.`);
+//     console.log(`${logPrefix} DB service is ready.`);
     // Log availability of window.dbKeyVal after dbReady
-    console.log(
+//     console.log(
       `${logPrefix} After dbReady: window.dbKeyVal available:`,
       !!window.dbKeyVal,
       "window.dbKeyVal type:",
@@ -161,7 +161,7 @@ async function initializeApp() {
       });
     }
 
-    console.log(`${logPrefix} Application initialization complete.`);
+//     console.log(`${logPrefix} Application initialization complete.`);
 
   } catch (err) {
     console.error(`${logPrefix} Error during application initialization:`, err);

@@ -50,7 +50,7 @@ function initFontSizeManager() {
     decreaseFontSizeBtn.addEventListener('click', () => changeFontSize(-1));
     increaseFontSizeBtn.addEventListener('click', () => changeFontSize(1));
 
-    console.log("FontSizeManager initialized.");
+//     console.log("FontSizeManager initialized.");
 }
 
 window.fontSizeManager = {
