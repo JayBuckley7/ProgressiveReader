@@ -63,11 +63,13 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     if (book.isRemoteOnly && driveSync?.isConnected?.()) {
       (async () => {
         try {
+          console.log(`${logPrefix} Grabbing ${book.title} from google drive`);
           const blob = await driveSync.downloadBook(book.id, book.mimeType);
           const proc = new EpubProcessorWrapper();
           await proc.loadBook(await blob.arrayBuffer());
           const cover = await proc.getCoverBlob();
           if (cover) {
+            console.log(`${logPrefix} Grabbing cover for ${book.title}`);
             injectCover(cover);
             coverWrapper.removeChild(placeholder);
           }
