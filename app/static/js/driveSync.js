@@ -477,9 +477,19 @@ async function driveFilesDelete(id){
   return res;
 }
 
+/**
+ * Download a file from Google Drive by its ID.
+ *
+ * @param {string} id - Drive file ID.
+ * @returns {Promise<ArrayBuffer>} File contents as an ArrayBuffer.
+ */
 async function downloadFile(id){
   const url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media`;
   const res = await fetchWithAuth(url);
+  if (res.status === 404) {
+    console.warn(`[DriveSync] File not found on Drive: ${id}`);
+    throw new Error('downloadFile failed (404)');
+  }
   if (!res.ok) throw new Error(`downloadFile failed (${res.status})`);
   return res.arrayBuffer();
 }

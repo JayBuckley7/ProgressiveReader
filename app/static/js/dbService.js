@@ -272,13 +272,9 @@ export async function getBookMetadata(bookId) {
     return meta;
 }
 
-
 /**
- * Retrieves all books' metadata (excluding content for efficiency).
- * @returns {Promise<Array<object>>} A list of book metadata objects.
- */
-/**
- * Retrieves metadata for all locally stored books.
+ * Retrieves metadata for all locally stored books (without their content).
+ *
  * @returns {Promise<Array<object>>} List of metadata objects.
  */
 export async function getLocalBooksMetadata() {
@@ -303,10 +299,7 @@ export async function getLocalBooksMetadata() {
                     coverDriveId: book.coverDriveId || null
                 }));
                
-                // Log demo books for debugging
-                const demoBooks = metadataList.filter(book => book.isDemo);
-//                 console.log(`[DBService] Found ${demoBooks.length} demo books:`, 
-                    demoBooks.map(book => ({ id: book.id, title: book.title })));
+
                
                 resolve(metadataList);
             } else {
