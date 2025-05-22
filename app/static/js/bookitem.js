@@ -55,18 +55,29 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     // Try fetching cover from Drive when none stored locally
     if (driveSync?.isConnected?.()) {
       (async () => {
+        const coverFileId = book.coverDriveId ?? null;
+        const bookFileId  = book.driveId      ?? null;
         try {
-          console.log(`${logPrefix} Fetching cover for \"${book.title}\" (${book.id})`);
-          const blob = await driveSync.downloadBook(book.id, book.mimeType);
-          const proc = new EpubProcessorWrapper();
-          await proc.loadBook(await blob.arrayBuffer());
-          const cover = await proc.getCoverBlob();
-          if (cover) {
-            injectCover(cover);
+          let blob;
+          if (coverFileId) {
+            const mime = book.coverMimeType || 'image/jpeg';
+            console.log(`${logPrefix} Fetching cover ${coverFileId} for \"${book.title}\"`);
+            blob = await driveSync.downloadBook(coverFileId, mime);
+          } else if (bookFileId) {
+            console.log(`${logPrefix} No cover file – extracting from book ${bookFileId}`);
+            blob = await driveSync.downloadBook(bookFileId, book.mimeType);
+            const proc = new EpubProcessorWrapper();
+            await proc.loadBook(await blob.arrayBuffer());
+            blob = await proc.getCoverBlob();
+          } else {
+            throw new Error('No Drive IDs on record');
+          }
+          if (blob) {
+            injectCover(blob);
             coverWrapper.removeChild(placeholder);
           }
         } catch (e) {
-          console.warn(`${logPrefix} Failed to fetch remote cover for ${book.id}`, e);
+          console.warn(`${logPrefix} Failed to fetch cover`, e);
         }
       })();
     }

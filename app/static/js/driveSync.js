@@ -918,7 +918,10 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
 
         const createdFile = await response.json();
         try {
-            await updateBookMetadata(bookId, { coverDriveId: createdFile.id });
+            await updateBookMetadata(bookId, {
+                coverDriveId:  createdFile.id,
+                coverMimeType: coverBlob.type
+            });
 //             console.log(`[DriveSync] uploadCoverToDrive: Stored coverDriveId (${createdFile.id}) in local metadata for book: ${bookId}`);
         } catch (e) {
             console.warn(`[DriveSync] uploadCoverToDrive: Failed to store coverDriveId locally for book: ${bookId}`, e);
