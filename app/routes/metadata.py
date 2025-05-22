@@ -13,6 +13,9 @@ def get_all_books(user_id):
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
     raw = r.get(f"user:{user_id}:books")
     books = json.loads(raw) if raw else []
+    current_app.logger.info(
+        "Fetched %s book metadata entries from Redis for user %s", len(books), user_id
+    )
     return jsonify(books)
 
 
@@ -23,6 +26,12 @@ def store_book(user_id, book_id):
     if not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON payload"}), 400
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    current_app.logger.info(
+        "Storing Redis metadata for user %s book %s (%s)",
+        user_id,
+        book_id,
+        data.get("title"),
+    )
     key_list = f"user:{user_id}:books"
     key_book = f"user:{user_id}:book:{book_id}"
     raw = r.get(key_list)
@@ -44,6 +53,9 @@ def store_book(user_id, book_id):
 def delete_book(user_id, book_id):
     """Delete stored metadata for a specific book."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    current_app.logger.info(
+        "Deleting Redis metadata for user %s book %s", user_id, book_id
+    )
     key_list = f"user:{user_id}:books"
     key_book = f"user:{user_id}:book:{book_id}"
 
@@ -67,4 +79,7 @@ def clear_all_entries(user_id):
     if book_keys:
         deleted_count += r.delete(*book_keys)
     deleted_count += r.delete(f"user:{user_id}:books")
+    current_app.logger.info(
+        "Cleared %s Redis metadata entries for user %s", deleted_count, user_id
+    )
     return jsonify({"deleted_count": deleted_count})
