@@ -132,10 +132,17 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 ## Running Tests
 
-Run the Python test suite using:
+Run the Python test suite with coverage using the provided helper script:
 
 ```bash
-python -m unittest discover -s tests
+./scripts/run_tests.sh
+```
+
+Set the `COVERAGE_MIN` environment variable to a percentage to fail the build if
+coverage falls below that threshold. For example:
+
+```bash
+COVERAGE_MIN=80 ./scripts/run_tests.sh
 ```
 
 
