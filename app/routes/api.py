@@ -156,6 +156,9 @@ def due_cards():
     password = data.get('password')
     cookie = data.get('cookie') or request.headers.get('Cookie')
 
+    if not (username or password or cookie):
+        return jsonify({'error': 'Authentication required'}), 401
+
     from app.utils.jpdb_due import fetch_all_due_cards
 
     cards = fetch_all_due_cards(username=username,
