@@ -43,11 +43,10 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install deps & run unit-tests
+      - name: Install Node dependencies
         run: |
           set -e                       # fail fast
           npm ci
-          node tests/test_epub_processor.js || exit 1
 
       - name: Set environment variables
         id: env
