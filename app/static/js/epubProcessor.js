@@ -18,7 +18,6 @@ export class EpubProcessorWrapper {
      */
     async loadBook(bookBinaryContent) {
         try {
-//             console.log('EpubProcessorWrapper: Loading book…');
 
             if (!(bookBinaryContent instanceof ArrayBuffer) || bookBinaryContent.byteLength < 512) {
                 console.error(`[EpubProcessor] Aborting: Book binary is too small or invalid (${bookBinaryContent.byteLength} bytes)`);
@@ -31,11 +30,6 @@ export class EpubProcessorWrapper {
             this.metadata       = await this.processor.getMetadata();
             this.totalChapters  = await this.processor.getTotalChapters();
             this.isReady        = true;
-
-//             console.log(
-                `EpubProcessorWrapper: Book loaded. Title: "${this.metadata.title || 'Untitled'}",` +
-                ` Chapters: ${this.totalChapters}.`
-            );
             return true;
         } catch (err) {
             console.error('EpubProcessorWrapper: Error loading book:', err);

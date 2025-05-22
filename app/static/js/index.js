@@ -13,14 +13,6 @@ const logPrefix = "[IndexInit]";
  * Initializes the application logic after the DOM is ready and DB service is available.
  */
 async function initializeApp() {
-//   console.log(`${logPrefix} DOM Content Loaded. Waiting for DB service...`);
-  // Log availability of window.dbKeyVal before dbReady
-//   console.log(
-    `${logPrefix} Initial check: window.dbKeyVal available:`,
-    !!window.dbKeyVal,
-    "window.dbKeyVal type:",
-    typeof window.dbKeyVal,
-  );
 
   const recentBooksGrid = document.getElementById("recent-books-grid");
   const searchInput = document.getElementById("bookshelf-search");
