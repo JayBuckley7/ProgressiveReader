@@ -61,6 +61,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
 
     // Try fetching cover from Drive
     if (book.isRemoteOnly && driveSync?.isConnected?.()) {
+      console.log(`${logPrefix} Grabbing cover for ${book.title} from Google Drive`);
       (async () => {
         try {
           const blob = await driveSync.downloadBook(book.id, book.mimeType);
@@ -167,6 +168,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
             try {
                 let blob = null;
                 if (driveSync?.isConnected?.()) {
+                    console.log(`${logPrefix} Grabbing ${book.title} from Google Drive`);
                     blob = await driveSync.downloadBook(book.id, book.mimeType);
                     await addBook(book.title, blob, book.id, { fileType: book.fileType });
                 }

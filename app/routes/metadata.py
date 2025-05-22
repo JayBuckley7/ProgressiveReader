@@ -11,6 +11,7 @@ metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 def get_all_books(user_id):
     """Return all stored metadata for a user."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    current_app.logger.info(f"Fetching metadata for {user_id} from Redis")
     raw = r.get(f"user:{user_id}:books")
     books = json.loads(raw) if raw else []
     return jsonify(books)
@@ -23,6 +24,7 @@ def store_book(user_id, book_id):
     if not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON payload"}), 400
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    current_app.logger.info(f"Storing metadata for {book_id} in Redis for {user_id}")
     key_list = f"user:{user_id}:books"
     key_book = f"user:{user_id}:book:{book_id}"
     raw = r.get(key_list)
@@ -44,6 +46,7 @@ def store_book(user_id, book_id):
 def delete_book(user_id, book_id):
     """Delete stored metadata for a specific book."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    current_app.logger.info(f"Deleting metadata for {book_id} from Redis for {user_id}")
     key_list = f"user:{user_id}:books"
     key_book = f"user:{user_id}:book:{book_id}"
 
@@ -61,6 +64,7 @@ def delete_book(user_id, book_id):
 def clear_all_entries(user_id):
     """Delete all Redis metadata entries for the specified user."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
+    current_app.logger.info(f"Clearing all Redis entries for {user_id}")
     pattern = f"user:{user_id}:book:*"
     book_keys = r.keys(pattern)
     deleted_count = 0

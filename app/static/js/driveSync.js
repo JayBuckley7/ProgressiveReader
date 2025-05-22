@@ -639,6 +639,7 @@ export async function init(isExplicitCall = false){
       await seedDriveFolder();
       await runSyncLoop();
       startScheduler();
+      console.log('[DriveSync] Gdrive is connected');
       window.dispatchEvent(new Event('drive-online'));
 //       console.log("[DriveSync] init: Completed successfully (connected state after hydrateToken).");
     } catch (err) {
@@ -666,6 +667,7 @@ export async function init(isExplicitCall = false){
           await seedDriveFolder();
           await runSyncLoop();
           startScheduler();
+          console.log('[DriveSync] Gdrive is connected');
           window.dispatchEvent(new Event('drive-online'));
 //           console.log("[DriveSync] init: Completed successfully (connected state after launchGoogleAuth).");
         } else {

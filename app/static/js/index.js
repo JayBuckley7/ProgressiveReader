@@ -31,13 +31,7 @@ async function initializeApp() {
   try {
     await dbReady;
 //     console.log(`${logPrefix} DB service is ready.`);
-    // Log availability of window.dbKeyVal after dbReady
-//     console.log(
-      `${logPrefix} After dbReady: window.dbKeyVal available:`,
-      !!window.dbKeyVal,
-      "window.dbKeyVal type:",
-      typeof window.dbKeyVal,
-    );
+  // Log availability of window.dbKeyVal after dbReady if needed
 
     let driveButton = null;
     if (driveControlsContainer) {
@@ -104,6 +98,7 @@ async function initializeApp() {
       updateIndicator(false);
     });
     window.addEventListener("drive-online", () => {
+      console.log(`${logPrefix} Gdrive is connected`);
       showBanner("Online", "idle", 2000);
       updateIndicator(true);
       driveButton?.refreshState(); // Refresh button state when coming online
