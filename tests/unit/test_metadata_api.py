@@ -1,4 +1,5 @@
 import unittest
+import json
 from unittest.mock import patch, MagicMock
 from app import create_app
 
@@ -56,6 +57,83 @@ class MetadataApiTestCase(unittest.TestCase):
 
         resp = self.client.delete('/metadata/user1/book/book1')
         self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get('/metadata/user1/books')
+        self.assertEqual(resp.get_json(), [])
+
+
+    @patch('app.routes.metadata.redis.Redis')
+    def test_store_book_invalid_json(self, mock_redis_cls):
+        """Non-dict JSON payloads should return HTTP 400."""
+        mock_redis_cls.from_url.return_value = MagicMock()
+        resp = self.client.post('/metadata/user1/book/book1', json=['bad'])
+        self.assertEqual(resp.status_code, 400)
+
+
+    @patch('app.routes.metadata.redis.Redis')
+    def test_delete_book_missing(self, mock_redis_cls):
+        """Deleting a non-existent book still succeeds."""
+        storage = {}
+        mock_redis = MagicMock()
+
+        def fake_get(key):
+            return storage.get(key)
+
+        def fake_set(key, value):
+            storage[key] = value
+
+        def fake_delete(key):
+            return 1 if storage.pop(key, None) is not None else 0
+
+        mock_redis.get.side_effect = fake_get
+        mock_redis.set.side_effect = fake_set
+        mock_redis.delete.side_effect = fake_delete
+        mock_redis_cls.from_url.return_value = mock_redis
+
+        resp = self.client.delete('/metadata/user1/book/book1')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.get_json()['success'])
+
+        resp = self.client.get('/metadata/user1/books')
+        self.assertEqual(resp.get_json(), [])
+
+
+    @patch('app.routes.metadata.redis.Redis')
+    def test_clear_all_entries_no_books(self, mock_redis_cls):
+        """Return count of one when only the book list key is deleted."""
+        storage = {'user:user1:books': json.dumps([{'id': 'book1'}])}
+        mock_redis = MagicMock()
+
+        def fake_get(key):
+            return storage.get(key)
+
+        def fake_set(key, value):
+            storage[key] = value
+
+        def fake_delete(*keys):
+            count = 0
+            for k in keys:
+                if isinstance(k, (list, tuple)):
+                    for inner in k:
+                        if storage.pop(inner, None) is not None:
+                            count += 1
+                else:
+                    if storage.pop(k, None) is not None:
+                        count += 1
+            return count
+
+        def fake_keys(pattern):
+            return []
+
+        mock_redis.get.side_effect = fake_get
+        mock_redis.set.side_effect = fake_set
+        mock_redis.delete.side_effect = fake_delete
+        mock_redis.keys.side_effect = fake_keys
+        mock_redis_cls.from_url.return_value = mock_redis
+
+        resp = self.client.delete('/metadata/user1/clear_all_entries')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['deleted_count'], 1)
 
         resp = self.client.get('/metadata/user1/books')
         self.assertEqual(resp.get_json(), [])
