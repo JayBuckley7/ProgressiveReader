@@ -37,6 +37,10 @@ class AllowedFileTestCase(unittest.TestCase):
     def test_allowed_file_true(self):
         self.assertTrue(allowed_file('book.epub'))
 
+    def test_allowed_file_true_uppercase(self):
+        """Ensure uppercase filenames are accepted."""
+        self.assertTrue(allowed_file('BOOK.EPUB'))
+
     def test_allowed_file_false(self):
         self.assertFalse(allowed_file('notes.txt'))
 
