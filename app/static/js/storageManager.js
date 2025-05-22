@@ -137,6 +137,8 @@ function saveDueCards(cards) {
 }
 
 async function prefetchDueCardsIfNeeded() {
+    const profile = window.driveSync?.getUserProfile?.();
+    if (!profile) return;  // avoid unauthenticated request
     if (!getCachedDueCards()) {
         try {
             const resp = await fetch('/api/due_cards', {
