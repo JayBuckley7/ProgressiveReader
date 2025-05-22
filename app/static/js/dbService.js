@@ -303,10 +303,7 @@ export async function getLocalBooksMetadata() {
                     coverDriveId: book.coverDriveId || null
                 }));
                
-                // Log demo books for debugging
-                const demoBooks = metadataList.filter(book => book.isDemo);
-//                 console.log(`[DBService] Found ${demoBooks.length} demo books:`, 
-                    demoBooks.map(book => ({ id: book.id, title: book.title })));
+
                
                 resolve(metadataList);
             } else {

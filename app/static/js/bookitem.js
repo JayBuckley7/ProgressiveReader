@@ -50,8 +50,11 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   };
 
   if (book.coverImageBlob instanceof Blob) {
+    console.log(`${logPrefix} Using local cover for "${book.title}" (${book.id})`);
     injectCover(book.coverImageBlob);
   } else {
+    console.log(`${logPrefix} No local cover for "${book.title}" (${book.id})`);
+
     const placeholder = document.createElement('div');
     placeholder.className = 'no-cover';
     placeholder.setAttribute('role', 'img');
@@ -59,8 +62,8 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     placeholder.textContent = 'No Cover';
     coverWrapper.appendChild(placeholder);
 
-    // Try fetching cover from Drive
     if (book.isRemoteOnly && driveSync?.isConnected?.()) {
+      console.log(`${logPrefix} Fetching cover from Drive for "${book.title}" (${book.id})`);
       (async () => {
         try {
           const blob = await driveSync.downloadBook(book.id, book.mimeType);
@@ -70,11 +73,19 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
           if (cover) {
             injectCover(cover);
             coverWrapper.removeChild(placeholder);
+            console.log(`${logPrefix} Remote cover downloaded for "${book.title}"`);
+          } else {
+            console.log(`${logPrefix} No cover found in remote book "${book.title}"`);
           }
         } catch (e) {
           console.warn(`${logPrefix} Failed to fetch remote cover for ${book.id}`, e);
         }
       })();
+    } else {
+      console.log(
+        `${logPrefix} Not fetching remote cover for "${book.title}"; ` +
+        `remoteOnly=${book.isRemoteOnly}, driveConnected=${driveSync?.isConnected?.()}`
+      );
     }
   }
 
