@@ -14,8 +14,10 @@ export async function getMergedBooksMetadata(userId) {
 
   let remote = [];
   try {
+    console.log('[MetadataSync] Fetching books from redis');
     const resp = await fetch(`/metadata/${userId}/books`);
     if (resp.ok) remote = await resp.json();
+    console.log(`[MetadataSync] Redis returned ${remote.length} books`);
   } catch (err) {
     console.error('[metadataSync] fetch failed:', err);
   }
@@ -24,6 +26,9 @@ export async function getMergedBooksMetadata(userId) {
 
   for (const book of remote) {
     const { id, title, coverImageBlob, ...rest } = book;
+    console.log(
+      `[MetadataSync] Redis metadata: ${title} (ID ${id}) cover=${rest.coverDriveId}`
+    );
     if (!byId.has(id)) {
       const existing = await getBook(id);
       if (!existing) {

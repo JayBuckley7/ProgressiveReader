@@ -43,12 +43,24 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
     const userId = driveSync?.getUserProfile?.()?.email || null;
 
     if (userId && driveSync?.isConnected?.()) {
+      console.log(`${logPrefix} Fetching books from redis`);
       await syncMetadata(userId);
     }
 
     const booksMetadata = userId
       ? await getMergedBooksMetadata(userId)
       : await getLocalBooksMetadata();
+    if (userId) {
+      const remoteCount = booksMetadata.filter(b => b.isRemoteOnly).length;
+      console.log(
+        `${logPrefix} Redis metadata returned, grabbing ${remoteCount} books from google drive`
+      );
+      booksMetadata
+        .filter(b => b.isRemoteOnly)
+        .forEach(b =>
+          console.log(`${logPrefix} Remote book: "${b.title}" (${b.id}) cover=${b.coverDriveId}`)
+        );
+    }
 
     /* ─────────────────────────────────────────────────────
        2  Filter + sort                                     

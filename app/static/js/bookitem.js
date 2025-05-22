@@ -61,6 +61,10 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
 
     // Try fetching cover from Drive
     if (book.isRemoteOnly && driveSync?.isConnected?.()) {
+      console.log(
+        `${logPrefix} Attempting to fetch cover for "${book.title}" ` +
+        `(ID ${book.id}) from Drive (cover ${book.coverDriveId || 'none'})`
+      );
       (async () => {
         try {
           const blob = await driveSync.downloadBook(book.id, book.mimeType);
@@ -70,11 +74,18 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
           if (cover) {
             injectCover(cover);
             coverWrapper.removeChild(placeholder);
+            console.log(`${logPrefix} Cover fetched for "${book.title}"`);
+          } else {
+            console.log(`${logPrefix} No cover found inside "${book.title}"`);
           }
         } catch (e) {
           console.warn(`${logPrefix} Failed to fetch remote cover for ${book.id}`, e);
         }
       })();
+    } else if (book.isRemoteOnly) {
+      console.log(
+        `${logPrefix} Drive not connected; cannot fetch cover for "${book.title}"`
+      );
     }
   }
 
@@ -162,19 +173,23 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
             console.warn(`${logPrefix} bookLink: ${type} click handler triggered by click on or inside btn-change-cover! Propagation should have been stopped.`);
         }
         // Call original handler logic based on type
-        if (type === 'REMOTE') {
-            ev.preventDefault();
-            try {
-                let blob = null;
-                if (driveSync?.isConnected?.()) {
-                    blob = await driveSync.downloadBook(book.id, book.mimeType);
-                    await addBook(book.title, blob, book.id, { fileType: book.fileType });
-                }
-                await openBookAtProgress(book.id, book.title);
-            } catch (err) {
-                console.error(`${logPrefix} Failed to load remote book`, err);
-                alert('Failed to load book from Drive');
-            }
+          if (type === 'REMOTE') {
+              ev.preventDefault();
+              try {
+                  let blob = null;
+                  if (driveSync?.isConnected?.()) {
+                      console.log(`${logPrefix} Downloading remote book '${book.title}' (${book.id})`);
+                      blob = await driveSync.downloadBook(book.id, book.mimeType);
+                      console.log(`${logPrefix} Remote book downloaded: ${blob.size} bytes`);
+                      await addBook(book.title, blob, book.id, { fileType: book.fileType });
+                  } else {
+                      console.warn(`${logPrefix} Cannot download '${book.title}': Drive not connected`);
+                  }
+                  await openBookAtProgress(book.id, book.title);
+              } catch (err) {
+                  console.error(`${logPrefix} Failed to load remote book`, err);
+                  alert('Failed to load book from Drive');
+              }
         } else if (type === 'LOCAL') {
             ev.preventDefault();
             await openBookAtProgress(book.id, book.title);
