@@ -63,6 +63,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     if (book.isRemoteOnly && driveSync?.isConnected?.()) {
       (async () => {
         try {
+          console.log(`${logPrefix} Grabbing cover for ${book.title} from google`);
           const blob = await driveSync.downloadBook(book.id, book.mimeType);
           const proc = new EpubProcessorWrapper();
           await proc.loadBook(await blob.arrayBuffer());
@@ -70,6 +71,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
           if (cover) {
             injectCover(cover);
             coverWrapper.removeChild(placeholder);
+            console.log(`${logPrefix} Cover fetched from google for ${book.title}`);
           }
         } catch (e) {
           console.warn(`${logPrefix} Failed to fetch remote cover for ${book.id}`, e);
@@ -167,7 +169,9 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
             try {
                 let blob = null;
                 if (driveSync?.isConnected?.()) {
+                    console.log(`${logPrefix} Grabbing ${book.title} from google`);
                     blob = await driveSync.downloadBook(book.id, book.mimeType);
+                    console.log(`${logPrefix} Added ${book.title} from drive`);
                     await addBook(book.title, blob, book.id, { fileType: book.fileType });
                 }
                 await openBookAtProgress(book.id, book.title);

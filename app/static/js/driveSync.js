@@ -640,6 +640,7 @@ export async function init(isExplicitCall = false){
       await runSyncLoop();
       startScheduler();
       window.dispatchEvent(new Event('drive-online'));
+      console.log('[DriveSync] Gdrive is connected');
 //       console.log("[DriveSync] init: Completed successfully (connected state after hydrateToken).");
     } catch (err) {
       console.error("[DriveSync] init: Error during connected state setup (post-hydrateToken):", err);
@@ -667,6 +668,7 @@ export async function init(isExplicitCall = false){
           await runSyncLoop();
           startScheduler();
           window.dispatchEvent(new Event('drive-online'));
+          console.log('[DriveSync] Gdrive is connected');
 //           console.log("[DriveSync] init: Completed successfully (connected state after launchGoogleAuth).");
         } else {
           console.warn("[DriveSync] init: launchGoogleAuth completed, but still not connected.");
@@ -845,7 +847,9 @@ export async function listRemoteBooks() {
 
 export async function downloadBook(bookId, mimeType = EPUB_MIME_TYPE) {
     if (!isConnected()) throw new Error('Not connected to Google Drive');
+    console.log(`[DriveSync] Grabbing ${bookId} from google`);
     const buf = await downloadFile(bookId);
+    console.log(`[DriveSync] Download complete for ${bookId}`);
     return new Blob([buf], { type: mimeType });
 }
 
