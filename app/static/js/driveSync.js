@@ -496,7 +496,6 @@ async function downloadAndStoreBook(file) {
     driveId: file.id,
     md5: file.md5Checksum,
     modifiedTime: file.modifiedTime,
-    isRemoteOnly: false,
     fileType: ext
   });
 }
@@ -559,7 +558,7 @@ async function autoUploadLocalBooks() {
   }
   const metas = await getLocalBooksMetadata();
   for (const m of metas) {
-    if (!m.driveId && !m.isRemoteOnly) {
+    if (!m.driveId) {
       try {
         const record = await getBook(m.id);
         if (record && record.content) {
@@ -580,7 +579,7 @@ async function autoUploadLocalBooks() {
       } catch (e) {
         console.warn('[DriveSync] autoUploadLocalBooks: Book file upload failed for', m.id, e);
       }
-    } else if (m.driveId && !m.coverDriveId && !m.isRemoteOnly) { // Book file exists on Drive (or has driveId), but cover doesn't
+    } else if (m.driveId && !m.coverDriveId) { // Book file exists on Drive (or has driveId), but cover doesn't
       if (pendingCoverUploads.has(m.id)) {
 //         console.log(`[DriveSync] autoUploadLocalBooks: Cover upload for ${m.id} already pending. Skipping.`);
         continue;
