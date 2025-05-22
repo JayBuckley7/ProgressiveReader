@@ -138,6 +138,16 @@ Run the Python test suite using:
 python -m unittest discover -s tests
 ```
 
+## Utility Scripts
+
+Additional helper scripts are located in the `scripts/` directory. They are
+designed for manual use and are not part of the automated test suite.
+
+- `scripts/generate_epub_groundtruth.py` generates HTML files to use as ground
+  truth when verifying EPUB parsing logic.
+- `scripts/test_epub_processor.js` is a Node.js utility for comparing EPUB
+  output against those ground truth files.
+
 
 ## Technologies Used
 
