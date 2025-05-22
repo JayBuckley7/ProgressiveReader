@@ -138,6 +138,12 @@ Run the Python test suite using:
 python -m unittest discover -s tests
 ```
 
+JavaScript unit tests are run with Jest:
+
+```bash
+npm test
+```
+
 
 ## Technologies Used
 
