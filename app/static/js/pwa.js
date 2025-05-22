@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Register the service worker using the Flask route
       navigator.serviceWorker.register('/service-worker.js')
         .then(registration => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+//           console.log('ServiceWorker registration successful with scope: ', registration.scope);
           
           // Set up periodic background sync if supported and needed
           if ('periodicSync' in registration) {
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showInstallPromotion() {
     // Check if user has already dismissed the prompt
     if (getCookie('pwaInstallDismissed') === 'true') {
-        console.log('PWA install prompt previously dismissed by user.');
+//         console.log('PWA install prompt previously dismissed by user.');
         return;
     }
 
@@ -85,9 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Wait for the user to respond to the prompt
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the install prompt');
+//             console.log('User accepted the install prompt');
           } else {
-            console.log('User dismissed the browser install prompt');
+//             console.log('User dismissed the browser install prompt');
             // Optionally, set cookie here too if browser prompt is dismissed
             // setCookie('pwaInstallDismissed', 'true', 365);
           }
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Handle the dismiss button click
       dismissButton.addEventListener('click', (e) => {
-        console.log('User clicked PWA dismiss button.');
+//         console.log('User clicked PWA dismiss button.');
         promptContainer.style.display = 'none';
         setCookie('pwaInstallDismissed', 'true', 365); // Dismiss for 1 year
         deferredPrompt = null; // Don't show again this session
@@ -125,11 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Handle online/offline events
   window.addEventListener('online', () => {
-    console.log('App is online.');
+//     console.log('App is online.');
   });
   
   window.addEventListener('offline', () => {
-    console.log('App is offline. Reading will continue to work from cache.');
+//     console.log('App is offline. Reading will continue to work from cache.');
     // Optionally show an offline notification to the user
     showOfflineNotification();
   });

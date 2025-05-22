@@ -3,7 +3,7 @@ import { TextProcessorWrapper } from './textProcessor.js';
 import { initializeReader } from './reader.js';
 // readerInit.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Reader page DOMContentLoaded - Main Initializer Script");
+//     console.log("Reader page DOMContentLoaded - Main Initializer Script");
 
     // --- Config & State from page-config JSON --- 
     const configElement = document.getElementById('page-config');
@@ -26,9 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlCurrentIndex = config.currentIndex !== null ? parseInt(config.currentIndex, 10) : null;
 
     // --- DEBUGGING LOGS (Keep for now) ---
-    console.log("[ReaderInit] Parsed config from #page-config:", JSON.stringify(config));
-    console.log("[ReaderInit] currentBookId from config:", currentBookId);
-    console.log("[ReaderInit] currentBookId type from config:", typeof currentBookId);
+//     console.log("[ReaderInit] Parsed config from #page-config:", JSON.stringify(config));
+//     console.log("[ReaderInit] currentBookId from config:", currentBookId);
+//     console.log("[ReaderInit] currentBookId type from config:", typeof currentBookId);
     // --- END DEBUGGING LOGS ---
 
     // --- DOM Elements (only those needed directly by init or for passing) ---
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    console.log("Main Reader Initializer (readerInit.js) complete.");
+//     console.log("Main Reader Initializer (readerInit.js) complete.");
     
     // --- Helper functions ---
     
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.storageManager.storePageContent(bookIdToStore, indexToStore, contentToStore)
             .then(success => {
                 if (success) {
-                    console.log(`[ReaderInit] Content for book ${bookIdToStore}, page ${indexToStore} stored for offline use`);
+//                     console.log(`[ReaderInit] Content for book ${bookIdToStore}, page ${indexToStore} stored for offline use`);
                 }
             });
         
@@ -152,14 +152,14 @@ document.addEventListener('DOMContentLoaded', function() {
         window.storageManager.storeBookForOffline(bookIdToStore, bookMetadata)
             .then(success => {
                 if (success) {
-                    console.log(`[ReaderInit] Book ${bookIdToStore} metadata stored for offline use`);
+//                     console.log(`[ReaderInit] Book ${bookIdToStore} metadata stored for offline use`);
                 }
             });
     }
     
     // Handle going online
     function handleOnline() {
-        console.log("App is online");
+//         console.log("App is online");
         
         // Remove offline notification if it exists
         const offlineNotification = document.querySelector('.offline-notification');
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle going offline
     function handleOffline() {
-        console.log("App is offline");
+//         console.log("App is offline");
         showOfflineNotification();
     }
     
@@ -210,13 +210,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (urlCurrentIndex !== null && !isNaN(urlCurrentIndex)) {
             actualStartIndex = urlCurrentIndex;
-            console.log(`[ReaderInit] Using currentIndex from URL: ${actualStartIndex} for book ${currentBookId}`);
+//             console.log(`[ReaderInit] Using currentIndex from URL: ${actualStartIndex} for book ${currentBookId}`);
         } else {
-            console.log("[ReaderInit] No valid currentIndex in URL, determining from storage...");
+//             console.log("[ReaderInit] No valid currentIndex in URL, determining from storage...");
             if (window.storageManager && typeof window.storageManager.determineActualStartingPosition === 'function') {
                 try {
                     actualStartIndex = await window.storageManager.determineActualStartingPosition(currentBookId);
-                    console.log(`[ReaderInit] Determined actualStartIndex from storage: ${actualStartIndex} for book ${currentBookId}`);
+//                     console.log(`[ReaderInit] Determined actualStartIndex from storage: ${actualStartIndex} for book ${currentBookId}`);
                 } catch (error) {
                     console.error(`[ReaderInit] Error calling determineActualStartingPosition for ${currentBookId}:`, error);
                     actualStartIndex = 0; 
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.storageManager && typeof window.storageManager.saveReadingProgress === 'function') {
             if (currentBookId !== null && actualStartIndex !== null) {
                 window.storageManager.saveReadingProgress(currentBookId, actualStartIndex);
-                console.log(`[ReaderInit] Saved initial reading progress for book ${currentBookId}, page ${actualStartIndex}`);
+//                 console.log(`[ReaderInit] Saved initial reading progress for book ${currentBookId}, page ${actualStartIndex}`);
             }
         } else {
             console.warn("StorageManager not found, cannot save initial reading progress.");
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         if (typeof initializeReader === 'function') {
-            console.log("[ReaderInit] Calling initializeReader with config:", initialConfig);
+//             console.log("[ReaderInit] Calling initializeReader with config:", initialConfig);
             initializeReader(initialConfig); // This function should be in reader.js
         } else {
             console.error("[ReaderInit] CRITICAL: initializeReader function not found. Reader cannot start.");

@@ -9,7 +9,7 @@
  * @param {number} [contextOffset] - The offset within the context (optional).
  */
 async function handlePopupAction(action, card, value, context, contextOffset) {
-    console.log(`Handling Popup Action: ${action}`, { card, value, context, contextOffset });
+//     console.log(`Handling Popup Action: ${action}`, { card, value, context, contextOffset });
 
     const settings = window.hoverSettings?.readHoverSettings() || {};
     const apiKey = settings.jpdbApiKey;
@@ -56,7 +56,7 @@ async function handlePopupAction(action, card, value, context, contextOffset) {
  * @param {number} [contextOffset] - The offset within the context.
  */
 async function handleKeybindAction(actionName, card, context, contextOffset) {
-    console.log(`Handling Keybind Action: ${actionName}`, { card, context, contextOffset });
+//     console.log(`Handling Keybind Action: ${actionName}`, { card, context, contextOffset });
 
     const settings = window.hoverSettings?.readHoverSettings() || {};
     const apiKey = settings.jpdbApiKey;
@@ -119,7 +119,7 @@ async function handleKeybindAction(actionName, card, context, contextOffset) {
 // --- Placeholder Backend API Call Functions ---
 
 async function _jpdbMineWord(apiKey, card, settings, context, contextOffset) {
-    console.log("PLACEHOLDER: Mining word:", card.spelling);
+//     console.log("PLACEHOLDER: Mining word:", card.spelling);
     // TODO: Implement API call to backend: POST /api/jpdb/mine
     // Body: { apiKey, vid: card.vid, sid: card.sid, deckId: settings.miningDeckId || null, 
     //         context: context || '', forq: settings.forqOnMine }
@@ -131,7 +131,7 @@ async function _jpdbMineWord(apiKey, card, settings, context, contextOffset) {
 }
 
 async function _jpdbSetFlag(apiKey, card, flagType, value) {
-    console.log(`PLACEHOLDER: Setting flag '${flagType}' to ${value} for:`, card.spelling);
+//     console.log(`PLACEHOLDER: Setting flag '${flagType}' to ${value} for:`, card.spelling);
     // TODO: Implement API call to backend: POST /api/jpdb/set_flag
     // Body: { apiKey, vid: card.vid, sid: card.sid, flag: flagType, value: value }
     // Handle response, maybe update card state locally
@@ -142,7 +142,7 @@ async function _jpdbSetFlag(apiKey, card, flagType, value) {
 }
 
 async function _jpdbReviewWord(apiKey, card, rating) {
-    console.log(`PLACEHOLDER: Reviewing word '${card.spelling}' as '${rating}'`);
+//     console.log(`PLACEHOLDER: Reviewing word '${card.spelling}' as '${rating}'`);
     // TODO: Implement API call to backend: POST /api/jpdb/review
     // Body: { apiKey, vid: card.vid, sid: card.sid, rating: rating }
     // Handle response, maybe update card state locally
@@ -156,4 +156,4 @@ window.hoverActions = {
     handleKeybindAction
 };
 
-console.log("hoverActions.js loaded"); 
+// console.log("hoverActions.js loaded"); 

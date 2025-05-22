@@ -36,7 +36,7 @@ export async function getMergedBooksMetadata(userId) {
           if (userId && book?.id) {
             try {
               await fetch(`/metadata/${userId}/book/${book.id}`, { method: 'DELETE' });
-              console.log(`[MetadataSync] Deleted Redis metadata for invalid book ${book.id}`);
+//               console.log(`[MetadataSync] Deleted Redis metadata for invalid book ${book.id}`);
             } catch (e) {
               console.warn(`[MetadataSync] Failed to delete Redis metadata for ${book.id}`, e);
             }

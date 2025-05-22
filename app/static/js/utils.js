@@ -6,7 +6,7 @@ function setCookie(name, value, days = 365) {
         expires = "; expires=" + date.toUTCString();
     }
     
-    console.log(`Setting cookie ${name} to value: ${value} (length: ${value.length})`);
+// //     console.log(`Setting cookie ${name} to value: ${value} (length: ${value.length})`);
     
     // Make sure path is set correctly and SameSite is appropriate
     const cookieString = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
@@ -14,7 +14,7 @@ function setCookie(name, value, days = 365) {
     
     // Verify the cookie was set by immediately trying to read it back
     const verifyValue = getCookie(name);
-    console.log(`Verifying cookie ${name} was set. Read back value: ${verifyValue} (length: ${verifyValue?.length || 0})`);
+// //     console.log(`Verifying cookie ${name} was set. Read back value: ${verifyValue} (length: ${verifyValue?.length || 0})`);
 }
 
 function getCookie(name) { 
@@ -37,4 +37,4 @@ window.appUtils = {
     getCookie
 };
 
-console.log("utils.js loaded"); 
+// // console.log("utils.js loaded"); 

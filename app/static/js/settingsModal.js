@@ -210,7 +210,7 @@ function _loadSettingsToUI() {
     _updateCefrOutput();
     _updateJlptToggleVisibility();
     _updateDueCardsVisibility();
-    console.log("Settings loaded into UI.");
+//     console.log("Settings loaded into UI.");
 }
 
 function _attachEventListeners() {
@@ -243,21 +243,21 @@ function _attachEventListeners() {
     if (jpdbApiKeyInput) {
         jpdbApiKeyInput.addEventListener('change', () => {
             const apiKeyValue = jpdbApiKeyInput.value.trim();
-            console.log(`JPDB API Key changed. New value length: ${apiKeyValue.length}`);
+//             console.log(`JPDB API Key changed. New value length: ${apiKeyValue.length}`);
             
             if (window.appUtils) {
-                console.log('Using appUtils.setCookie to save JPDB API key');
+//                 console.log('Using appUtils.setCookie to save JPDB API key');
                 window.appUtils.setCookie('jpdb_api_key', apiKeyValue);
             } else {
-                console.log('Using direct setCookie function to save JPDB API key');
+//                 console.log('Using direct setCookie function to save JPDB API key');
                 setCookie('jpdb_api_key', apiKeyValue);
             }
             
             // Force a config reload on the highlighter to ensure it picks up the new API key
             if (window.jpHighlighter && typeof window.jpHighlighter.loadConfig === 'function') {
-                console.log('Explicitly reloading JP Highlighter config after API key change');
+//                 console.log('Explicitly reloading JP Highlighter config after API key change');
                 const updatedConfig = window.jpHighlighter.loadConfig();
-                console.log('New config after API key change:', updatedConfig);
+//                 console.log('New config after API key change:', updatedConfig);
             }
             _updateDueCardsVisibility();
             if (window.storageManager && typeof window.storageManager.prefetchDueCardsIfNeeded === 'function') {
@@ -439,12 +439,12 @@ function _attachEventListeners() {
                 
                 // Handle Escape specially
                 if (key === 'Escape') {
-                    console.log('Escape pressed, canceling keybind capture.');
+//                     console.log('Escape pressed, canceling keybind capture.');
                     const defaultValue = DEFAULT_SETTINGS_MODAL[localStorageKey];
                     localStorage.setItem(localStorageKey, defaultValue);
                     if (activeKeybindInput) activeKeybindInput.value = keybindToString(defaultValue);
                 } else {
-                    console.log('Non-modifier key captured:', { key, code, modifiers });
+//                     console.log('Non-modifier key captured:', { key, code, modifiers });
                     const newKeybind = { key, code, modifiers };
                     localStorage.setItem(localStorageKey, JSON.stringify(newKeybind));
                     if (activeKeybindInput) activeKeybindInput.value = keybindToString(newKeybind);
@@ -462,7 +462,7 @@ function _attachEventListeners() {
                     
                     // If no other modifiers are active, use this modifier as the key itself
                     if (!otherModifiersActive) {
-                        console.log('Modifier key captured on keyup:', event.key);
+//                         console.log('Modifier key captured on keyup:', event.key);
                         const code = event.code;
                         const key = event.key;
                         // No modifiers since this key IS the key, not a modifier for another key
@@ -484,7 +484,7 @@ function _attachEventListeners() {
                 // Get modifiers that are held during the mouse click
                 const modifiers = MODIFIERS.filter(mod => event.getModifierState(mod));
                 
-                console.log('Mouse button captured:', { key, code, modifiers });
+//                 console.log('Mouse button captured:', { key, code, modifiers });
                 const newKeybind = { key, code, modifiers };
                 localStorage.setItem(localStorageKey, JSON.stringify(newKeybind));
                 if (activeKeybindInput) activeKeybindInput.value = keybindToString(newKeybind);
@@ -524,19 +524,19 @@ function _attachEventListeners() {
 
     if (showPopupOnHoverCheckbox) {
         showPopupOnHoverCheckbox.addEventListener('change', () => {
-            console.log('showPopupOnHover changed to:', showPopupOnHoverCheckbox.checked);
+//             console.log('showPopupOnHover changed to:', showPopupOnHoverCheckbox.checked);
             localStorage.setItem('showPopupOnHover', showPopupOnHoverCheckbox.checked);
-            console.log('showPopupOnHover saved in localStorage:', localStorage.getItem('showPopupOnHover'));
+//             console.log('showPopupOnHover saved in localStorage:', localStorage.getItem('showPopupOnHover'));
             
             // Try to access the highlighter in different ways to ensure we can reload config
             if (window.jpHighlighter) {
                 if (typeof window.jpHighlighter.reinitialize === 'function') {
-                    console.log('Using reinitialize function for config reload');
+//                     console.log('Using reinitialize function for config reload');
                     window.jpHighlighter.reinitialize();
                 } else if (typeof window.jpHighlighter.loadConfig === 'function') {
-                    console.log('Using loadConfig function for config reload');
+//                     console.log('Using loadConfig function for config reload');
                     const updatedConfig = window.jpHighlighter.loadConfig();
-                    console.log('Highlighter config reloaded after change. Updated showPopupOnHover value:', updatedConfig.showPopupOnHover);
+//                     console.log('Highlighter config reloaded after change. Updated showPopupOnHover value:', updatedConfig.showPopupOnHover);
                 } else {
                     console.warn('jpHighlighter object exists but no loadConfig or reinitialize method available');
                 }
@@ -575,7 +575,7 @@ function _attachEventListeners() {
             // Also, directly update the style if the popup instance is accessible and has an update method
             if (window.jpHighlighter.Popup && window.jpHighlighter.Popup.get && typeof window.jpHighlighter.Popup.get().updateStyle === 'function') {
                 window.jpHighlighter.Popup.get().updateStyle(customPopupCssInput.value);
-                console.log('Custom popup CSS updated live.');
+//                 console.log('Custom popup CSS updated live.');
             }
         });
     }
@@ -584,7 +584,7 @@ function _attachEventListeners() {
     if (autoloadCheckbox && window.storageManager && typeof window.storageManager.saveAutoloadPreference === 'function') {
         autoloadCheckbox.addEventListener('change', () => {
             window.storageManager.saveAutoloadPreference(autoloadCheckbox.checked);
-            console.log('Autoload preference saved:', autoloadCheckbox.checked);
+//             console.log('Autoload preference saved:', autoloadCheckbox.checked);
         });
     }
 
@@ -729,7 +729,7 @@ function initSettingsModal(passedServerDefaultModel) {
     }
     _loadSettingsToUI();
     _attachEventListeners();
-    console.log("SettingsModal initialized.");
+//     console.log("SettingsModal initialized.");
 }
 
 window.settingsModalManager = {

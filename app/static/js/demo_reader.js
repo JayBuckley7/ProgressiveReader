@@ -2,7 +2,7 @@
 
 // Ensure this script knows it's in demo mode for clarity, though its execution implies it.
 window.IS_DEMO_MODE = true;
-console.log('[DemoReader] Initializing demo mode for reader page.');
+// console.log('[DemoReader] Initializing demo mode for reader page.');
 
 const DEMO_BOOKS = [
   {
@@ -47,7 +47,7 @@ function updatePageConfig() {
             const newConfig = JSON.parse(configElement.textContent);
             // Check if bookId has changed to trigger mock data reload
             if (pageConfig.bookId !== newConfig.bookId) {
-                console.log(`[DemoReader] Book ID changed from ${pageConfig.bookId} to ${newConfig.bookId}. Reloading mock data.`);
+//                 console.log(`[DemoReader] Book ID changed from ${pageConfig.bookId} to ${newConfig.bookId}. Reloading mock data.`);
                 pageConfig = newConfig;
                 loadMockData(); // Reload data for the new book
             } else {
@@ -73,14 +73,14 @@ async function loadMockData() {
   }
 
   const bookId = pageConfig.bookId;
-  console.log(`[DemoReader] Loading mock data for book: ${bookId}`);
+//   console.log(`[DemoReader] Loading mock data for book: ${bookId}`);
 
   try {
     const translatePath = `/static/demo_data/${bookId}/translate_responses.json`;
     const translateResponse = await fetch(translatePath);
     if (translateResponse.ok) {
       mockTranslateData = await translateResponse.json();
-      console.log(`[DemoReader] Loaded mock translation data for ${bookId}:`, mockTranslateData);
+//       console.log(`[DemoReader] Loaded mock translation data for ${bookId}:`, mockTranslateData);
     } else {
       console.error(`[DemoReader] Failed to load ${translatePath}`, translateResponse.statusText);
       mockTranslateData = []; // Clear previous data on failure
@@ -90,7 +90,7 @@ async function loadMockData() {
     const highlightResponse = await fetch(highlightPath);
     if (highlightResponse.ok) {
       mockHighlightData = await highlightResponse.json();
-      console.log(`[DemoReader] Loaded mock highlight data for ${bookId}:`, mockHighlightData);
+//       console.log(`[DemoReader] Loaded mock highlight data for ${bookId}:`, mockHighlightData);
     } else {
       console.error(`[DemoReader] Failed to load ${highlightPath}`, highlightResponse.statusText);
       mockHighlightData = []; // Clear previous data on failure
@@ -116,11 +116,11 @@ window.fetch = async (input, init) => {
     // Determine initial cefrLevel based on request or default to A1 if not specified
     let cefrLevel = requestBody.cefr_level || 'A1'; 
 
-    console.log(`[DemoReader] Mocking /api/translate for index: ${itemIndex}, lang: ${targetLanguage}, requested cefr: ${requestBody.cefr_level || 'not specified'}`);
+//     console.log(`[DemoReader] Mocking /api/translate for index: ${itemIndex}, lang: ${targetLanguage}, requested cefr: ${requestBody.cefr_level || 'not specified'}`);
 
     let effectiveCefrForDemoLookup = cefrLevel;
     if (window.IS_DEMO_MODE && cefrLevel === "ALL") {
-        console.log(`[DemoReader] Translation CEFR level is "ALL" in demo mode, using "C2" for mock data lookup.`);
+//         console.log(`[DemoReader] Translation CEFR level is "ALL" in demo mode, using "C2" for mock data lookup.`);
         effectiveCefrForDemoLookup = "C2";
     }
 
@@ -132,19 +132,19 @@ window.fetch = async (input, init) => {
 
     // Fallback: If C2 was used (because original was ALL) and no C2 data found, try to find actual "ALL" data.
     if (!mockEntry && cefrLevel === "ALL") { 
-        console.log(`[DemoReader] No mock translation data found for CEFR level ${effectiveCefrForDemoLookup} (mapped from ALL). Trying cefr_level: "ALL" mock data.`);
+//         console.log(`[DemoReader] No mock translation data found for CEFR level ${effectiveCefrForDemoLookup} (mapped from ALL). Trying cefr_level: "ALL" mock data.`);
         mockEntry = mockTranslateData.find(entry =>
             entry.item_index === itemIndex &&
             entry.target_language === targetLanguage &&
             entry.cefr_level === "ALL"
         );
     } else if (!mockEntry) {
-        console.log(`[DemoReader] No specific mock translation data found for requested/mapped CEFR level: ${effectiveCefrForDemoLookup}.`);
+//         console.log(`[DemoReader] No specific mock translation data found for requested/mapped CEFR level: ${effectiveCefrForDemoLookup}.`);
     }
 
     if (mockEntry) {
       if (mockEntry.response_json_stream && Array.isArray(mockEntry.response_json_stream)) {
-        console.log('[DemoReader] Using mock translation stream entry:', mockEntry);
+//         console.log('[DemoReader] Using mock translation stream entry:', mockEntry);
         const stream = new ReadableStream({
           async start(controller) {
             for (const chunk of mockEntry.response_json_stream) {
@@ -156,7 +156,7 @@ window.fetch = async (input, init) => {
         });
         return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
       } else if (mockEntry.response_json) {
-        console.log('[DemoReader] Using mock translation entry (non-streamed JSON), providing as a simple stream:', mockEntry);
+//         console.log('[DemoReader] Using mock translation entry (non-streamed JSON), providing as a simple stream:', mockEntry);
         const simpleStreamData = `data: ${JSON.stringify(mockEntry.response_json)}\n\ndata: [DONE]\n\n`;
         const stream = new ReadableStream({
             start(controller) {
@@ -208,11 +208,11 @@ window.fetch = async (input, init) => {
     }
     const finalCefrLevel = requestBody.cefr_level || currentCefrLevel;
 
-    console.log(`[DemoReader] Mocking /api/get_jpdb_data for index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${finalCefrLevel}`);
+//     console.log(`[DemoReader] Mocking /api/get_jpdb_data for index: ${itemIndex}, lang: ${targetLanguage}, cefr: ${finalCefrLevel}`);
 
     let effectiveCefrForDemoLookup = finalCefrLevel;
     if (window.IS_DEMO_MODE && finalCefrLevel === "ALL") {
-        console.log(`[DemoReader] CEFR level is "ALL" in demo mode, using "C2" for mock data lookup.`);
+//         console.log(`[DemoReader] CEFR level is "ALL" in demo mode, using "C2" for mock data lookup.`);
         effectiveCefrForDemoLookup = "C2";
     }
 
@@ -225,18 +225,18 @@ window.fetch = async (input, init) => {
     // Fallback: If C2 was used (because original was ALL) and no C2 data found, try to find actual "ALL" data.
     // Or, if the original request was for a specific level (not ALL) and it wasn't found, this won't run.
     if (!mockEntry && finalCefrLevel === "ALL") { 
-        console.log(`[DemoReader] No mock data found for CEFR level ${effectiveCefrForDemoLookup} (mapped from ALL). Trying cefr_level: "ALL" mock data.`);
+//         console.log(`[DemoReader] No mock data found for CEFR level ${effectiveCefrForDemoLookup} (mapped from ALL). Trying cefr_level: "ALL" mock data.`);
         mockEntry = mockHighlightData.find(entry =>
             entry.item_index === itemIndex &&
             entry.target_language === targetLanguage &&
             entry.cefr_level === "ALL" 
         );
     } else if (!mockEntry) {
-        console.log(`[DemoReader] No mock data found for originally requested/mapped CEFR level: ${effectiveCefrForDemoLookup}.`);
+//         console.log(`[DemoReader] No mock data found for originally requested/mapped CEFR level: ${effectiveCefrForDemoLookup}.`);
     }
 
     if (mockEntry) {
-      console.log('[DemoReader] Found matching mock highlight entry:', mockEntry);
+//       console.log('[DemoReader] Found matching mock highlight entry:', mockEntry);
       return new Response(
         JSON.stringify(mockEntry.response_json),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -256,7 +256,7 @@ window.getDemoBookFile = async function(bookId) {
 
   const demoBook = DEMO_BOOKS.find(b => b.id === bookId);
   if (demoBook) {
-    console.log(`[DemoReader] Requested demo book: ${demoBook.title}`);
+//     console.log(`[DemoReader] Requested demo book: ${demoBook.title}`);
     try {
       const response = await fetch(`/static/demo_books/${demoBook.filename}`);
       if (!response.ok) {
@@ -293,13 +293,13 @@ async function initDemoReader() {
     if (translateBtn) {
         //translateBtn.disabled = true;
         //translateBtn.title = 'Disabled in demo';
-        //console.log('[DemoReader] Disabled translate button.');
+//         //console.log('[DemoReader] Disabled translate button.');
     }
 
     if (translateCefrBtn) {
         //translateCefrBtn.disabled = true;
         //translateCefrBtn.title = 'Disabled in demo';
-        //console.log('[DemoReader] Disabled CEFR translate button.');
+//         //console.log('[DemoReader] Disabled CEFR translate button.');
     }
 
     // Modify Server Key Status for demo mode in Settings Modal
@@ -327,7 +327,7 @@ async function initDemoReader() {
                 statusTextPrefix +
                 ' <span style="color: green;">Configured (Demo Mode)</span> ' +
                 '<small>(API calls are mocked, no real key used)</small>';
-            console.log('[DemoReader] Updated Server Key Status in Settings Modal for demo mode.');
+//             console.log('[DemoReader] Updated Server Key Status in Settings Modal for demo mode.');
         } else {
             console.warn('[DemoReader] Could not find the Server Key Status paragraph as expected next to openai-key input.');
         }
@@ -338,7 +338,7 @@ async function initDemoReader() {
     if (modelSelect) {
         modelSelect.disabled = true;
         modelSelect.title = 'Disabled in Demo Mode';
-        console.log('[DemoReader] Disabled OpenAI Model select in Settings Modal for demo mode.');
+//         console.log('[DemoReader] Disabled OpenAI Model select in Settings Modal for demo mode.');
     } else {
         console.warn('[DemoReader] Could not find OpenAI model select field (openai-model) in settings modal.');
     }
@@ -349,7 +349,7 @@ async function initDemoReader() {
         // Optionally, clear the value or set a placeholder
         // jpdbApiKeyInput.value = ''; 
         // jpdbApiKeyInput.placeholder = 'Disabled in Demo';
-        console.log('[DemoReader] Disabled JPDB API Key input in Settings Modal for demo mode.');
+//         console.log('[DemoReader] Disabled JPDB API Key input in Settings Modal for demo mode.');
     } else {
         console.warn('[DemoReader] Could not find JPDB API Key input field (jpdb-api-key) in settings modal.');
     }
@@ -360,7 +360,7 @@ async function initDemoReader() {
         const jpdbCookie = getCookie('jpdb_api_key');
         if (!jpdbCookie || jpdbCookie.trim() === '') {
             document.cookie = "jpdb_api_key=demo_mode_key;path=/";
-            console.log('[DemoReader] Set dummy jpdb_api_key cookie for demo mode.');
+//             console.log('[DemoReader] Set dummy jpdb_api_key cookie for demo mode.');
         }
     }
 }

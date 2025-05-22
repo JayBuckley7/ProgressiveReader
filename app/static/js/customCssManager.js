@@ -12,16 +12,16 @@ function applyCustomWordCss() {
 
     if (customCss) {
         styleElement.textContent = customCss;
-        console.log("Applied custom word CSS.");
+//         console.log("Applied custom word CSS.");
     } else {
         styleElement.textContent = ''; // Clear if no custom CSS
-        console.log("No custom word CSS found or cleared existing.");
+//         console.log("No custom word CSS found or cleared existing.");
     }
 }
 
 function initCustomCssManager() {
     applyCustomWordCss(); // Apply on initial load
-    console.log("CustomCssManager initialized.");
+//     console.log("CustomCssManager initialized.");
 }
 
 window.customCssManager = {

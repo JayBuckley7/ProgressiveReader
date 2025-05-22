@@ -30,12 +30,12 @@ const PRECACHE_ASSETS = [
 
 // Install event - cache core assets
 self.addEventListener('install', event => {
-  console.log('[Service Worker] Installing');
+//   console.log('[Service Worker] Installing');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[Service Worker] Caching app shell and assets');
+//         console.log('[Service Worker] Caching app shell and assets');
         
         // Cache each asset individually to prevent one failure from stopping all caching
         return Promise.all(
@@ -54,7 +54,7 @@ self.addEventListener('install', event => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', event => {
-  console.log('[Service Worker] Activating');
+//   console.log('[Service Worker] Activating');
   
   event.waitUntil(
     caches.keys()
@@ -63,7 +63,7 @@ self.addEventListener('activate', event => {
           cacheNames.filter(cacheName => {
             return cacheName !== CACHE_NAME;
           }).map(cacheName => {
-            console.log('[Service Worker] Clearing old cache:', cacheName);
+//             console.log('[Service Worker] Clearing old cache:', cacheName);
             return caches.delete(cacheName);
           })
         );
@@ -105,7 +105,7 @@ self.addEventListener('fetch', event => {
       })
       .catch(() => {
         // If network fails, try to serve from cache
-        console.log('[Service Worker] Serving from cache:', event.request.url);
+//         console.log('[Service Worker] Serving from cache:', event.request.url);
         return caches.match(event.request)
           .then(cachedResponse => {
             if (cachedResponse) {

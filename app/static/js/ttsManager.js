@@ -256,7 +256,7 @@ async function speakCurrentChapter() {
     }
     // Log highlighting method status
     if (CSS.highlights) {
-        console.log("[ttsManager] Using CSS Custom Highlight API for word highlighting (main method).");
+//         console.log("[ttsManager] Using CSS Custom Highlight API for word highlighting (main method).");
     } else {
         console.warn("[ttsManager] CSS Custom Highlight API not supported. TTS will work without word highlighting (no backup method currently).");
     }
@@ -318,7 +318,7 @@ function initTtsManager() {
     const btn = document.getElementById('read-aloud-btn');
     if (btn) {
         btn.addEventListener('click', () => {
-            console.log('[ttsManager] Read Aloud button clicked.');
+//             console.log('[ttsManager] Read Aloud button clicked.');
             if (isSpeaking) {
                 stopSpeaking();
             } else {
