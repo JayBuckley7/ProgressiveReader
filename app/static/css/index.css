@@ -220,17 +220,6 @@ body {
     box-shadow 0.25s ease;
 }
 
-.book-item.remote {
-  border-style: dashed;
-}
-
-.book-item .remote-indicator {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  font-size: 1.2em;
-  color: #4285f4;
-}
 
 .book-item:hover {
   transform: translateY(-4px);

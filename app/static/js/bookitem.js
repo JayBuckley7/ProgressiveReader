@@ -2,7 +2,7 @@
  * Placeholder for book item component logic.
  * Future implementations may move DOM creation from bookshelfUI.js here.
  */
-import { deleteBook, addBook, updateBookCover } from './dbService.js';
+import { deleteBook, addBook, updateBookCover, getBook } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 
 const logPrefix = "[BookItem]"; // Added for logging within bookitem
@@ -26,13 +26,6 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   const item = document.createElement('div');
   item.className = 'book-item';
   item.dataset.bookId = book.id;
-  if (book.isRemoteOnly) {
-    item.classList.add('remote');
-    const badge = document.createElement('span');
-    badge.className = 'remote-indicator';
-    badge.textContent = '☁';
-    item.appendChild(badge);
-  }
   item.setAttribute('role', 'listitem');
 
   /* — Cover image — */
@@ -59,10 +52,11 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
     placeholder.textContent = 'No Cover';
     coverWrapper.appendChild(placeholder);
 
-    // Try fetching cover from Drive
-    if (book.isRemoteOnly && driveSync?.isConnected?.()) {
+    // Try fetching cover from Drive when none stored locally
+    if (driveSync?.isConnected?.()) {
       (async () => {
         try {
+          console.log(`${logPrefix} Fetching cover for \"${book.title}\" (${book.id})`);
           const blob = await driveSync.downloadBook(book.id, book.mimeType);
           const proc = new EpubProcessorWrapper();
           await proc.loadBook(await blob.arrayBuffer());
@@ -154,42 +148,30 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
   coverWrapper.appendChild(coverBtn);
   coverWrapper.appendChild(coverInput); // Changed from item.appendChild(coverInput)
 
-  /* ─ Remote‑only handling ─ */
-  // Helper to wrap original handlers with logging
-  const createLoggedClickHandler = (type, originalHandler) => {
-    return async (ev) => {
-        if (ev.target.classList.contains('btn-change-cover') || ev.target.closest('.btn-change-cover')) {
-            console.warn(`${logPrefix} bookLink: ${type} click handler triggered by click on or inside btn-change-cover! Propagation should have been stopped.`);
-        }
-        // Call original handler logic based on type
-        if (type === 'REMOTE') {
-            ev.preventDefault();
-            try {
-                let blob = null;
-                if (driveSync?.isConnected?.()) {
-                    blob = await driveSync.downloadBook(book.id, book.mimeType);
-                    await addBook(book.title, blob, book.id, { fileType: book.fileType });
-                }
-                await openBookAtProgress(book.id, book.title);
-            } catch (err) {
-                console.error(`${logPrefix} Failed to load remote book`, err);
-                alert('Failed to load book from Drive');
-            }
-        } else if (type === 'LOCAL') {
-            ev.preventDefault();
-            await openBookAtProgress(book.id, book.title);
+  /* ─ Book opening handler ─ */
+  bookLink.onclick = async (ev) => {
+    ev.preventDefault();
+    try {
+      const record = await getBook(book.id);
+      const hasLocal = record && record.content instanceof Blob && record.content.size > 0;
+      if (!hasLocal) {
+        console.log(`${logPrefix} Downloading book \"${book.title}\" from Drive`);
+        if (driveSync?.isConnected?.()) {
+          const blob = await driveSync.downloadBook(book.id, book.mimeType);
+          await addBook(book.title, blob, book.id, { fileType: book.fileType });
         } else {
-            // Fallback to originalHandler if provided and type doesn't match
-             if (originalHandler) await originalHandler(ev);
+          alert('Book not available offline and Drive is not connected.');
+          return;
         }
-    };
+      } else {
+        console.log(`${logPrefix} Opening local book \"${book.title}\"`);
+      }
+      await openBookAtProgress(book.id, book.title);
+    } catch (err) {
+      console.error(`${logPrefix} Failed to load book`, err);
+      alert('Failed to load book');
+    }
   };
-
-  if (book.isRemoteOnly) {
-    bookLink.onclick = createLoggedClickHandler('REMOTE', async (ev_unused) => {});
-  } else {
-    bookLink.onclick = createLoggedClickHandler('LOCAL', async (ev_unused) => {});
-  }
 
   // ─ Long‑press on mobile to show action buttons ─
   (() => {

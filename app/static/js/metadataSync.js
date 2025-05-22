@@ -46,7 +46,7 @@ export async function getMergedBooksMetadata(userId) {
         }
       }
       await updateBookMetadata(id, rest);
-      byId.set(id, { id, title, ...rest, source: 'redis', isRemoteOnly: true });
+      byId.set(id, { id, title, ...rest, source: 'redis' });
     } else {
       await updateBookMetadata(id, rest);
       const existingLocal = byId.get(id);
