@@ -300,7 +300,8 @@ export async function getLocalBooksMetadata() {
                     isDemo: book.isDemo || false,
                     fileType: book.fileType || 'epub',
                     driveId: book.driveId || null,
-                    coverDriveId: book.coverDriveId || null
+                    coverDriveId: book.coverDriveId || null,
+                    coverMimeType: book.coverMimeType || null
                 }));
                
 
