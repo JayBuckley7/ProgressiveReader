@@ -168,7 +168,7 @@ export function createBookItem(book, driveSync, renderBookshelf, openBookAtProgr
       if (!hasLocal) {
         console.log(`${logPrefix} Downloading book \"${book.title}\" from Drive`);
         if (driveSync?.isConnected?.()) {
-          const blob = await driveSync.downloadBook(book.id, book.mimeType);
+          const blob = await driveSync.downloadBook(book.driveId, book.mimeType);
           await addBook(book.title, blob, book.id, { fileType: book.fileType });
         } else {
           alert('Book not available offline and Drive is not connected.');

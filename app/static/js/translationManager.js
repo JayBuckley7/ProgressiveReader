@@ -484,8 +484,8 @@ function initTranslationManager(config) {
             
             if (cachedTranslation && contentArea) {
 //                 console.log("TranslationManager: Autoloading translation from cache for book:", 
-                            currentBookIdForTranslation, 
-                            "page:", currentPageIndexForTranslation);
+//                             currentBookIdForTranslation, 
+//                             "page:", currentPageIndexForTranslation);
                 
                 // Only apply cached translation if we have actual content (not loading placeholder)
                 const isLoadingPlaceholder = contentArea.innerHTML.includes("Loading content from storage");
@@ -507,9 +507,9 @@ function initTranslationManager(config) {
         // Update the original content references when new content is loaded
         if (contentArea) {
 //             console.log("TranslationManager: Updating content references from:", 
-                        trueOriginalServerContent.substring(0, 50) + "...",
-                        "to current content:", 
-                        contentArea.innerHTML.substring(0, 50) + "...");
+//                         trueOriginalServerContent.substring(0, 50) + "...",
+//                         "to current content:", 
+//                         contentArea.innerHTML.substring(0, 50) + "...");
             
             // Store the new content as the original content
             trueOriginalServerContent = contentArea.innerHTML;
