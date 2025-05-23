@@ -1,50 +1,58 @@
-import unittest
+import io
+import pytest
 from app import create_app
 from app.utils.helpers import allowed_file
 
-class AppFactoryTestCase(unittest.TestCase):
-    def setUp(self):
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.client = self.app.test_client()
+@pytest.fixture
+def app_instance():
+    app = create_app()
+    app.config['TESTING'] = True
+    app.config['ALLOWED_EXTENSIONS'] = {'epub', 'txt', 'docx', 'pdf', 'mobi'}
+    return app
 
-    def test_hello_route(self):
-        response = self.client.get('/hello')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data.decode('utf-8'), 'Hello, World from create_app!')
-
-    def test_index_route(self):
-        response = self.client.get('/')
-        self.assertEqual(response.status_code, 200)
-
-class AllowedFileTestCase(unittest.TestCase):
-    def setUp(self):
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.app.config['ALLOWED_EXTENSIONS'] = {'epub'}
-        self.ctx = self.app.app_context()
-        self.ctx.push()
-
-    def tearDown(self):
-        self.ctx.pop()
-
-    def test_allowed_file_true(self):
-        self.assertTrue(allowed_file('book.epub'))
-
-    def test_allowed_file_false(self):
-        self.assertFalse(allowed_file('notes.txt'))
+@pytest.fixture
+def client(app_instance):
+    return app_instance.test_client()
 
 
-class ReaderRouteTestCase(unittest.TestCase):
-    def setUp(self):
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.client = self.app.test_client()
+def test_hello_route(client):
+    resp = client.get('/hello')
+    assert resp.status_code == 200
+    assert resp.data.decode('utf-8') == 'Hello, World from create_app!'
 
-    def test_read_route_redirects_without_index(self):
-        response = self.client.get('/read/testbook')
-        self.assertEqual(response.status_code, 302)
-        self.assertIn('/read/testbook/0', response.location)
 
-if __name__ == '__main__':
-    unittest.main()
+def test_index_route(client):
+    resp = client.get('/')
+    assert resp.status_code == 200
+
+
+def test_allowed_file():
+    app = create_app()
+    app.config['ALLOWED_EXTENSIONS'] = {'epub'}
+    with app.app_context():
+        assert allowed_file('book.epub')
+        assert not allowed_file('notes.txt')
+
+
+def test_api_translate_missing_fields(client):
+    resp = client.post('/api/translate', json={})
+    assert resp.status_code == 400
+
+
+def test_book_upload_missing_file(client):
+    resp = client.post('/book/upload', data={})
+    assert resp.status_code == 400
+
+
+def test_book_upload_valid_file(client):
+    data = {
+        'file': (io.BytesIO(b'data'), 'sample.epub')
+    }
+    resp = client.post('/book/upload', data=data, content_type='multipart/form-data')
+    assert resp.status_code == 200
+    assert resp.get_json().get('success') is True
+
+
+def test_reader_route(client):
+    resp = client.get('/read/testbook')
+    assert resp.status_code == 200

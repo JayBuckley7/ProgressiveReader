@@ -1,4 +1,23 @@
 steps:
+  # Run Python unit tests
+  - name: python:3.11
+    id: Run Pytest
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install -r requirements.txt -r requirements-dev.txt
+        pytest --cov
+
+  # Run JavaScript unit tests
+  - name: node:18
+    id: Run Jest
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        npm install
+        npm test
   # 1. Build
   - name: gcr.io/cloud-builders/docker
     id: Build Docker Image
