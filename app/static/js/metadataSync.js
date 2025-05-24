@@ -10,7 +10,10 @@ import * as driveSync from './driveSync.js';
  */
 export async function getMergedBooksMetadata(userId) {
   const local = await getLocalBooksMetadata();
-  if (!userId) return local;
+  if (!userId) {
+    console.warn('[metadataSync] Skipping metadata sync: userId is null');
+    return local;
+  }
 
   let remote = [];
   try {
@@ -35,8 +38,7 @@ export async function getMergedBooksMetadata(userId) {
           const userId = driveSync.getUserProfile()?.email;
           if (userId && book?.id) {
             try {
-              await fetch(`/metadata/${userId}/book/${book.id}`, { method: 'DELETE' });
-//               console.log(`[MetadataSync] Deleted Redis metadata for invalid book ${book.id}`);
+          await fetch(`/metadata/${userId}/book/${book.id}`, { method: 'DELETE' });
             } catch (e) {
               console.warn(`[MetadataSync] Failed to delete Redis metadata for ${book.id}`, e);
             }
