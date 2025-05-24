@@ -10,7 +10,10 @@ import * as driveSync from './driveSync.js';
  */
 export async function getMergedBooksMetadata(userId) {
   const local = await getLocalBooksMetadata();
-  if (!userId) return local;
+  if (!userId) {
+    console.warn('[metadataSync] Skipping metadata sync: userId is null');
+    return local;
+  }
 
   let remote = [];
   try {
