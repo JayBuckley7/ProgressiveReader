@@ -636,9 +636,10 @@ export async function init(isExplicitCall = false){
     // Dispatch event to indicate Google Drive connection is confirmed
     try {
       await seedDriveFolder();
+      window.dispatchEvent(new Event('drive-online'));
+      await new Promise(r => setTimeout(r, 0));
       await runSyncLoop();
       startScheduler();
-      window.dispatchEvent(new Event('drive-online'));
 //       console.log("[DriveSync] init: Completed successfully (connected state after hydrateToken).");
     } catch (err) {
       console.error("[DriveSync] init: Error during connected state setup (post-hydrateToken):", err);
@@ -663,9 +664,10 @@ export async function init(isExplicitCall = false){
           setDriveConnectedCookie(true); // Ensure cookie is set after successful explicit auth
           // Full setup after successful explicit auth
           await seedDriveFolder();
+          window.dispatchEvent(new Event('drive-online'));
+          await new Promise(r => setTimeout(r, 0));
           await runSyncLoop();
           startScheduler();
-          window.dispatchEvent(new Event('drive-online'));
 //           console.log("[DriveSync] init: Completed successfully (connected state after launchGoogleAuth).");
         } else {
           console.warn("[DriveSync] init: launchGoogleAuth completed, but still not connected.");
