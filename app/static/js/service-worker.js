@@ -81,7 +81,10 @@ self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith(self.location.origin)) return;
   
   // Skip API requests - always fetch from network
-  if (event.request.url.includes('/api/')) return;
+  if (event.request.url.includes('/api/') ||
+      event.request.url.includes('/metadata/')) {
+    return;
+  }
 
   // Skip caching for URLs with nocache parameter
   if (event.request.url.includes('nocache=')) {
