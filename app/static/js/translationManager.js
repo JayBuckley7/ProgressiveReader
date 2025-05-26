@@ -127,6 +127,19 @@ function createBufferElement() {
     return translationBuffer;
 }
 
+/**
+ * Ensure the translated HTML is wrapped in a `.chapter-content` element.
+ * Older cached translations may lack this wrapper, which breaks features
+ * like text-to-speech that expect it.
+ * @param {string} html - Raw translated HTML from cache or API.
+ * @returns {string} Normalized HTML guaranteed to include the wrapper.
+ */
+function ensureChapterWrapper(html) {
+    if (!html) return html;
+    const hasWrapper = /class=["']chapter-content["']/.test(html);
+    return hasWrapper ? html : `<div class="chapter-content">${html}</div>`;
+}
+
 function getCompleteHtmlElements(html) {
     // Create temporary element to parse HTML
     const temp = document.createElement('div');
@@ -388,7 +401,15 @@ function _attachEventListeners() {
                      if (!originalPageContent || contentArea.innerHTML === trueOriginalServerContent) {
                         originalPageContent = contentArea.innerHTML;
                      }
-                     contentArea.innerHTML = cachedTranslation;
+                     const normalized = ensureChapterWrapper(cachedTranslation);
+                     contentArea.innerHTML = normalized;
+                     if (normalized !== cachedTranslation && window.storageManager) {
+                         window.storageManager.saveTranslationToLocal(
+                             currentBookIdForTranslation,
+                             currentPageIndexForTranslation,
+                             normalized
+                         );
+                     }
                      updateDisplayButtons();
                 }
             }
@@ -403,7 +424,15 @@ function _attachEventListeners() {
                 if (!originalPageContent || contentArea.innerHTML === trueOriginalServerContent) {
                     originalPageContent = contentArea.innerHTML;
                 }
-                contentArea.innerHTML = cachedTranslation;
+                const normalized = ensureChapterWrapper(cachedTranslation);
+                contentArea.innerHTML = normalized;
+                if (normalized !== cachedTranslation && window.storageManager) {
+                    window.storageManager.saveTranslationToLocal(
+                        currentBookIdForTranslation,
+                        currentPageIndexForTranslation,
+                        normalized
+                    );
+                }
                 updateDisplayButtons();
             } else {
                 alert("No cached translation found for this page.");
@@ -422,7 +451,15 @@ function _attachEventListeners() {
                     if (!originalPageContent || contentArea.innerHTML === trueOriginalServerContent) {
                         originalPageContent = contentArea.innerHTML;
                     }
-                    contentArea.innerHTML = cachedTranslation;
+                    const normalized = ensureChapterWrapper(cachedTranslation);
+                    contentArea.innerHTML = normalized;
+                    if (normalized !== cachedTranslation && window.storageManager) {
+                        window.storageManager.saveTranslationToLocal(
+                            currentBookIdForTranslation,
+                            currentPageIndexForTranslation,
+                            normalized
+                        );
+                    }
                     updateDisplayButtons();
                     window.settingsModalManager.closeSettingsModal();
                 }
@@ -491,7 +528,15 @@ function initTranslationManager(config) {
                 const isLoadingPlaceholder = contentArea.innerHTML.includes("Loading content from storage");
                 if (!isLoadingPlaceholder) {
                     originalPageContent = contentArea.innerHTML; // Store current before overwriting
-                    contentArea.innerHTML = cachedTranslation;
+                    const normalized = ensureChapterWrapper(cachedTranslation);
+                    contentArea.innerHTML = normalized;
+                    if (normalized !== cachedTranslation) {
+                        window.storageManager.saveTranslationToLocal(
+                            currentBookIdForTranslation,
+                            currentPageIndexForTranslation,
+                            normalized
+                        );
+                    }
                     updateDisplayButtons();
                     autoloadInitialized = true;
                 } else {
