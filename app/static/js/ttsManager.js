@@ -1,3 +1,27 @@
+
+function selectVoiceForText(text) {
+    const voices = speechSynthesis.getVoices();
+    if (!voices.length) return null;
+
+    const isJapanese = /[\u3040-\u30FF\u4E00-\u9FFF]/.test(text);
+    const isChinese = /[\u4E00-\u9FFF]/.test(text) && !isJapanese;
+    const isKorean = /[\uAC00-\uD7AF]/.test(text);
+
+    if (isJapanese) {
+        return voices.find(v => v.lang.startsWith('ja')) || null;
+    } else if (isChinese) {
+        return voices.find(v => v.lang.startsWith('zh')) || null;
+    } else if (isKorean) {
+        return voices.find(v => v.lang.startsWith('ko')) || null;
+    } else {
+        return voices.find(v =>
+            ['en', 'es', 'fr', 'de', 'it', 'pt', 'da', 'sv', 'nl', 'fi', 'no'].some(prefix =>
+                v.lang.toLowerCase().startsWith(prefix)
+            )
+        ) || voices[0] || null;
+    }
+}
+
 // Enhanced text-to-speech controls with progress tracking and floating controls
 
 let isSpeaking = false;
@@ -200,7 +224,14 @@ function hideControls() {
 
 function speakFromIndex(index) {
     if (!contentElement) return;
-    currentUtterance = new SpeechSynthesisUtterance(contentText.slice(index));
+    
+    const text = contentText.slice(index);
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    const voice = selectVoiceForText(text);
+    if (voice) {
+        currentUtterance.voice = voice;
+        currentUtterance.lang = voice.lang;
+    }
     currentUtterance.rate = currentRate;
     if (boundarySupported) {
         currentUtterance.onboundary = (e) => {
