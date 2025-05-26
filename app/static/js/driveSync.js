@@ -551,6 +551,7 @@ async function autoUploadLocalBooks() {
   const userId = getUserProfile()?.email;
   if (userId) {
     try {
+      console.log('[DriveSync] Calling syncMetadata...');
       await syncMetadata(userId);
     } catch (e) {
       console.warn('[DriveSync] autoUploadLocalBooks: syncMetadata failed', e);

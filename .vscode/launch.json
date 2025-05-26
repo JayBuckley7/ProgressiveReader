@@ -50,6 +50,23 @@
             "runtimeArgs": ["run", "dev"],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Run Flask Dev Server (Debug) - Online Redis Tunnel",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "args": [],
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "justMyCode": true,
+            "env": {
+                "FLASK_DEBUG": "1",
+                "FLASK_APP": "run.py",
+                "FLASK_ENV": "development",
+                "REDIS_URL": "redis://127.0.0.1:6379/0"
+            }
         }
     ],
     "compounds": [
