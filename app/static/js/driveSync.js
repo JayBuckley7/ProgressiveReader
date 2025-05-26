@@ -32,7 +32,13 @@ if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
 /* eslint-disable no-console */
 
 // ── 0. Config ---------------------------------------------------------------------------
-const SCOPES         = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+// Base OAuth scopes required for normal operation. Additional scopes can be
+// requested incrementally when needed.
+const BASE_SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.appdata',
+  'https://www.googleapis.com/auth/userinfo.profile'
+];
 const FOLDER_NAME    = 'ProgReader';
 const TOKEN_STORE_KEY= 'drive.token';
 const MIME_TYPES = {
@@ -123,7 +129,8 @@ async function fetchAndStoreUserProfile(tokenToFetchWith) {
     gToken.userProfile = {
       name: profile.name,
       picture: profile.picture,
-      email: profile.email
+      email: profile.email,
+      sub: profile.sub
     };
     
     // Make sure profile picture URL uses HTTPS and avoid caching issues by adding timestamp
@@ -150,10 +157,15 @@ async function fetchAndStoreUserProfile(tokenToFetchWith) {
   }
 }
 
-export async function launchGoogleAuth(promptType = 'consent') {
-//   console.log(`[DriveSync] launchGoogleAuth: Starting with promptType: ${promptType}`);
+export async function launchGoogleAuth(additionalScopes = []) {
+//   console.log(`[DriveSync] launchGoogleAuth: Starting with additional scopes: ${additionalScopes.join(' ')}`);
 
   return new Promise(async (resolve, reject) => {
+    const requested = Array.from(new Set([...BASE_SCOPES, ...additionalScopes]));
+    const scopeStr = requested.join(' ');
+    const prevScopes = gToken?.scopes ? gToken.scopes.split(' ') : [];
+    const addingNew = requested.some(s => !prevScopes.includes(s));
+    const promptType = addingNew ? 'consent' : 'none';
     if (!window.google || !window.google.accounts) {
 //       console.log('[DriveSync] launchGoogleAuth: GIS SDK not found, attempting to load...');
       try {
@@ -190,14 +202,15 @@ export async function launchGoogleAuth(promptType = 'consent') {
 //       console.log('[DriveSync] launchGoogleAuth: Initializing token client...');
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: SCOPES,
+        scope: scopeStr,
         callback: async (tok) => {
 //           console.log('[DriveSync] launchGoogleAuth: Token received, expiry:', new Date(Date.now() + (tok.expires_in || 0) * 1000));
           // Initialize gToken with essential token info and placeholder for profile
-          gToken = { 
-            access: tok.access_token, 
+          gToken = {
+            access: tok.access_token,
             expiry: Date.now() + (tok.expires_in || 0) * 1000,
-            userProfile: null // Initialize userProfile field
+            userProfile: null, // Initialize userProfile field
+            scopes: scopeStr
           };
           
           // Fetch profile data and attach it to the gToken object
@@ -229,7 +242,7 @@ export async function launchGoogleAuth(promptType = 'consent') {
       });
 
 //       console.log('[DriveSync] launchGoogleAuth: Requesting access token...');
-      tokenClient.requestAccessToken({ prompt: promptType });
+      tokenClient.requestAccessToken({ prompt: promptType, scope: scopeStr });
 
     } catch (error) {
         console.error('[DriveSync] launchGoogleAuth: Synchronous error during token client init:', error);
@@ -255,6 +268,9 @@ async function hydrateToken(){
   if(saved && saved.expiry && Date.now() < saved.expiry-30_000){
 //     console.log('[DriveSync] hydrateToken: Token loaded from localStorage and is fresh.', saved.userProfile ? 'Profile also loaded.' : 'Profile not in token.');
     gToken = saved;
+    if(!gToken.scopes){
+      gToken.scopes = BASE_SCOPES.join(' ');
+    }
     if(!gToken.userProfile){
       try {
         await fetchAndStoreUserProfile(gToken.access);
@@ -288,9 +304,10 @@ async function attemptRefreshToken(){
   if(!isConnected()) return;
   if(Date.now() < gToken.expiry-120_000) return; // still fresh (>2 min)
   return new Promise((resolve)=>{
+    const scopeStr = gToken?.scopes || BASE_SCOPES.join(' ');
     google.accounts.oauth2.initTokenClient({
       client_id: window.VITE_GDRIVE_CLIENT_ID,
-      scope: SCOPES,
+      scope: scopeStr,
       callback: async tok => {
         if(tok.error || !tok.access_token){
           console.warn('[Drive] silent refresh failed, disconnecting');
@@ -301,10 +318,11 @@ async function attemptRefreshToken(){
         // Preserve user profile data when refreshing token
         const previousUserProfile = gToken.userProfile;
         
-        gToken = { 
-          access: tok.access_token, 
+        gToken = {
+          access: tok.access_token,
           expiry: Date.now() + tok.expires_in * 1000,
-          userProfile: previousUserProfile 
+          userProfile: previousUserProfile,
+          scopes: scopeStr
         };
         
         // Try to refresh the profile data as well
@@ -321,7 +339,7 @@ async function attemptRefreshToken(){
         localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(gToken));
         resolve();
       }
-    }).requestAccessToken({prompt:'none'});
+    }).requestAccessToken({prompt:'none', scope: scopeStr});
   });
 }
 
