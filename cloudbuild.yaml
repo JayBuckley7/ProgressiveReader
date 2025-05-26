@@ -57,7 +57,7 @@ steps:
           --allow-unauthenticated \
           --set-env-vars=APP_ENV=$_ENVIRONMENT \
           --project=$PROJECT_ID \
-          --vpc-connector=projects/floofgg/regions/us-central1/connectors/progressivereader-vpc-connector \
+          --vpc-connector=projects/floofgg/locations/us-central1/connectors/progressivereader-vpc-connector \
           --vpc-egress=private-ranges-only
 
 images:
