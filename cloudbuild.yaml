@@ -57,8 +57,9 @@ steps:
           --allow-unauthenticated \
           --set-env-vars=APP_ENV=$_ENVIRONMENT \
           --project=$PROJECT_ID \
-          --vpc-connector=projects/floofgg/locations/us-central1/connectors/progressivereader-vpc-connector \
+          --vpc-connector=floof-connector \
           --vpc-egress=private-ranges-only
+
 
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
