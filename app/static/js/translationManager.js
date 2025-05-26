@@ -141,9 +141,30 @@ function ensureChapterWrapper(html) {
     temp.innerHTML = html.trim();
 
     const first = temp.firstElementChild;
-    const isWrapped = first && first.classList && first.classList.contains('chapter-content');
+    const isWrapped =
+        first && first.classList && first.classList.contains('chapter-content');
 
     return isWrapped ? html : `<div class="chapter-content">${html}</div>`;
+}
+
+/**
+ * Remove the existing `.chapter-content` wrapper if it is the only child of
+ * the provided area. This prevents nested wrappers when inserting new
+ * translations.
+ * @param {Element} area - The `.epub-content` element containing the chapter.
+ */
+function stripExistingWrapper(area) {
+    if (!area) return;
+
+    const first = area.firstElementChild;
+    if (
+        first &&
+        first.classList &&
+        first.classList.contains('chapter-content') &&
+        area.children.length === 1
+    ) {
+        area.innerHTML = first.innerHTML;
+    }
 }
 
 function getCompleteHtmlElements(html) {
@@ -284,6 +305,7 @@ async function callTranslateAPI(payload) {
                                     // We have enough content to update the display
                                     lastRenderedLength = accumulatedHtml.length;
                                     // Only show complete elements (exclude any partial content at the end)
+                                    stripExistingWrapper(contentArea);
                                     contentArea.innerHTML = ensureChapterWrapper(buffer.innerHTML);
                                     
                                     // Scroll to keep current position visible if needed
@@ -298,6 +320,7 @@ async function callTranslateAPI(payload) {
                                 finalTranslatedText = parsedData.translated_text;
                                 // Ensure the final state is set correctly with the complete translation
                                 const normalizedFinal = ensureChapterWrapper(finalTranslatedText);
+                                stripExistingWrapper(contentArea);
                                 contentArea.innerHTML = normalizedFinal;
                                 
                                 // Save the complete translation to cache
@@ -339,6 +362,7 @@ async function callTranslateAPI(payload) {
             const data = await response.json();
             if (data.translated_text) {
                 const normalized = ensureChapterWrapper(data.translated_text);
+                stripExistingWrapper(contentArea);
                 contentArea.innerHTML = normalized;
                 if (window.storageManager) {
                     window.storageManager.saveTranslationToLocal(
@@ -410,6 +434,7 @@ function _attachEventListeners() {
                         originalPageContent = contentArea.innerHTML;
                      }
                      const normalized = ensureChapterWrapper(cachedTranslation);
+                     stripExistingWrapper(contentArea);
                      contentArea.innerHTML = normalized;
                      if (normalized !== cachedTranslation && window.storageManager) {
                          window.storageManager.saveTranslationToLocal(
@@ -433,6 +458,7 @@ function _attachEventListeners() {
                     originalPageContent = contentArea.innerHTML;
                 }
                 const normalized = ensureChapterWrapper(cachedTranslation);
+                stripExistingWrapper(contentArea);
                 contentArea.innerHTML = normalized;
                 if (normalized !== cachedTranslation && window.storageManager) {
                     window.storageManager.saveTranslationToLocal(
@@ -460,6 +486,7 @@ function _attachEventListeners() {
                         originalPageContent = contentArea.innerHTML;
                     }
                     const normalized = ensureChapterWrapper(cachedTranslation);
+                    stripExistingWrapper(contentArea);
                     contentArea.innerHTML = normalized;
                     if (normalized !== cachedTranslation && window.storageManager) {
                         window.storageManager.saveTranslationToLocal(
@@ -537,6 +564,7 @@ function initTranslationManager(config) {
                 if (!isLoadingPlaceholder) {
                     originalPageContent = contentArea.innerHTML; // Store current before overwriting
                     const normalized = ensureChapterWrapper(cachedTranslation);
+                    stripExistingWrapper(contentArea);
                     contentArea.innerHTML = normalized;
                     if (normalized !== cachedTranslation) {
                         window.storageManager.saveTranslationToLocal(
