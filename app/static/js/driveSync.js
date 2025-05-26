@@ -3,6 +3,14 @@ import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, get
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { syncMetadata } from './metadataSync.js';
 
+// Helper function to add a timeout to a Promise
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+  ]);
+}
+
 // Client ID Shim
 if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
     window.VITE_GDRIVE_CLIENT_ID = window.GDRIVE_CLIENT_ID;
@@ -551,9 +559,10 @@ async function autoUploadLocalBooks() {
   const userId = getUserProfile()?.email;
   if (userId) {
     try {
-      await syncMetadata(userId);
+      console.log('[DriveSync] Calling syncMetadata...');
+      await withTimeout(syncMetadata(userId), 3000);  // timeout after 3s
     } catch (e) {
-      console.warn('[DriveSync] autoUploadLocalBooks: syncMetadata failed', e);
+      console.warn('[DriveSync] syncMetadata failed or timed out:', e);
     }
   }
   const metas = await getLocalBooksMetadata();
@@ -636,9 +645,10 @@ export async function init(isExplicitCall = false){
     // Dispatch event to indicate Google Drive connection is confirmed
     try {
       await seedDriveFolder();
+      window.dispatchEvent(new Event('drive-online'));
+      await new Promise(r => setTimeout(r, 0));
       await runSyncLoop();
       startScheduler();
-      window.dispatchEvent(new Event('drive-online'));
 //       console.log("[DriveSync] init: Completed successfully (connected state after hydrateToken).");
     } catch (err) {
       console.error("[DriveSync] init: Error during connected state setup (post-hydrateToken):", err);
@@ -663,9 +673,10 @@ export async function init(isExplicitCall = false){
           setDriveConnectedCookie(true); // Ensure cookie is set after successful explicit auth
           // Full setup after successful explicit auth
           await seedDriveFolder();
+          window.dispatchEvent(new Event('drive-online'));
+          await new Promise(r => setTimeout(r, 0));
           await runSyncLoop();
           startScheduler();
-          window.dispatchEvent(new Event('drive-online'));
 //           console.log("[DriveSync] init: Completed successfully (connected state after launchGoogleAuth).");
         } else {
           console.warn("[DriveSync] init: launchGoogleAuth completed, but still not connected.");

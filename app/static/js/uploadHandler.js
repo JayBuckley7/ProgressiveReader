@@ -111,7 +111,7 @@ async function handleFileSelect() {
         formData.append('file', tinyPlaceholder, file.name);
         
         try {
-            await fetch('/book/upload', {
+            await fetch('/upload', {
                 method: 'POST',
                 body: formData,
             });

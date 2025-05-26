@@ -6,6 +6,8 @@ steps:
       - build
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
       - .
 
   # 2. Push to Artifact Registry
@@ -15,6 +17,13 @@ steps:
     args:
       - push
       - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+
+  - name: gcr.io/cloud-builders/docker
+    id: Push latest tag
+    waitFor: [Build Docker Image]
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
 
   # 3. Run Build Verification Tests (BVT)
   - name: gcr.io/cloud-builders/gcloud
