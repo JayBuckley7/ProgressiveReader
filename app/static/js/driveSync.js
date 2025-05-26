@@ -3,6 +3,14 @@ import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, get
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { syncMetadata } from './metadataSync.js';
 
+// Helper function to add a timeout to a Promise
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+  ]);
+}
+
 // Client ID Shim
 if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
     window.VITE_GDRIVE_CLIENT_ID = window.GDRIVE_CLIENT_ID;
@@ -552,9 +560,9 @@ async function autoUploadLocalBooks() {
   if (userId) {
     try {
       console.log('[DriveSync] Calling syncMetadata...');
-      await syncMetadata(userId);
+      await withTimeout(syncMetadata(userId), 3000);  // timeout after 3s
     } catch (e) {
-      console.warn('[DriveSync] autoUploadLocalBooks: syncMetadata failed', e);
+      console.warn('[DriveSync] syncMetadata failed or timed out:', e);
     }
   }
   const metas = await getLocalBooksMetadata();
