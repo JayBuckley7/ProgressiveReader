@@ -34,7 +34,7 @@ def translate_content():
         r = redis.Redis.from_url(current_app.config['REDIS_URL'])
         if r.exists(request_token):
             current_app.logger.info(f"Duplicate translation request denied: {request_token}")
-            return jsonify({"error": "Duplicate translation request"}), 429
+        #    return jsonify({"error": "Duplicate translation request"}), 429
         else:
             r.set(request_token, 1, ex=300)
     except Exception as redis_exc:

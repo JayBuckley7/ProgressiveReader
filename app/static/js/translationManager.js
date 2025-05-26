@@ -127,6 +127,46 @@ function createBufferElement() {
     return translationBuffer;
 }
 
+/**
+ * Ensure the translated HTML is wrapped in a `.chapter-content` element.
+ * Older cached translations may lack this wrapper, which breaks features
+ * like text-to-speech that expect it.
+ * @param {string} html - Raw translated HTML from cache or API.
+ * @returns {string} Normalized HTML guaranteed to include the wrapper.
+ */
+function ensureChapterWrapper(html) {
+    if (!html) return html;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = html.trim();
+
+    const first = temp.firstElementChild;
+    const isWrapped =
+        first && first.classList && first.classList.contains('chapter-content');
+
+    return isWrapped ? html : `<div class="chapter-content">${html}</div>`;
+}
+
+/**
+ * Remove the existing `.chapter-content` wrapper if it is the only child of
+ * the provided area. This prevents nested wrappers when inserting new
+ * translations.
+ * @param {Element} area - The `.epub-content` element containing the chapter.
+ */
+function stripExistingWrapper(area) {
+    if (!area) return;
+
+    const first = area.firstElementChild;
+    if (
+        first &&
+        first.classList &&
+        first.classList.contains('chapter-content') &&
+        area.children.length === 1
+    ) {
+        area.innerHTML = first.innerHTML;
+    }
+}
+
 function getCompleteHtmlElements(html) {
     // Create temporary element to parse HTML
     const temp = document.createElement('div');
@@ -265,7 +305,8 @@ async function callTranslateAPI(payload) {
                                     // We have enough content to update the display
                                     lastRenderedLength = accumulatedHtml.length;
                                     // Only show complete elements (exclude any partial content at the end)
-                                    contentArea.innerHTML = `<div class="chapter-content">${buffer.innerHTML}</div>`;
+                                    stripExistingWrapper(contentArea);
+                                    contentArea.innerHTML = ensureChapterWrapper(buffer.innerHTML);
                                     
                                     // Scroll to keep current position visible if needed
                                     if (contentArea.scrollHeight > contentArea.clientHeight) {
@@ -278,14 +319,16 @@ async function callTranslateAPI(payload) {
                             if (parsedData.complete && parsedData.translated_text) {
                                 finalTranslatedText = parsedData.translated_text;
                                 // Ensure the final state is set correctly with the complete translation
-                                contentArea.innerHTML = `<div class="chapter-content">${finalTranslatedText}</div>`;
+                                const normalizedFinal = ensureChapterWrapper(finalTranslatedText);
+                                stripExistingWrapper(contentArea);
+                                contentArea.innerHTML = normalizedFinal;
                                 
                                 // Save the complete translation to cache
                                 if (window.storageManager) {
                                     window.storageManager.saveTranslationToLocal(
                                         currentBookIdForTranslation,
                                         currentPageIndexForTranslation,
-                                        `<div class="chapter-content">${finalTranslatedText}</div>`
+                                        normalizedFinal
                                     );
                                 }
                             }
@@ -318,16 +361,18 @@ async function callTranslateAPI(payload) {
             
             const data = await response.json();
             if (data.translated_text) {
-                contentArea.innerHTML = `<div class="chapter-content">${data.translated_text}</div>`;
+                const normalized = ensureChapterWrapper(data.translated_text);
+                stripExistingWrapper(contentArea);
+                contentArea.innerHTML = normalized;
                 if (window.storageManager) {
                     window.storageManager.saveTranslationToLocal(
                         currentBookIdForTranslation,
                         currentPageIndexForTranslation,
-                        `<div class="chapter-content">${data.translated_text}</div>`
+                        normalized
                     );
                 }
                 updateDisplayButtons();
-            } else { 
+            } else {
                 throw new Error('No translation returned from server.'); 
             }
         }
@@ -388,7 +433,16 @@ function _attachEventListeners() {
                      if (!originalPageContent || contentArea.innerHTML === trueOriginalServerContent) {
                         originalPageContent = contentArea.innerHTML;
                      }
-                     contentArea.innerHTML = cachedTranslation;
+                     const normalized = ensureChapterWrapper(cachedTranslation);
+                     stripExistingWrapper(contentArea);
+                     contentArea.innerHTML = normalized;
+                     if (normalized !== cachedTranslation && window.storageManager) {
+                         window.storageManager.saveTranslationToLocal(
+                             currentBookIdForTranslation,
+                             currentPageIndexForTranslation,
+                             normalized
+                         );
+                     }
                      updateDisplayButtons();
                 }
             }
@@ -403,7 +457,16 @@ function _attachEventListeners() {
                 if (!originalPageContent || contentArea.innerHTML === trueOriginalServerContent) {
                     originalPageContent = contentArea.innerHTML;
                 }
-                contentArea.innerHTML = cachedTranslation;
+                const normalized = ensureChapterWrapper(cachedTranslation);
+                stripExistingWrapper(contentArea);
+                contentArea.innerHTML = normalized;
+                if (normalized !== cachedTranslation && window.storageManager) {
+                    window.storageManager.saveTranslationToLocal(
+                        currentBookIdForTranslation,
+                        currentPageIndexForTranslation,
+                        normalized
+                    );
+                }
                 updateDisplayButtons();
             } else {
                 alert("No cached translation found for this page.");
@@ -422,7 +485,16 @@ function _attachEventListeners() {
                     if (!originalPageContent || contentArea.innerHTML === trueOriginalServerContent) {
                         originalPageContent = contentArea.innerHTML;
                     }
-                    contentArea.innerHTML = cachedTranslation;
+                    const normalized = ensureChapterWrapper(cachedTranslation);
+                    stripExistingWrapper(contentArea);
+                    contentArea.innerHTML = normalized;
+                    if (normalized !== cachedTranslation && window.storageManager) {
+                        window.storageManager.saveTranslationToLocal(
+                            currentBookIdForTranslation,
+                            currentPageIndexForTranslation,
+                            normalized
+                        );
+                    }
                     updateDisplayButtons();
                     window.settingsModalManager.closeSettingsModal();
                 }
@@ -491,7 +563,16 @@ function initTranslationManager(config) {
                 const isLoadingPlaceholder = contentArea.innerHTML.includes("Loading content from storage");
                 if (!isLoadingPlaceholder) {
                     originalPageContent = contentArea.innerHTML; // Store current before overwriting
-                    contentArea.innerHTML = cachedTranslation;
+                    const normalized = ensureChapterWrapper(cachedTranslation);
+                    stripExistingWrapper(contentArea);
+                    contentArea.innerHTML = normalized;
+                    if (normalized !== cachedTranslation) {
+                        window.storageManager.saveTranslationToLocal(
+                            currentBookIdForTranslation,
+                            currentPageIndexForTranslation,
+                            normalized
+                        );
+                    }
                     updateDisplayButtons();
                     autoloadInitialized = true;
                 } else {
