@@ -40,7 +40,7 @@ steps:
           (echo "BVT failed for $${HEALTH_CHECK_URL}" && exit 1)
         echo "BVT passed for $${HEALTH_CHECK_URL}"
 
-  # 4. Deploy to Cloud Run (conditional on BVT success if implemented)
+  # 4. Deploy to Cloud Run (with VPC access)
   - name: gcr.io/cloud-builders/gcloud
     id: Deploy to Cloud Run
     waitFor: [BVT]
@@ -56,6 +56,8 @@ steps:
           --platform=managed \
           --allow-unauthenticated \
           --set-env-vars=APP_ENV=$_ENVIRONMENT \
+          --vpc-connector=floof-connector \
+          --vpc-egress=all \
           --project=$PROJECT_ID
 
 images:
