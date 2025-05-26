@@ -278,7 +278,7 @@ async function callTranslateAPI(payload) {
                                     // We have enough content to update the display
                                     lastRenderedLength = accumulatedHtml.length;
                                     // Only show complete elements (exclude any partial content at the end)
-                                    contentArea.innerHTML = `<div class="chapter-content">${buffer.innerHTML}</div>`;
+                                    contentArea.innerHTML = ensureChapterWrapper(buffer.innerHTML);
                                     
                                     // Scroll to keep current position visible if needed
                                     if (contentArea.scrollHeight > contentArea.clientHeight) {
@@ -291,14 +291,15 @@ async function callTranslateAPI(payload) {
                             if (parsedData.complete && parsedData.translated_text) {
                                 finalTranslatedText = parsedData.translated_text;
                                 // Ensure the final state is set correctly with the complete translation
-                                contentArea.innerHTML = `<div class="chapter-content">${finalTranslatedText}</div>`;
+                                const normalizedFinal = ensureChapterWrapper(finalTranslatedText);
+                                contentArea.innerHTML = normalizedFinal;
                                 
                                 // Save the complete translation to cache
                                 if (window.storageManager) {
                                     window.storageManager.saveTranslationToLocal(
                                         currentBookIdForTranslation,
                                         currentPageIndexForTranslation,
-                                        `<div class="chapter-content">${finalTranslatedText}</div>`
+                                        normalizedFinal
                                     );
                                 }
                             }
@@ -331,16 +332,17 @@ async function callTranslateAPI(payload) {
             
             const data = await response.json();
             if (data.translated_text) {
-                contentArea.innerHTML = `<div class="chapter-content">${data.translated_text}</div>`;
+                const normalized = ensureChapterWrapper(data.translated_text);
+                contentArea.innerHTML = normalized;
                 if (window.storageManager) {
                     window.storageManager.saveTranslationToLocal(
                         currentBookIdForTranslation,
                         currentPageIndexForTranslation,
-                        `<div class="chapter-content">${data.translated_text}</div>`
+                        normalized
                     );
                 }
                 updateDisplayButtons();
-            } else { 
+            } else {
                 throw new Error('No translation returned from server.'); 
             }
         }
