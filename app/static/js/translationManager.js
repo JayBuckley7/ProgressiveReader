@@ -136,8 +136,14 @@ function createBufferElement() {
  */
 function ensureChapterWrapper(html) {
     if (!html) return html;
-    const hasWrapper = /class=["']chapter-content["']/.test(html);
-    return hasWrapper ? html : `<div class="chapter-content">${html}</div>`;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = html.trim();
+
+    const first = temp.firstElementChild;
+    const isWrapped = first && first.classList && first.classList.contains('chapter-content');
+
+    return isWrapped ? html : `<div class="chapter-content">${html}</div>`;
 }
 
 function getCompleteHtmlElements(html) {
