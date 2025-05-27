@@ -57,3 +57,9 @@ def tos():
     """Render the Terms of Service page."""
     return render_template('tos.html')
 
+
+@main_bp.route('/privacy')
+def privacy():
+    """Render the Privacy Policy page."""
+    return render_template('privacy.html')
+
