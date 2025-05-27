@@ -547,3 +547,13 @@ body {
 }
 .danger-btn:hover { opacity: 0.85; }
 .danger-btn.secondary { background: #6c757d; }
+
+/* --- Legal Notice --- */
+.legal-blurb {
+  font-size: 0.8rem;
+  color: #555;
+  text-align: center;
+  max-width: 700px;
+  margin: 1.5rem auto;
+  line-height: 1.4;
+}
