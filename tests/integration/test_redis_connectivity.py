@@ -1,13 +1,14 @@
 import os
 import unittest
 import redis
-from config import Config
 
 class RedisConnectivityTestCase(unittest.TestCase):
     """Integration test to verify Redis connectivity."""
 
     def setUp(self):
-        redis_url = os.environ.get("REDIS_URL", Config.REDIS_URL)
+        redis_url = os.environ.get("REDIS_URL")
+        if not redis_url:
+            self.skipTest("REDIS_URL environment variable not set")
         self.redis = redis.Redis.from_url(redis_url)
         self.test_key = "test:connectivity"
 
