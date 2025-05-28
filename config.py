@@ -2,7 +2,7 @@
 import os
 
 class Config:
-    SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'supersecretkey-fallback')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecretkey-fallback')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     SERVER_DEFAULT_MODEL = os.environ.get('DEFAULT_MODEL', 'gpt-4o-mini')
     UPLOAD_FOLDER = 'user_epubs'
