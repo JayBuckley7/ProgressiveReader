@@ -76,8 +76,14 @@ if (btnClearRedis) {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Successfully cleared ${result.deleted_count} entries for user ${userId}. It is recommended to reload the page.`);
-        location.reload();
+        if (result.success) {
+          alert(
+            `Successfully cleared data for user ${userId}. It is recommended to reload the page.`
+          );
+          location.reload();
+        } else {
+          alert('Failed to clear Redis data.');
+        }
       } else {
         const errorResult = await response.text();
         alert(`Failed to clear Redis data. Server responded with ${response.status}: ${errorResult}`);
