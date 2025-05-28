@@ -14,14 +14,12 @@ class ApiTranslateTestCase(unittest.TestCase):
     @patch('app.routes.api.OpenAI')
     def test_missing_json_body(self, mock_openai):
         """Return 400 if the request body has no JSON."""
-        mock_redis.from_url.return_value = MagicMock(exists=MagicMock(return_value=False))
         resp = self.client.post('/api/translate', data='', content_type='application/json')
         self.assertEqual(resp.status_code, 400)
 
     @patch('app.routes.api.OpenAI')
     def test_missing_required_fields(self, mock_openai):
         """Return 400 when content, target_language or model is absent."""
-        mock_redis.from_url.return_value = MagicMock(exists=MagicMock(return_value=False))
         resp = self.client.post('/api/translate', json={'content': '<p>hi</p>'})
         self.assertEqual(resp.status_code, 400)
 
@@ -29,7 +27,6 @@ class ApiTranslateTestCase(unittest.TestCase):
     def test_translate_success_with_user_key(self, mock_openai):
         """Successful translation when API key is provided in payload."""
         self.app.config['OPENAI_API_KEY'] = None
-        mock_redis.from_url.return_value = MagicMock(exists=MagicMock(return_value=False))
         mock_openai.return_value.chat.completions.create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content='```html<p>hola</p>```'))]
         )
@@ -48,7 +45,6 @@ class ApiTranslateTestCase(unittest.TestCase):
     def test_no_api_key_configured(self, mock_openai):
         """Return 400 when neither server nor user API key is available."""
         self.app.config['OPENAI_API_KEY'] = None
-        mock_redis.from_url.return_value = MagicMock(exists=MagicMock(return_value=False))
         payload = {
             'content': '<p>hello</p>',
             'target_language': 'Spanish',
