@@ -2,6 +2,7 @@
 import os
 import logging
 from flask import Flask, send_from_directory, jsonify
+from flask_login import LoginManager
 from config import Config
 
 # Define a filter for logging
@@ -65,11 +66,15 @@ def create_app(config_class=Config) -> Flask:
         from .routes import reader # Import the reader blueprint
         from .routes import api  # Import the api blueprint
         from .routes import metadata  # Redis metadata endpoints
+        from .routes import auth
+        login_manager = auth.login_manager
+        login_manager.init_app(app)
         # Register Blueprints
         app.register_blueprint(main.main_bp)
         app.register_blueprint(reader.reader_bp) # Register the reader blueprint
         app.register_blueprint(api.api_bp)  # Register the api blueprint
         app.register_blueprint(metadata.metadata_bp)  # Register metadata blueprint
+        app.register_blueprint(auth.auth_bp)
 
         # You might also initialize extensions here if needed
         # e.g., db.init_app(app)

@@ -9,6 +9,7 @@ class MetadataApiTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     @patch('app.routes.metadata.redis.Redis')
     def test_store_and_fetch(self, mock_redis_cls):

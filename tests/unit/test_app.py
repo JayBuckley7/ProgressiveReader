@@ -13,6 +13,7 @@ class AppFactoryTestCase(unittest.TestCase):
             return 'Hello, Test!'
 
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     def test_dummy_route(self):
         response = self.client.get('/test-hello')
@@ -50,6 +51,7 @@ class ReaderRouteTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     def test_read_route_redirects_without_index(self):
         response = self.client.get('/read/testbook')

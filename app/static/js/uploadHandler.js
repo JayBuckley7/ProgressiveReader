@@ -1,5 +1,6 @@
 import { addBook, getBook, getBookMetadata } from './dbService.js';
 import * as driveSync from './driveSync.js';
+import { getUserId } from './userService.js';
 import { renderBookshelf } from './bookshelfUI.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { TextProcessorWrapper } from './textProcessor.js';
@@ -132,7 +133,7 @@ async function handleFileSelect() {
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
 //         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
 
-        const userId = driveSync.getUserProfile()?.email;
+        const userId = await getUserId();
         if (userId) {
             const metadata = await getBookMetadata(bookIdFromDB);
             const { coverImageBlob, ...metaWithoutCover } = metadata;

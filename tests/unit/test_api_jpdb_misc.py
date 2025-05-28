@@ -10,6 +10,7 @@ class JpdbMiscEndpointsTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     def test_mine_jpdb_word_success(self):
         """A valid request returns success for mining a word."""

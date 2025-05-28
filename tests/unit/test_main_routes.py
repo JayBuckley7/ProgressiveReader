@@ -12,6 +12,7 @@ class MainRoutesTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     def test_upload_no_file(self):
         """Upload endpoint should reject requests without a file part."""

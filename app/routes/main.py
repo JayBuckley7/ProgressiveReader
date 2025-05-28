@@ -1,5 +1,6 @@
 """Blueprint routes for main pages and index handling."""
 from flask import Blueprint, render_template, session, request, redirect, url_for, current_app, jsonify
+from flask_login import login_required
 import os
 import uuid
 # import tempfile # No longer needed
@@ -8,11 +9,13 @@ import uuid
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
+@login_required
 def index():
     """Return the index page; JavaScript fills in the book list."""
     return render_template('index.html', books=[])
 
 @main_bp.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     """Validate the uploaded file and return a JSON status message."""
     if 'file' not in request.files:
@@ -33,6 +36,7 @@ def upload_file():
 
 
 @main_bp.route('/delete/<filename>', methods=['POST'])
+@login_required
 def delete_book(filename):
     """Return an error because deletion happens in the browser."""
     return jsonify({'success': False, 'message': 'Deletion handled client-side via IndexedDB.'}), 400

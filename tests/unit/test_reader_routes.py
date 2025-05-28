@@ -11,6 +11,7 @@ class ReaderRoutesTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     def test_read_route_with_index(self):
         """/read/<book_id>/<int:index> returns HTTP 200."""

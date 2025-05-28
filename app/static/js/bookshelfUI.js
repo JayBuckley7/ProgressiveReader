@@ -1,5 +1,6 @@
 import { getLocalBooksMetadata, deleteBook, addBook, updateBookCover, getBook } from './dbService.js';
 import { getMergedBooksMetadata, syncMetadata } from './metadataSync.js';
+import { getUserId } from './userService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { createBookItem } from './bookitem.js';
 
@@ -40,7 +41,7 @@ export async function renderBookshelf(driveSync, searchQuery = "") {
        1  Gather metadata (local + remote)                  
        ───────────────────────────────────────────────────*/
 
-    const userId = driveSync?.getUserProfile?.()?.email || null;
+    const userId = await getUserId();
 
     if (userId && driveSync?.isConnected?.()) {
       await syncMetadata(userId);

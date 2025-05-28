@@ -1,5 +1,6 @@
 """Blueprint providing translation and content API routes."""
 from flask import Blueprint, request, jsonify, session, current_app, Response
+from flask_login import login_required
 from openai import OpenAI
 import requests
 import re
@@ -10,6 +11,7 @@ import hashlib
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/translate', methods=['POST'])
+@login_required
 def translate_content():
     """Translate HTML content with OpenAI and return JSON or stream events."""
     data = request.get_json()
@@ -127,6 +129,7 @@ def translate_content():
         return jsonify({"error": f"Error during translation: {e}"}), 500
 
 @api_bp.route('/delete_cached_translation', methods=['POST'])
+@login_required
 def delete_cached_translation_route():
     """Acknowledge removal of cached translation on the client."""
     data = request.get_json()
@@ -137,6 +140,7 @@ def delete_cached_translation_route():
     return jsonify({'success': True, 'message': 'Client-side cache deletion acknowledged.'})
 
 @api_bp.route('/toggle_jlpt', methods=['POST'])
+@login_required
 def toggle_jlpt():
     """Enable or disable JLPT highlighting in the session."""
     data = request.get_json()
@@ -149,6 +153,7 @@ def toggle_jlpt():
     return jsonify({'success': True, 'jlpt_highlighting_enabled': is_enabled})
 
 @api_bp.route('/due_cards', methods=['POST'])
+@login_required
 def due_cards():
     """Return JPDB due cards for the authenticated user."""
     data = request.get_json(silent=True) or {}
@@ -170,6 +175,7 @@ def due_cards():
     return jsonify(cards)
 
 @api_bp.route('/get_jpdb_data', methods=['POST'])
+@login_required
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments."""
     data = request.get_json()
@@ -405,6 +411,7 @@ def get_jpdb_data():
     return jsonify(all_processed_tokens_globally_offset) 
 
 @api_bp.route('/mine_jpdb_word', methods=['POST'])
+@login_required
 def mine_jpdb_word():
     """Send a request to add a vocabulary word to a JPDB deck."""
     data = request.get_json()
@@ -431,6 +438,7 @@ def mine_jpdb_word():
     return jsonify({"success": True})
 
 @api_bp.route('/update_jpdb_word_state', methods=['POST'])
+@login_required
 def update_jpdb_word_state():
     """Update the study state of a JPDB vocabulary entry."""
     data = request.get_json()
@@ -462,6 +470,7 @@ def update_jpdb_word_state():
     return jsonify({"success": True, "newState": new_state})
 
 @api_bp.route('/review_jpdb_card', methods=['POST'])
+@login_required
 def review_jpdb_card():
     """Record a review rating for a JPDB vocabulary card."""
     data = request.get_json()

@@ -2,12 +2,14 @@
 
 import json
 from flask import Blueprint, request, jsonify, current_app
+from flask_login import login_required
 import redis
 
 metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 
 
 @metadata_bp.route("/<user_id>/books", methods=["GET"])
+@login_required
 def get_all_books(user_id):
     """Return all stored metadata for a user."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
@@ -17,6 +19,7 @@ def get_all_books(user_id):
 
 
 @metadata_bp.route("/<user_id>/book/<book_id>", methods=["POST"])
+@login_required
 def store_book(user_id, book_id):
     """Store metadata for a specific book including coverDriveId and coverMimeType."""
     data = request.get_json()
@@ -41,6 +44,7 @@ def store_book(user_id, book_id):
 
 
 @metadata_bp.route("/<user_id>/book/<book_id>", methods=["DELETE"])
+@login_required
 def delete_book(user_id, book_id):
     """Delete stored metadata for a specific book."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])
@@ -58,6 +62,7 @@ def delete_book(user_id, book_id):
 
 
 @metadata_bp.route("/<user_id>/clear_all_entries", methods=["DELETE"])
+@login_required
 def clear_all_entries(user_id):
     """Delete all Redis metadata entries for the specified user."""
     r = redis.Redis.from_url(current_app.config["REDIS_URL"])

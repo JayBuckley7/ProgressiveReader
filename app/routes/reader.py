@@ -18,6 +18,7 @@ from flask import (
     redirect,
     url_for,
 )
+from flask_login import login_required
 
 reader_bp = Blueprint("reader", __name__)
 
@@ -27,6 +28,7 @@ reader_bp = Blueprint("reader", __name__)
 # ──────────────────────────────────────────────────────────────────────────
 @reader_bp.route("/read/<book_id>/<int:item_index>", endpoint="read_item_at_index")
 @reader_bp.route("/read/<book_id>", defaults={'item_index': None}, endpoint="read_item_no_index")
+@login_required
 def reader(book_id: str, item_index: int = None):
     """
     Serve the minimal reader shell; the browser does all EPUB work.
@@ -57,6 +59,7 @@ def reader(book_id: str, item_index: int = None):
 
 @reader_bp.route("/demo/read/<book_id>/<int:item_index>", endpoint="read_demo_item_at_index")
 @reader_bp.route("/demo/read/<book_id>", defaults={'item_index': None}, endpoint="read_demo_item_no_index")
+@login_required
 def reader_demo(book_id: str, item_index: int = None):
     # Ensure current_index passed to template is explicitly None if item_index is None
     template_current_index = item_index if item_index is not None else None

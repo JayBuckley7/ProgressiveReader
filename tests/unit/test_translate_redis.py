@@ -8,6 +8,7 @@ class RedisCheckTestCase(unittest.TestCase):
         self.app.config['TESTING'] = True
         self.app.config['OPENAI_API_KEY'] = 'dummy'
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     @patch('app.routes.api.redis.Redis')
     def test_duplicate_request_denied(self, mock_redis_cls):

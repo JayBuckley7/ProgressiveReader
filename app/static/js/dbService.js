@@ -1,4 +1,5 @@
 import { EpubProcessorWrapper } from './epubProcessor.js';
+import { getUserId } from './userService.js';
 
 /**
  * Handles IndexedDB operations for storing and retrieving book data locally.
@@ -356,7 +357,7 @@ export async function deleteBook(bookId, driveId = null, driveSync = null) {
         transaction.oncomplete = async () => {
 //             console.log(`[DBService] Successfully deleted book ${bookId} from IndexedDB.`);
 
-            const userId = driveSync?.getUserProfile?.()?.email;
+            const userId = await getUserId();
             if (userId) {
                 try {
                     await fetch(`/metadata/${userId}/book/${bookId}`, { method: 'DELETE' });

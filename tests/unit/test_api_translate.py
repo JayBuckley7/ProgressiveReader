@@ -10,6 +10,7 @@ class ApiTranslateTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
 
     @patch('app.routes.api.redis.Redis')
     @patch('app.routes.api.OpenAI')

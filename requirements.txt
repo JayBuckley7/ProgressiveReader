@@ -10,3 +10,4 @@ gunicorn==21.2.0
 redis==5.0.4
 async_timeout
 python-dotenv
+Flask-Login==0.6.3

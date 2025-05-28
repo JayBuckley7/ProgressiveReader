@@ -10,6 +10,7 @@ class GetJpdbDataInputValidationTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/login', json={'id': 'user1'})
         patcher = patch('app.routes.api.requests.post')
         self.mock_post = patcher.start()
         self.addCleanup(patcher.stop)

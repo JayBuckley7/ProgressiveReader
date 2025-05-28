@@ -2,6 +2,7 @@
 import { addBook, updateBookMetadata, getBookByDriveId, deleteBookByDriveId, getBookMetadata, getLocalBooksMetadata, getBook } from './dbService.js';
 import { EpubProcessorWrapper } from './epubProcessor.js';
 import { syncMetadata } from './metadataSync.js';
+import { getUserId } from './userService.js';
 
 // Helper function to add a timeout to a Promise
 function withTimeout(promise, ms) {
@@ -574,7 +575,7 @@ async function drainProgressQueue(){if(progressWorkerRunning||!progressQueue.len
   progressWorkerRunning=false;}
 
 async function autoUploadLocalBooks() {
-  const userId = getUserProfile()?.email;
+  const userId = await getUserId();
   if (userId) {
     try {
       console.log('[DriveSync] Calling syncMetadata...');
@@ -818,7 +819,7 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
             console.warn('[DriveSync] Failed to update local metadata with driveId:', e);
         }
 
-        const userId = getUserProfile()?.email;
+        const userId = await getUserId();
         if (userId) {
             try {
                 const meta = await getBookMetadata(bookId);
@@ -956,7 +957,7 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
             console.warn(`[DriveSync] uploadCoverToDrive: Failed to store coverDriveId locally for book: ${bookId}`, e);
         }
 
-        const userId = getUserProfile()?.email;
+        const userId = await getUserId();
         if (userId) {
             try {
                 const meta = await getBookMetadata(bookId);
