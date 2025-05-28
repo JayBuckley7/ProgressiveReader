@@ -47,15 +47,10 @@ class JpdbMiscEndpointsTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn('newState', resp.get_json())
 
-    @patch('app.routes.api.redis.Redis')
     @patch('app.routes.api.OpenAI')
-    def test_translate_streaming(self, mock_openai, mock_redis):
+    def test_translate_streaming(self, mock_openai):
         """Streaming translation yields SSE events with final completion."""
         self.app.config['OPENAI_API_KEY'] = 'server-key'
-        mock_redis.from_url.return_value = MagicMock(
-            exists=MagicMock(return_value=False),
-            set=MagicMock()
-        )
 
         chunk1 = MagicMock(choices=[MagicMock(delta=MagicMock(content='hola '))])
         chunk2 = MagicMock(choices=[MagicMock(delta=MagicMock(content='mundo'))])

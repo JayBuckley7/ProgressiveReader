@@ -132,19 +132,17 @@ async function handleFileSelect() {
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
 //         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
 
-        const userId = driveSync.getUserProfile()?.email;
-        if (userId) {
-            const metadata = await getBookMetadata(bookIdFromDB);
-            const { coverImageBlob, ...metaWithoutCover } = metadata;
-            try {
-                await fetch(`/metadata/${userId}/book/${bookIdFromDB}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(metaWithoutCover),
-                });
-            } catch (e) {
-                console.warn(`${logPrefix} Failed to POST metadata for ${bookIdFromDB}:`, e);
-            }
+        const metadata = await getBookMetadata(bookIdFromDB);
+        const { coverImageBlob, ...metaWithoutCover } = metadata;
+        try {
+            await fetch('/metadata/books', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(metaWithoutCover),
+            });
+        } catch (e) {
+            console.warn(`${logPrefix} Failed to POST metadata for ${bookIdFromDB}:`, e);
         }
 
         let storedRecord = null;

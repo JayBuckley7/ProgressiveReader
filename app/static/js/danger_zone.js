@@ -64,18 +64,19 @@ if (btnClearRedis) {
     }
     const userId = user.email;
 
-    if (!confirm(`Are you absolutely sure you want to delete ALL your data from our servers (Redis) for user ${userId}? This includes all book metadata and reading progress synced across devices. This action cannot be undone.`)) {
+    if (!confirm(`Are you absolutely sure you want to delete ALL your data from our servers for user ${userId}? This includes all book metadata and reading progress synced across devices. This action cannot be undone.`)) {
       return;
     }
 
     try {
-      const response = await fetch(`/metadata/${userId}/clear_all_entries`, {
+      const response = await fetch('/metadata/books', {
         method: 'DELETE',
+        credentials: 'include'
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Successfully cleared ${result.deleted_count} entries from Redis for user ${userId}. It is recommended to reload the page.`);
+        alert(`Successfully cleared ${result.deleted_count} entries for user ${userId}. It is recommended to reload the page.`);
         location.reload();
       } else {
         const errorResult = await response.text();

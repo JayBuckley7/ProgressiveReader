@@ -5,7 +5,6 @@ class Config:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'supersecretkey-fallback')
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     SERVER_DEFAULT_MODEL = os.environ.get('DEFAULT_MODEL', 'gpt-4o-mini')
-    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
     UPLOAD_FOLDER = 'user_epubs'
     # Derive COVER_EXPORT_FOLDER from UPLOAD_FOLDER
     COVER_EXPORT_FOLDER = UPLOAD_FOLDER 
@@ -27,4 +26,6 @@ class Config:
         'card_state',
         'pitch_accent',
     ]
-    JPDB_API_URL = 'https://jpdb.io/api/v1/parse' 
+    JPDB_API_URL = 'https://jpdb.io/api/v1/parse'
+    SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
+    SESSION_COOKIE_SECURE = bool(os.environ.get('SESSION_COOKIE_SECURE', 'True'))

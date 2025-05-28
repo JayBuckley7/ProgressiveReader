@@ -223,6 +223,10 @@ This application is configured for deployment to Google Cloud Run.
 
 4.  After deployment, `gcloud` will output the URL of your deployed service.
 
+The Cloud Run service account needs the **Datastore User** role. No
+`GOOGLE_APPLICATION_CREDENTIALS` file is required—the Firestore client uses the
+automatic credentials provided by Cloud Run.
+
 ### Deploy Scripts
 
 For convenience, two shell scripts are provided in the `scripts` directory:
