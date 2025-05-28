@@ -818,19 +818,17 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
             console.warn('[DriveSync] Failed to update local metadata with driveId:', e);
         }
 
-        const userId = getUserProfile()?.email;
-        if (userId) {
-            try {
-                const meta = await getBookMetadata(bookId);
-                const { coverImageBlob, ...metaWithoutCover } = meta;
-                await fetch(`/metadata/${userId}/book/${bookId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(metaWithoutCover)
-                });
-            } catch (e) {
-                console.warn('[DriveSync] uploadBookToDrive: Failed to update Redis metadata:', e);
-            }
+        try {
+            const meta = await getBookMetadata(bookId);
+            const { coverImageBlob, ...metaWithoutCover } = meta;
+            await fetch('/metadata/books', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(metaWithoutCover)
+            });
+        } catch (e) {
+            console.warn('[DriveSync] uploadBookToDrive: Failed to update metadata:', e);
         }
         
         // Optionally, dispatch an event or provide feedback
@@ -956,19 +954,17 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
             console.warn(`[DriveSync] uploadCoverToDrive: Failed to store coverDriveId locally for book: ${bookId}`, e);
         }
 
-        const userId = getUserProfile()?.email;
-        if (userId) {
-            try {
-                const meta = await getBookMetadata(bookId);
-                const { coverImageBlob, ...metaWithoutCover } = meta;
-                await fetch(`/metadata/${userId}/book/${bookId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(metaWithoutCover)
-                });
-            } catch (e) {
-                console.warn('[DriveSync] uploadCoverToDrive: Failed to update Redis metadata:', e);
-            }
+        try {
+            const meta = await getBookMetadata(bookId);
+            const { coverImageBlob, ...metaWithoutCover } = meta;
+            await fetch('/metadata/books', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(metaWithoutCover)
+            });
+        } catch (e) {
+            console.warn('[DriveSync] uploadCoverToDrive: Failed to update metadata:', e);
         }
 
         window.dispatchEvent(new CustomEvent('drive-file-uploaded', {
