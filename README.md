@@ -199,24 +199,24 @@ This application is configured for deployment to Google Cloud Run.
     - This command uses Cloud Build to build the container image based on the `Dockerfile` and then deploys it to Cloud Run.
 
 3.  **Set Environment Variables (Secrets):**
-    - For the `FLASK_SECRET_KEY`, generate a strong random key.
+    - For the `SECRET_KEY`, generate a strong random key.
     - For the `OPENAI_API_KEY`, use your actual key.
     - **Method 1 (gcloud command - recommended for secrets):**
         First, enable the Secret Manager API in your GCP project.
         ```bash
         # Create secrets (do this once)
-        printf "your_strong_flask_secret" | gcloud secrets create flask-secret --data-file=-
+        printf "your_strong_secret_key" | gcloud secrets create secret-key --data-file=-
         printf "your_openai_api_key" | gcloud secrets create openai-secret --data-file=-
 
         # Deploy or Update service linking secrets
         gcloud run deploy progressive-reader --source . --region YOUR_REGION --allow-unauthenticated \
-          --update-secrets=FLASK_SECRET_KEY=flask-secret:latest \
+          --update-secrets=SECRET_KEY=secret-key:latest \
           --update-secrets=OPENAI_API_KEY=openai-secret:latest
         ```
     - **Method 2 (gcloud command - simpler for non-sensitive vars):**
         ```bash
         gcloud run deploy progressive-reader --source . --region YOUR_REGION --allow-unauthenticated \
-          --set-env-vars FLASK_SECRET_KEY="your_strong_flask_secret" \
+          --set-env-vars SECRET_KEY="your_strong_secret_key" \
           --set-env-vars OPENAI_API_KEY="your_openai_api_key"
         ```
     - Replace placeholders with your actual keys/secrets.
