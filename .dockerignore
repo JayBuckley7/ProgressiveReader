@@ -63,4 +63,7 @@ Dockerfile
 user_epubs/
 
 # Service account keys
-pr-ghactions-sa-key.json 
+pr-ghactions-sa-key.json
+
+# Secrets and sensitive files
+firebase-adminsdk-credentials.json 

@@ -47,4 +47,7 @@ user_epubs/
 node_modules/
 
 # Service account keys
-pr-ghactions-sa-key.json 
+pr-ghactions-sa-key.json
+
+# Service account key files
+firebase-adminsdk-credentials.json 

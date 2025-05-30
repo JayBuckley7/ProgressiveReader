@@ -35,9 +35,12 @@ if (typeof window !== 'undefined' && !window.VITE_GDRIVE_CLIENT_ID) {
 // Base OAuth scopes required for normal operation. Additional scopes can be
 // requested incrementally when needed.
 const BASE_SCOPES = [
+  'openid', // For ID token
+  'email',  // For user's email address
+  'profile', // For user's basic profile info (name, picture)
   'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/drive.appdata',
-  'https://www.googleapis.com/auth/userinfo.profile'
+  'https://www.googleapis.com/auth/drive.appdata'
+  // 'https://www.googleapis.com/auth/userinfo.profile' // Covered by openid, email, profile
 ];
 const FOLDER_NAME    = 'ProgReader';
 const TOKEN_STORE_KEY= 'drive.token';
@@ -157,96 +160,179 @@ async function fetchAndStoreUserProfile(tokenToFetchWith) {
   }
 }
 
-export async function launchGoogleAuth(additionalScopes = []) {
-//   console.log(`[DriveSync] launchGoogleAuth: Starting with additional scopes: ${additionalScopes.join(' ')}`);
+export async function launchGoogleAuth(promptOrScopes = []) {
+  // console.log(`[DriveSync] launchGoogleAuth: Called with:`, promptOrScopes);
+
+  let explicitPrompt = null;
+  let additionalScopes = [];
+
+  if (typeof promptOrScopes === 'string') {
+    if (promptOrScopes === 'consent' || promptOrScopes === 'select_account') {
+      explicitPrompt = promptOrScopes;
+      // console.log(`[DriveSync] launchGoogleAuth: Interpreted as explicit prompt: ${explicitPrompt}`);
+    } else {
+      // This case should be rare: a single scope string passed directly.
+      console.warn('launchGoogleAuth: Called with a single scope string. Consider passing an array of scopes.');
+      additionalScopes = [promptOrScopes];
+    }
+  } else if (Array.isArray(promptOrScopes)) {
+    additionalScopes = promptOrScopes;
+    // console.log(`[DriveSync] launchGoogleAuth: Interpreted as additional scopes:`, additionalScopes);
+  } else if (promptOrScopes && typeof promptOrScopes === 'object' && !Array.isArray(promptOrScopes)) {
+     console.error('launchGoogleAuth: Called with an object that is not an array. This is not supported. Aborting auth.', promptOrScopes);
+     return Promise.reject(new Error('Invalid argument to launchGoogleAuth: expected string or array.'))
+  }
+
 
   return new Promise(async (resolve, reject) => {
-    const requested = Array.from(new Set([...BASE_SCOPES, ...additionalScopes]));
-    const scopeStr = requested.join(' ');
-    const prevScopes = gToken?.scopes ? gToken.scopes.split(' ') : [];
-    const addingNew = requested.some(s => !prevScopes.includes(s));
-    const promptType = addingNew ? 'consent' : 'none';
+    const currentScopesSet = gToken?.scopes ? new Set(gToken.scopes.split(' ')) : new Set();
+    const requestedScopesSet = new Set([...BASE_SCOPES, ...additionalScopes]);
+
+    additionalScopes.forEach(scope => requestedScopesSet.add(scope)); // Ensure all additional scopes are included
+
+    const newScopesToRequest = [...requestedScopesSet].filter(s => !currentScopesSet.has(s));
+    const finalScopeStr = [...requestedScopesSet].join(' ');
+
+    let promptType = explicitPrompt; // Use explicit prompt if provided
+    if (!promptType) { // Otherwise, determine based on new scopes
+        promptType = newScopesToRequest.length > 0 ? 'consent' : 'none';
+    }
+    // console.log(`[DriveSync] launchGoogleAuth: Final promptType: '${promptType}', Scopes to request: '${finalScopeStr}' (New: ${newScopesToRequest.join(', ') || 'None'})`);
+
+
     if (!window.google || !window.google.accounts) {
-//       console.log('[DriveSync] launchGoogleAuth: GIS SDK not found, attempting to load...');
+      // console.log('[DriveSync] launchGoogleAuth: GIS SDK not found, attempting to load...');
       try {
         await new Promise((scriptResolve, scriptReject) => {
           const s = document.createElement('script');
           s.src = 'https://accounts.google.com/gsi/client';
           s.async = true;
+          s.defer = true;
           s.onload = () => {
-//             console.log('[DriveSync] launchGoogleAuth: GIS SDK loaded successfully.');
+            // console.log('[DriveSync] launchGoogleAuth: GIS SDK loaded successfully.');
             scriptResolve();
           };
-          s.onerror = () => {
-            console.error('[DriveSync] launchGoogleAuth: Failed to load GIS SDK.');
+          s.onerror = (err) => {
+            console.error('[DriveSync] launchGoogleAuth: Failed to load GIS SDK.', err);
             scriptReject(new Error('Failed to load Google Identity Services SDK'));
           };
           document.head.appendChild(s);
         });
       } catch (error) {
-        return reject(error); // Propagate script loading error
+        return reject(error);
       }
     } else {
-//       console.log('[DriveSync] launchGoogleAuth: GIS SDK already available.');
+      // console.log('[DriveSync] launchGoogleAuth: GIS SDK already available.');
     }
 
-    // Now window.google should be defined
-    const clientId = (import.meta && import.meta.env && import.meta.env.VITE_GDRIVE_CLIENT_ID) || window.GDRIVE_CLIENT_ID;
-//     console.log('[DriveSync] launchGoogleAuth: Using Client ID:', clientId);
+    const clientId = (import.meta?.env?.VITE_GDRIVE_CLIENT_ID) || window.GDRIVE_CLIENT_ID;
     if (!clientId) {
       console.error('[DriveSync] Missing Google Drive OAuth client ID');
       return reject(new Error('Missing Google Drive OAuth client ID'));
     }
 
     try {
-//       console.log('[DriveSync] launchGoogleAuth: Initializing token client...');
+      // console.log('[DriveSync] launchGoogleAuth: Initializing token client with scopes:', finalScopeStr);
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: scopeStr,
-        callback: async (tok) => {
-//           console.log('[DriveSync] launchGoogleAuth: Token received, expiry:', new Date(Date.now() + (tok.expires_in || 0) * 1000));
-          // Initialize gToken with essential token info and placeholder for profile
-          gToken = {
-            access: tok.access_token,
-            expiry: Date.now() + (tok.expires_in || 0) * 1000,
-            userProfile: null, // Initialize userProfile field
-            scopes: scopeStr
-          };
-          
-          // Fetch profile data and attach it to the gToken object
-          await fetchAndStoreUserProfile(tok.access_token); // Passes the token to fetch, modifies gToken in module scope
-          
-          // Persist the fully formed gToken (now including profile data, if successful)
-//           console.log("[DriveSync] launchGoogleAuth: About to call localStorage.setItem. gToken to save:", JSON.parse(JSON.stringify(gToken)));
-          try {
-              localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(gToken));
-//               console.log("[DriveSync] launchGoogleAuth: gToken stored in localStorage.");
-          } catch (storageError) {
-              console.error("[DriveSync] launchGoogleAuth: ERROR during localStorage.setItem:", storageError);
+        scope: finalScopeStr,
+        callback: async (tokenResponse) => {
+          if (tokenResponse.error) {
+            console.error('[DriveSync] launchGoogleAuth: Error in tokenResponse (initial callback):', tokenResponse.error, tokenResponse.error_description);
+            reject(new Error(`Google Auth Error: ${tokenResponse.error} - ${tokenResponse.error_description || 'No details'}`));
+            return;
           }
-          
-//           console.log("[DriveSync] launchGoogleAuth: Token supposedly stored. About to set cookie. gToken.access exists:", !!gToken?.access, "isConnected():", isConnected());
+          console.log('[DriveSync] launchGoogleAuth: Full tokenResponse from Google:', JSON.parse(JSON.stringify(tokenResponse)));
+
+          gToken = {
+            access: tokenResponse.access_token,
+            expiry: Date.now() + (tokenResponse.expires_in || 0) * 1000,
+            userProfile: null, // Initialize
+            scopes: tokenResponse.scope || finalScopeStr 
+          };
+
+          await fetchAndStoreUserProfile(tokenResponse.access_token); // This populates gToken.userProfile
+          console.log('[DriveSync] launchGoogleAuth: gToken.userProfile after fetchAndStoreUserProfile:', JSON.parse(JSON.stringify(gToken.userProfile)));
+          console.log('[DriveSync] launchGoogleAuth: access_token present:', tokenResponse.access_token ? 'EXISTS' : 'MISSING');
+
+          // After Google auth and profile fetch, establish Flask session
+          if (gToken.userProfile && gToken.userProfile.email && tokenResponse.access_token) {
+            console.log('[DriveSync] launchGoogleAuth: Proceeding to backend sign-in. Email:', gToken.userProfile.email, 'Access Token Present:', !!tokenResponse.access_token);
+            try {
+              const backendAuthResponse = await fetch('/auth/google/signin', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                  access_token: tokenResponse.access_token, // Send the access token instead of id_token
+                  email: gToken.userProfile.email,
+                  name: gToken.userProfile.name,
+                  picture: gToken.userProfile.picture 
+                }),
+              });
+              if (!backendAuthResponse.ok) {
+                const errorData = await backendAuthResponse.json().catch(() => ({ error: 'Failed to parse error from backend sign-in' }));
+                console.error('[DriveSync] Backend sign-in failed:', backendAuthResponse.status, errorData);
+                // Reject the promise from launchGoogleAuth if backend sign-in fails
+                reject(new Error(`Backend sign-in failed: ${backendAuthResponse.status} - ${errorData.error || 'Unknown error'}`));
+                return; // IMPORTANT: Stop further execution in this callback
+              } else {
+                console.log('[DriveSync] Backend sign-in successful.');
+              }
+            } catch (err) {
+              console.error('[DriveSync] Error calling backend sign-in endpoint:', err);
+              // Reject the promise from launchGoogleAuth if network or other error occurs
+              reject(new Error(`Error calling backend sign-in: ${err.message}`));
+              return; // IMPORTANT: Stop further execution in this callback
+            }
+          } else {
+            console.warn('[DriveSync] Cannot call backend sign-in: missing user profile, email or access_token from Google.');
+            // This is a significant issue, likely means Google auth didn't return expected data.
+            // Reject the promise from launchGoogleAuth
+            reject(new Error('Google authentication did not provide necessary user details (email/access_token).'));
+            return; // IMPORTANT: Stop further execution in this callback
+          }
+
+          // If backend sign-in was successful
+          try {
+            localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(gToken));
+            // console.log("[DriveSync] launchGoogleAuth: gToken stored in localStorage.");
+          } catch (storageError) {
+            console.error("[DriveSync] launchGoogleAuth: ERROR during localStorage.setItem:", storageError);
+            // This is a local issue, but could prevent hydration. Decide if it's critical enough to reject.
+            // For now, let it proceed but log error.
+          }
+
           setDriveConnectedCookie(true);
-          // Test retrieval from localStorage
-          const savedTokenJSON = localStorage.getItem(TOKEN_STORE_KEY);
-          const testToken = savedTokenJSON ? JSON.parse(savedTokenJSON) : null;
-//           console.log("[DriveSync] launchGoogleAuth: TEST - Retrieved token from localStorage immediately after set:", testToken ? 'FOUND' : 'NOT FOUND', testToken ? JSON.parse(JSON.stringify(testToken)) : undefined);
-          
           startScheduler();
-          resolve(tok);
+          resolve(tokenResponse); // Resolve only if everything above was successful
         },
         error_callback: (error) => {
-            console.error('[DriveSync] launchGoogleAuth: Error from initTokenClient or token request:', error);
-            reject(new Error(`Google token client error: ${error.type || 'Unknown error'}`));
+          console.error('[DriveSync] launchGoogleAuth: Error from initTokenClient or token request:', error);
+          let message = 'Google token client error';
+          if (error && error.type) message += `: ${error.type}`;
+          if (error && error.message) message += ` - ${error.message}`;
+          if (error && error.details) message += ` (${error.details})`;
+          
+          // Check if it's a popup closed error, often not a "real" error for the flow.
+          const popupErrors = ["popup_closed", "popup_failed_to_open", "user_declined", "access_denied"];
+          if (error && popupErrors.includes(error.type)) {
+            // console.log(`[DriveSync] launchGoogleAuth: Non-critical popup error: ${error.type}. Not rejecting promise.`);
+            // Potentially resolve with a specific status or do nothing, depending on desired UX.
+            // For now, let's treat it as a soft failure that doesn't break subsequent logic if any.
+             resolve({error: error.type, message: "User closed or declined the Google Auth popup."}); // Resolve to allow init flow to continue gracefully
+          } else {
+            reject(new Error(message));
+          }
         }
       });
 
-//       console.log('[DriveSync] launchGoogleAuth: Requesting access token...');
-      tokenClient.requestAccessToken({ prompt: promptType, scope: scopeStr });
-
+      // console.log(`[DriveSync] launchGoogleAuth: Requesting access token with prompt: '${promptType}'`);
+      tokenClient.requestAccessToken({ prompt: promptType });
     } catch (error) {
-        console.error('[DriveSync] launchGoogleAuth: Synchronous error during token client init:', error);
-        reject(error);
+      console.error('[DriveSync] launchGoogleAuth: Synchronous error during token client init/request:', error);
+      reject(error);
     }
   });
 }
@@ -631,89 +717,112 @@ function startScheduler(){if(driveInterval) return; driveInterval=setInterval(()
 function stopScheduler(){if(driveInterval) clearInterval(driveInterval); driveInterval=null;}
 
 // ── 10. Public bootstrap / disconnect ------------------------------------
-export async function init(isExplicitCall = false){
-//   console.log(`[DriveSync] init: Starting. Explicit call: ${isExplicitCall}`);
-  window.dispatchEvent(new Event('drive-sync-start')); // Notify UI early
+export async function init(isExplicitCall = false) {
+    window.dispatchEvent(new Event('drive-sync-start'));
+    // console.log(`[DriveSync] init: Starting. Explicit: ${isExplicitCall}`);
 
-  const cookieStatus = getDriveConnectedCookie(); // getDriveConnectedCookie() already logs its specific findings
-//   console.log(`[DriveSync] init: Current gdrive_connected cookie status reported as: ${cookieStatus === null ? 'not found/null' : cookieStatus}.`);
+    const cookieStatus = getDriveConnectedCookie();
 
-  if (!isExplicitCall) { // This is an automatic call on page load
-    if (cookieStatus === true) {
-//       console.log("[DriveSync] init: Auto-init: Cookie is true. Proceeding with token hydration and potential sync.");
-      // Immediately dispatch an event to indicate Google Drive connection is being established
-      window.dispatchEvent(new Event('drive-connected-loading'));
-    } else {
-      // Cookie is false or null, so we skip auto-init
-      const reason = cookieStatus === false ? "gdrive_connected cookie was 'false' (user likely disconnected previously)." : "gdrive_connected cookie not found (first visit or cookie cleared).";
-//       console.log(`[DriveSync] init: Auto-init: SKIPPING full initialization because ${reason} Waiting for explicit user action (e.g., clicking connect button).`);
-      window.dispatchEvent(new Event('drive-sync-complete')); // End "syncing" state shown to user
-      window.dispatchEvent(new Event('drive-disconnect')); // Ensure UI is in disconnected state
-      return; // Stop further automatic initialization
+    if (!isExplicitCall && cookieStatus !== true) {
+        // console.log(`[DriveSync] init: Auto-init skipped. User not previously connected or explicitly disconnected. Cookie: ${cookieStatus}`);
+        _markDisconnected(); // Ensure clean state if not proceeding
+        window.dispatchEvent(new Event('drive-disconnect'));
+        window.dispatchEvent(new Event('drive-sync-complete'));
+        return;
     }
-  } else { // This is an explicit call (e.g., user clicked connect button)
-//     console.log("[DriveSync] init: Explicit call: Proceeding with initialization logic (hydrateToken, etc.).");
-  }
 
-//   console.log("[DriveSync] init: Calling hydrateToken()...");
-  await hydrateToken(); // This might set gToken and also cookie via its own logic
-
-  if (isConnected()) {
-//     console.log("[DriveSync] init: hydrateToken reported connected. Proceeding with connected state setup (folder, import, sync).");
-    // Dispatch event to indicate Google Drive connection is confirmed
-    try {
-      await seedDriveFolder();
-      window.dispatchEvent(new Event('drive-online'));
-      await new Promise(r => setTimeout(r, 0));
-      await runSyncLoop();
-      startScheduler();
-//       console.log("[DriveSync] init: Completed successfully (connected state after hydrateToken).");
-    } catch (err) {
-      console.error("[DriveSync] init: Error during connected state setup (post-hydrateToken):", err);
-      window.dispatchEvent(new Event('drive-offline')); 
+    if (!isExplicitCall && cookieStatus === true) {
+        // console.log("[DriveSync] init: Auto-init, cookie indicates prior connection. Will attempt to hydrate and verify session.");
+        window.dispatchEvent(new Event('drive-connected-loading'));
     }
-  } else { // Not connected after hydrateToken
-//     console.log("[DriveSync] init: hydrateToken did NOT result in a connection.");
-    if (cookieStatus === true) { 
-        console.warn("[DriveSync] init: Cookie initially indicated 'true', but hydrateToken failed to establish connection or cleared the cookie. This might mean the stored token was invalid.");
-        if (getDriveConnectedCookie() === true) { 
-            console.warn("[DriveSync] init: Stale cookie still present despite failed hydration. Clearing it now.");
-            clearDriveConnectedCookie();
+
+    await hydrateToken(); // Populates gToken if a valid one is stored
+
+    let flaskSessionOk = false;
+    let googleAuthAttempted = false;
+
+    if (isConnected()) { // Checks gToken (Google connection from hydration)
+        // console.log("[DriveSync] init: Google token hydrated. Checking Flask session via /auth/me.");
+        try {
+            const meResponse = await fetch('/auth/me', { method: 'GET', credentials: 'include' });
+            if (meResponse.ok) {
+                flaskSessionOk = true;
+                // console.log("[DriveSync] init: Flask session active.");
+            } else if (meResponse.status === 401) {
+                // console.log("[DriveSync] init: Flask session 401. Attempting silent Google re-auth to establish Flask session.");
+                // Fall through to attempt launchGoogleAuth([])
+            } else {
+                console.warn("[DriveSync] init: /auth/me call failed with status:", meResponse.status);
+                // Treat as no Flask session, might attempt re-auth.
+            }
+        } catch (err) {
+            console.error("[DriveSync] init: Error calling /auth/me:", err);
+            // Treat as no Flask session, might attempt re-auth.
         }
     }
 
-    if (isExplicitCall) {
-//       console.log("[DriveSync] init: Explicit call and not connected after hydrate. Attempting launchGoogleAuth('consent').");
-      try {
-        await launchGoogleAuth('consent'); // Attempt to authenticate
-        if (isConnected()) {
-//           console.log("[DriveSync] init: launchGoogleAuth successful. isConnected() is " + isConnected() + ". About to set cookie.");
-          setDriveConnectedCookie(true); // Ensure cookie is set after successful explicit auth
-          // Full setup after successful explicit auth
-          await seedDriveFolder();
-          window.dispatchEvent(new Event('drive-online'));
-          await new Promise(r => setTimeout(r, 0));
-          await runSyncLoop();
-          startScheduler();
-//           console.log("[DriveSync] init: Completed successfully (connected state after launchGoogleAuth).");
-        } else {
-          console.warn("[DriveSync] init: launchGoogleAuth completed, but still not connected.");
-          window.dispatchEvent(new Event('drive-disconnect'));
+    // Conditions to trigger Google Auth Flow (which includes Flask sign-in):
+    // 1. Explicit call by user.
+    // 2. Google token hydrated, but Flask session was NOT active (flaskSessionOk is false).
+    // 3. No Google token after hydration (isConnected is false), but it's an explicit call.
+    const needsToRunGoogleAuthFlow = isExplicitCall || (isConnected() && !flaskSessionOk);
+
+    if (needsToRunGoogleAuthFlow) {
+        googleAuthAttempted = true;
+        // console.log(`[DriveSync] init: Needs to run Google Auth Flow. Explicit: ${isExplicitCall}, Google connected: ${isConnected()}, Flask OK: ${flaskSessionOk}`);
+        try {
+            // If !isExplicitCall, this is a silent attempt due to bad Flask session with good gToken.
+            await launchGoogleAuth(isExplicitCall ? 'consent' : []); 
+            
+            if (isConnected()) { // Re-check Google connection after auth attempt
+                const meResponseAfterAuth = await fetch('/auth/me', { method: 'GET', credentials: 'include' });
+                if (meResponseAfterAuth.ok) {
+                    flaskSessionOk = true;
+                    setDriveConnectedCookie(true); // Ensure our custom cookie is set
+                    // console.log("[DriveSync] init: Google auth flow successful, Flask session now active.");
+                } else {
+                    console.warn("[DriveSync] init: Flask session STILL not active after Google auth flow. /auth/me status:", meResponseAfterAuth.status);
+                    _markDisconnected(); 
+                    flaskSessionOk = false;
+                }
+            } else {
+                // console.log("[DriveSync] init: launchGoogleAuth did not result in Google connection.");
+                _markDisconnected();
+                flaskSessionOk = false;
+            }
+        } catch (authError) {
+            console.error("[DriveSync] init: Error during launchGoogleAuth flow:", authError);
+            _markDisconnected();
+            flaskSessionOk = false;
+            if (isExplicitCall) {
+                 window.dispatchEvent(new Event('drive-sync-complete')); // Ensure loading state is cleared
+                 throw authError; // Rethrow for UI if explicit action failed
+            }
         }
-      } catch (error) {
-        console.error("[DriveSync] init: Error during launchGoogleAuth from explicit call:", error);
-        window.dispatchEvent(new Event('drive-disconnect')); // Ensure disconnected state on auth error
-        // Rethrow the error so driveButton.js can catch it and show an alert to the user.
-        throw error; 
-      }
-    } else {
-      // Not an explicit call, and not connected after hydrate: This implies the initial cookie check decided to proceed (cookie was true),
-      // but hydrateToken failed. We are already in a disconnected state from hydrateToken's perspective.
-      console.warn("[DriveSync] init: Auto-call, but not connected after hydrateToken (cookie was likely true initially but token failed). Should already be in disconnected state.");
-      window.dispatchEvent(new Event('drive-disconnect')); // Ensure UI reflects this
     }
-  }
-  window.dispatchEvent(new Event('drive-sync-complete')); 
+
+    if (isConnected() && flaskSessionOk) {
+        // console.log("[DriveSync] init: Google connected AND Flask session active. Proceeding with Drive operations.");
+        try {
+            await seedDriveFolder();
+            window.dispatchEvent(new Event('drive-online'));
+            await runSyncLoop();
+            startScheduler();
+        } catch (err) {
+            console.error("[DriveSync] init: Error during Drive operations (seed/sync/schedule):", err);
+            _markDisconnected(); 
+            window.dispatchEvent(new Event('drive-offline'));
+        }
+    } else {
+        // console.log(`[DriveSync] init: Not proceeding with Drive operations. Google connected: ${isConnected()}, Flask session OK: ${flaskSessionOk}`);
+        // If it wasn't an explicit call that failed and threw, or if an auth attempt wasn't made this round,
+        // ensure we are marked as disconnected.
+        if (!isExplicitCall || !googleAuthAttempted) {
+            _markDisconnected();
+            window.dispatchEvent(new Event('drive-disconnect'));
+        }
+    }
+    window.dispatchEvent(new Event('drive-sync-complete')); 
 }
 
 export function disconnect(){

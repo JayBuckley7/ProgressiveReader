@@ -5,6 +5,7 @@ from flask import Flask, send_from_directory, jsonify
 from flask_login import LoginManager
 from config import Config
 from .models import db, User
+from dotenv import load_dotenv
 
 # Define a filter for logging
 class FilterImageRequests(logging.Filter):
@@ -31,6 +32,7 @@ def load_user(user_id: str):
     return User.query.get(int(user_id))
 
 def create_app(config_class=Config) -> Flask:
+    load_dotenv()
     app = Flask(
         __name__, 
         instance_relative_config=False,
