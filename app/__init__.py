@@ -1,8 +1,18 @@
 """Flask application factory that registers blueprints and routes."""
 import os
+import json
 import logging
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, render_template, url_for
 from flask_login import LoginManager
+try:
+    from flask_cors import CORS
+except ImportError:  # unit-test fallback only
+    class CORS:  # noqa: D401, E302
+        def __init__(self, *_a, **_kw):
+            ...
+
+        def init_app(self, app, **_kw):
+            app.logger.debug("CORS stub")
 from config import Config
 from .models import db, User
 from dotenv import load_dotenv
@@ -50,6 +60,23 @@ def create_app(config_class=Config) -> Flask:
 
     db.init_app(app)
     login_manager.init_app(app)
+    CORS().init_app(app)
+
+    def vite_asset(filename: str) -> str:
+        """Return the path to a Vite-built asset."""
+        manifest_path = os.path.join(app.static_folder, 'dist', 'manifest.json')
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path) as f:
+                    manifest = json.load(f)
+                entry = manifest.get(filename)
+                if entry and 'file' in entry:
+                    return url_for('static', filename=f"dist/{entry['file']}")
+            except Exception as exc:  # pragma: no cover - runtime safeguard
+                app.logger.debug(f"Vite manifest read failed: {exc}")
+        return url_for('static', filename=f'dist/{filename}')
+
+    app.jinja_env.globals['vite_asset'] = vite_asset
     app.config.update({
         "SESSION_COOKIE_SAMESITE": "Lax",
         "SESSION_COOKIE_SECURE": True,

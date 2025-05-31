@@ -1,10 +1,18 @@
-# Stage 1: Build frontend assets
-FROM node:18 AS frontend_builder
+# Stage 1: Build TypeScript highlighter
+FROM node:18 AS ts_builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY src/ ./src/
 COPY tsconfig.json webpack.config.js ./
+RUN npm run build
+
+# Stage 2: Build React UI with Vite
+FROM node:18 AS react_builder
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
 RUN npm run build
 
 FROM python:3.11-slim AS python_base
@@ -16,7 +24,8 @@ FROM python_base AS runtime
 
 # Copy the built frontend assets from the builder stage
 # This copies the contents of /frontend/app/static/js/dist to /app/app/static/js/dist
-COPY --from=frontend_builder /app/app/static/js/dist /app/app/static/js/dist
+COPY --from=ts_builder /app/app/static/js/dist /app/app/static/js/dist
+COPY --from=react_builder /frontend/dist /app/app/static/dist
 
 # Copy the application structure
 # Note: Adjust these paths if your project structure is different
