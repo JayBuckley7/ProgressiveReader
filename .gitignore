@@ -18,7 +18,7 @@ uploads/
 .cursorrules
 
 # Environment variables
-.env 
+.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -63,7 +63,7 @@ htmlcov/
 .tox/
 .nox/
 .coverage
-.coverage.* 
+.coverage.*
 .cache
 .pytest_cache/
 .hypothesis/
@@ -165,4 +165,4 @@ node_modules/
 pr-ghactions-sa-key.json
 
 # Service account key files
-firebase-adminsdk-credentials.json 
+firebase-adminsdk-credentials.json
