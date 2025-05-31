@@ -1,32 +1,22 @@
 # Stage 1: Build frontend assets
 FROM node:18 AS frontend_builder
-WORKDIR /frontend
-
-# Copy package files and install npm dependencies
+WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install
-
-# Copy frontend source, TypeScript config, and Webpack config
+RUN npm ci
 COPY src/ ./src/
-COPY tsconfig.json .
-COPY webpack.config.js .
-
-# Run the production build script
+COPY tsconfig.json webpack.config.js ./
 RUN npm run build
 
-# Stage 2: Python application
-FROM python:3.11-slim
-
-# Set the working directory in the container
+FROM python:3.11-slim AS python_base
 WORKDIR /app
-
-# Copy Python requirements and install
-COPY requirements.txt .
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+FROM python_base AS runtime
 
 # Copy the built frontend assets from the builder stage
 # This copies the contents of /frontend/app/static/js/dist to /app/app/static/js/dist
-COPY --from=frontend_builder /frontend/app/static/js/dist /app/app/static/js/dist
+COPY --from=frontend_builder /app/app/static/js/dist /app/app/static/js/dist
 
 # Copy the application structure
 # Note: Adjust these paths if your project structure is different
