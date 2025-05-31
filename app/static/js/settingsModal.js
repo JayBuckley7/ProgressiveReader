@@ -715,6 +715,16 @@ function _attachEventListeners() {
             input.click();
         });
     }
+
+    if (settingsModal) {
+        const push = () => {
+            if (window.settingsSync && typeof window.settingsSync.pushSettings === 'function') {
+                window.settingsSync.pushSettings();
+            }
+        };
+        settingsModal.addEventListener('change', push);
+        settingsModal.addEventListener('input', push);
+    }
 }
 
 function initSettingsModal(passedServerDefaultModel) {
