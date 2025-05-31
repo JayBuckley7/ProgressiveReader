@@ -73,7 +73,6 @@ async function handleFileSelect() {
     const extension = safeFilename.split('.').pop().toLowerCase();
     let title = safeFilename.replace(/\.[^.]+$/, '') || 'Untitled Book';
 
-//     console.log(`${logPrefix} File selected: "${title}". Attempting to process.`);
 
     try {
         updateProgress(25); // Starting processing
@@ -125,12 +124,10 @@ async function handleFileSelect() {
        
         // Generate a client-side UUID 
         const bookId = uuidv4(); // Generate UUID client-side
-//         console.log(`${logPrefix} Generated book_id=${bookId}, title="${title}"`);
         
         updateProgress(75); // Starting IndexedDB storage
 
         const bookIdFromDB = await addBook(title, file, bookId, { fileType: extension });
-//         console.log(`${logPrefix} addBook to IndexedDB completed. Effective ID in DB: ${bookIdFromDB}`);
 
         const metadata = await getBookMetadata(bookIdFromDB);
         const { coverImageBlob, ...metaWithoutCover } = metadata;
@@ -156,7 +153,6 @@ async function handleFileSelect() {
         if (driveSync?.isConnected?.()) {
             try {
                 await driveSync.uploadBookToDrive(bookIdFromDB, title, file, extension);
-//                 console.log(`${logPrefix} Auto-upload to Drive completed for ${bookIdFromDB}`);
                 if (storedRecord?.coverImageBlob instanceof Blob) {
                     try {
                         await driveSync.uploadCoverToDrive(bookIdFromDB, title, storedRecord.coverImageBlob);
@@ -187,7 +183,6 @@ async function handleFileSelect() {
             }, { once: true });
         }, 3000);
 
-//         console.log(`${logPrefix} Upload successful, triggering bookshelf re-render.`);
         renderBookshelf();
 
     } catch (error) {
@@ -208,7 +203,6 @@ export function setupUploadForm() {
     }
     // Instead of form submit, listen to file input change
     fileInput.addEventListener('change', handleFileSelect);
-//     console.log(`${logPrefix} File input change listener attached for automatic upload.`);
     
     // Remove the old form submit listener if it was attached to uploadForm
     // No, uploadForm itself isn't strictly needed for submit anymore, but can be kept for structure

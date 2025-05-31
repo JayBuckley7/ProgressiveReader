@@ -9,7 +9,6 @@ function saveTranslationToLocal(bookId, itemIndex, translatedHtml) {
     if (!key) return;
     try {
         localStorage.setItem(key, translatedHtml);
-//         console.log(`Saved translation for book ${bookId}, index ${itemIndex}.`);
     } catch (e) {
         console.error(`Error saving translation to localStorage for book ${bookId}, index ${itemIndex}:`, e);
         // Consider a more robust error handling/reporting mechanism
@@ -27,7 +26,6 @@ function removeTranslationFromLocal(bookId, itemIndex) {
      const key = getTranslationCacheKey(bookId, itemIndex);
      if (!key) return;
      localStorage.removeItem(key);
-//      console.log(`Removed translation for book ${bookId}, index ${itemIndex}.`);
 }
 
 // --- Reading Progress Management ---
@@ -93,7 +91,6 @@ function getAutoloadPreference() {
 
 function saveAutoloadPreference(isChecked) {
     localStorage.setItem('autoload_preference', isChecked);
-//     // console.log("Autoload preference saved:", isChecked);
 }
 
 function getPreferDueCards() {
@@ -185,12 +182,10 @@ function openDatabase() {
             // Create object stores if they don't exist
             if (!db.objectStoreNames.contains(STORES.BOOKS)) {
                 db.createObjectStore(STORES.BOOKS, { keyPath: 'id' });
-//                 console.log('Books store created');
             }
             
             if (!db.objectStoreNames.contains(STORES.CONTENT)) {
                 db.createObjectStore(STORES.CONTENT, { keyPath: 'key' });
-//                 console.log('Content store created');
             }
             
         };
@@ -212,7 +207,6 @@ async function storeBookForOffline(bookId, bookData) {
         };
         
         await booksStore.put(bookRecord);
-//         console.log(`Book ${bookId} stored for offline access`);
         return true;
     } catch (error) {
         console.error('Error storing book for offline access:', error);
@@ -237,7 +231,6 @@ async function storePageContent(bookId, itemIndex, content) {
         };
         
         await contentStore.put(contentRecord);
-//         console.log(`Content for book ${bookId}, page ${itemIndex} stored for offline access`);
         return true;
     } catch (error) {
         console.error('Error storing page content for offline access:', error);
@@ -359,7 +352,6 @@ async function determineActualStartingPosition(bookId) {
         console.error(`[StorageManager] Error determining starting position for ${bookId}:`, error);
     }
 
-//     console.log(`[StorageManager] Final determined startIndex for ${bookId}: ${startIndex}`);
     return startIndex;
 }
 
@@ -400,4 +392,3 @@ window.storageManager = {
 // Expose mergeProgress for DriveSync backward compatibility
 window.mergeProgress = mergeProgress;
 
-// console.log("storageManager.js loaded with PWA offline support"); 

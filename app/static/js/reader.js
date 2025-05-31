@@ -113,7 +113,6 @@ function renderTableOfContents(chapterTitles, epubWrapper) {
     try {
         const totalChapters = epubWrapper.getTotalChapters();
         if (!chapterTitles || !Array.isArray(chapterTitles) || chapterTitles.length === 0) {
-//             console.log('readerJS: No valid chapter titles for TOC, creating defaults.');
             chapterTitles = Array.from({ length: totalChapters }, (_, i) => ({ index: i, title: `Chapter ${i + 1}` }));
         }
         
@@ -149,20 +148,16 @@ async function getBookData(bookId) {
         return null;
     }
     if (window.IS_DEMO_MODE && typeof window.getDemoBookFile === 'function') {
-//         console.log(`readerJS: Demo mode. Attempting to load demo book: ${bookId}`);
         const demoBookData = await window.getDemoBookFile(bookId);
         if (demoBookData) {
             if (!(demoBookData.content instanceof Blob)) { 
                 showError(`Demo book data for ${bookId} is not a Blob.`); 
                 return null; 
             }
-//             console.log(`readerJS: Successfully fetched demo book data for ${bookId}`);
             return demoBookData;
         }
-//         console.log(`readerJS: Demo book ${bookId} not found by getDemoBookFile. Will try IndexedDB if applicable.`);
     }
     try {
-//         console.log(`readerJS: Fetching book with ID: ${bookId} from IndexedDB...`);
         const bookData = await getBook(bookId); // From dbService.js
         if (!bookData) { 
             throw new Error(`Book with ID ${bookId} not found in local storage.`); 
@@ -170,7 +165,6 @@ async function getBookData(bookId) {
         if (!bookData.content || !(bookData.content instanceof Blob)) {
             throw new Error('Invalid book content format in database. Expected Blob.');
         }
-//         console.log(`readerJS: Successfully fetched book data for ${bookId} from IndexedDB.`);
         return bookData;
     } catch (error) { 
         showError(`Could not get book data for ${bookId}: ${error.message}`); 
@@ -198,7 +192,6 @@ async function loadBookWithProcessor(bookData) {
         if (!loaded) { 
             throw new Error(`Failed to load book using ${wrapper.constructor.name}.`); 
         }
-//         console.log(`readerJS: Book loaded with ${wrapper.constructor.name}.`);
         return wrapper;
     } catch (error) { 
         showError(`Could not load book content: ${error.message}`); 
@@ -264,13 +257,11 @@ async function loadAndRenderContent(epubWrapper, bookId, chapterIndex, totalChap
         return false;
     }
     try {
-//         console.log(`readerJS: Loading chapter ${chapterIndex} for book ${bookId}`);
         const chapterHtml = await epubWrapper.getChapterHtml(chapterIndex);
         if (chapterHtml === null || typeof chapterHtml === 'undefined') { 
             throw new Error(`Content for chapter ${chapterIndex} is null or undefined.`); 
         }
         viewerElement.innerHTML = `<div class="chapter-content">${chapterHtml}</div>`;
-//         console.log(`readerJS: Chapter ${chapterIndex} rendered successfully.`);
         dispatchContentEvent('ebookContentLoaded', { bookId, chapterIndex, totalChapters });
         return true;
     } catch (error) {
@@ -298,7 +289,6 @@ async function navigate(delta) {
         return; 
     }
 
-//     console.log(`navigate: Attempting to load index ${newIndex}`);
     const contentLoaded = await loadAndRenderContent(epubWrapperInstance, bookId, newIndex, totalChapters);
     if (contentLoaded) {
         const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
@@ -313,14 +303,12 @@ async function navigate(delta) {
         
         if(viewerElement) viewerElement.scrollTop = 0; 
         document.documentElement.scrollTop = 0; 
-//         console.log(`navigate: Successfully navigated to index ${newIndex}. URL: ${url}`);
     } else {
         console.error(`navigate: Failed to load content for index ${newIndex}. Error should have been shown by loadAndRenderContent.`);
     }
 }
 
 export async function initializeReader(initialConfig) {
-//     console.log('readerJS: initializeReader called with config:', JSON.stringify(initialConfig));
     config = initialConfig; // Set module-scoped config
 
     if (!viewerElement) {
@@ -339,7 +327,6 @@ export async function initializeReader(initialConfig) {
         return;
     }
 
-//     console.log(`readerJS: Initializing reader for bookId: ${bookId}, starting at currentIndex: ${currentIndex}`);
 
     const bookData = await getBookData(bookId);
     if (!bookData) { 
@@ -359,20 +346,16 @@ export async function initializeReader(initialConfig) {
     // getAndRenderNavData shows error if totalChapters is 0 or less due to an issue.
     // If totalChapters is legitimately 0 (e.g. empty book), it will handle UI appropriately.
     // No specific error check needed here for totalChapters <= 0 unless specific behavior desired.
-//     console.log(`initializeReader: Total chapters determined: ${totalChapters}`);
         
     const initialContentRendered = await loadAndRenderContent(epubWrapperInstance, bookId, currentIndex, totalChapters);
 
     if (initialContentRendered) {
-//         console.log(`readerJS: Initial content for chapter ${currentIndex} rendered successfully.`);
         const baseUrl = window.IS_DEMO_MODE ? `/demo/read/${bookId}` : `/read/${bookId}`;
         const expectedUrl = `${baseUrl}/${currentIndex}`;
         // Only update URL if it's different, to avoid redundant history entries if already correct.
         if (window.location.pathname !== expectedUrl) {
              history.replaceState({ idx: currentIndex, bookId: bookId }, '', expectedUrl);
-//              console.log(`readerJS: Initial URL updated to: ${expectedUrl}`);
         } else {
-//             console.log(`readerJS: URL ${window.location.pathname} already matches expected ${expectedUrl}. No replaceState needed.`);
         }
     } else {
         console.error(`readerJS: Initial content rendering FAILED for chapter ${currentIndex}. Check logs.`);
@@ -385,7 +368,6 @@ export async function initializeReader(initialConfig) {
 document.addEventListener('DOMContentLoaded', () => {
     // CRITICAL FIRST STEP: Assign module-scoped viewerElement
     viewerElement = document.querySelector('.epub-content');
-//     console.log('readerJS: DOMContentLoaded. viewerElement assigned:', viewerElement ? 'found' : 'NOT FOUND');
     
     const configElement = document.getElementById('page-config'); 
 
@@ -406,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (e) => {
         const target = e.target.closest('[data-nav]');
         if (target) {
-//             console.log(`Click detected on navigation element: ${target.dataset.nav}`);
         }
     }, true);
 
@@ -414,7 +395,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // initializeReader (called by readerInit.js) might depend on this.
     dbServiceReady
         .then(() => {
-//             console.log("readerJS: dbService is ready.");
         })
         .catch(error => {
             showError(`Database service failed to initialize: ${error.message || 'Unknown DB error'}`);
@@ -431,14 +411,12 @@ document.addEventListener('DOMContentLoaded', () => {
     contentWrapper.addEventListener('pointerdown', e =>{
       if(e.pointerType !== 'touch') return;
       if(e.target.closest('a, button, input, textarea, select, [contenteditable="true"]')) {
-//         console.log('Swipe ignored: pointer down on an interactive or editable element.');
         return;
       }
       startX_swipe = e.clientX;
       startY_swipe = e.clientY;
       downTime_swipe = e.timeStamp; 
       isSwiping_swipe = false;
-//       // console.log('Swipe: pointerdown');
     });
 
     contentWrapper.addEventListener('pointermove', e =>{
@@ -450,10 +428,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!isSwiping_swipe){ 
         if(Math.abs(dx) > minLock_swipe && Math.abs(dx) > Math.abs(dy)){ 
           isSwiping_swipe = true;          
-//           // console.log('Swipe: Horizontal lock acquired');
           if (e.cancelable) e.preventDefault(); 
         } else if (Math.abs(dy) > minLock_swipe && Math.abs(dy) > Math.abs(dx)) { 
-//           // console.log('Swipe: Vertical scroll detected, aborting horizontal swipe');
           startX_swipe = null; 
           startY_swipe = null;
         }
@@ -464,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     contentWrapper.addEventListener('pointerup', e => {
       if (e.pointerType !== 'touch' || startX_swipe == null || !isSwiping_swipe) {
-//         // console.log('Swipe: pointerup - not a valid swipe.');
         startX_swipe = null; 
         startY_swipe = null;
         isSwiping_swipe = false; 
@@ -475,17 +450,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const dt = e.timeStamp - downTime_swipe;
       const v = (dt > 0) ? Math.abs(dx) / dt : 0; 
 
-//       // console.log(`Swipe: pointerup. dx: ${dx}, dt: ${dt}, v: ${v}`);
 
       if (Math.abs(dx) > minSwipe_swipe && v > minVelocity_swipe) {
         if (!config || typeof config.currentIndex !== 'number' || typeof config.totalChapters !== 'number') {
             console.warn("Swipe: Config not ready for navigation or invalid. Config:", JSON.stringify(config));
         } else {
-//             console.log(`Swipe: Gesture detected. dx: ${dx}. Calling navigate.`);
             navigate(dx < 0 ? 1 : -1); // navigate(1) for next (swipe left), navigate(-1) for prev (swipe right)
         }
       } else {
-//         // console.log('Swipe: Gesture did not meet threshold (minSwipe or minVelocity).');
       }
       startX_swipe = startY_swipe = null; 
       isSwiping_swipe = false; 
@@ -497,7 +469,6 @@ document.addEventListener('DOMContentLoaded', () => {
         smartTranslateButton.addEventListener('click', () => {
             if (window.translationManager && typeof window.translationManager.triggerTranslation === 'function') {
                 const lastMethod = localStorage.getItem('lastTranslationMethod') || 'standard';
-//                 console.log(`Smart translate button clicked. Method: ${lastMethod}`);
                 window.translationManager.triggerTranslation(lastMethod);
             } else {
                 console.error('Smart translate: translationManager.triggerTranslation is not available.');
@@ -528,7 +499,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-//             console.log(`navigate: Loading content for index ${newIndex} for book ${bookId}`);
             
             const contentLoaded = await loadAndRenderContent(epubWrapperInstance, bookId, newIndex, totalChapters);
 
@@ -541,7 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 viewerElement.scrollTop = 0;
                 document.documentElement.scrollTop = 0;
-//                 console.log(`navigate: Successfully navigated to index ${newIndex}`);
             } else {
                 console.error(`navigate: loadAndRenderContent failed for index ${newIndex}.`);
                 viewerElement.innerHTML = `<p>Error loading content for chapter ${newIndex + 1}. Please try refreshing.</p>`;

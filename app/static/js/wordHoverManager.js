@@ -24,7 +24,6 @@ function initWordHoverManager(targetContentArea, initiallyEnabled = true) {
 
     // Load initial settings
     currentSettings = window.hoverSettings?.readHoverSettings() || {};
-//     console.log("WordHoverManager initialized with settings:", currentSettings);
 
     if (initiallyEnabled) {
         activateHoverFeature();
@@ -44,7 +43,6 @@ function initWordHoverManager(targetContentArea, initiallyEnabled = true) {
     //     }
     // });
 
-//     console.log("Word Hover Manager initialized.");
 }
 
 /**
@@ -56,7 +54,6 @@ async function activateHoverFeature() {
         return;
     }
     isHoverFeatureActive = true;
-//     console.log("Activating hover feature...");
 
     // 1. Get current settings (in case they changed)
     currentSettings = window.hoverSettings?.readHoverSettings() || {};
@@ -67,7 +64,6 @@ async function activateHoverFeature() {
     const textSegments = _extractCleanTextSegments(tempDiv);
 
     if (!textSegments || textSegments.length === 0) {
-//         console.log("WordHoverManager: No text segments to process.");
         isHoverFeatureActive = false; // Nothing to do
         return;
     }
@@ -94,7 +90,6 @@ async function activateHoverFeature() {
     } finally {
         document.body.style.cursor = 'default';
     }
-//     console.log("Hover feature activated.");
 }
 
 /**
@@ -110,11 +105,9 @@ function deactivateHoverFeature() {
     window.hoverPopup?.hide(); // Hide popup if it was visible
     // Remove global key listeners specific to the feature if any were dynamically added
     // (currently _setupGlobalKeyListeners adds them once, so they persist)
-//     console.log("Hover feature deactivated. Content restored.");
 }
 
 async function _fetchWordTokens(textSegments, apiKey) {
-//     console.log(`Fetching word tokens for ${textSegments.length} segments from /api/jpdb_hover_data`);
     if (!apiKey) {
         console.warn("JPDB API Key not provided to _fetchWordTokens. Backend may require it.");
         // Depending on backend, this might be an error or it might allow anonymous parsing without user data.
@@ -148,7 +141,6 @@ async function _fetchWordTokens(textSegments, apiKey) {
         }
 
         const tokens = await response.json();
-//         console.log("Received tokens from backend:", tokens);
         // The backend should already return tokens in the format:
         // [{ start, end, text, token: { card: {...} } }, ...]
         // If not, transformation would be needed here.
@@ -328,7 +320,6 @@ function _setupGlobalKeyListeners() {
                 if (actionName === 'showPopupKey') continue; // Already handled
 
                 if (event.code === keyCode) {
-//                     console.log(`Keybind triggered: ${actionName} for word:`, card.spelling);
                     if (window.hoverActions && typeof window.hoverActions.handleKeybindAction === 'function') {
                         window.hoverActions.handleKeybindAction(actionName, card, context, contextOffset);
                         actionHandled = true;
@@ -494,4 +485,3 @@ export { initWordHoverManager, activateHoverFeature, deactivateHoverFeature };
 // Also provide a global reference for non-module scripts
 window.wordHoverManager = { initWordHoverManager, activateHoverFeature, deactivateHoverFeature };
 
-// console.log("wordHoverManager.js loaded (ES module)"); 
