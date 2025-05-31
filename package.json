@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "A progressive reader for language learning with JPDB integration",
   "scripts": {
-    "build": "tsc && webpack --mode production",
-    "dev": "tsc && webpack --mode development --watch",
+    "build-highlighter": "tsc && webpack --mode production",
+    "build-frontend": "npm --prefix frontend run build",
+    "build": "npm run build-highlighter && npm run build-frontend",
+    "dev-highlighter": "tsc && webpack --mode development --watch",
+    "dev-frontend": "npm --prefix frontend run dev",
+    "dev": "npm run dev-highlighter & npm run dev-frontend",
     "format": "prettier --write ."
   },
   "dependencies": {

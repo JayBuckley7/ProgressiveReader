@@ -7,36 +7,25 @@ The current frontend is built with **React** and **TypeScript** using **Vite**.
 
 The application now includes an enhanced JP Highlighter module that provides improved Japanese word highlighting with JPDB integration.
 
-### Setting Up the TypeScript Module
+### Build & Development
 This project requires **Node.js v18+** with **npm v9** or newer.
 
-1. Install Node.js dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Build the TypeScript module:
+2. Build both the JP Highlighter and React frontend with one command:
    ```bash
    npm run build
    ```
 
-3. For development with automatic rebuilding:
+3. For development with automatic rebuilding of both parts:
    ```bash
    npm run dev
    ```
 
-### Building the React Frontend
-
-Build the new UI assets located in the `frontend` directory:
-
-```bash
-cd frontend
-npm install
-npm run build    # production build
-npm run dev      # start local development server
-```
-
-The output will be available under `app/static/dist`.
+The compiled assets will be placed under `app/static/dist`.
 Run `npm run lint && npm run format` before pushing to ensure CI passes.
 
 ### Features
