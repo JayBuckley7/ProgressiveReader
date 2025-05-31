@@ -32,7 +32,6 @@ async function initializeApp() {
 
   try {
     await dbReady;
-//     console.log(`${logPrefix} DB service is ready.`);
   // Log availability of window.dbKeyVal after dbReady if needed
 
     let driveButton = null;
@@ -150,7 +149,6 @@ async function initializeApp() {
       });
     }
 
-//     console.log(`${logPrefix} Application initialization complete.`);
 
   } catch (err) {
     console.error(`${logPrefix} Error during application initialization:`, err);

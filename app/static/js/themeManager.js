@@ -7,7 +7,6 @@ function applyTheme(theme) {
         htmlElement.classList.add('user-theme-dark');
     }
     // If 'system', no class is added, CSS will rely on prefers-color-scheme
-//     console.log("Applied theme:", theme);
 }
 
 function initThemeManager() {
@@ -31,7 +30,6 @@ function initThemeManager() {
 
         setCookieFunc('userTheme', selectedTheme); // Save preference to cookie (redundant? Using localStorage mainly)
         localStorage.setItem('userTheme', selectedTheme); // Save preference to localStorage
-//         console.log('Theme saved:', selectedTheme);
         applyTheme(selectedTheme);
         
         // Re-apply custom CSS as theme change might affect it
@@ -42,7 +40,6 @@ function initThemeManager() {
         }
     });
 
-//     console.log("ThemeManager initialized.");
 }
 
 // Expose functions if needed by other modules, although init pattern is preferred

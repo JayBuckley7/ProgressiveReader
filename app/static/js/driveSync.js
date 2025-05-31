@@ -74,7 +74,6 @@ let progressWorkerRunning = false;
 // --- Cookie Helper Functions ---
 function setDriveConnectedCookie(status) {
     document.cookie = `gdrive_connected=${status};path=/;max-age=${30*24*60*60}`; // Expires in 30 days
-//     console.log(`[DriveSync] Cookie gdrive_connected set to ${status}`);
 }
 
 function getDriveConnectedCookie() {
@@ -88,17 +87,14 @@ function getDriveConnectedCookie() {
         }
         if (c.indexOf(name) === 0) {
             const value = c.substring(name.length, c.length);
-//             console.log(`[DriveSync] Cookie gdrive_connected found with value: ${value}`);
             return value === 'true';
         }
     }
-//     console.log(`[DriveSync] Cookie gdrive_connected not found.`);
     return null; // Return null if cookie not found
 }
 
 function clearDriveConnectedCookie() {
     document.cookie = 'gdrive_connected=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-//     console.log("[DriveSync] Cookie gdrive_connected cleared.");
 }
 // --- End Cookie Helper Functions ---
 
@@ -149,11 +145,9 @@ async function fetchAndStoreUserProfile(tokenToFetchWith) {
         : `${modifiedUrl}?_t=${Date.now()}`;
         
       gToken.userProfile.picture = modifiedUrl;
-//       console.log('[DriveSync] Modified profile picture URL to:', modifiedUrl);
     }
     
     // Removed: await idbSet(TOKEN_STORE_KEY, gToken); // Caller will persist
-//     console.log('[DriveSync] User profile data attached to gToken:', gToken.userProfile);
   } catch (error) {
     console.error('[DriveSync] Error fetching user profile:', error);
     if (gToken) gToken.userProfile = null; // Reset profile on error
@@ -161,7 +155,6 @@ async function fetchAndStoreUserProfile(tokenToFetchWith) {
 }
 
 export async function launchGoogleAuth(promptOrScopes = []) {
-  // console.log(`[DriveSync] launchGoogleAuth: Called with:`, promptOrScopes);
 
   let explicitPrompt = null;
   let additionalScopes = [];
@@ -169,7 +162,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
   if (typeof promptOrScopes === 'string') {
     if (promptOrScopes === 'consent' || promptOrScopes === 'select_account') {
       explicitPrompt = promptOrScopes;
-      // console.log(`[DriveSync] launchGoogleAuth: Interpreted as explicit prompt: ${explicitPrompt}`);
     } else {
       // This case should be rare: a single scope string passed directly.
       console.warn('launchGoogleAuth: Called with a single scope string. Consider passing an array of scopes.');
@@ -177,7 +169,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
     }
   } else if (Array.isArray(promptOrScopes)) {
     additionalScopes = promptOrScopes;
-    // console.log(`[DriveSync] launchGoogleAuth: Interpreted as additional scopes:`, additionalScopes);
   } else if (promptOrScopes && typeof promptOrScopes === 'object' && !Array.isArray(promptOrScopes)) {
      console.error('launchGoogleAuth: Called with an object that is not an array. This is not supported. Aborting auth.', promptOrScopes);
      return Promise.reject(new Error('Invalid argument to launchGoogleAuth: expected string or array.'))
@@ -197,11 +188,9 @@ export async function launchGoogleAuth(promptOrScopes = []) {
     if (!promptType) { // Otherwise, determine based on new scopes
         promptType = newScopesToRequest.length > 0 ? 'consent' : 'none';
     }
-    // console.log(`[DriveSync] launchGoogleAuth: Final promptType: '${promptType}', Scopes to request: '${finalScopeStr}' (New: ${newScopesToRequest.join(', ') || 'None'})`);
 
 
     if (!window.google || !window.google.accounts) {
-      // console.log('[DriveSync] launchGoogleAuth: GIS SDK not found, attempting to load...');
       try {
         await new Promise((scriptResolve, scriptReject) => {
           const s = document.createElement('script');
@@ -209,7 +198,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
           s.async = true;
           s.defer = true;
           s.onload = () => {
-            // console.log('[DriveSync] launchGoogleAuth: GIS SDK loaded successfully.');
             scriptResolve();
           };
           s.onerror = (err) => {
@@ -222,7 +210,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
         return reject(error);
       }
     } else {
-      // console.log('[DriveSync] launchGoogleAuth: GIS SDK already available.');
     }
 
     const clientId = (import.meta?.env?.VITE_GDRIVE_CLIENT_ID) || window.GDRIVE_CLIENT_ID;
@@ -232,7 +219,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
     }
 
     try {
-      // console.log('[DriveSync] launchGoogleAuth: Initializing token client with scopes:', finalScopeStr);
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: finalScopeStr,
@@ -297,7 +283,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
           // If backend sign-in was successful
           try {
             localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(gToken));
-            // console.log("[DriveSync] launchGoogleAuth: gToken stored in localStorage.");
           } catch (storageError) {
             console.error("[DriveSync] launchGoogleAuth: ERROR during localStorage.setItem:", storageError);
             // This is a local issue, but could prevent hydration. Decide if it's critical enough to reject.
@@ -318,7 +303,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
           // Check if it's a popup closed error, often not a "real" error for the flow.
           const popupErrors = ["popup_closed", "popup_failed_to_open", "user_declined", "access_denied"];
           if (error && popupErrors.includes(error.type)) {
-            // console.log(`[DriveSync] launchGoogleAuth: Non-critical popup error: ${error.type}. Not rejecting promise.`);
             // Potentially resolve with a specific status or do nothing, depending on desired UX.
             // For now, let's treat it as a soft failure that doesn't break subsequent logic if any.
              resolve({error: error.type, message: "User closed or declined the Google Auth popup."}); // Resolve to allow init flow to continue gracefully
@@ -328,7 +312,6 @@ export async function launchGoogleAuth(promptOrScopes = []) {
         }
       });
 
-      // console.log(`[DriveSync] launchGoogleAuth: Requesting access token with prompt: '${promptType}'`);
       tokenClient.requestAccessToken({ prompt: promptType });
     } catch (error) {
       console.error('[DriveSync] launchGoogleAuth: Synchronous error during token client init/request:', error);
@@ -338,9 +321,7 @@ export async function launchGoogleAuth(promptOrScopes = []) {
 }
 
 async function hydrateToken(){
-//   console.log("[DriveSync] hydrateToken: Attempting to retrieve token. localStorage available:", !!localStorage);
   const savedTokenJSON = localStorage.getItem(TOKEN_STORE_KEY); 
-//   console.log("[DriveSync] hydrateToken: localStorage.getItem(TOKEN_STORE_KEY) returned:", savedTokenJSON);
   let saved = null;
   if (savedTokenJSON) {
     try {
@@ -352,7 +333,6 @@ async function hydrateToken(){
   }
 
   if(saved && saved.expiry && Date.now() < saved.expiry-30_000){
-//     console.log('[DriveSync] hydrateToken: Token loaded from localStorage and is fresh.', saved.userProfile ? 'Profile also loaded.' : 'Profile not in token.');
     gToken = saved;
     if(!gToken.scopes){
       gToken.scopes = BASE_SCOPES.join(' ');
@@ -368,12 +348,10 @@ async function hydrateToken(){
     setDriveConnectedCookie(true);
     startScheduler();
   } else if (saved) { 
-//     console.log('[DriveSync] hydrateToken: Token found in localStorage but was expired, stale, or invalid.');
     localStorage.removeItem(TOKEN_STORE_KEY);
     gToken = null;
     clearDriveConnectedCookie();
   } else { 
-//     console.log('[DriveSync] hydrateToken: No token found or token was invalid in localStorage.');
   }
 }
 
@@ -431,35 +409,27 @@ async function attemptRefreshToken(){
 
 // ── 3. Folder seed --------------------------------------------------------
 export async function seedDriveFolder(){
-//   console.log('[DriveSync] seedDriveFolder: Starting with list-then-create logic.');
   if (folderId) {
-//     console.log('[DriveSync] seedDriveFolder: folderId already cached in memory:', folderId);
     return folderId;
   }
   folderId = localStorage.getItem('drive.folderId');
   if (folderId) {
-//     console.log('[DriveSync] seedDriveFolder: folderId retrieved from localStorage:', folderId);
     return folderId;
   }
-//   console.log('[DriveSync] seedDriveFolder: folderId not in localStorage. Querying Drive...');
 
   /* 1. LIST first – see if any ProgReader exists already */
   const q = `name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false`;
   try {
     const res = await driveFilesList(q, 'files(id,createdTime)');
     if (res.files && res.files.length > 0) {
-//       console.log(`[DriveSync] seedDriveFolder: Found ${res.files.length} existing '${FOLDER_NAME}' folder(s).`);
       // Pick the oldest (first created) as the canonical folder
       res.files.sort((a,b)=> new Date(a.createdTime).getTime() - new Date(b.createdTime).getTime());
       folderId = res.files[0].id;
-//       console.log(`[DriveSync] seedDriveFolder: Using oldest folder with ID: ${folderId}, created: ${res.files[0].createdTime}`);
       localStorage.setItem('drive.folderId', folderId);
 
       /* Optional: mark spares as trashed so they disappear for the user */
       if (res.files.length > 1) {
-//           console.log(`[DriveSync] seedDriveFolder: Attempting to trash ${res.files.length - 1} duplicate folder(s).`);
           for (let i = 1; i < res.files.length; i++) {
-//             console.log(`[DriveSync] seedDriveFolder: Trashing duplicate folder ID: ${res.files[i].id}`);
             try {
                 await driveFilesUpdate(res.files[i].id, { trashed: true });
             } catch (err) {
@@ -472,14 +442,12 @@ export async function seedDriveFolder(){
     }
 
     /* 2. None found → CREATE one */
-//     console.log(`[DriveSync] seedDriveFolder: No existing '${FOLDER_NAME}' folder found. Creating new one...`);
     const created = await driveFilesCreate({
       name: FOLDER_NAME,
       mimeType: 'application/vnd.google-apps.folder',
       parents: ['root']
     });
     folderId = created.id;
-//     console.log(`[DriveSync] seedDriveFolder: Successfully created new folder '${FOLDER_NAME}' with ID: ${folderId}`);
     localStorage.setItem('drive.folderId', folderId);
     return folderId;
 
@@ -500,7 +468,6 @@ const _authLostHandlers = [];
 export function onAuthLost(fn) { if (typeof fn === 'function') _authLostHandlers.push(fn); }
 function _notifyAuthLost() { _authLostHandlers.forEach(fn => { try { fn(); } catch { /* noop */ } }); }
 function _markDisconnected() {
-//   console.log("[DriveSync] _markDisconnected: Marking as disconnected.");
   gToken = null;
   folderId = null;
   stopScheduler();
@@ -616,11 +583,9 @@ async function downloadAndStoreBook(file) {
 
 // ── 7. Sync loop ----------------------------------------------------------
 export async function runSyncLoop(){
-//   console.log('[DriveSync] runSyncLoop: Starting sync process...');
   window.dispatchEvent(new Event('drive-sync-start'));
 
   if(!isConnected()) {
-//     console.log('[DriveSync] runSyncLoop: Not connected to Google Drive. Aborting sync.');
     return;
   }
 
@@ -637,7 +602,6 @@ export async function runSyncLoop(){
 
   const ms = (performance.now() - startT) | 0;
   window.dispatchEvent(new CustomEvent('drive-sync-complete', { detail: { added: 0, updated: 0, removed: 0 } }));
-//   console.log(`[DriveSync] runSyncLoop: Upload sync completed in ${ms}ms.`);
   return { added: 0, updated: 0, removed: 0, bytesDownloaded: 0, cycleMs: ms };
 }
 
@@ -676,11 +640,9 @@ async function autoUploadLocalBooks() {
         const record = await getBook(m.id);
         if (record && record.content) {
           const ft = record.fileType || m.fileType || 'epub';
-//           console.log(`[DriveSync] autoUploadLocalBooks: Uploading book file for ${m.id} (${m.title})`);
           await uploadBookToDrive(m.id, m.title, record.content, ft);
           // If book upload was successful, immediately try to upload its cover if not already tracked/uploaded
           if (record.coverImageBlob instanceof Blob && !m.coverDriveId && !pendingCoverUploads.has(m.id)) {
-//             console.log(`[DriveSync] autoUploadLocalBooks: Book ${m.id} uploaded, now attempting to upload its cover.`);
             pendingCoverUploads.add(m.id);
             try {
               await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
@@ -694,13 +656,11 @@ async function autoUploadLocalBooks() {
       }
     } else if (m.driveId && !m.coverDriveId) { // Book file exists on Drive (or has driveId), but cover doesn't
       if (pendingCoverUploads.has(m.id)) {
-//         console.log(`[DriveSync] autoUploadLocalBooks: Cover upload for ${m.id} already pending. Skipping.`);
         continue;
       }
       try {
         const record = await getBook(m.id);
         if (record && record.coverImageBlob instanceof Blob) {
-//           console.log(`[DriveSync] autoUploadLocalBooks: Uploading cover for existing Drive book ${m.id} (${m.title})`);
           pendingCoverUploads.add(m.id);
           await uploadCoverToDrive(m.id, m.title, record.coverImageBlob);
         }
@@ -719,12 +679,10 @@ function stopScheduler(){if(driveInterval) clearInterval(driveInterval); driveIn
 // ── 10. Public bootstrap / disconnect ------------------------------------
 export async function init(isExplicitCall = false) {
     window.dispatchEvent(new Event('drive-sync-start'));
-    // console.log(`[DriveSync] init: Starting. Explicit: ${isExplicitCall}`);
 
     const cookieStatus = getDriveConnectedCookie();
 
     if (!isExplicitCall && cookieStatus !== true) {
-        // console.log(`[DriveSync] init: Auto-init skipped. User not previously connected or explicitly disconnected. Cookie: ${cookieStatus}`);
         _markDisconnected(); // Ensure clean state if not proceeding
         window.dispatchEvent(new Event('drive-disconnect'));
         window.dispatchEvent(new Event('drive-sync-complete'));
@@ -732,7 +690,6 @@ export async function init(isExplicitCall = false) {
     }
 
     if (!isExplicitCall && cookieStatus === true) {
-        // console.log("[DriveSync] init: Auto-init, cookie indicates prior connection. Will attempt to hydrate and verify session.");
         window.dispatchEvent(new Event('drive-connected-loading'));
     }
 
@@ -742,14 +699,11 @@ export async function init(isExplicitCall = false) {
     let googleAuthAttempted = false;
 
     if (isConnected()) { // Checks gToken (Google connection from hydration)
-        // console.log("[DriveSync] init: Google token hydrated. Checking Flask session via /auth/me.");
         try {
             const meResponse = await fetch('/auth/me', { method: 'GET', credentials: 'include' });
             if (meResponse.ok) {
                 flaskSessionOk = true;
-                // console.log("[DriveSync] init: Flask session active.");
             } else if (meResponse.status === 401) {
-                // console.log("[DriveSync] init: Flask session 401. Attempting silent Google re-auth to establish Flask session.");
                 // Fall through to attempt launchGoogleAuth([])
             } else {
                 console.warn("[DriveSync] init: /auth/me call failed with status:", meResponse.status);
@@ -769,7 +723,6 @@ export async function init(isExplicitCall = false) {
 
     if (needsToRunGoogleAuthFlow) {
         googleAuthAttempted = true;
-        // console.log(`[DriveSync] init: Needs to run Google Auth Flow. Explicit: ${isExplicitCall}, Google connected: ${isConnected()}, Flask OK: ${flaskSessionOk}`);
         try {
             // If !isExplicitCall, this is a silent attempt due to bad Flask session with good gToken.
             await launchGoogleAuth(isExplicitCall ? 'consent' : []); 
@@ -779,14 +732,12 @@ export async function init(isExplicitCall = false) {
                 if (meResponseAfterAuth.ok) {
                     flaskSessionOk = true;
                     setDriveConnectedCookie(true); // Ensure our custom cookie is set
-                    // console.log("[DriveSync] init: Google auth flow successful, Flask session now active.");
                 } else {
                     console.warn("[DriveSync] init: Flask session STILL not active after Google auth flow. /auth/me status:", meResponseAfterAuth.status);
                     _markDisconnected(); 
                     flaskSessionOk = false;
                 }
             } else {
-                // console.log("[DriveSync] init: launchGoogleAuth did not result in Google connection.");
                 _markDisconnected();
                 flaskSessionOk = false;
             }
@@ -802,7 +753,6 @@ export async function init(isExplicitCall = false) {
     }
 
     if (isConnected() && flaskSessionOk) {
-        // console.log("[DriveSync] init: Google connected AND Flask session active. Proceeding with Drive operations.");
         try {
             await seedDriveFolder();
             window.dispatchEvent(new Event('drive-online'));
@@ -814,7 +764,6 @@ export async function init(isExplicitCall = false) {
             window.dispatchEvent(new Event('drive-offline'));
         }
     } else {
-        // console.log(`[DriveSync] init: Not proceeding with Drive operations. Google connected: ${isConnected()}, Flask session OK: ${flaskSessionOk}`);
         // If it wasn't an explicit call that failed and threw, or if an auth attempt wasn't made this round,
         // ensure we are marked as disconnected.
         if (!isExplicitCall || !googleAuthAttempted) {
@@ -826,11 +775,9 @@ export async function init(isExplicitCall = false) {
 }
 
 export function disconnect(){
-//   console.log("[DriveSync] disconnect: User initiated disconnect.");
   if(gToken && gToken.access) {
     try {
       google.accounts.oauth2.revoke(gToken.access, () => {
-//         console.log('[DriveSync] Token revoked successfully.');
       });
     } catch (e) {
       console.warn('[DriveSync] Error during token revocation (gsi):', e.message);
@@ -851,7 +798,6 @@ export default { init, launchGoogleAuth, isConnected, getFolderId, getUserProfil
  * @param {string} [fileType='epub'] Extension representing the file type.
  */
 export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 'epub') {
-//     console.log(`[DriveSync] uploadBookToDrive: Starting upload for bookId: ${bookId}, Title: ${bookTitle}`);
 
     if (!isConnected()) {
         console.error('[DriveSync] uploadBookToDrive: Not connected to Google Drive.');
@@ -871,7 +817,6 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
             console.error('[DriveSync] uploadBookToDrive: Could not get or create app folder in Drive.');
             throw new Error('Failed to access application folder in Google Drive.');
         }
-//         console.log(`[DriveSync] uploadBookToDrive: Using app folder ID: ${appFolderId}`);
 
         // Sanitize title and preserve extension
         const ext = (fileType || 'epub').toLowerCase();
@@ -888,14 +833,12 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
               progReaderBookId: bookId
             }
         };
-//         console.log('[DriveSync] uploadBookToDrive: File metadata prepared:', metadata);
 
         // 3. Create FormData for multipart upload
         const form = new FormData();
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         form.append('file', fileBlob, fileNameInDrive);
 
-//         console.log('[DriveSync] uploadBookToDrive: FormData prepared. Initiating upload...');
 
         // 4. Upload the file using fetch with authHeader
         const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
@@ -918,11 +861,9 @@ export async function uploadBookToDrive(bookId, bookTitle, fileBlob, fileType = 
         }
 
         const createdFile = await response.json();
-//         console.log(`[DriveSync] uploadBookToDrive: File uploaded successfully. ID: ${createdFile.id}, Name: ${createdFile.name}`);
 
         try {
             await updateBookMetadata(bookId, { driveId: createdFile.id });
-//             console.log('[DriveSync] Stored driveId in local metadata');
         } catch (e) {
             console.warn('[DriveSync] Failed to update local metadata with driveId:', e);
         }
@@ -988,7 +929,6 @@ export async function deleteRemoteBook(bookId) {
     if (!isConnected()) throw new Error('Not connected to Google Drive');
     try {
         await driveFilesDelete(bookId);
-//         console.log(`[DriveSync] deleteRemoteBook: Deleted ${bookId}`);
     } catch (err) {
         console.error('[DriveSync] deleteRemoteBook: Error deleting', bookId, err);
         throw err;
@@ -996,7 +936,6 @@ export async function deleteRemoteBook(bookId) {
 }
 
 export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
-//     console.log(`[DriveSync] uploadCoverToDrive: Starting cover upload for bookId: ${bookId}, Title: ${bookTitle}`);
 
     if (!isConnected()) {
         console.error('[DriveSync] uploadCoverToDrive: Not connected to Google Drive.');
@@ -1058,7 +997,6 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
                 coverDriveId:  createdFile.id,
                 coverMimeType: coverBlob.type
             });
-//             console.log(`[DriveSync] uploadCoverToDrive: Stored coverDriveId (${createdFile.id}) in local metadata for book: ${bookId}`);
         } catch (e) {
             console.warn(`[DriveSync] uploadCoverToDrive: Failed to store coverDriveId locally for book: ${bookId}`, e);
         }

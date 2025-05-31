@@ -19,7 +19,6 @@ function initSideDrawer() {
         document.body.classList.remove('drawer-open');
     });
     
-//     console.log("SideDrawer initialized.");
 }
 
 // Expose if needed, but init pattern is better

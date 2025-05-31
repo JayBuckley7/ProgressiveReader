@@ -12,7 +12,6 @@ const logPrefix = '[DemoInit]';
  | 0.  Global demo flag                                        
  *--------------------------------------------------------------*/
 window.IS_DEMO_MODE = true;
-// console.log(`${logPrefix} Setting global IS_DEMO_MODE flag to true`);
 
 /*--------------------------------------------------------------
  | 1.  Demo-book descriptors                                   
@@ -46,7 +45,6 @@ async function preloadEpubDependencies() {
   const epubjsUrl = 'https://unpkg.com/epubjs@0.3.93/dist/epub.min.js';
 
   if (!window.JSZip) {
-//     console.log(`${logPrefix} Loading JSZip…`);
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src   = jszipUrl;
@@ -58,7 +56,6 @@ async function preloadEpubDependencies() {
   }
 
   if (!window.ePub) {
-//     console.log(`${logPrefix} Loading epub.js…`);
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src   = epubjsUrl;
@@ -69,7 +66,6 @@ async function preloadEpubDependencies() {
     });
   }
 
-//   console.log(`${logPrefix} EPUB dependencies are ready`);  // from internal loader logic :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}:contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
 }
 
 /*--------------------------------------------------------------
@@ -190,7 +186,6 @@ async function addDemoBooksToDOM() {
   }
 
   DEMO_BOOKS.forEach(book => {
-//     console.log(`${logPrefix} Injecting demo book: ${book.title}`);
     grid.appendChild(createDemoBookElement(book));
   });
 }
@@ -211,14 +206,12 @@ function setupBookshelfObserver() {
   new MutationObserver(lockNonDemoBooks)
     .observe(grid, { childList:true, subtree:true });
 
-//   console.log(`${logPrefix} Bookshelf observer active`);
 }
 
 /*--------------------------------------------------------------
  | 7.  Clean up old persistent demo blobs                       
  *--------------------------------------------------------------*/
 async function cleanupOldDemoBooks() {
-//   console.log(`${logPrefix} Cleaning legacy demo blobs…`);
   try {
     const all = await getLocalBooksMetadata();
     const toDel = all.filter(rec =>
@@ -228,7 +221,6 @@ async function cleanupOldDemoBooks() {
     );
     for (const rec of toDel) {
       await deleteBook(rec.id, rec.driveId, driveSync);
-//       console.log(`${logPrefix} Removed legacy demo blob: ${rec.title||rec.id}`);
     }
   } catch (err) {
     console.error(`${logPrefix} cleanup failed:`, err);
@@ -242,13 +234,11 @@ async function initDemo() {
   const demoButton = document.getElementById('to-demo-page-link');
   if (demoButton) {
     demoButton.style.display = 'none';
-//     console.log(`${logPrefix} "To Demo Page" link hidden as we are already in demo mode.`);
   }
 
   addDemoBookStyles();
   setupBookshelfObserver();
 
-//   console.log(`${logPrefix} Waiting for bookshelf render…`);
   await dbReady;                    
   await cleanupOldDemoBooks();
 
@@ -263,7 +253,6 @@ async function initDemo() {
   await addDemoBooksToDOM();
   lockNonDemoBooks();
 
-//   console.log(`${logPrefix} Demo initialization complete.`);
 }
 
 /*--------------------------------------------------------------

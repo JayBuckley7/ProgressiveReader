@@ -149,4 +149,3 @@ window.hoverSettings = {
     DEFAULTS: DEFAULT_HOVER_SETTINGS 
 };
 
-// console.log("hoverSettings.js loaded (reader only)"); 
