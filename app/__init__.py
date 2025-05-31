@@ -8,7 +8,7 @@ try:
     from flask_cors import CORS
 except ImportError:  # unit-test fallback only
     class CORS:
-        """Minimal stand-in when ``flask_cors`` is unavailable during tests."""
+        """Minimal stand-in used when ``flask_cors`` is missing during tests."""
 
         def __init__(self, app=None, **_kw):
             if app is not None:
