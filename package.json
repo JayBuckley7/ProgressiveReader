@@ -5,7 +5,7 @@
   "scripts": {
     "build-highlighter": "tsc && webpack --mode production",
     "build-frontend": "npm --prefix frontend run build",
-    "copy:frontend-assets": "mkdir -p app/static/dist && cp -r frontend/dist/assets app/static/dist/ && cp frontend/dist/manifest.json app/static/dist/manifest.json",
+    "copy:frontend-assets": "node scripts/copyFrontendAssets.js",
     "build": "npm run build-highlighter && npm run build-frontend && npm run copy:frontend-assets",
     "dev-highlighter": "tsc && webpack --mode development --watch",
     "dev-frontend": "npm --prefix frontend run dev",
