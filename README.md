@@ -7,6 +7,7 @@ A web-based progressive reader for language learning with JPDB integration.
 The application now includes an enhanced JP Highlighter module that provides improved Japanese word highlighting with JPDB integration.
 
 ### Setting Up the TypeScript Module
+This project requires **Node.js v18+** with **npm v9** or newer.
 
 1. Install Node.js dependencies:
    ```bash
@@ -22,6 +23,22 @@ The application now includes an enhanced JP Highlighter module that provides imp
    ```bash
    npm run dev
    ```
+
+### Building the React Frontend
+
+Build the new UI assets located in the `frontend` directory:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+The output will be available under `app/static/dist`.
+
+### Switching UI stacks
+To enable the new React UI, export `USE_NEW_UI=true` or set it in `.env`.
+Run `npm run lint && npm run format` before pushing to ensure CI passes.
 
 ### Features
 
@@ -66,6 +83,8 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 - Python 3.x
 - pip (Python package installer)
+- Node.js 18+
+- npm 9+
 
 ### Installation & Setup
 
