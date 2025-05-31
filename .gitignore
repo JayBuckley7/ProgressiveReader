@@ -160,6 +160,8 @@ user_epubs/
 
 # Node.js
 node_modules/
+frontend/node_modules/
+frontend/dist/
 
 # Service account keys
 pr-ghactions-sa-key.json

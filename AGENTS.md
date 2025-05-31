@@ -12,3 +12,4 @@ The following guidelines apply to all code contributions in this repository.
   Report the results in the pull request description.
 - If JavaScript tests are added in the future, run `npm test` as well.
 
+- Add TODO comments referencing the README for any features described there but missing in the codebase.
