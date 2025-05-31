@@ -4,9 +4,7 @@ const CACHE_NAME = 'progressive-reader-cache-v1';
 // Assets to cache on install
 const PRECACHE_ASSETS = [
   '/',
-  '/static/css/index.css',
   '/static/css/reader_styles.css',
-  '/static/js/index.js',
   '/static/js/dbService.js',
   '/static/js/storageManager.js',
   '/static/js/epubProcessor.js',

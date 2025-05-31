@@ -139,16 +139,15 @@ def create_app(config_class=Config) -> Flask:
 
         db.create_all()
 
-    if app.config.get('USE_NEW_UI'):
-        @app.route('/', defaults={'path': ''}, methods=['GET'])
-        @app.route('/<path:path>', methods=['GET'])
-        def spa_fallback(path: str):
-            """Serve the React application for non-API routes."""
-            dist = os.path.join(app.static_folder, 'dist')
-            index_file = os.path.join(dist, 'index.html')
-            if os.path.exists(index_file):
-                return send_from_directory(dist, 'index.html')
-            return render_template('index.html')
+    @app.route('/', defaults={'path': ''}, methods=['GET'])
+    @app.route('/<path:path>', methods=['GET'])
+    def spa_fallback(path: str):
+        """Serve the React application for non-API routes."""
+        dist = os.path.join(app.static_folder, 'dist')
+        index_file = os.path.join(dist, 'index.html')
+        if os.path.exists(index_file):
+            return send_from_directory(dist, 'index.html')
+        return render_template('index.html')
 
     app.logger.info("Flask app created successfully.")
     return app
