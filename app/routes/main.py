@@ -2,7 +2,6 @@
 from flask import Blueprint, render_template, session, request, redirect, url_for, current_app, jsonify
 import os
 import uuid
-# import tempfile # No longer needed
 
 # Use a more descriptive name like 'main_bp' or similar
 main_bp = Blueprint('main', __name__)
@@ -31,16 +30,10 @@ def upload_file():
     else:
         return jsonify({'success': False, 'message': 'Invalid file type, please upload an EPUB, PDF, MOBI, DOCX, or TXT file.'}), 400
 
-
 @main_bp.route('/delete/<filename>', methods=['POST'])
 def delete_book(filename):
     """Return an error because deletion happens in the browser."""
     return jsonify({'success': False, 'message': 'Deletion handled client-side via IndexedDB.'}), 400
-
-# Remove old /book/cover route if it exists, as covers aren't handled yet
-# @main_bp.route('/book/cover/<book_id>/<filename>')
-# def book_cover(book_id, filename):
-#    ... (old cover serving logic) 
 
 @main_bp.route('/demo', strict_slashes=False)
 def demo():
@@ -49,7 +42,7 @@ def demo():
     demo_book_files = []
     if os.path.exists(demo_books_dir):
         demo_book_files = [f for f in os.listdir(demo_books_dir) if f.endswith('.epub')]
-        print(f"Found demo books: {demo_book_files}") # Log for debugging
+        current_app.logger.info(f"Found demo books: {demo_book_files}")
 
     return render_template('demo.html', is_demo=True, demo_books=demo_book_files, openai_key_configured=True) 
 @main_bp.route('/tos')
