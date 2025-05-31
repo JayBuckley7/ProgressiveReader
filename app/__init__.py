@@ -62,18 +62,25 @@ def create_app(config_class=Config) -> Flask:
     login_manager.init_app(app)
     CORS().init_app(app)
 
+    manifest_cache: dict | None = None
+
     def vite_asset(filename: str) -> str:
-        """Return the path to a Vite-built asset."""
-        manifest_path = os.path.join(app.static_folder, 'dist', 'manifest.json')
-        if os.path.exists(manifest_path):
-            try:
-                with open(manifest_path) as f:
-                    manifest = json.load(f)
-                entry = manifest.get(filename)
-                if entry and 'file' in entry:
-                    return url_for('static', filename=f"dist/{entry['file']}")
-            except Exception as exc:  # pragma: no cover - runtime safeguard
-                app.logger.debug(f"Vite manifest read failed: {exc}")
+        """Return the path to a Vite-built asset using the manifest if present."""
+        nonlocal manifest_cache
+        if manifest_cache is None:
+            manifest_path = os.path.join(app.static_folder, 'dist', 'manifest.json')
+            if os.path.exists(manifest_path):
+                try:
+                    with open(manifest_path) as f:
+                        manifest_cache = json.load(f)
+                except Exception as exc:  # pragma: no cover - runtime safeguard
+                    app.logger.debug(f"Vite manifest read failed: {exc}")
+                    manifest_cache = {}
+            else:
+                manifest_cache = {}
+        entry = manifest_cache.get(filename) if manifest_cache else None
+        if isinstance(entry, dict) and 'file' in entry:
+            return url_for('static', filename=f"dist/{entry['file']}")
         return url_for('static', filename=f'dist/{filename}')
 
     app.jinja_env.globals['vite_asset'] = vite_asset
