@@ -1,6 +1,7 @@
 # Progressive Reader
 
 A web-based progressive reader for language learning with JPDB integration.
+The current frontend is built with **React** and **TypeScript** using **Vite**.
 
 ## New TypeScript JP Highlighter
 
@@ -31,7 +32,8 @@ Build the new UI assets located in the `frontend` directory:
 ```bash
 cd frontend
 npm install
-npm run build
+npm run build    # production build
+npm run dev      # start local development server
 ```
 
 The output will be available under `app/static/dist`.
@@ -279,4 +281,10 @@ To use `dev.progressivereader.net` with this Cloud Run service:
 
 ### Local Development - Classic UI (if `USE_NEW_UI` is `False`)
 
-If you are using the classic UI (i.e., `USE_NEW_UI` is set to `False`
+If you are using the classic UI (i.e., `USE_NEW_UI` is set to `False` in your `.env` or `config.py`), you need to build the TypeScript-based highlighter manually before running the Flask development server:
+
+```bash
+npm install       # Install dependencies if you haven't already
+npm run build     # Compile the highlighter
+flask run         # Start the Flask development server
+```
