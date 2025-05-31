@@ -8,7 +8,7 @@ The current frontend is built with **React** and **TypeScript** using **Vite**.
 The application now includes an enhanced JP Highlighter module that provides improved Japanese word highlighting with JPDB integration.
 
 ### Build & Development
-This project requires **Node.js v18+** with **npm v9** or newer.
+This project requires **Node.js v18 or newer** along with **npm v9+**.
 
 1. Install dependencies:
    ```bash
@@ -112,6 +112,7 @@ Run `npm run lint && npm run format` before pushing to ensure CI passes.
     *   Open the newly created `.env` file in a text editor.
     *   Modify the placeholder values, especially `REDIS_URL`, to match your local setup or cloud services. For example, if you have a Google Cloud Redis instance, set `REDIS_URL` to its connection string (e.g., `redis://<your-redis-ip>:<port>/0`).
     *   The `.env` file is included in `.gitignore` and should **not** be committed to version control.
+    *   To enable the new UI, set `USE_NEW_UI=true` in your environment or inside the `.env` file.
 
 5.  **Install development dependencies (optional):**
     ```bash
