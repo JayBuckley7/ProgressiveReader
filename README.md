@@ -179,7 +179,7 @@ designed for manual use and are not part of the automated test suite.
 ## Technologies Used
 
 - **Backend**: Flask (Python web framework)
-- **EPUB Parsing**: ebooklib (Python library)
+- **EPUB Parsing**: json (Python standard library)
 - **Frontend**: HTML, CSS, JavaScript (within Flask templates)
 
 ## License
@@ -279,10 +279,4 @@ To use `dev.progressivereader.net` with this Cloud Run service:
 
 ### Local Development - Classic UI (if `USE_NEW_UI` is `False`)
 
-If you are using the classic UI (i.e., `USE_NEW_UI` is set to `False` in your `.env` or `config.py`), you need to build the TypeScript-based highlighter manually before running the Flask development server:
-
-```bash
-npm install       # Install dependencies if you haven't already
-npm run build     # Compile the highlighter
-flask run         # Start the Flask development server
-```
+If you are using the classic UI (i.e., `USE_NEW_UI` is set to `False`

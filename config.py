@@ -29,4 +29,4 @@ class Config:
     JPDB_API_URL = 'https://jpdb.io/api/v1/parse'
     SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
     SESSION_COOKIE_SECURE = bool(os.environ.get('SESSION_COOKIE_SECURE', 'True'))
-    USE_NEW_UI = os.environ.get('USE_NEW_UI', 'False').lower() in ('1', 'true', 'yes')
+    USE_NEW_UI = True

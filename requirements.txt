@@ -1,6 +1,5 @@
 Flask==3.1.1
-# ebooklib==0.18 # Removed as EbookLib>=0.18 covers it
-EbookLib>=0.18
+# beautifulsoup4==4.12.3
 beautifulsoup4==4.12.3
 lxml==5.1.0
 openai==1.78.1
