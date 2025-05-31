@@ -10,8 +10,6 @@ if __name__ == '__main__':
     # Ensure debug logging is active when running with app.run(debug=True)
     if app.debug:
         app.logger.setLevel(logging.DEBUG)
-        # You can also set the Werkzeug logger to DEBUG if needed
-        # logging.getLogger('werkzeug').setLevel(logging.DEBUG)
         app.logger.info("Flask development server running with DEBUG log level.")
 
     # Configure extra files to watch for changes
