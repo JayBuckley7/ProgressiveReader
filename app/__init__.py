@@ -7,12 +7,15 @@ from flask_login import LoginManager
 try:
     from flask_cors import CORS
 except ImportError:  # unit-test fallback only
-    class CORS:  # noqa: D401, E302
-        def __init__(self, *_a, **_kw):
-            ...
+    class CORS:
+        """Minimal stand-in when ``flask_cors`` is unavailable during tests."""
+
+        def __init__(self, app=None, **_kw):
+            if app is not None:
+                self.init_app(app)
 
         def init_app(self, app, **_kw):
-            app.logger.debug("CORS stub")
+            app.logger.debug("CORS stub initialized")
 from config import Config
 from .models import db, User
 from dotenv import load_dotenv
@@ -60,7 +63,7 @@ def create_app(config_class=Config) -> Flask:
 
     db.init_app(app)
     login_manager.init_app(app)
-    CORS().init_app(app)
+    CORS(app)
 
     def vite_asset(filename: str) -> str:
         """Return the path to a Vite-built asset."""
