@@ -5,10 +5,11 @@
   "scripts": {
     "build-highlighter": "tsc && webpack --mode production",
     "build-frontend": "npm --prefix frontend run build",
-    "build": "npm run build-highlighter && npm run build-frontend",
+    "copy:frontend-assets": "mkdir -p app/static/dist && cp -r frontend/dist/assets app/static/dist/ && cp frontend/dist/manifest.json app/static/dist/manifest.json",
+    "build": "npm run build-highlighter && npm run build-frontend && npm run copy:frontend-assets",
     "dev-highlighter": "tsc && webpack --mode development --watch",
     "dev-frontend": "npm --prefix frontend run dev",
-    "dev": "npm run dev-highlighter & npm run dev-frontend",
+    "dev": "concurrently \"npm:dev-highlighter\" \"npm:dev-frontend\"",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
     "@types/node": "^20.2.5",
+    "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.11.0",
     "prettier": "^3.0.3",
