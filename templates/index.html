@@ -20,7 +20,11 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.png') }}" />
 
     <!-- App Stylesheets -->
-    <link rel="stylesheet" href="{{ vite_asset('index.css') }}" />
+    {% if config.USE_NEW_UI %}
+      <link rel="stylesheet" href="{{ vite_asset('index.css') }}" />
+    {% else %}
+      <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}" />
+    {% endif %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/pwa_prompt.css') }}" />
 
     <!-- Inline styles for PWA elements, Drive-status banner and hero banner -->
@@ -214,7 +218,11 @@
     <!-- <script src="{{ url_for('static', filename='js/lib/idb-keyval-iife.min.js') }}"></script> -->
 
     <!-- Your Application Modules AFTER libraries are loaded -->
-    <script type="module" src="{{ vite_asset('index.js') }}"></script>
+    {% if config.USE_NEW_UI %}
+      <script type="module" src="{{ vite_asset('index.js') }}"></script>
+    {% else %}
+      <script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
+    {% endif %}
     <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/danger_zone.js') }}"></script>
     {% block body_end %}{% endblock %}

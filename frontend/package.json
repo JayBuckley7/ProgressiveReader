@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "format": "prettier --check ."
+    "format": "prettier --write ."
   },
   "dependencies": {
     "react": "^18.2.0",

@@ -1,5 +1,7 @@
 # Stage 1: Build TypeScript highlighter
-FROM node:18 AS ts_builder
+FROM node:18 AS nodebase
+
+FROM nodebase AS ts_builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +10,7 @@ COPY tsconfig.json webpack.config.js ./
 RUN npm run build
 
 # Stage 2: Build React UI with Vite
-FROM node:18 AS react_builder
+FROM nodebase AS react_builder
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

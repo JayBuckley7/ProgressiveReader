@@ -276,3 +276,13 @@ To use `dev.progressivereader.net` with this Cloud Run service:
 
 3. Once DNS changes propagate, Cloud Run automatically provisions an HTTPS
    certificate and the custom domain will be active.
+
+### Local Development - Classic UI (if `USE_NEW_UI` is `False`)
+
+If you are using the classic UI (i.e., `USE_NEW_UI` is set to `False` in your `.env` or `config.py`), you need to build the TypeScript-based highlighter manually before running the Flask development server:
+
+```bash
+npm install       # Install dependencies if you haven't already
+npm run build     # Compile the highlighter
+flask run         # Start the Flask development server
+```
