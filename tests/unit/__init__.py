@@ -1,12 +1,11 @@
-from unittest.mock import MagicMock
-from google.cloud import firestore
-import sys
-import types
+# This file can be empty or contain fixtures specific to unit tests.
+# For example, you might mock specific modules or classes here.
 
-# Dummy Firestore client for unit tests
-firestore.Client = MagicMock(return_value=MagicMock())
-sys.modules.setdefault('redis', MagicMock())
+# import pytest
+# from unittest.mock import patch
 
-import app.routes.metadata as metadata
-if not hasattr(metadata, 'redis'):
-    metadata.redis = types.SimpleNamespace(Redis=MagicMock())
+# @pytest.fixture(autouse=True) # autouse=True applies this fixture to all unit tests
+# def mock_some_dependency():
+#     with patch('your_module.dependency_to_mock') as mock:
+#         mock.return_value = 'mocked value'
+#         yield mock

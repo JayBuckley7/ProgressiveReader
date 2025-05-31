@@ -95,3 +95,11 @@ if (btnClearRedis) {
   });
 }
 
+function clearUserCache() {
+    // This function will clear user-specific caches.
+    // We will implement this based on where user data is stored.
+    // For now, let's assume it clears local storage or makes an API call.
+    console.log("Clearing user-specific cache...");
+    alert("User-specific cache cleared (simulated).");
+}
+

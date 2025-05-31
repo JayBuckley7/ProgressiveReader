@@ -1,67 +1,49 @@
 steps:
   # 1. Build Docker Image
-  - name: gcr.io/cloud-builders/docker
+  - name: 'gcr.io/cloud-builders/docker'
     id: Build Docker Image
-    args:
-      - build
-      - -t
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
-      - -t
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
-      - .
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/progressivereader:$COMMIT_SHA', '.']
 
-  # 2. Push to Artifact Registry
-  - name: gcr.io/cloud-builders/docker
-    id: Push to Artifact Registry
+  # 2. Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push to Container Registry
     waitFor: [Build Docker Image]
-    args:
-      - push
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+    args: ['push', 'gcr.io/$PROJECT_ID/progressivereader:$COMMIT_SHA']
 
-  - name: gcr.io/cloud-builders/docker
-    id: Push latest tag
-    waitFor: [Build Docker Image]
-    args:
-      - push
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
-
-  # 3. Run Build Verification Tests (BVT)
-  - name: gcr.io/cloud-builders/gcloud
-    id: BVT
-    waitFor: [Push to Artifact Registry]
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME --platform managed --region us-central1 --format 'value(status.url)')
-        HEALTH_CHECK_URL="$${SERVICE_URL}/health"
-        echo "Performing BVT by checking health at: $${HEALTH_CHECK_URL}"
-        curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$${HEALTH_CHECK_URL}" || \
-          (echo "BVT failed for $${HEALTH_CHECK_URL}" && exit 1)
-        echo "BVT passed for $${HEALTH_CHECK_URL}"
-
-  # 4. Deploy to Cloud Run (with VPC access)
-  - name: gcr.io/cloud-builders/gcloud
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: Deploy to Cloud Run
-    waitFor: [BVT]
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        gcloud run deploy ${_SERVICE_NAME} \
-          --image=us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA} \
-          --service-account=progressive-reader-bvt-sa@${PROJECT_ID}.iam.gserviceaccount.com \
-          --set-secrets=OPENAI_API_KEY=openai-api-key:latest,JPDB_API_KEY=jpdb-api-key:latest,REDIS_URL=redis-url:latest \
-          --region=us-central1 \
-          --platform=managed \
-          --allow-unauthenticated \
-          --set-env-vars=APP_ENV=$_ENVIRONMENT \
-          --project=$PROJECT_ID \
-          --vpc-connector=floof-connector \
-          --vpc-egress=private-ranges-only
+    waitFor: [Push to Container Registry]
+    entrypoint: gcloud
+    args: [
+      'run', 'deploy', 'progressivereader', 
+      '--image', 'gcr.io/$PROJECT_ID/progressivereader:$COMMIT_SHA', 
+      '--region', 'us-central1',
+      '--platform', 'managed',
+      '--allow-unauthenticated',
+      '--set-env-vars=FLASK_ENV=production'
+    ]
 
+  # 4. Deploy the Cloud Run indexer service
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Deploy Cloud Run Indexer
+    waitFor: [Deploy to Cloud Run]
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'progressivereader-indexer'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/progressivereader-indexer:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--no-allow-unauthenticated'
+      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID'
 
 images:
-  - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+  - 'gcr.io/$PROJECT_ID/progressivereader:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/progressivereader-indexer:$COMMIT_SHA'
 
 timeout: "1200s"

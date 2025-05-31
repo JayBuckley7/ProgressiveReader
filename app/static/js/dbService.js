@@ -645,3 +645,53 @@ export async function getCachedUserProfileImage(userId) {
         };
     });
 }
+
+async function syncMetadataWithServer(userId) {
+    if (!userId) {
+        console.warn('User ID is not available, skipping server sync.');
+        return;
+    }
+    // console.log('Syncing metadata with server for user:', userId);
+    // try {
+    //     const response = await fetch(`/metadata/${userId}/books`);
+    //     if (!response.ok) {
+    //         throw new Error(`HTTP error! status: ${response.status}`);
+    //     }
+    //     const serverBooks = await response.json();
+    //     // console.log('Received books from server:', serverBooks);
+
+    //     const db = await dbReady;
+    //     const transaction = db.transaction('books', 'readwrite');
+    //     const store = transaction.objectStore('books');
+
+    //     for (const book of serverBooks) {
+    //         // console.log('Processing server book:', book);
+    //         const existingBook = await store.get(book.id);
+    //         if (existingBook) {
+    //             // console.log('Book exists locally, updating:', book.id);
+    //             // Merge server data with local data, prioritizing server for most fields
+    //             // but keeping local progress if server's is older or undefined.
+    //             const updatedBook = { ...existingBook, ...book };
+    //             // Add specific logic for merging progress if necessary
+    //             await store.put(updatedBook);
+    //         } else {
+    //             // console.log('Book does not exist locally, adding:', book.id);
+    //             // If book is new, ensure default values for progress are set if not provided by server
+    //             const newBook = {
+    //                 ...book,
+    //                 current_chapter_index: book.current_chapter_index || 0,
+    //                 reading_position_in_chapter: book.reading_position_in_chapter || 0,
+    //                 last_read_timestamp: book.last_read_timestamp || Date.now()
+    //             };
+    //             await store.put(newBook);
+    //         }
+    //     }
+
+    //     await transaction.done;
+    //     // console.log('Metadata sync with server completed.');
+    //     document.dispatchEvent(new CustomEvent('booksUpdated'));
+
+    // } catch (error) {
+    //     console.error('Error syncing metadata with server:', error);
+    // }
+}
