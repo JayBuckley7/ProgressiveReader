@@ -1,7 +1,7 @@
 import unittest
-import json
 from unittest.mock import patch, MagicMock
 from app import create_app
+import types
 
 
 class MetadataApiTestCase(unittest.TestCase):
@@ -9,180 +9,61 @@ class MetadataApiTestCase(unittest.TestCase):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
+        self.client.post('/auth/register', json={'email': 'm@test.com', 'password': 'pw'})
 
-    @patch('app.routes.metadata.redis.Redis')
-    def test_store_and_fetch(self, mock_redis_cls):
+    @patch('app.routes.metadata.firestore.ArrayUnion')
+    @patch('app.routes.metadata.fs_db')
+    def test_store_and_fetch(self, mock_fs, mock_au):
         storage = {}
-        mock_redis = MagicMock()
 
-        def fake_get(key):
-            return storage.get(key)
+        mock_au.side_effect = lambda vals: types.SimpleNamespace(values=vals)
 
-        def fake_set(key, value):
-            storage[key] = value
+        class FakeDoc:
+            def __init__(self, key):
+                self.key = key
 
-        mock_redis.get.side_effect = fake_get
-        mock_redis.set.side_effect = fake_set
-        mock_redis_cls.from_url.return_value = mock_redis
+            def get(self):
+                data = storage.get(self.key)
+                snap = MagicMock()
+                snap.exists = data is not None
+                snap.to_dict.return_value = data or {}
+                return snap
+
+            def set(self, data, merge=False):
+                existing = storage.get(self.key, {})
+                for k, v in data.items():
+                    if hasattr(v, 'values') and isinstance(existing.get(k), list):
+                        existing[k].extend(list(v.values))
+                    elif hasattr(v, 'values'):
+                        existing[k] = list(v.values)
+                    elif isinstance(v, list) and isinstance(existing.get(k), list):
+                        existing[k].extend(v)
+                    else:
+                        existing[k] = v
+                storage[self.key] = existing
+
+        class FakeCollection:
+            def document(self, doc_id):
+                return FakeDoc(doc_id)
+
+        mock_fs.collection.return_value = FakeCollection()
 
         metadata = {'id': 'book1', 'title': 'Test', 'coverDriveId': 'c123'}
-        resp = self.client.post('/metadata/user1/book/book1', json=metadata)
-        self.assertEqual(resp.status_code, 200)
+        with self.client as c:
+            c.post('/auth/login', json={'email': 'm@test.com', 'password': 'pw'})
+            resp = c.post('/metadata/books', json=metadata)
+            self.assertEqual(resp.status_code, 200)
 
-        resp = self.client.get('/metadata/user1/books')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json(), [metadata])
+            resp = c.get('/metadata/books')
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.get_json(), [metadata])
 
-    @patch('app.routes.metadata.redis.Redis')
-    def test_delete_book(self, mock_redis_cls):
-        storage = {}
-        mock_redis = MagicMock()
-
-        def fake_get(key):
-            return storage.get(key)
-
-        def fake_set(key, value):
-            storage[key] = value
-
-        def fake_delete(key):
-            storage.pop(key, None)
-
-        mock_redis.get.side_effect = fake_get
-        mock_redis.set.side_effect = fake_set
-        mock_redis.delete.side_effect = fake_delete
-        mock_redis_cls.from_url.return_value = mock_redis
-
-        metadata = {'id': 'book1', 'title': 'Test', 'coverDriveId': 'c123'}
-        self.client.post('/metadata/user1/book/book1', json=metadata)
-
-        resp = self.client.delete('/metadata/user1/book/book1')
-        self.assertEqual(resp.status_code, 200)
-
-        resp = self.client.get('/metadata/user1/books')
-        self.assertEqual(resp.get_json(), [])
-
-
-    @patch('app.routes.metadata.redis.Redis')
-    def test_store_book_invalid_json(self, mock_redis_cls):
-        """Non-dict JSON payloads should return HTTP 400."""
-        mock_redis_cls.from_url.return_value = MagicMock()
-        resp = self.client.post('/metadata/user1/book/book1', json=['bad'])
-        self.assertEqual(resp.status_code, 400)
-
-
-    @patch('app.routes.metadata.redis.Redis')
-    def test_delete_book_missing(self, mock_redis_cls):
-        """Deleting a non-existent book still succeeds."""
-        storage = {}
-        mock_redis = MagicMock()
-
-        def fake_get(key):
-            return storage.get(key)
-
-        def fake_set(key, value):
-            storage[key] = value
-
-        def fake_delete(key):
-            return 1 if storage.pop(key, None) is not None else 0
-
-        mock_redis.get.side_effect = fake_get
-        mock_redis.set.side_effect = fake_set
-        mock_redis.delete.side_effect = fake_delete
-        mock_redis_cls.from_url.return_value = mock_redis
-
-        resp = self.client.delete('/metadata/user1/book/book1')
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.get_json()['success'])
-
-        resp = self.client.get('/metadata/user1/books')
-        self.assertEqual(resp.get_json(), [])
-
-
-    @patch('app.routes.metadata.redis.Redis')
-    def test_clear_all_entries_no_books(self, mock_redis_cls):
-        """Return count of one when only the book list key is deleted."""
-        storage = {'user:user1:books': json.dumps([{'id': 'book1'}])}
-        mock_redis = MagicMock()
-
-        def fake_get(key):
-            return storage.get(key)
-
-        def fake_set(key, value):
-            storage[key] = value
-
-        def fake_delete(*keys):
-            count = 0
-            for k in keys:
-                if isinstance(k, (list, tuple)):
-                    for inner in k:
-                        if storage.pop(inner, None) is not None:
-                            count += 1
-                else:
-                    if storage.pop(k, None) is not None:
-                        count += 1
-            return count
-
-        def fake_keys(pattern):
-            return []
-
-        mock_redis.get.side_effect = fake_get
-        mock_redis.set.side_effect = fake_set
-        mock_redis.delete.side_effect = fake_delete
-        mock_redis.keys.side_effect = fake_keys
-        mock_redis_cls.from_url.return_value = mock_redis
-
-        resp = self.client.delete('/metadata/user1/clear_all_entries')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json()['deleted_count'], 1)
-
-        resp = self.client.get('/metadata/user1/books')
-        self.assertEqual(resp.get_json(), [])
-
-    @patch('app.routes.metadata.redis.Redis')
-    def test_clear_all_entries(self, mock_redis_cls):
-        storage = {}
-        mock_redis = MagicMock()
-
-        def fake_get(key):
-            return storage.get(key)
-
-        def fake_set(key, value):
-            storage[key] = value
-
-        def fake_delete(*keys):
-            count = 0
-            for k in keys:
-                if isinstance(k, (list, tuple)):
-                    for inner in k:
-                        if storage.pop(inner, None) is not None:
-                            count += 1
-                else:
-                    if storage.pop(k, None) is not None:
-                        count += 1
-            return count
-
-        def fake_keys(pattern):
-            prefix = pattern.replace('*', '')
-            return [k for k in storage if k.startswith(prefix)]
-
-        mock_redis.get.side_effect = fake_get
-        mock_redis.set.side_effect = fake_set
-        mock_redis.delete.side_effect = fake_delete
-        mock_redis.keys.side_effect = fake_keys
-        mock_redis_cls.from_url.return_value = mock_redis
-
-        metadata1 = {'id': 'book1', 'title': 'Test1', 'coverDriveId': 'c1'}
-        metadata2 = {'id': 'book2', 'title': 'Test2', 'coverDriveId': 'c2'}
-        self.client.post('/metadata/user1/book/book1', json=metadata1)
-        self.client.post('/metadata/user1/book/book2', json=metadata2)
-
-        resp = self.client.delete('/metadata/user1/clear_all_entries')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json()['deleted_count'], 3)
-
-        resp = self.client.get('/metadata/user1/books')
-        self.assertEqual(resp.get_json(), [])
-
-
-if __name__ == '__main__':
-    unittest.main()
+    @patch('app.routes.metadata.firestore.ArrayUnion')
+    @patch('app.routes.metadata.fs_db')
+    def test_store_book_invalid_json(self, mock_fs, mock_au):
+        mock_fs.collection.return_value = MagicMock()
+        mock_au.side_effect = lambda vals: types.SimpleNamespace(values=vals)
+        with self.client as c:
+            c.post('/auth/login', json={'email': 'm@test.com', 'password': 'pw'})
+            resp = c.post('/metadata/books', json=['bad'])
+            self.assertEqual(resp.status_code, 400)

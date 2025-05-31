@@ -37,6 +37,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
 - Translation capabilities
 - JLPT word highlighting (now enhanced with TypeScript)
 - Settings management
+- Automatic settings synchronization across devices
 - And more...
 
 ## Features

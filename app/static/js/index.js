@@ -3,6 +3,8 @@ import { renderBookshelf } from "./bookshelf.js";
 import { setupUploadForm } from "./uploadHandler.js";
 import * as driveSync from "./driveSync.js";
 window.driveSync = driveSync;
+import * as settingsSync from "./settingsSync.js";
+window.settingsSync = settingsSync;
 import { DriveButton } from "./driveButton.js"; // Import the new component
 import './storageManager.js'; // Ensure storageManager is loaded and sets window.storageManager
 
@@ -43,6 +45,7 @@ async function initializeApp() {
     }
 
     await driveSync.init();
+    await settingsSync.init();
     driveButton?.refreshState(); // Initialize button state based on sync status
     updateIndicator(driveSync.isConnected()); // Initial indicator state
     updateDriveLink(); // Initial drive link state
