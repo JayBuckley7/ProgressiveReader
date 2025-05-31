@@ -1,6 +1,7 @@
+"""Provides the shared Firestore client used by the application."""
+
 from google.cloud import firestore
 
-# Shared Firestore client for the application
 # In production, ADC credentials are used automatically.
 db = firestore.Client()
 
