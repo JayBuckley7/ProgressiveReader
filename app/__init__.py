@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 # Define a filter for logging
 class FilterImageRequests(logging.Filter):
     def filter(self, record):
+        """Suppress log records of successful image GET requests."""
         msg = record.getMessage()
         # Filter successful GET requests for image URLs to reduce noise
         return not ('GET /image/' in msg and ' 200 ' in msg)
