@@ -31,16 +31,10 @@ def upload_file():
     else:
         return jsonify({'success': False, 'message': 'Invalid file type, please upload an EPUB, PDF, MOBI, DOCX, or TXT file.'}), 400
 
-
 @main_bp.route('/delete/<filename>', methods=['POST'])
 def delete_book(filename):
     """Return an error because deletion happens in the browser."""
     return jsonify({'success': False, 'message': 'Deletion handled client-side via IndexedDB.'}), 400
-
-# Remove old /book/cover route if it exists, as covers aren't handled yet
-# @main_bp.route('/book/cover/<book_id>/<filename>')
-# def book_cover(book_id, filename):
-#    ... (old cover serving logic) 
 
 @main_bp.route('/demo', strict_slashes=False)
 def demo():
