@@ -11,9 +11,10 @@ interface BookReaderProps {
   bookId: Id<"books">;
   currentChapter: number;
   setCurrentChapter: (chapter: number) => void;
+  onBack: () => void;
 }
 
-export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookReaderProps) {
+export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   const book = useQuery(api.books.get, { bookId });
   const chapter = useQuery(api.books.getChapter, { bookId, chapterIndex: currentChapter });
   const progress = useQuery(api.reading.getProgress, { bookId });
@@ -25,6 +26,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
   const contentRef = useRef<HTMLDivElement>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
+
+  // Swipe control state
+  const swipeRef = useRef({
+    startX: null as number | null,
+    startY: null as number | null,
+    startTime: null as number | null,
+    isSwiping: false
+  });
 
   // Update reading progress
   useEffect(() => {
@@ -67,6 +76,84 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
       contentRef.current.scrollTop = progress.currentPosition;
     }
   }, [progress, currentChapter]);
+
+  // Swipe controls implementation
+  useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl || !book) return;
+
+    const minLockDistance = 10;
+    const minSwipeDistance = 60;
+    const minVelocity = 0.3;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      
+      // Ignore swipes on interactive elements
+      const target = e.target as HTMLElement;
+      if (target.closest('a, button, input, textarea, select, [contenteditable="true"]')) {
+        return;
+      }
+
+      swipeRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startTime: e.timeStamp,
+        isSwiping: false
+      };
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || swipeRef.current.startX === null) return;
+
+      const dx = e.clientX - swipeRef.current.startX;
+      const dy = e.clientY - swipeRef.current.startY!;
+
+      if (!swipeRef.current.isSwiping) {
+        if (Math.abs(dx) > minLockDistance && Math.abs(dx) > Math.abs(dy)) {
+          swipeRef.current.isSwiping = true;
+          if (e.cancelable) e.preventDefault();
+        } else if (Math.abs(dy) > minLockDistance && Math.abs(dy) > Math.abs(dx)) {
+          swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
+        }
+      } else {
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || swipeRef.current.startX === null || !swipeRef.current.isSwiping) {
+        swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
+        return;
+      }
+
+      const dx = e.clientX - swipeRef.current.startX;
+      const dt = e.timeStamp - swipeRef.current.startTime!;
+      const velocity = dt > 0 ? Math.abs(dx) / dt : 0;
+
+      if (Math.abs(dx) > minSwipeDistance && velocity > minVelocity) {
+        if (dx < 0) {
+          // Swipe left - next chapter
+          nextChapter();
+        } else {
+          // Swipe right - previous chapter
+          prevChapter();
+        }
+      }
+
+      swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
+    };
+
+    contentEl.addEventListener('pointerdown', handlePointerDown);
+    contentEl.addEventListener('pointermove', handlePointerMove);
+    contentEl.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      contentEl.removeEventListener('pointerdown', handlePointerDown);
+      contentEl.removeEventListener('pointermove', handlePointerMove);
+      contentEl.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [book, currentChapter]);
 
   /**
    * Translate the current chapter using the backend API.
@@ -135,23 +222,37 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Reader Header */}
-      <div className="bg-white dark:bg-gray-800 border-b px-4 py-3 flex items-center justify-between">
-        <div className="flex-1">
-          <h1 className="font-semibold text-gray-900 dark:text-white truncate">
-            {book.title}
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Chapter {currentChapter + 1} of {book.totalChapters}
-          </p>
+      <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <button
+            onClick={onBack}
+            className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Back to Library"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="hidden sm:inline-block ml-1 text-sm">Back to Library</span>
+          </button>
+          
+          <div className="flex-1 min-w-0 border-l pl-3 sm:pl-4 border-gray-200 dark:border-gray-700">
+            <h1 className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
+              {book.title}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              Chapter {currentChapter + 1} of {book.totalChapters}
+            </p>
+          </div>
         </div>
         
         <button
           onClick={() => setShowSettings(true)}
-          className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          aria-label="Settings"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
@@ -161,23 +262,20 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
       {/* Reader Content */}
       <div 
         ref={contentRef}
-        className="flex-1 overflow-y-auto px-4 md:px-8 lg:px-16"
+        className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
         style={{
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
         }}
       >
-        <div className="max-w-4xl mx-auto py-8">
+        <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
           {chapter ? (
-            <div className="prose prose-lg dark:prose-invert max-w-none">
-              <h2 className="text-2xl font-bold mb-6">{chapter.title}</h2>
-              <div 
-                className="leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: chapter.content }}
-              />
-            </div>
+            <div 
+              className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: chapter.content }}
+            />
           ) : (
-            <div className="flex justify-center items-center py-16">
+            <div className="flex justify-center items-center py-8 sm:py-16">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}

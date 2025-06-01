@@ -1,136 +1,699 @@
 import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
-interface SettingsModalProps {
-    onClose: () => void;
-    onTranslate: (useCefr: boolean) => void;
-    translating: boolean;
+// LocalStorage & Cookie keys
+const localKeys = {
+  openaiKey: "openaiKey",
+  openaiModel: "openaiModel",
+  cefrLevel: "cefrLevel",
+  autoload: "autoloadTranslations",
+  jpdbDeckId: "jpdbDeckId",
+  forqDeckId: "forqDeckId",
+  blacklistDeckId: "blacklistDeckId",
+  neverForgetDeckId: "neverForgetDeckId",
+  contextSentenceCount: "contextSentenceCount",
+  autoAddToFORQ: "autoAddToFORQ",
+  preferDueCards: "preferDueCards",
+  customWordCSS: "customWordCSS",
+  customPopupCSS: "customPopupCSS",
+};
+
+const cookieKeys = {
+  jpdbApiKey: "jpdbApiKey",
+};
+
+// Tab configuration with icons
+const tabs = [
+  { id: "general", label: "General", icon: "⚙️" },
+  { id: "jlpt", label: "JLPT", icon: "🎌" },
+  { id: "accessibility", label: "Accessibility", icon: "♿" },
+] as const;
+
+export function SettingsModal({ onClose, onTranslate, translating }: {
+  onClose: () => void;
+  onTranslate: (useCefr: boolean) => void;
+  translating: boolean;
+}) {
+  const { settings, updateSettings } = useSettings();
+  const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
+
+  const [localState, setLocalState] = useState(() => ({
+    openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
+    openaiModel: localStorage.getItem(localKeys.openaiModel) || "gpt-4o-mini",
+    cefrLevel: parseInt(localStorage.getItem(localKeys.cefrLevel) || "3"),
+    autoload: localStorage.getItem(localKeys.autoload) === "true",
+    jpdbDeckId: localStorage.getItem(localKeys.jpdbDeckId) || "",
+    forqDeckId: localStorage.getItem(localKeys.forqDeckId) || "",
+    blacklistDeckId: localStorage.getItem(localKeys.blacklistDeckId) || "",
+    neverForgetDeckId: localStorage.getItem(localKeys.neverForgetDeckId) || "",
+    contextSentenceCount: parseInt(localStorage.getItem(localKeys.contextSentenceCount) || "1"),
+    autoAddToFORQ: localStorage.getItem(localKeys.autoAddToFORQ) === "true",
+    preferDueCards: localStorage.getItem(localKeys.preferDueCards) === "true",
+    customWordCSS: localStorage.getItem(localKeys.customWordCSS) || "",
+    customPopupCSS: localStorage.getItem(localKeys.customPopupCSS) || "",
+  }));
+
+  const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
+
+  useEffect(() => {
+    Object.entries(localKeys).forEach(([key, storageKey]) => {
+      const value = localState[key as keyof typeof localState];
+      localStorage.setItem(storageKey, typeof value === "boolean" ? value.toString() : String(value));
+    });
+    if (jpdbApiKey) {
+      document.cookie = `jpdbApiKey=${jpdbApiKey}; path=/;`;
+    }
+  }, [localState, jpdbApiKey]);
+
+  if (!settings) return null;
+
+  const handleChange = <K extends keyof typeof localState>(key: K, value: typeof localState[K]) => {
+    setLocalState(prev => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[calc(100vh-1rem)] sm:max-h-[90vh] overflow-hidden animate-slide-up flex flex-col">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 sm:p-4 md:p-6 flex-shrink-0">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Settings</h2>
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors duration-200 hover:rotate-90 transform p-1"
+            >
+              <svg className="w-5 sm:w-6 h-5 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex gap-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`
+                  flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 
+                  rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap
+                  transition-all duration-200 transform flex-shrink-0
+                  ${activeTab === tab.id
+                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md scale-105'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
+                  }
+                `}
+                onClick={() => setActiveTab(tab.id as any)}
+              >
+                <span className="text-sm sm:text-base md:text-lg">{tab.icon}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+          {activeTab === "general" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">API Configuration</h3>
+                <TextInput
+                  label="OpenAI API Key"
+                  value={localState.openaiKey}
+                  onChange={v => handleChange("openaiKey", v)}
+                  placeholder="sk-..."
+                  type="password"
+                />
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                  Server Key Status: <span className="font-semibold text-green-600 dark:text-green-400">✓ Configured</span>
+                  <span className="text-gray-600 dark:text-gray-400 ml-1">(used if cookie is empty)</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SelectInput
+                  label="Theme"
+                  value={settings.theme}
+                  onChange={v => updateSettings({ theme: v as any })}
+                  options={[
+                    { value: "system", label: "🌓 System Default" },
+                    { value: "light", label: "☀️ Light" },
+                    { value: "dark", label: "🌙 Dark" }
+                  ]}
+                />
+                <SelectInput
+                  label="Preferred Model"
+                  value={localState.openaiModel}
+                  onChange={v => handleChange("openaiModel", v)}
+                  options={[
+                    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast)" },
+                    { value: "gpt-4", label: "GPT-4 (Powerful)" },
+                    { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Legacy)" }
+                  ]}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SelectInput
+                  label="Target Language"
+                  value={settings.targetLanguage}
+                  onChange={v => updateSettings({ targetLanguage: v })}
+                  options={[
+                    { value: "English", label: "🇬🇧 English" },
+                    { value: "Japanese", label: "🇯🇵 Japanese" }
+                  ]}
+                />
+                <SelectInput
+                  label="Target CEFR Level"
+                  value={String(localState.cefrLevel)}
+                  onChange={v => handleChange("cefrLevel", parseInt(v))}
+                  options={[
+                    { value: "0", label: "A1 (Beginner)" },
+                    { value: "1", label: "A2 (Elementary)" },
+                    { value: "2", label: "B1 (Intermediate)" },
+                    { value: "3", label: "B2 (Upper Intermediate)" },
+                    { value: "4", label: "C1 (Advanced)" },
+                    { value: "5", label: "C2 (Proficient)" }
+                  ]}
+                />
+              </div>
+
+              <CheckboxInput
+                label="Autoload Translations"
+                description="Automatically load translations when opening a book"
+                checked={localState.autoload}
+                onChange={v => handleChange("autoload", v)}
+              />
+
+              <SliderInput
+                label="Font Size"
+                value={settings.fontSize}
+                onChange={v => updateSettings({ fontSize: v })}
+                min={12}
+                max={24}
+                unit="px"
+              />
+            </div>
+          )}
+
+          {activeTab === "jlpt" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB Integration</h3>
+                <TextInput
+                  label="JPDB API Key"
+                  value={jpdbApiKey}
+                  onChange={setJpdbApiKey}
+                  placeholder="Enter your JPDB API key"
+                  type="password"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <TextInput
+                  label="Mining Deck ID"
+                  value={localState.jpdbDeckId}
+                  onChange={v => handleChange("jpdbDeckId", v)}
+                  placeholder="e.g., 12345"
+                />
+                <TextInput
+                  label="FORQ Deck ID"
+                  value={localState.forqDeckId}
+                  onChange={v => handleChange("forqDeckId", v)}
+                  placeholder="e.g., 67890"
+                />
+                <TextInput
+                  label="Blacklist Deck ID"
+                  value={localState.blacklistDeckId}
+                  onChange={v => handleChange("blacklistDeckId", v)}
+                  placeholder="e.g., 11111"
+                />
+                <TextInput
+                  label="Never Forget Deck ID"
+                  value={localState.neverForgetDeckId}
+                  onChange={v => handleChange("neverForgetDeckId", v)}
+                  placeholder="e.g., 22222"
+                />
+              </div>
+
+              <TextInput
+                label="Context Sentences"
+                type="number"
+                value={String(localState.contextSentenceCount)}
+                onChange={v => handleChange("contextSentenceCount", parseInt(v) || 1)}
+                min="1"
+                max="5"
+              />
+
+              <div className="space-y-3">
+                <CheckboxInput
+                  label="Add to FORQ When Mining"
+                  description="Automatically add mined cards to your FORQ deck"
+                  checked={localState.autoAddToFORQ}
+                  onChange={v => handleChange("autoAddToFORQ", v)}
+                />
+                <CheckboxInput
+                  label="Prefer Due Cards"
+                  description="Prioritize due cards in translation suggestions"
+                  checked={localState.preferDueCards}
+                  onChange={v => handleChange("preferDueCards", v)}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "accessibility" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="space-y-3">
+                <CheckboxInput
+                  label="Show Popup on Hover"
+                  description="Display word information when hovering"
+                  checked={settings.showPopupOnHover ?? true}
+                  onChange={v => updateSettings({ showPopupOnHover: v })}
+                />
+                <CheckboxInput
+                  label="Touchscreen Support"
+                  description="Enable touch interactions for mobile devices"
+                  checked={settings.touchscreenSupport ?? false}
+                  onChange={v => updateSettings({ touchscreenSupport: v })}
+                />
+                <CheckboxInput
+                  label="Disable Fade Animation"
+                  description="Remove fade effects for better performance"
+                  checked={settings.disableFadeAnimation ?? false}
+                  onChange={v => updateSettings({ disableFadeAnimation: v })}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <TextInput
+                  label="Custom Word CSS"
+                  value={localState.customWordCSS}
+                  onChange={v => handleChange("customWordCSS", v)}
+                  multiline
+                  placeholder=".word { color: blue; }"
+                />
+                <TextInput
+                  label="Custom Popup CSS"
+                  value={localState.customPopupCSS}
+                  onChange={v => handleChange("customPopupCSS", v)}
+                  multiline
+                  placeholder=".popup { background: white; }"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    // Export all settings to JSON file with exact field names for backward compatibility
+                    const settingsToExport = {
+                      // API and model settings
+                      openai_api_key: localState.openaiKey,
+                      jpdb_api_key: jpdbApiKey,
+                      openai_model: localState.openaiModel,
+                      target_language: settings.targetLanguage,
+                      cefr_index: String(localState.cefrLevel),
+                      
+                      // Display settings
+                      userTheme: settings.theme,
+                      fontSize: String(settings.fontSize),
+                      autoload_preference: localState.autoload,
+                      prefer_due_cards: localState.preferDueCards,
+                      
+                      // JPDB deck settings
+                      jpdbMiningDeckId: localState.jpdbDeckId,
+                      customWordCSS: localState.customWordCSS,
+                      forqDeckId: localState.forqDeckId,
+                      blacklistDeckId: localState.blacklistDeckId,
+                      neverForgetDeckId: localState.neverForgetDeckId,
+                      contextWidth: String(localState.contextSentenceCount),
+                      forqOnMine: localState.autoAddToFORQ,
+                      
+                      // Keybind settings - for now just store as "None" to match format
+                      showPopupKey: "None",
+                      addKey: "None",
+                      dialogKey: "None",
+                      blacklistKey: "None",
+                      neverForgetKey: "None",
+                      nothingKey: "None",
+                      somethingKey: "None",
+                      hardKey: "None",
+                      goodKey: "None",
+                      easyKey: "None",
+                      
+                      // Accessibility settings
+                      showPopupOnHover: settings.showPopupOnHover ?? true,
+                      touchscreenSupport: settings.touchscreenSupport ?? false,
+                      disableFadeAnimation: settings.disableFadeAnimation ?? false,
+                      customPopupCSS: localState.customPopupCSS,
+                    };
+                    
+                    const jsonString = JSON.stringify(settingsToExport, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `progressive_reader_settings_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    // Show success message
+                    toast.success('Settings exported successfully!');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <span>📋</span>
+                  Export Settings
+                </button>
+                <button
+                  onClick={() => {
+                    // Create file input element
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const importedSettings = JSON.parse(event.target?.result as string);
+                            
+                            // Update local state with imported values
+                            const newLocalState = {
+                              ...localState,
+                              openaiKey: importedSettings.openai_api_key ?? localState.openaiKey,
+                              openaiModel: importedSettings.openai_model ?? localState.openaiModel,
+                              cefrLevel: parseInt(importedSettings.cefr_index ?? String(localState.cefrLevel)),
+                              autoload: importedSettings.autoload_preference ?? localState.autoload,
+                              jpdbDeckId: importedSettings.jpdbMiningDeckId ?? localState.jpdbDeckId,
+                              forqDeckId: importedSettings.forqDeckId ?? localState.forqDeckId,
+                              blacklistDeckId: importedSettings.blacklistDeckId ?? localState.blacklistDeckId,
+                              neverForgetDeckId: importedSettings.neverForgetDeckId ?? localState.neverForgetDeckId,
+                              contextSentenceCount: parseInt(importedSettings.contextWidth ?? String(localState.contextSentenceCount)) || 1,
+                              autoAddToFORQ: importedSettings.forqOnMine ?? localState.autoAddToFORQ,
+                              preferDueCards: importedSettings.prefer_due_cards ?? localState.preferDueCards,
+                              customWordCSS: importedSettings.customWordCSS ?? localState.customWordCSS,
+                              customPopupCSS: importedSettings.customPopupCSS ?? localState.customPopupCSS,
+                            };
+                            
+                            setLocalState(newLocalState);
+                            
+                            // Update jpdbApiKey if present
+                            if (importedSettings.jpdb_api_key !== undefined) {
+                              setJpdbApiKey(importedSettings.jpdb_api_key);
+                            }
+                            
+                            // Update settings through context
+                            const settingsUpdates: any = {};
+                            if (importedSettings.target_language !== undefined) settingsUpdates.targetLanguage = importedSettings.target_language;
+                            if (importedSettings.userTheme !== undefined) settingsUpdates.theme = importedSettings.userTheme;
+                            if (importedSettings.fontSize !== undefined) settingsUpdates.fontSize = parseInt(importedSettings.fontSize) || 16;
+                            
+                            // Note: These are stored in localStorage, not in settings context
+                            // autoload_preference and prefer_due_cards are already handled in localState above
+                            
+                            // Import any missing settings fields that exist in the old format
+                            if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
+                            if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
+                            if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
+                            
+                            if (Object.keys(settingsUpdates).length > 0) {
+                              updateSettings(settingsUpdates);
+                            }
+                            
+                            // Show success message
+                            toast.success('Settings imported successfully!');
+                            
+                            // Optional: Force a page reload to ensure all settings are applied
+                            // window.location.reload();
+                          } catch (error) {
+                            console.error('Error importing settings:', error);
+                            toast.error('Failed to import settings. Please check the file format.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <span>📥</span>
+                  Import Settings
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 md:p-6 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="flex flex-row gap-2 sm:gap-3">
+              <button
+                onClick={() => onTranslate(false)}
+                disabled={translating}
+                className="
+                  flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
+                  bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium 
+                  rounded-lg text-xs sm:text-sm md:text-base whitespace-nowrap
+                  hover:from-blue-600 hover:to-blue-700 focus:ring-4 focus:ring-blue-500/30
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
+                  transform hover:scale-105 active:scale-95
+                "
+              >
+                {translating ? (
+                  <span className="flex items-center justify-center gap-1 sm:gap-2">
+                    <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span className="hidden sm:inline">Translating...</span>
+                    <span className="sm:hidden">...</span>
+                  </span>
+                ) : 'Translate'}
+              </button>
+              <button
+                onClick={() => onTranslate(true)}
+                disabled={translating}
+                className="
+                  flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
+                  bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium 
+                  rounded-lg text-xs sm:text-sm md:text-base whitespace-nowrap
+                  hover:from-purple-600 hover:to-purple-700 focus:ring-4 focus:ring-purple-500/30
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
+                  transform hover:scale-105 active:scale-95
+                "
+              >
+                {translating ? (
+                  <span className="flex items-center justify-center gap-1 sm:gap-2">
+                    <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span className="hidden sm:inline">Translating...</span>
+                    <span className="sm:hidden">...</span>
+                  </span>
+                ) : <span className="hidden sm:inline">Translate (CEFR)</span>}
+                {!translating && <span className="sm:hidden">CEFR</span>}
+              </button>
+            </div>
+            <button
+              onClick={onClose}
+              className="
+                px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
+                bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 
+                font-medium rounded-lg text-xs sm:text-sm md:text-base
+                hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-4 focus:ring-gray-500/30
+                transition-all duration-200 transform hover:scale-105 active:scale-95
+              "
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export function SettingsModal({ onClose, onTranslate, translating }: SettingsModalProps) {
-    const { settings, updateSettings } = useSettings();
-    const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
+// Enhanced Reusable Input Components
 
-    const [openaiKey, setOpenaiKey] = useState(localStorage.getItem("openaiKey") || "");
-    const [openaiModel, setOpenaiModel] = useState(localStorage.getItem("openaiModel") || "gpt-4o-mini");
-    const [cefrLevel, setCefrLevel] = useState(parseInt(localStorage.getItem("cefrLevel") || "3"));
-    const [autoload, setAutoload] = useState(localStorage.getItem("autoloadTranslations") === "true");
+function TextInput({ 
+  label, 
+  value, 
+  onChange, 
+  type = "text", 
+  multiline = false, 
+  placeholder = "",
+  min,
+  max
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  multiline?: boolean;
+  placeholder?: string;
+  min?: string;
+  max?: string;
+}) {
+  const inputClasses = `
+    w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+    placeholder-gray-400 dark:placeholder-gray-500
+    focus:ring-2 focus:ring-blue-500 focus:border-transparent
+    transition-all duration-200
+  `;
 
-    useEffect(() => { localStorage.setItem("openaiKey", openaiKey); }, [openaiKey]);
-    useEffect(() => { localStorage.setItem("openaiModel", openaiModel); }, [openaiModel]);
-    useEffect(() => { localStorage.setItem("cefrLevel", cefrLevel.toString()); }, [cefrLevel]);
-    useEffect(() => { localStorage.setItem("autoloadTranslations", autoload.toString()); }, [autoload]);
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+      {multiline ? (
+        <textarea
+          className={`${inputClasses} min-h-[100px] resize-y`}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      ) : (
+        <input
+          className={inputClasses}
+          value={value}
+          type={type}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+        />
+      )}
+    </div>
+  );
+}
 
-    if (!settings) return null;
+function SelectInput({ 
+  label, 
+  value, 
+  onChange, 
+  options 
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ value: string; label: string } | string>;
+}) {
+  const normalizedOptions = options.map(opt => 
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
+  );
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+      </label>
+      <select
+        className="
+          w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
+          bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+          focus:ring-2 focus:ring-blue-500 focus:border-transparent
+          transition-all duration-200 cursor-pointer
+        "
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      >
+        {normalizedOptions.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
-                    <div className="flex gap-2 mb-4">
-                        <button className={`px-3 py-1 rounded ${activeTab === 'general' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('general')}>General</button>
-                        <button className={`px-3 py-1 rounded ${activeTab === 'jlpt' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('jlpt')}>JLPT</button>
-                        <button className={`px-3 py-1 rounded ${activeTab === 'accessibility' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('accessibility')}>Accessibility</button>
-                    </div>
+function SliderInput({ 
+  label, 
+  value, 
+  onChange, 
+  min, 
+  max,
+  unit = ""
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  unit?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </label>
+        <span className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+          {value}{unit}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={e => onChange(parseInt(e.target.value))}
+        className="
+          w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer
+          slider:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        "
+      />
+      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+        <span>{min}{unit}</span>
+        <span>{max}{unit}</span>
+      </div>
+    </div>
+  );
+}
 
-                    {activeTab === 'general' && (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">OpenAI API Key</label>
-                                <input value={openaiKey} onChange={(e) => setOpenaiKey(e.target.value)} className="w-full p-2 border rounded" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Model</label>
-                                <select value={openaiModel} onChange={(e) => setOpenaiModel(e.target.value)} className="w-full p-2 border rounded">
-                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                    <option value="gpt-4">GPT-4</option>
-                                    <option value="gpt-3.5-turbo">GPT-3.5-Turbo</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Target Language</label>
-                                <select value={settings.targetLanguage} onChange={(e) => updateSettings({ targetLanguage: e.target.value })} className="w-full p-2 border rounded">
-                                    <option value="English">English</option>
-                                    <option value="Spanish">Spanish</option>
-                                    <option value="French">French</option>
-                                    <option value="German">German</option>
-                                    <option value="Japanese">Japanese</option>
-                                    <option value="Korean">Korean</option>
-                                    <option value="Chinese">Chinese</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">CEFR Level: {cefrLevel}</label>
-                                <input type="range" min="0" max="5" value={cefrLevel} onChange={(e) => setCefrLevel(parseInt(e.target.value))} className="w-full" />
-                            </div>
-                            <div className="flex items-center">
-                                <input type="checkbox" id="autoload" checked={autoload} onChange={(e) => setAutoload(e.target.checked)} className="mr-2" />
-                                <label htmlFor="autoload" className="text-sm">Autoload Translations</label>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Theme</label>
-                                <select value={settings.theme} onChange={(e) => updateSettings({ theme: e.target.value as any })} className="w-full p-2 border rounded">
-                                    <option value="system">System Default</option>
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Font Size: {settings.fontSize}px</label>
-                                <input type="range" min="12" max="24" value={settings.fontSize} onChange={(e) => updateSettings({ fontSize: parseInt(e.target.value) })} className="w-full" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Font Family</label>
-                                <select value={settings.fontFamily} onChange={(e) => updateSettings({ fontFamily: e.target.value })} className="w-full p-2 border rounded">
-                                    <option value="Inter">Inter</option>
-                                    <option value="Georgia">Georgia</option>
-                                    <option value="Times New Roman">Times New Roman</option>
-                                    <option value="Arial">Arial</option>
-                                    <option value="Helvetica">Helvetica</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'jlpt' && (
-                        <div className="space-y-4">
-                            <div className="flex items-center">
-                                <input type="checkbox" id="jlpt-enabled" checked={settings.jlptEnabled} onChange={(e) => updateSettings({ jlptEnabled: e.target.checked })} className="mr-2" />
-                                <label htmlFor="jlpt-enabled" className="text-sm">Enable JLPT highlighting</label>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'accessibility' && (
-                        <div className="space-y-4">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Accessibility options will be added soon.
-                            </p>
-                        </div>
-                    )}
-
-                    <hr className="my-4" />
-                    <div className="flex justify-between">
-                        <button onClick={() => onTranslate(false)} disabled={translating} className="px-4 py-2 bg-primary text-white rounded-md">
-                            {translating ? 'Translating...' : 'Translate'}
-                        </button>
-                        <button onClick={() => onTranslate(true)} disabled={translating} className="px-4 py-2 bg-primary text-white rounded-md">
-                            {translating ? 'Translating...' : 'Translate (CEFR)'}
-                        </button>
-                        <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">Close</button>
-                    </div>
-                </div>
-            </div>
+function CheckboxInput({ 
+  label, 
+  checked, 
+  onChange,
+  description
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  description?: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="
+          mt-0.5 w-5 h-5 text-blue-600 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600
+          rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0
+          transition-all duration-200 cursor-pointer
+        "
+      />
+      <div className="flex-1">
+        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          {label}
         </div>
-    );
+        {description && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {description}
+          </div>
+        )}
+      </div>
+    </label>
+  );
 }

@@ -22,25 +22,8 @@ export default function App() {
 
   return (
     <SettingsProvider>
-      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-        {currentBookId ? (
-          <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-semibold text-primary">ProgReader</h2>
-              <button
-                onClick={() => setCurrentBookId(null)}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary"
-              >
-                ← Back to Library
-              </button>
-            </div>
-            <SignOutButton />
-          </header>
-        ) : (
-          null
-        )}
-        
-        <main className="flex-1">
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+        <main className="flex-1 flex flex-col">
           <Content
             currentBookId={currentBookId}
             setCurrentBookId={setCurrentBookId}
@@ -82,43 +65,48 @@ function Content({
 
   if (loggedInUser === undefined) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
+      <div className="flex-1 flex justify-center items-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col flex-1">
       <Authenticated>
         {currentBookId ? (
           <BookReader
             bookId={currentBookId}
             currentChapter={currentChapter}
             setCurrentChapter={setCurrentChapter}
+            onBack={() => setCurrentBookId(null)}
           />
         ) : (
-          <>
+          <div className="flex flex-col flex-1">
             <TopActions
               currentPage={currentPage}
               onPageChange={setCurrentPage}
               onShowLogin={() => setShowLogin(true)}
             />
             <HeroBanner />
-            {currentPage === "library" ? (
-              <BookLibrary onSelectBook={setCurrentBookId} />
-            ) : (
-              <VocabularyPage />
-            )}
-          </>
+            <div className="flex-1 overflow-y-auto">
+              {currentPage === "library" ? (
+                <BookLibrary onSelectBook={setCurrentBookId} />
+              ) : (
+                <VocabularyPage />
+              )}
+            </div>
+          </div>
         )}
       </Authenticated>
       
       <Unauthenticated>
-        <HeroBanner />
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="w-full max-w-md mx-auto p-8">
-            <SignInForm />
+        <div className="flex flex-col flex-1">
+          <HeroBanner />
+          <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+            <div className="w-full max-w-md mx-auto">
+              <SignInForm />
+            </div>
           </div>
         </div>
       </Unauthenticated>

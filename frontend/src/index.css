@@ -5,6 +5,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Full height layout */
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide scrollbar for tab navigation */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --color-light: #ffffff;
   --color-dark: #171717;
@@ -192,4 +219,47 @@ html {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
+}
+
+/* Touch and swipe styles */
+.touch-pan-y {
+  touch-action: pan-y;
+}
+
+/* Prevent text selection during swipe */
+.swiping {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Smooth transitions for page changes */
+.reader-content-transition {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Settings Modal Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
 }

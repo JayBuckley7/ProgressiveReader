@@ -13,6 +13,9 @@ interface Settings {
   autoTranslate: boolean;
   targetLanguage: string;
   customCss?: string;
+  showPopupOnHover?: boolean;
+  touchscreenSupport?: boolean;
+  disableFadeAnimation?: boolean;
 }
 
 interface SettingsContextType {
@@ -37,6 +40,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     autoTranslate: dbSettings.autoTranslate,
     targetLanguage: dbSettings.targetLanguage,
     customCss: 'customCss' in dbSettings ? dbSettings.customCss : undefined,
+    showPopupOnHover: 'showPopupOnHover' in dbSettings ? dbSettings.showPopupOnHover : undefined,
+    touchscreenSupport: 'touchscreenSupport' in dbSettings ? dbSettings.touchscreenSupport : undefined,
+    disableFadeAnimation: 'disableFadeAnimation' in dbSettings ? dbSettings.disableFadeAnimation : undefined,
   } : null;
 
   const updateSettings = (updates: Partial<Settings>) => {
