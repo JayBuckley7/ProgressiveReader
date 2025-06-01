@@ -142,3 +142,50 @@ export const createChapter = mutation({
     });
   },
 });
+
+const _deleteBook = mutation({
+  args: { bookId: v.id("books") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const book = await ctx.db.get(args.bookId);
+    if (!book || book.uploadedBy !== userId) {
+      throw new Error("Book not found or access denied");
+    }
+
+    if (book.coverImageId) {
+      await ctx.storage.delete(book.coverImageId);
+    }
+
+    const chapters = await ctx.db
+      .query("chapters")
+      .withIndex("by_book", (q) => q.eq("bookId", args.bookId))
+      .collect();
+
+    await Promise.all(chapters.map((c) => ctx.db.delete(c._id)));
+
+    await ctx.db.delete(args.bookId);
+  },
+});
+
+export { _deleteBook as delete };
+
+export const updateCover = mutation({
+  args: { bookId: v.id("books"), coverImageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const book = await ctx.db.get(args.bookId);
+    if (!book || book.uploadedBy !== userId) {
+      throw new Error("Book not found or access denied");
+    }
+
+    if (book.coverImageId) {
+      await ctx.storage.delete(book.coverImageId);
+    }
+
+    await ctx.db.patch(args.bookId, { coverImageId: args.coverImageId });
+  },
+});
