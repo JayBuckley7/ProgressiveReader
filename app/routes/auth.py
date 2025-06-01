@@ -1,6 +1,7 @@
 """Authentication routes using Flask-Login."""
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
+from ..utils.firebase_auth import firebase_token_or_login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from ..models import db, User
@@ -45,7 +46,7 @@ def login():
 
 
 @auth_bp.route('/auth/logout', methods=['POST'])
-@login_required
+@firebase_token_or_login_required
 def logout():
     """Log out the current user."""
     logout_user()
@@ -53,7 +54,7 @@ def logout():
 
 
 @auth_bp.route('/auth/me', methods=['GET'])
-@login_required
+@firebase_token_or_login_required
 def me():
     """Return the authenticated user's ID and email."""
     return jsonify({'id': current_user.id, 'email': current_user.email})
