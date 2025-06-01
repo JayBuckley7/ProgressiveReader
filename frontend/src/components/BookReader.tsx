@@ -22,6 +22,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
   const [showSettings, setShowSettings] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // Update reading progress
   useEffect(() => {
@@ -57,6 +58,39 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
       contentRef.current.scrollTop = progress.currentPosition;
     }
   }, [progress, currentChapter]);
+
+  /**
+   * Translate the current chapter using the backend API.
+   * @param useCefr - If true include the CEFR level in the request.
+   */
+  const translateCurrent = async (useCefr: boolean) => {
+    if (!contentRef.current || !chapter) return;
+    setIsTranslating(true);
+    const payload: any = {
+      content: contentRef.current.innerHTML,
+      target_language: settings?.targetLanguage || "English",
+      model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
+      api_key: localStorage.getItem("openaiKey") || "",
+    };
+    if (useCefr) {
+      payload.cefr_level = localStorage.getItem("cefrLevel") || "B2";
+    }
+    try {
+      const resp = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.translated_text && contentRef.current) {
+          contentRef.current.innerHTML = data.translated_text;
+        }
+      }
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   if (!book) {
     return (
@@ -139,7 +173,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
 
       {/* Settings Modal */}
       {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onTranslate={(useCefr) => translateCurrent(useCefr)}
+          translating={isTranslating}
+        />
       )}
     </div>
   );
