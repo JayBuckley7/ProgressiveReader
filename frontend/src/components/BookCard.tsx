@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { BookReader } from "./BookReader";
@@ -22,6 +22,10 @@ interface BookCardProps {
 export function BookCard({ book }: BookCardProps) {
   const [showReader, setShowReader] = useState(false);
   const progress = useQuery(api.books.getReadingProgress, { bookId: book._id });
+  const deleteBook = useMutation(api.books.delete);
+  const updateCover = useMutation(api.books.updateCover);
+  const generateUploadUrl = useMutation(api.books.generateUploadUrl);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   
   const progressPercentage = progress && book.totalPages 
     ? Math.round((progress.currentPage / progress.totalPages) * 100)
@@ -35,12 +39,66 @@ export function BookCard({ book }: BookCardProps) {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Delete "${book.title}"?`)) return;
+    try {
+      await deleteBook({ bookId: book._id });
+    } catch (err) {
+      console.error("Failed to delete book", err);
+    }
+  };
+
+  const handleCoverChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { storageId } = await res.json();
+      await updateCover({ bookId: book._id, coverImageId: storageId });
+    } catch (err) {
+      console.error("Failed to update cover", err);
+    } finally {
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  };
+
   if (showReader) {
     return <BookReader bookId={book._id} onClose={() => setShowReader(false)} />;
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer group">
+    <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer group relative">
+      <input
+        type="file"
+        accept="image/*"
+        ref={coverInputRef}
+        className="hidden"
+        onChange={handleCoverChange}
+      />
+      <button
+        onClick={handleDelete}
+        className="absolute top-2 right-2 bg-red-600 text-white text-xs rounded-full w-6 h-6 hidden group-hover:flex items-center justify-center"
+      >
+        ×
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          coverInputRef.current?.click();
+        }}
+        className="absolute top-2 left-2 bg-white text-gray-700 text-xs rounded-full w-6 h-6 hidden group-hover:flex items-center justify-center"
+      >
+        📷
+      </button>
       <div onClick={handleOpenBook}>
         <div className="aspect-[3/4] bg-gradient-to-br from-blue-100 to-purple-100 rounded-t-lg flex items-center justify-center relative overflow-hidden">
           {book.coverUrl ? (
