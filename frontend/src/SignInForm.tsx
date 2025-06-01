@@ -46,9 +46,9 @@ export function SignInForm() {
           placeholder="Password"
           required
         />
-        <button className="auth-button" type="submit" disabled={submitting}>
-          {flow === "signIn" ? "Sign in" : "Sign up"}
-        </button>
+      <button className="auth-button" type="submit" disabled={submitting}>
+        {flow === "signIn" ? "Sign in" : "Sign up"}
+      </button>
         <div className="text-center text-sm text-secondary">
           <span>
             {flow === "signIn"
@@ -72,6 +72,11 @@ export function SignInForm() {
       <button className="auth-button" onClick={() => void signIn("anonymous")}>
         Sign in anonymously
       </button>
+      <div className="mt-2">
+        <button className="auth-button" onClick={() => void signIn("google")}>
+          Sign in with Google
+        </button>
+      </div>
     </div>
   );
 }
