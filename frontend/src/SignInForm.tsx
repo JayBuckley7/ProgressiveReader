@@ -77,11 +77,11 @@ export function SignInForm() {
       <button className="auth-button" onClick={() => void signIn("anonymous")}>
         Continue without signing in
       </button>
-      <div className="mt-2">
+      {/* <div className="mt-2">
         <button className="auth-button" onClick={() => void signIn("google")}>
           Sign in with Google
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }
