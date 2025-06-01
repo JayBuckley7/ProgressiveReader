@@ -1,15 +1,15 @@
-<footer class="site-footer" style="text-align:center;padding:0.75rem 0;border-top:1px solid #e0e6ed;background:#f8f9fa;position:fixed;bottom:0;left:0;width:100%;z-index:500;">
+<footer class="site-footer text-center py-3 border-t bg-gray-100 fixed bottom-0 left-0 w-full z-50">
   <a href="{{ url_for('main.tos') }}" target="_blank">Terms of Service</a>
   &nbsp;|&nbsp;
   <a href="{{ url_for('main.privacy') }}" target="_blank">Privacy Policy</a>
   &nbsp;|&nbsp;
-  <a href="#" id="danger-link" style="color:#d9534f;font-weight:600;">Danger Zone</a>
+  <a href="#" id="danger-link" class="text-red-600 font-semibold">Danger Zone</a>
 </footer>
 
 <div id="danger-modal" class="modal-overlay" hidden>
   <div class="modal-content">
     <h3>Danger Zone</h3>
-    <p style="font-size:0.9rem;color:#c00;margin-bottom:1rem;">These actions are irreversible – proceed with caution.</p>
+    <p class="text-sm text-red-700 mb-4">These actions are irreversible – proceed with caution.</p>
     <button id="btn-logout-google" class="danger-btn">Log out of Google</button>
     <button id="btn-clear-cache" class="danger-btn">Clear browser cache</button>
     <button id="btn-remove-books" class="danger-btn">Remove ALL books from local database</button>

@@ -1,11 +1,11 @@
-<div class="bookshelf">
-  <h2>
+<div class="bookshelf mt-0">
+  <h2 class="text-xl mb-6 border-b-2 border-blue-500 inline-block text-gray-800">
     My Bookshelf <span id="drive-indicator" class="drive-indicator disconnected" aria-label="Drive disconnected">●</span>
-    <span class="bookshelf-icons">
+    <span class="bookshelf-icons inline-flex gap-1 ml-2">
       <button id="btn-sync" class="icon-btn" title="Sync Now" hidden>🔄</button>
       <a id="btn-drive" class="icon-btn" title="Open Drive Folder" hidden target="_blank" rel="noopener">📂</a>
     </span>
   </h2>
-  <input id="bookshelf-search" type="text" placeholder="Search books" aria-label="Search books" />
-  <div id="recent-books-grid" class="books-grid"></div>
+  <input id="bookshelf-search" type="text" placeholder="Search books" aria-label="Search books" class="mb-4 p-2 w-full max-w-xs border rounded" />
+  <div id="recent-books-grid" class="books-grid grid grid-cols-[repeat(auto-fill,minmax(clamp(140px,20vw,220px),1fr))] gap-4"></div>
 </div>
