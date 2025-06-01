@@ -7,38 +7,55 @@ import { BookLibrary } from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { useState } from "react";
+import { TopActions } from "./components/TopActions";
+import { HeroBanner } from "./components/HeroBanner";
+import { DangerZone } from "./components/DangerZone";
+import { VocabularyPage } from "./components/VocabularyPage";
+import { LoginModal } from "./components/LoginModal";
 import { Id } from "../convex/_generated/dataModel";
 
 export default function App() {
   const [currentBookId, setCurrentBookId] = useState<Id<"books"> | null>(null);
   const [currentChapter, setCurrentChapter] = useState(0);
+  const [currentPage, setCurrentPage] = useState<"library" | "vocabulary" | "stats">("library");
+  const [showLogin, setShowLogin] = useState(false);
 
   return (
     <SettingsProvider>
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-        <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold text-primary">ProgReader</h2>
-            {currentBookId && (
+        {currentBookId ? (
+          <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-16 flex justify-between items-center border-b shadow-sm px-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold text-primary">ProgReader</h2>
               <button
                 onClick={() => setCurrentBookId(null)}
                 className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary"
               >
                 ← Back to Library
               </button>
-            )}
-          </div>
-          <SignOutButton />
-        </header>
+            </div>
+            <SignOutButton />
+          </header>
+        ) : (
+          <TopActions
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onShowLogin={() => setShowLogin(true)}
+          />
+        )}
         
         <main className="flex-1">
-          <Content 
+          <Content
             currentBookId={currentBookId}
             setCurrentBookId={setCurrentBookId}
             currentChapter={currentChapter}
             setCurrentChapter={setCurrentChapter}
+            currentPage={currentPage}
           />
         </main>
+        <DangerZone />
+
+        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
         
         <Toaster />
       </div>
@@ -46,16 +63,18 @@ export default function App() {
   );
 }
 
-function Content({ 
-  currentBookId, 
-  setCurrentBookId, 
-  currentChapter, 
-  setCurrentChapter 
+function Content({
+  currentBookId,
+  setCurrentBookId,
+  currentChapter,
+  setCurrentChapter,
+  currentPage,
 }: {
   currentBookId: Id<"books"> | null;
   setCurrentBookId: (id: Id<"books"> | null) => void;
   currentChapter: number;
   setCurrentChapter: (chapter: number) => void;
+  currentPage: "library" | "vocabulary" | "stats";
 }) {
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
@@ -71,25 +90,27 @@ function Content({
     <div className="flex flex-col">
       <Authenticated>
         {currentBookId ? (
-          <BookReader 
+          <BookReader
             bookId={currentBookId}
             currentChapter={currentChapter}
             setCurrentChapter={setCurrentChapter}
           />
         ) : (
-          <BookLibrary onSelectBook={setCurrentBookId} />
+          <>
+            <HeroBanner />
+            {currentPage === "library" ? (
+              <BookLibrary onSelectBook={setCurrentBookId} />
+            ) : (
+              <VocabularyPage />
+            )}
+          </>
         )}
       </Authenticated>
       
       <Unauthenticated>
+        <HeroBanner />
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="w-full max-w-md mx-auto p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-primary mb-4">ProgReader</h1>
-              <p className="text-xl text-gray-600 dark:text-gray-400">
-                Your personal book reader with Japanese learning features
-              </p>
-            </div>
             <SignInForm />
           </div>
         </div>
