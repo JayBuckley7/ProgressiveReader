@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useState, useRef } from "react";
-import jpHighlighter from "../../../src/jp-highlighter";
+// import jpHighlighter from "../../../src/jp-highlighter";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { SettingsModal } from "./SettingsModal";
@@ -57,7 +57,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
   // Initialize JPDB highlighter
   useEffect(() => {
     if (contentRef.current) {
-      jpHighlighter.initialize(contentRef.current);
+      // jpHighlighter.initialize(contentRef.current);
     }
   }, []);
 
@@ -124,7 +124,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
   const toggleHighlight = async () => {
     if (!contentRef.current) return;
     if (!jpdbHighlighted) {
-      await jpHighlighter.highlightContent(contentRef.current);
+      // await jpHighlighter.highlightContent(contentRef.current);
     } else {
       const saved = contentRef.current.getAttribute('data-original-content');
       if (saved) {

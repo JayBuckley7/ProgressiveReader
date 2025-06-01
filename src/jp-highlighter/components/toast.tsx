@@ -1,6 +1,7 @@
 import { jsxCreateElement } from '../utils/jsx';
 
 const toastContainer = <div></div>;
+document.body.append(toastContainer);
 const shadow = toastContainer.attachShadow({ mode: 'closed' });
 
 // Add styles directly in the shadow DOM
@@ -66,7 +67,6 @@ style.textContent = `
 `;
 
 shadow.append(style);
-document.body.append(toastContainer);
 
 export function showToast(
     kind: string,
