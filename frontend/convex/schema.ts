@@ -60,6 +60,21 @@ const applicationTables = {
     note: v.optional(v.string()),
     highlightedText: v.optional(v.string()),
   }).index("by_user_book", ["userId", "bookId"]),
+
+    vocabulary: defineTable({
+        userId: v.id("users"),
+        word: v.string(),
+        translation: v.string(),
+        language: v.string(),
+        bookId: v.optional(v.id("books")),
+        context: v.optional(v.string()),
+        difficulty: v.optional(
+            v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"))
+        ),
+        mastered: v.boolean(),
+    })
+        .index("by_user", ["userId"])
+        .index("by_user_and_language", ["userId", "language"]),
 };
 
 export default defineSchema({
