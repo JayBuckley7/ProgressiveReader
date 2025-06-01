@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useState, useRef } from "react";
+import jpHighlighter from "../../../src/jp-highlighter";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { SettingsModal } from "./SettingsModal";
@@ -23,6 +24,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
   const [scrollPosition, setScrollPosition] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
 
   // Update reading progress
   useEffect(() => {
@@ -49,6 +51,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
     if (content) {
       content.addEventListener('scroll', handleScroll);
       return () => content.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  // Initialize JPDB highlighter
+  useEffect(() => {
+    if (contentRef.current) {
+      jpHighlighter.initialize(contentRef.current);
     }
   }, []);
 
@@ -112,6 +121,19 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
     }
   };
 
+  const toggleHighlight = async () => {
+    if (!contentRef.current) return;
+    if (!jpdbHighlighted) {
+      await jpHighlighter.highlightContent(contentRef.current);
+    } else {
+      const saved = contentRef.current.getAttribute('data-original-content');
+      if (saved) {
+        contentRef.current.innerHTML = saved;
+      }
+    }
+    setJpdbHighlighted(!jpdbHighlighted);
+  };
+
   return (
     <div className="flex flex-col h-screen">
       {/* Reader Header */}
@@ -169,6 +191,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter }: BookRe
         onPrevChapter={prevChapter}
         onNextChapter={nextChapter}
         bookId={bookId}
+        jpdbHighlighted={jpdbHighlighted}
+        onToggleHighlight={toggleHighlight}
       />
 
       {/* Settings Modal */}
