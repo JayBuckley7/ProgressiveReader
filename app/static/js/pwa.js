@@ -128,15 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   function showOfflineNotification() {
-    // Simple notification to inform user they're offline
     const notification = document.createElement('div');
-    notification.className = 'offline-notification';
+    notification.className =
+      'fixed bottom-5 left-1/2 -translate-x-1/2 transform bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50';
     notification.textContent = 'You are currently offline. Some features may be limited.';
-    
-    // Append to body or a specific container
     document.body.appendChild(notification);
-    
-    // Auto-remove after 5 seconds
     setTimeout(() => {
       notification.remove();
     }, 5000);

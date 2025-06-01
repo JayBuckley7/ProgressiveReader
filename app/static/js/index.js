@@ -70,10 +70,18 @@ async function initializeApp() {
       );
     }
 
-    function showBanner(text, cls, hideAfterMs = 0) {
+    function showBanner(text, state, hideAfterMs = 0) {
       if (!banner) return;
+      const base =
+        "fixed top-0 left-1/2 -translate-x-1/2 transform px-3 py-1 text-sm font-semibold text-white rounded-b-md shadow z-50";
+      const color =
+        state === "offline"
+          ? "bg-red-600"
+          : state === "syncing"
+          ? "bg-amber-500"
+          : "bg-green-600";
       banner.textContent = text;
-      banner.className = cls;
+      banner.className = `${base} ${color}`;
       banner.style.display = "block";
       banner.hidden = false;
       if (hideAfterMs) {

@@ -40,57 +40,13 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader_styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pwa_prompt.css') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Dynamic styles for word highlighting injected by JS -->
     <style id="custom-word-styles"></style>
     <!-- JP Highlighter styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='js/dist/styles.css') }}">
     
-    <!-- Offline Stylesheet (minimal styles for offline notification) -->
-    <style>
-        .offline-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        
-        .offline-notification.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        
-        #pwa-install-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4b8dff;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            cursor: pointer;
-            display: none;
-            z-index: 900;
-            font-size: 24px;
-        }
-        
-        #pwa-install-button:hover {
-            background-color: #3a7ae0;
-        }
-    </style>
+    <!-- Tailwind replaces previous inline styles -->
 </head>
 <body 
     data-openai-key-configured="{{ openai_key_configured | tojson }}"

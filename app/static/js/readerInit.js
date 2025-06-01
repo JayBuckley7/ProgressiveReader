@@ -174,17 +174,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.querySelector('.offline-notification')) return;
         
         const notification = document.createElement('div');
-        notification.className = 'offline-notification';
+        notification.className =
+            'fixed bottom-5 left-1/2 -translate-x-1/2 transform bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 opacity-0 pointer-events-none transition-opacity';
         notification.textContent = 'You are currently offline. Some features may be limited.';
         document.body.appendChild(notification);
-        
+
         // Trigger reflow to ensure the transition works
         notification.offsetHeight;
-        notification.classList.add('show');
+        notification.classList.remove('opacity-0', 'pointer-events-none');
+        notification.classList.add('opacity-100');
         
         // Remove after 5 seconds
         setTimeout(() => {
-            notification.classList.remove('show');
+            notification.classList.add('opacity-0');
             setTimeout(() => notification.remove(), 300);
         }, 5000);
     }

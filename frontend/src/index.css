@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-light: #ffffff;
+  --color-dark: #171717;
+  --reader-font-size: 16px;
+}
+
+.accent-text {
+  @apply text-slate-600;
+}
+
+body {
+  font-family:
+    "Inter Variable",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji";
+  color: var(--color-dark);
+  background: var(--color-light);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-light: #171717;
+    --color-dark: #ffffff;
+  }
+}
+
+.user-theme-light {
+  --color-light: #ffffff;
+  --color-dark: #171717;
+}
+
+.user-theme-dark {
+  --color-light: #171717;
+  --color-dark: #ffffff;
+}
+
+/* Auth styles */
+.auth-input-field {
+  @apply w-full px-4 py-3 rounded-container bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-shadow shadow-sm hover:shadow;
+}
+
+.auth-button {
+  @apply w-full px-4 py-3 rounded bg-primary text-white font-semibold hover:bg-primary-hover transition-colors shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Reader styles */
+.reader-content {
+  font-size: var(--reader-font-size);
+  line-height: 1.7;
+}
+
+/* JLPT highlighting styles */
+.jlpt-n5 { background-color: rgba(34, 197, 94, 0.2); }
+.jlpt-n4 { background-color: rgba(59, 130, 246, 0.2); }
+.jlpt-n3 { background-color: rgba(251, 191, 36, 0.2); }
+.jlpt-n2 { background-color: rgba(249, 115, 22, 0.2); }
+.jlpt-n1 { background-color: rgba(239, 68, 68, 0.2); }
+
+/* Text selection highlighting */
+.text-highlight {
+  background-color: rgba(59, 130, 246, 0.3);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Responsive typography */
+@media (max-width: 768px) {
+  .reader-content {
+    font-size: calc(var(--reader-font-size) * 0.9);
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Prose styles for reader content */
+.prose {
+  max-width: none;
+}
+
+.prose p {
+  margin-bottom: 1.25em;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  margin-top: 2em;
+  margin-bottom: 1em;
+  font-weight: 600;
+}
+
+.prose blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin: 1.5em 0;
+  font-style: italic;
+}
+
+.dark .prose blockquote {
+  border-left-color: #4b5563;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Page break styles for text processing */
+.page-break {
+  page-break-before: always;
+  break-before: page;
+  margin: 2em 0;
+  border-top: 2px dashed #ccc;
+  padding-top: 1em;
+}
+
+/* Upload progress styles */
+.upload-progress {
+  transition: width 0.3s ease-in-out;
+}
+
+/* Chapter content styles */
+.chapter-content {
+  line-height: 1.8;
+}
+
+.chapter-content p {
+  margin-bottom: 1em;
+}
+
+.chapter-content h1,
+.chapter-content h2,
+.chapter-content h3,
+.chapter-content h4,
+.chapter-content h5,
+.chapter-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
