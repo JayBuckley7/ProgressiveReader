@@ -8,10 +8,10 @@ export function Bookshelf() {
   if (books.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="mb-6 flex justify-center">
-          <img src="/icon.png" alt="App icon" className="w-20 h-20" />
+        <div className="inline-block relative mb-6">
+          <img src="/static/icons/slow.gif" alt="Animation" className="w-16 h-16 mb-4 rounded-lg shadow" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome to Progressive Reader</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Your bookshelf reimagined</h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
           Learn languages through reading with intelligent vocabulary tracking and progress analytics
         </p>

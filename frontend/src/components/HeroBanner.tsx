@@ -38,12 +38,13 @@ export function HeroBanner() {
         
         <Unauthenticated>
           <div className="text-center">
+            
+          <img src="/slow.gif" alt="Animation" className="w-16 h-16 mb-4 rounded-lg shadow mx-auto" />
             <h1 className="text-5xl font-bold mb-4 flex items-center justify-center">
-              Progressive Reader
-              <img src="/icon.png" alt="App icon" className="w-8 h-8 ml-2" />
+              Your Digital Bookshelf, Reimagined.
             </h1>
             <p className="text-xl text-blue-100 mb-8">
-              Learn languages through reading with intelligent vocabulary tracking
+              Upload books in EPUB, PDF, MOBI, DOCX, or TXT format, read anywhere, and enhance your language learning.
             </p>
             <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">

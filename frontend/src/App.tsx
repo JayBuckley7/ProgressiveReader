@@ -37,11 +37,7 @@ export default function App() {
             <SignOutButton />
           </header>
         ) : (
-          <TopActions
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onShowLogin={() => setShowLogin(true)}
-          />
+          null
         )}
         
         <main className="flex-1">
@@ -51,6 +47,8 @@ export default function App() {
             currentChapter={currentChapter}
             setCurrentChapter={setCurrentChapter}
             currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            setShowLogin={setShowLogin}
           />
         </main>
         <DangerZone />
@@ -69,12 +67,16 @@ function Content({
   currentChapter,
   setCurrentChapter,
   currentPage,
+  setCurrentPage,
+  setShowLogin,
 }: {
   currentBookId: Id<"books"> | null;
   setCurrentBookId: (id: Id<"books"> | null) => void;
   currentChapter: number;
   setCurrentChapter: (chapter: number) => void;
   currentPage: "library" | "vocabulary" | "stats";
+  setCurrentPage: (page: "library" | "vocabulary" | "stats") => void;
+  setShowLogin: (show: boolean) => void;
 }) {
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
@@ -97,6 +99,11 @@ function Content({
           />
         ) : (
           <>
+            <TopActions
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              onShowLogin={() => setShowLogin(true)}
+            />
             <HeroBanner />
             {currentPage === "library" ? (
               <BookLibrary onSelectBook={setCurrentBookId} />

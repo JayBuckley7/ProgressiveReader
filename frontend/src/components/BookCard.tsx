@@ -7,9 +7,9 @@ import { BookReader } from "./BookReader";
 interface Book {
   _id: Id<"books">;
   title: string;
-  author: string;
+  author?: string;
   language: string;
-  coverUrl?: string;
+  coverUrl?: string | null;
   totalPages?: number;
   description?: string;
   fileId?: Id<"_storage">;
