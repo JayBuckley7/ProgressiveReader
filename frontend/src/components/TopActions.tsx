@@ -14,15 +14,16 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
   const [showAddBook, setShowAddBook] = useState(false);
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <header className="bg-white shadow-sm border-b">
       <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => onPageChange("library")}
             aria-label="Go to library"
-            className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+            className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors flex items-center"
           >
-            📚 Progressive Reader
+            <img src="/icon.png" alt="App icon" className="w-6 h-6 mr-2" />
+            Progressive Reader
           </button>
           <button
             onClick={() => setShowAddBook(true)}
