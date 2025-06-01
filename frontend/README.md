@@ -14,7 +14,7 @@ The backend code is in the `convex` directory.
 
 ## App authentication
 
-Chef apps use [Convex Auth](https://auth.convex.dev/) with Anonymous auth for easy sign in. You may wish to change this before deploying your app.
+Chef apps use [Convex Auth](https://auth.convex.dev/) with Anonymous auth for easy sign in. This project extends it with email/password and Google authentication.
 
 ## Developing and deploying your app
 
