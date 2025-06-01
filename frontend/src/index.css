@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* JPDB highlighter styles */
+@import "../../src/jp-highlighter/styles.css";
+
 :root {
   --color-light: #ffffff;
   --color-dark: #171717;

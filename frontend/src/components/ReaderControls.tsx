@@ -9,6 +9,8 @@ interface ReaderControlsProps {
   onPrevChapter: () => void;
   onNextChapter: () => void;
   bookId: Id<"books">;
+  jpdbHighlighted: boolean;
+  onToggleHighlight: () => void;
 }
 
 export function ReaderControls({
@@ -17,6 +19,8 @@ export function ReaderControls({
   onPrevChapter,
   onNextChapter,
   bookId,
+  jpdbHighlighted,
+  onToggleHighlight,
 }: ReaderControlsProps) {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const bookmarks = useQuery(api.reading.getBookmarks, { bookId });
@@ -94,6 +98,14 @@ export function ReaderControls({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
+          </button>
+
+          <button
+            onClick={onToggleHighlight}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            title="Toggle JPDB highlighting"
+          >
+            <span className="text-sm font-semibold">JP</span>
           </button>
         </div>
       </div>
