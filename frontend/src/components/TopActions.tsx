@@ -2,6 +2,7 @@ import { Authenticated, Unauthenticated } from "convex/react";
 import { SignOutButton } from "../SignOutButton";
 import { useState } from "react";
 import { AddBookModal } from "./AddBookModal";
+import { DriveButton } from "../gdrive/DriveButton";
 
 interface TopActionsProps {
   currentPage: "library" | "vocabulary" | "stats";
