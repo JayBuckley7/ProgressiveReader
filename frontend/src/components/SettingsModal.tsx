@@ -9,7 +9,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ onClose, onTranslate, translating }: SettingsModalProps) {
     const { settings, updateSettings } = useSettings();
-    const [activeTab, setActiveTab] = useState<"translate" | "jlpt" | "accessibility">("translate");
+    const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
 
     const [openaiKey, setOpenaiKey] = useState(localStorage.getItem("openaiKey") || "");
     const [openaiModel, setOpenaiModel] = useState(localStorage.getItem("openaiModel") || "gpt-4o-mini");
@@ -37,12 +37,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
                     </div>
 
                     <div className="flex gap-2 mb-4">
-                        <button className={`px-3 py-1 rounded ${activeTab === 'translate' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('translate')}>Translate</button>
+                        <button className={`px-3 py-1 rounded ${activeTab === 'general' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('general')}>General</button>
                         <button className={`px-3 py-1 rounded ${activeTab === 'jlpt' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('jlpt')}>JLPT</button>
                         <button className={`px-3 py-1 rounded ${activeTab === 'accessibility' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700'}`} onClick={() => setActiveTab('accessibility')}>Accessibility</button>
                     </div>
 
-                    {activeTab === 'translate' && (
+                    {activeTab === 'general' && (
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">OpenAI API Key</label>
@@ -76,20 +76,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
                                 <input type="checkbox" id="autoload" checked={autoload} onChange={(e) => setAutoload(e.target.checked)} className="mr-2" />
                                 <label htmlFor="autoload" className="text-sm">Autoload Translations</label>
                             </div>
-                        </div>
-                    )}
 
-                    {activeTab === 'jlpt' && (
-                        <div className="space-y-4">
-                            <div className="flex items-center">
-                                <input type="checkbox" id="jlpt-enabled" checked={settings.jlptEnabled} onChange={(e) => updateSettings({ jlptEnabled: e.target.checked })} className="mr-2" />
-                                <label htmlFor="jlpt-enabled" className="text-sm">Enable JLPT highlighting</label>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'accessibility' && (
-                        <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Theme</label>
                                 <select value={settings.theme} onChange={(e) => updateSettings({ theme: e.target.value as any })} className="w-full p-2 border rounded">
@@ -112,6 +99,23 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
                                     <option value="Helvetica">Helvetica</option>
                                 </select>
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'jlpt' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center">
+                                <input type="checkbox" id="jlpt-enabled" checked={settings.jlptEnabled} onChange={(e) => updateSettings({ jlptEnabled: e.target.checked })} className="mr-2" />
+                                <label htmlFor="jlpt-enabled" className="text-sm">Enable JLPT highlighting</label>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'accessibility' && (
+                        <div className="space-y-4">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Accessibility options will be added soon.
+                            </p>
                         </div>
                     )}
 
