@@ -34,12 +34,14 @@ export function DangerZone() {
           <div className="flex space-x-2">
             <button
               onClick={handleInstall}
+              aria-label="Install app"
               className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
             >
               Install
             </button>
             <button
               onClick={handleDismiss}
+              aria-label="Dismiss install prompt"
               className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors"
             >
               Not Now
@@ -48,6 +50,7 @@ export function DangerZone() {
         </div>
         <button
           onClick={handleDismiss}
+          aria-label="Close prompt"
           className="text-gray-400 hover:text-gray-600 transition-colors"
         >
           ✕
