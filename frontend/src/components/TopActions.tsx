@@ -65,10 +65,9 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 📊 Stats
               </button>
             </nav>
-            <DriveButton />
             <SignOutButton />
           </Authenticated>
-
+          
           <Unauthenticated>
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">Sign in with:</span>
@@ -77,6 +76,12 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 📧 Email
+              </button>
+              <button
+                onClick={() => window.open('https://accounts.google.com/oauth/authorize?client_id=your-client-id&redirect_uri=your-redirect&scope=https://www.googleapis.com/auth/drive.readonly&response_type=code', '_blank')}
+                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                📁 Google Drive
               </button>
             </div>
           </Unauthenticated>
