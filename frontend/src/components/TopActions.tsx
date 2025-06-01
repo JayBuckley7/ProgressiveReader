@@ -19,12 +19,14 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
         <div className="flex items-center space-x-4">
           <button
             onClick={() => onPageChange("library")}
+            aria-label="Go to library"
             className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
           >
             📚 Progressive Reader
           </button>
           <button
             onClick={() => setShowAddBook(true)}
+            aria-label="Upload book"
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
             + Upload Book
@@ -34,31 +36,34 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
         <div className="flex items-center space-x-4">
           <Authenticated>
             <nav className="flex items-center space-x-1">
-              <button 
+              <button
                 onClick={() => onPageChange("library")}
+                aria-label="Library page"
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === "library" 
-                    ? "bg-blue-100 text-blue-700" 
+                  currentPage === "library"
+                    ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
                 📚 Library
               </button>
-              <button 
+              <button
                 onClick={() => onPageChange("vocabulary")}
+                aria-label="Vocabulary page"
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === "vocabulary" 
-                    ? "bg-blue-100 text-blue-700" 
+                  currentPage === "vocabulary"
+                    ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
                 📝 Vocabulary
               </button>
-              <button 
+              <button
                 onClick={() => onPageChange("stats")}
+                aria-label="Statistics page"
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === "stats" 
-                    ? "bg-blue-100 text-blue-700" 
+                  currentPage === "stats"
+                    ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
@@ -73,12 +78,14 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
               <span className="text-sm text-gray-600">Sign in with:</span>
               <button
                 onClick={onShowLogin}
+                aria-label="Sign in with email"
                 className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 📧 Email
               </button>
               <button
                 onClick={() => window.open('https://accounts.google.com/oauth/authorize?client_id=your-client-id&redirect_uri=your-redirect&scope=https://www.googleapis.com/auth/drive.readonly&response_type=code', '_blank')}
+                aria-label="Connect Google Drive"
                 className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
               >
                 📁 Google Drive
