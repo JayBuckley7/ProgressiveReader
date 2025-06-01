@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["*"],
+      "@/jp-highlighter/*": ["../../src/jp-highlighter/*"]
     }
   },
   "include": ["src"]

@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "A progressive reader for language learning with JPDB integration",
   "scripts": {
-    "build-highlighter": "tsc && webpack --mode production",
     "build-frontend": "npm --prefix frontend run build",
     "copy:frontend-assets": "node scripts/copyFrontendAssets.js",
-    "build": "npm run build-highlighter && npm run build-frontend && npm run copy:frontend-assets",
+    "build": "npm run build-frontend && npm run copy:frontend-assets",
     "dev-highlighter": "tsc && webpack --mode development --watch",
     "dev-frontend": "npm --prefix frontend run dev",
     "dev": "concurrently \"npm:dev-highlighter\" \"npm:dev-frontend\"",

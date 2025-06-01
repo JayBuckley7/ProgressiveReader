@@ -7,18 +7,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: 18
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    - run: npm install
-      working-directory: ./frontend
-    - run: npm run lint && npm run format
-      working-directory: ./frontend
-    - run: npm run build
-      working-directory: ./frontend
-    - run: |
-        mkdir -p app/static/dist
-        cp -r frontend/dist/* app/static/dist/
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+        working-directory: frontend
+
+      - run: npm run lint && npm run format
+        working-directory: frontend
+
+      - run: npm run build
+        working-directory: frontend
+
+      - name: Copy bundle into repo (unit test artifact)
+        run: mkdir -p app/static/dist && cp -r app/static/dist/* app/static/dist/

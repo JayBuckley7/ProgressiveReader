@@ -20,7 +20,13 @@ This project requires **Node.js v18 or newer** along with **npm v9+**.
    npm run build
    ```
 
-3. For development with automatic rebuilding of both parts:
+3. To build just the React UI, run the following inside the `frontend` directory:
+   ```bash
+   npm ci && npm run build
+   ```
+   Flask will then serve hashed assets via `vite_asset()` when `USE_NEW_UI=true`.
+
+4. For development with automatic rebuilding of both parts:
    ```bash
    npm run dev
    ```
@@ -125,6 +131,10 @@ Run `npm run lint && npm run format` before pushing to ensure CI passes.
     ```
     Alternatively, you can use `flask run` if you have the `FLASK_APP` environment
     variable set to `run.py`.
+    For a quick smoke test of the new React UI, run:
+    ```bash
+    ./scripts/dev-check.sh
+    ```
 
 7.  Open your web browser and navigate to `http://127.0.0.1:5000` (or the address provided by Flask).
 

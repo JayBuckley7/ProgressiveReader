@@ -1,29 +1,31 @@
 // Service Worker for Progressive Reader PWA
+// TODO: generate PRECACHE_ASSETS from vite manifest hashes
+//       at build-time (see scripts/pwa-manifest.js).
 const CACHE_NAME = 'progressive-reader-cache-v1';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
   '/',
-  '/static/css/reader_styles.css',
-  '/static/js/dbService.js',
-  '/static/js/storageManager.js',
-  '/static/js/epubProcessor.js',
-  '/static/js/themeManager.js',
-  '/static/js/fontSizeManager.js',
-  '/static/js/customCssManager.js',
-  '/static/js/sideDrawer.js',
-  '/static/js/settingsModal.js',
-  '/static/js/translationManager.js',
-  '/static/js/jlptHighlighter.js',
-  '/static/js/readerInit.js',
-  '/static/js/reader.js',
-  '/static/js/dist/jpHighlighter.bundle.js',
-  '/static/js/dist/styles.css',
-  '/static/js/utils.js',
-  '/static/icons/icon.png',
-  '/static/icons/icon-192x192.png',
-  '/static/icons/icon-512x512.png',
-  '/static/icons/slow.gif'
+  '../css/reader_styles.css',
+  'dbService.js',
+  'storageManager.js',
+  'epubProcessor.js',
+  'themeManager.js',
+  'fontSizeManager.js',
+  'customCssManager.js',
+  'sideDrawer.js',
+  'settingsModal.js',
+  'translationManager.js',
+  'jlptHighlighter.js',
+  'readerInit.js',
+  'reader.js',
+  '../dist/jp-highlighter.js',
+  '../dist/jp-highlighter.css',
+  'utils.js',
+  '../icons/icon.png',
+  '../icons/icon-192x192.png',
+  '../icons/icon-512x512.png',
+  '../icons/slow.gif'
 ];
 
 // Install event - cache core assets

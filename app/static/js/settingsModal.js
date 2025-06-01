@@ -1,4 +1,6 @@
 // settingsModal.js
+let jpHighlighter;
+import('/static/dist/jp-highlighter.js').then(m => { jpHighlighter = m.jpHighlighter; });
 
 let settingsModal, toggleSettingsBtn, settingsCloseBtn, apiKeyInput, modelSelect, languageSelect, cefrSlider, cefrOutput;
 let jpdbApiKeyInput, miningDeckIdInput, customWordCssInput, themeSelect;
@@ -250,8 +252,8 @@ function _attachEventListeners() {
             }
             
             // Force a config reload on the highlighter to ensure it picks up the new API key
-            if (window.jpHighlighter && typeof window.jpHighlighter.loadConfig === 'function') {
-                const updatedConfig = window.jpHighlighter.loadConfig();
+            if (jpHighlighter && typeof jpHighlighter.loadConfig === 'function') {
+                const updatedConfig = jpHighlighter.loadConfig();
             }
             _updateDueCardsVisibility();
             if (window.storageManager && typeof window.storageManager.prefetchDueCardsIfNeeded === 'function') {
@@ -517,11 +519,11 @@ function _attachEventListeners() {
             localStorage.setItem('showPopupOnHover', showPopupOnHoverCheckbox.checked);
             
             // Try to access the highlighter in different ways to ensure we can reload config
-            if (window.jpHighlighter) {
-                if (typeof window.jpHighlighter.reinitialize === 'function') {
-                    window.jpHighlighter.reinitialize();
-                } else if (typeof window.jpHighlighter.loadConfig === 'function') {
-                    const updatedConfig = window.jpHighlighter.loadConfig();
+            if (jpHighlighter) {
+                if (typeof jpHighlighter.reinitialize === 'function') {
+                    jpHighlighter.reinitialize();
+                } else if (typeof jpHighlighter.loadConfig === 'function') {
+                    const updatedConfig = jpHighlighter.loadConfig();
                 } else {
                     console.warn('jpHighlighter object exists but no loadConfig or reinitialize method available');
                 }
@@ -533,18 +535,18 @@ function _attachEventListeners() {
     if (touchscreenSupportCheckbox) {
         touchscreenSupportCheckbox.addEventListener('change', () => {
             localStorage.setItem('touchscreenSupport', touchscreenSupportCheckbox.checked);
-            if (window.jpHighlighter && typeof window.jpHighlighter.loadConfig === 'function') {
-                window.jpHighlighter.loadConfig(); // Reload config if it affects highlighter
+            if (jpHighlighter && typeof jpHighlighter.loadConfig === 'function') {
+                jpHighlighter.loadConfig(); // Reload config if it affects highlighter
             }
         });
     }
     if (disableFadeAnimationCheckbox) {
         disableFadeAnimationCheckbox.addEventListener('change', () => {
             localStorage.setItem('disableFadeAnimation', disableFadeAnimationCheckbox.checked);
-            if (window.jpHighlighter && typeof window.jpHighlighter.loadConfig === 'function') {
-                window.jpHighlighter.loadConfig(); // Reload config as it's used by Popup component via api-adapter
+            if (jpHighlighter && typeof jpHighlighter.loadConfig === 'function') {
+                jpHighlighter.loadConfig(); // Reload config as it's used by Popup component via api-adapter
                  // Potentially also directly update popup style if Popup.get().updateStyle() is exposed and needed
-                 if (window.jpHighlighter.Popup && window.jpHighlighter.Popup.get) {
+                 if (jpHighlighter.Popup && jpHighlighter.Popup.get) {
                     // This depends on how customPopupCSS is structured and if 'disable-fade-animation' is part of it
                     // For now, loadConfig() should be sufficient as Popup reads from the global config object.
                  }
@@ -554,12 +556,12 @@ function _attachEventListeners() {
     if (customPopupCssInput) {
         customPopupCssInput.addEventListener('input', () => {
             localStorage.setItem('customPopupCSS', customPopupCssInput.value);
-            if (window.jpHighlighter && typeof window.jpHighlighter.loadConfig === 'function') {
-                window.jpHighlighter.loadConfig(); // Reload config
+            if (jpHighlighter && typeof jpHighlighter.loadConfig === 'function') {
+                jpHighlighter.loadConfig(); // Reload config
             }
             // Also, directly update the style if the popup instance is accessible and has an update method
-            if (window.jpHighlighter.Popup && window.jpHighlighter.Popup.get && typeof window.jpHighlighter.Popup.get().updateStyle === 'function') {
-                window.jpHighlighter.Popup.get().updateStyle(customPopupCssInput.value);
+            if (jpHighlighter.Popup && jpHighlighter.Popup.get && typeof jpHighlighter.Popup.get().updateStyle === 'function') {
+                jpHighlighter.Popup.get().updateStyle(customPopupCssInput.value);
             }
         });
     }

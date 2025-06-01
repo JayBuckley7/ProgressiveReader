@@ -1,5 +1,6 @@
 // jlptHighlighter.js
 // This is now a thin wrapper around the TypeScript implementation
+let jpHighlighterPromise = import('/static/dist/jp-highlighter.js');
 
 let jlptToggleCheckbox, contentAreaJlpt;
 let trueOriginalServerContentForJlpt = "";
@@ -101,7 +102,7 @@ function _attachJlptEventListeners() {
     }
 }
 
-function initJlptHighlighter(config) {
+async function initJlptHighlighter(config) {
     contentAreaJlpt = config.contentAreaElement; // Expect contentArea to be passed in
     trueOriginalServerContentForJlpt = config.trueOriginalServerContent;
 
@@ -118,10 +119,11 @@ function initJlptHighlighter(config) {
         console.warn("JLPT toggle checkbox not found, highlighter not fully initialized.");
     } else {
         // Initialize and wire up the TypeScript implementation
-        if (window.jpHighlighter && typeof window.jpHighlighter.initialize === 'function') {
-            window.jpHighlighter.initialize(contentAreaJlpt).then(() => {
-                if (typeof window.jpHighlighter.wireUpToggle === 'function') {
-                    window.jpHighlighter.wireUpToggle(contentAreaJlpt);
+        const { jpHighlighter } = await jpHighlighterPromise;
+        if (jpHighlighter && typeof jpHighlighter.initialize === 'function') {
+            jpHighlighter.initialize(contentAreaJlpt).then(() => {
+                if (typeof jpHighlighter.wireUpToggle === 'function') {
+                    jpHighlighter.wireUpToggle(contentAreaJlpt);
                 } else {
                     console.error("JP Highlighter module's wireUpToggle not found!");
                 }
@@ -132,8 +134,8 @@ function initJlptHighlighter(config) {
                     const applyInitialHighlights = (event) => {
                         // Check again in case the user unchecked it while content was loading
                         if (jlptToggleCheckbox.checked && contentAreaJlpt) {
-                            if (window.jpHighlighter && typeof window.jpHighlighter.highlightContent === 'function'){
-                                window.jpHighlighter.highlightContent(contentAreaJlpt);
+                            if (jpHighlighter && typeof jpHighlighter.highlightContent === 'function'){
+                                jpHighlighter.highlightContent(contentAreaJlpt);
                             } else {
                                 console.error("JP Highlighter module's highlightContent not found during initial application!");
                             }
@@ -156,7 +158,7 @@ function initJlptHighlighter(config) {
                 _legacyInitFallback();
             });
         } else {
-            console.error("JP Highlighter module (window.jpHighlighter) or its initialize function not loaded!");
+            console.error("JP Highlighter module could not be loaded!");
             _legacyInitFallback();
         }
     }

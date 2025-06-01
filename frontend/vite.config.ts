@@ -3,16 +3,17 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  base: '/static/',
   plugins: [react()],
-  resolve: {
-    alias: { '@': path.resolve(__dirname, 'src') }
-  },
-  server: {
-    proxy: { '/api': 'http://localhost:5000' }
-  },
+  base: '/static/',
   build: {
-    outDir: 'dist',
-    manifest: true
-  }
+    outDir: '../app/static/dist',
+    manifest: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+      '@/jp-highlighter': path.resolve(__dirname, '../src/jp-highlighter'),
+    },
+  },
+  server: { proxy: { '/api': 'http://localhost:5000' } },
 });
