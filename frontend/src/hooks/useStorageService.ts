@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { storageService, BookMetadata, ReadingProgress } from '../lib/storageService';
+import { storageService, BookMetadata, ReadingProgress } from '../services/storageService';
 import { User as FirebaseUser } from 'firebase/auth';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
@@ -72,7 +72,7 @@ export function useStorageService() {
     try {
       const bookTitle = title || file.name.replace(/\.[^/.]+$/, '');
       
-      const metadata = await storageService.uploadBookToDrive(file, {
+      const metadata = await storageService.uploadBook(file, {
         title: bookTitle,
         fileType: file.name.split('.').pop()?.toLowerCase() || 'epub',
       });
