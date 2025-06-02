@@ -3,7 +3,7 @@ import { api } from "../convex/_generated/api";
 import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
 import { Toaster } from "sonner";
-import { BookLibrary } from "./components/BookLibrary";
+import BookLibrary from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { useState } from "react";

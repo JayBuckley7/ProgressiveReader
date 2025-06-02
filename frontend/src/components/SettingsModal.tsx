@@ -31,12 +31,12 @@ const tabs = [
 ] as const;
 
 export function SettingsModal({ onClose, onTranslate, translating }: {
-  onClose: () => void;
-  onTranslate: (useCefr: boolean) => void;
-  translating: boolean;
+    onClose: () => void;
+    onTranslate: (useCefr: boolean) => void;
+    translating: boolean;
 }) {
-  const { settings, updateSettings } = useSettings();
-  const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
+    const { settings, updateSettings } = useSettings();
+    const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
 
   const [localState, setLocalState] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
@@ -66,13 +66,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     }
   }, [localState, jpdbApiKey]);
 
-  if (!settings) return null;
+    if (!settings) return null;
 
   const handleChange = <K extends keyof typeof localState>(key: K, value: typeof localState[K]) => {
     setLocalState(prev => ({ ...prev, [key]: value }));
   };
 
-  return (
+    return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[calc(100vh-1rem)] sm:max-h-[90vh] overflow-hidden animate-slide-up flex flex-col">
         {/* Header */}
@@ -84,11 +84,11 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               className="text-white/80 hover:text-white transition-colors duration-200 hover:rotate-90 transform p-1"
             >
               <svg className="w-5 sm:w-6 h-5 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    </div>
 
         {/* Tab Navigation */}
         <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -111,8 +111,8 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 <span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
-          </div>
-        </div>
+                            </div>
+                            </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
@@ -131,7 +131,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   Server Key Status: <span className="font-semibold text-green-600 dark:text-green-400">✓ Configured</span>
                   <span className="text-gray-600 dark:text-gray-400 ml-1">(used if cookie is empty)</span>
                 </p>
-              </div>
+                            </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput
@@ -154,7 +154,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                     { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Legacy)" }
                   ]}
                 />
-              </div>
+                            </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput
@@ -179,7 +179,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                     { value: "5", label: "C2 (Proficient)" }
                   ]}
                 />
-              </div>
+                            </div>
 
               <CheckboxInput
                 label="Autoload Translations"
@@ -210,7 +210,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   placeholder="Enter your JPDB API key"
                   type="password"
                 />
-              </div>
+                            </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <TextInput
@@ -237,7 +237,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   onChange={v => handleChange("neverForgetDeckId", v)}
                   placeholder="e.g., 22222"
                 />
-              </div>
+                            </div>
 
               <TextInput
                 label="Context Sentences"
@@ -261,9 +261,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   checked={localState.preferDueCards}
                   onChange={v => handleChange("preferDueCards", v)}
                 />
-              </div>
-            </div>
-          )}
+                            </div>
+                        </div>
+                    )}
 
           {activeTab === "accessibility" && (
             <div className="space-y-6 animate-fade-in">
@@ -288,7 +288,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
               </div>
 
-              <div className="space-y-4">
+                        <div className="space-y-4">
                 <TextInput
                   label="Custom Word CSS"
                   value={localState.customWordCSS}
@@ -447,10 +447,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   <span>📥</span>
                   Import Settings
                 </button>
-              </div>
-            </div>
-          )}
-        </div>
+                            </div>
+                        </div>
+                    )}
+                        </div>
 
         {/* Footer */}
         <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 md:p-6 flex-shrink-0">
@@ -502,7 +502,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   </span>
                 ) : <span className="hidden sm:inline">Translate (CEFR)</span>}
                 {!translating && <span className="sm:hidden">CEFR</span>}
-              </button>
+                        </button>
             </div>
             <button
               onClick={onClose}
@@ -515,12 +515,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               "
             >
               Close
-            </button>
-          </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 // Enhanced Reusable Input Components
@@ -695,5 +695,5 @@ function CheckboxInput({
         )}
       </div>
     </label>
-  );
+    );
 }

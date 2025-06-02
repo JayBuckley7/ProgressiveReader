@@ -162,21 +162,6 @@ export async function seedDriveFolder(): Promise<string> {
 }
 
 /**
- * Upload a book file to Google Drive inside the application folder.
- */
-export async function uploadBookToDrive(bookId: string, title: string, blob: Blob, ext = 'epub'): Promise<void> {
-  if (!isConnected()) throw new Error('Not connected to Google Drive');
-  const folder = await seedDriveFolder();
-  const metadata = {
-    name: `${title}.${ext}`,
-    mimeType: blob.type || 'application/octet-stream',
-    parents: [folder],
-    appProperties: { progReaderBookId: bookId }
-  };
-  await driveFilesCreate(metadata, blob);
-}
-
-/**
  * Run a basic sync cycle. Currently this just ensures the folder exists.
  */
 export async function runSyncLoop(): Promise<void> {
