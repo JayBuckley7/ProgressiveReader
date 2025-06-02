@@ -2,7 +2,6 @@ import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
 // import { Authenticated, Unauthenticated } from "convex/react"; // REMOVED
 // import { SignOutButton } from "./SignOutButton"; // REMOVED - using Clerk's
 import { useState } from "react";
-import { AddBookModal } from "./AddBookModal";
 import { DriveButton } from "../gdrive/DriveButton";
 
 interface TopActionsProps {
@@ -12,7 +11,6 @@ interface TopActionsProps {
 }
 
 export function TopActions({ currentPage, onPageChange, onShowLogin }: TopActionsProps) {
- // const [showAddBook, setShowAddBook] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   return (
@@ -29,12 +27,6 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
           </button>
           
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowAddBook(true)}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium"
-            >
-              + Upload
-            </button>
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className="p-1.5 text-gray-600"
@@ -100,13 +92,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
               <img src="/icon.png" alt="App icon" className="w-6 h-6 mr-2" />
               Progressive Reader
             </button>
-            {/* <button
-              onClick={() => setShowAddBook(true)}
-              aria-label="Upload book"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              + Upload Book
-            </button> */}
+            
           </div>
           
           <div className="flex items-center space-x-4">
@@ -163,10 +149,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
           </div>
         </div>
       </div>
-      
-      {/* {showAddBook && (
-        <AddBookModal onClose={() => setShowAddBook(false)} />
-      )} */}
+
     </header>
   );
 }
