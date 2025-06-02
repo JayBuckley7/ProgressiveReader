@@ -186,3 +186,12 @@ export function disconnect(): void {
   gToken = null;
   folderId = null;
 }
+
+/**
+ * Return the OAuth access token or null if not authenticated.
+ */
+export function getAccessToken(): string | null {
+    return gToken?.access || null;
+}
+
+export { fetchWithAuth as driveFetch, driveFilesCreate };
