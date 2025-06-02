@@ -1,0 +1,15 @@
+# Ignore Python cache and virtual environments
+__pycache__/
+*.pyc
+venv/
+
+# Git and GitHub files
+.git
+.github
+
+# Node modules
+frontend/node_modules
+
+# Other files not needed in image
+*.log
+.DS_Store
