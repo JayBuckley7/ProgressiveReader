@@ -10,5 +10,6 @@ The following guidelines apply to all code contributions in this repository.
   python -m unittest discover -s tests
   ```
   Report the results in the pull request description.
-- If JavaScript tests are added in the future, run `npm test` as well.
+- For JavaScript or TypeScript changes, run `npm run lint` and fix any issues before committing.
+- If JavaScript or TypeScript tests exist, run `npm test` as well.
 
