@@ -98,6 +98,8 @@ class StorageService {
     constructor() {
         onAuthStateChanged(this.auth, (u) => {
             this.provider = this.detectProvider(u);
+            console.log('Auth state changed (constructor):', u);
+            console.log('Detected provider:', this.provider);
         });
     }
 
@@ -116,6 +118,8 @@ class StorageService {
     onAuthStateChange(callback: (user: User | null) => void): void {
         onAuthStateChanged(this.auth, (u) => {
             this.provider = this.detectProvider(u);
+            console.log('Auth state changed (onAuthStateChange):', u);
+            console.log('Detected provider:', this.provider);
             callback(u);
         });
     }
