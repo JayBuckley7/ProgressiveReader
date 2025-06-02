@@ -1,12 +1,6 @@
-// import { useQuery, useMutation, useAction } from "convex/react";
-// import { api } from "../../convex/_generated/api";
-// import { Id } from "../../convex/_generated/dataModel";
 import { useState, useRef } from "react";
 import { SettingsModal } from "./SettingsModal";
 import { toast } from "sonner";
-import { EpubProcessorWrapper } from "../lib/epubProcessor";
-import { TextProcessorWrapper } from "../lib/textProcessor";
-import { processBookChapters } from "../lib/utils";
 import { useStorageService } from "../hooks/useStorageService";
 
 interface BookLibraryProps {
@@ -16,18 +10,7 @@ interface BookLibraryProps {
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
   const { books, isAuthenticated, signIn, uploadBook } = useStorageService();
 
-  // const generateUploadUrl = useMutation(api.books.generateUploadUrl);
-  // const createBook = useMutation(api.books.create);
-  // const createChapter = useMutation(api.books.createChapter);
-  // const updateBookMetadata = useMutation(api.books.updateMetadata);
-  // const processEpub = useAction(api.epubProcessor.processEpubFile);
-
-  // Placeholder functions for Convex mutations/actions
-  const generateUploadUrl = async () => { console.log("generateUploadUrl (TODO)"); return "/mock-upload-url"; };
-  const createBook = async (data: any) => { console.log("createBook (TODO)", data); return "mock-book-id"; };
-  const createChapter = async (data: any) => { console.log("createChapter (TODO)", data); };
-  const updateBookMetadata = async (data: any) => { console.log("updateBookMetadata (TODO)", data); };
-  const processEpub = async (data: any) => { console.log("processEpub (TODO)", data); return { chapters: [], metadata: {} }; };
+  // All book handling is delegated to the storage service.
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -54,32 +37,8 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       const uploadedBookMetadata = await uploadBook(file);
       
       if (uploadedBookMetadata) {
-        // Now process chapters using a Convex action if needed, or client-side
-        // Based on the structure, processing might still be a Convex action,
-        // but creating/updating metadata is handled by storageService.
-        // We should pass the *new* bookId and driveFileId to the processing step if needed.
-        
-        // The existing processBookChapters seems to handle the chapter creation/metadata update
-        // within itself, possibly calling Convex mutations directly. This needs review.
-        // If chapters are also going to Firestore, processBookChapters needs refactoring
-        // to use storageService.saveChapter or similar, or we move processing client-side.
-        
-        // Assuming processBookChapters will be updated to use storageService or client-side logic:
-        // await processBookChapters({
-        //   file, // Might still need the file blob
-        //   fileExtension,
-        //   bookId: uploadedBookMetadata.id,
-        //   bookTitle: uploadedBookMetadata.title,
-        //   author: uploadedBookMetadata.author, // if extracted
-        //   totalChapters: uploadedBookMetadata.totalChapters, // if extracted
-        //   coverImageId: uploadedBookMetadata.coverImageId, // if extracted
-        //   // Pass storageService methods if needed, or refactor processBookChapters
-        // });
-
-        // For now, let's assume storageService.uploadBook handles all initial metadata
-        // and the follow-up processing step might just be for chapter content.
-        // The original code had client-side processing followed by Convex mutations.
-        // Let's rely on storageService.uploadBook handling metadata saving to Firestore.
+        // All metadata handling is performed in the storage service. Any future
+        // chapter processing will hook into that layer.
 
         setUploadProgress(100);
         toast.success(`"${uploadedBookMetadata.title}" uploaded successfully!`);
