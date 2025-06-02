@@ -1,20 +1,22 @@
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+// import { Authenticated, Unauthenticated, useQuery } from "convex/react"; // REMOVED
+// import { api } from "../../convex/_generated/api";
 
 export function HeroBanner() {
-  const loggedInUser = useQuery(api.auth.loggedInUser);
-  const books = useQuery(api.books.list) || [];
-  const vocabulary = useQuery(api.vocabulary.list, {}) || [];
-
-  const masteredWords = vocabulary.filter(word => word.mastered).length;
+  const { user } = useUser(); // Get user from Clerk instead
+  
+  // Placeholder data for now - will need to connect to Flask API
+  const books = []; // Placeholder
+  const vocabulary = []; // Placeholder
+  const masteredWords = 0; // Placeholder
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
       <div className="max-w-6xl mx-auto px-4 py-12">
-        <Authenticated>
+        <SignedIn>
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-4">
-              Welcome back, {loggedInUser?.name || "Reader"}! 📖
+              Welcome back, {user?.firstName || user?.username || "Reader"}! 📖
             </h1>
             <p className="text-xl text-blue-100 mb-6">
               Continue your language learning journey
@@ -34,9 +36,9 @@ export function HeroBanner() {
               </div>
             </div>
           </div>
-        </Authenticated>
+        </SignedIn>
         
-        <Unauthenticated>
+        <SignedOut>
           <div className="text-center">
             
           <img src="/slow.gif" alt="Animation" className="w-16 h-16 mb-4 rounded-lg shadow mx-auto" />
@@ -70,7 +72,7 @@ export function HeroBanner() {
               </div>
             </div>
           </div>
-        </Unauthenticated>
+        </SignedOut>
       </div>
     </div>
   );

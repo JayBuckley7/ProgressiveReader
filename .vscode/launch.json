@@ -5,73 +5,68 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Flask Dev Server (Debug)",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/run.py",
-            "args": [],
-            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
-            "console": "integratedTerminal",
-            "subProcess": true,
-            "justMyCode": true,
-            "env": {
-                "FLASK_DEBUG": "1",
-                "FLASK_APP": "run.py",
-                "FLASK_ENV": "development"
-            }
-        },
-        {
-            "name": "Run Flask with Hot Reload (No Debug)",
+            "name": "Backend: Run Flask (Hot Reload)",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/run.py",
-            "console": "integratedTerminal",
-            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "module": "flask",
+            "cwd": "${workspaceFolder}/backend",
             "env": {
+                "FLASK_APP": "run.py", 
+                "FLASK_ENV": "development",
                 "FLASK_DEBUG": "1",
-                "FLASK_APP": "run.py",
-                "FLASK_ENV": "development"
-            }
+                "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/backend/firebase-adminsdk-credentials.json"
+            },
+            "args": [
+                "run",
+                "--no-debugger" 
+            ],
+            "jinja": true,
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe" 
         },
         {
-            "name": "Python: Generate EPUB Ground Truth",
+            "name": "Backend: Debug Flask",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/scripts/generate_epub_groundtruth.py",
-            "console": "integratedTerminal",
-            "args": [],
-            "env": {},
-            "stopOnEntry": false,
-            "cwd": "${workspaceFolder}"
+            "module": "flask",
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "FLASK_APP": "run.py", 
+                "FLASK_ENV": "development",
+                "FLASK_DEBUG": "0",
+                "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/backend/firebase-adminsdk-credentials.json"
+            },
+            "args": [
+                "run",
+                "--no-reload" 
+            ],
+            "jinja": true,
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe" 
         },
         {
-            "name": "npm: Run Development Watch",
-            "type": "node",
+            "name": "Frontend: Vite Dev Server",
+            "type": "node-terminal", 
             "request": "launch",
-            "runtimeExecutable": "npm",
-            "runtimeArgs": ["run", "dev"],
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "command": "npm run dev:frontend",
+            "cwd": "${workspaceFolder}/frontend",
+            "console": "integratedTerminal"
         }
     ],
     "compounds": [
         {
-            "name": "Full-Stack: Server + Webpack",
-            "configurations": ["Run Flask Dev Server (Debug)", "npm: Run Development Watch"],
+            "name": "Full-Stack: Flask (Hot Reload) + Vite",
+            "configurations": ["Backend: Run Flask (Hot Reload)", "Frontend: Vite Dev Server"],
             "stopAll": true,
             "presentation": {
-                "hidden": false,
-                "group": "fullstack",
+                "group": "Full-Stack",
                 "order": 1
             }
         },
         {
-            "name": "Full-Stack: Hot Reload + Webpack",
-            "configurations": ["Run Flask with Hot Reload (No Debug)", "npm: Run Development Watch"],
+            "name": "Full-Stack: Debug Flask + Vite",
+            "configurations": ["Backend: Debug Flask", "Frontend: Vite Dev Server"],
             "stopAll": true,
             "presentation": {
-                "hidden": false,
-                "group": "fullstack",
+                "group": "Full-Stack",
                 "order": 2
             }
         }

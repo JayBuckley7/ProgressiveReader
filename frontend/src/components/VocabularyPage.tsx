@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+// import { useQuery, useMutation } from "convex/react"; // REMOVED
+// import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
-import { Id } from "../../convex/_generated/dataModel";
+// import { Id } from "../../convex/_generated/dataModel";
 
 interface VocabularyWord {
-  _id: Id<"vocabulary">;
+  _id: string; // Was: Id<"vocabulary">
   word: string;
   translation: string;
   language: string;
-  bookId?: Id<"books">;
+  bookId?: string; // Was: Id<"books">
   context?: string;
   difficulty?: "easy" | "medium" | "hard";
   mastered: boolean;
@@ -22,18 +22,22 @@ export function VocabularyPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
 
-  const vocabulary = useQuery(api.vocabulary.list, { 
-    language: selectedLanguage || undefined 
-  }) || [];
+  // const vocabularyQuery = useQuery(api.vocabulary.list, { 
+  //   language: selectedLanguage || undefined 
+  // }) || [];
+  const vocabulary: VocabularyWord[] = []; // Placeholder, was vocabularyList
 
-  const books = useQuery(api.books.list) || [];
-  const toggleMastered = useMutation(api.vocabulary.toggleMastered);
+  // const books = useQuery(api.books.list) || [];
+  const books: any[] = []; // Placeholder
+
+  // const toggleMasteredMutation = useMutation(api.vocabulary.toggleMastered);
+  const toggleMastered = async (data: any) => { console.log("Toggle mastered (TODO):", data); }; // Was toggleMasteredMutation
 
   // Get unique languages from vocabulary
-  const languages = Array.from(new Set(vocabulary.map(word => word.language)));
+  const languages = Array.from(new Set(vocabulary.map(word => word.language))); // Use vocabulary
 
   // Filter vocabulary based on search and mastered status
-  const filteredVocabulary = vocabulary.filter(word => {
+  const filteredVocabulary = vocabulary.filter(word => { // Use vocabulary
     const matchesSearch = word.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          word.translation.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -44,9 +48,10 @@ export function VocabularyPage() {
     return matchesSearch && matchesMastered;
   });
 
-  const handleToggleMastered = async (wordId: Id<"vocabulary">) => {
+  const handleToggleMastered = async (wordId: string) => { // Was: Id<"vocabulary">
     try {
-      await toggleMastered({ wordId });
+      // await toggleMasteredMutation({ wordId });
+      await toggleMastered({ wordId }); // Use toggleMastered
     } catch (error) {
       toast.error("Failed to update word status");
     }
@@ -178,7 +183,7 @@ export function VocabularyPage() {
 interface VocabularyCardProps {
   word: VocabularyWord;
   books: any[];
-  onToggleMastered: (wordId: Id<"vocabulary">) => void;
+  onToggleMastered: (wordId: string) => void; // Was: Id<"vocabulary">
 }
 
 function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) {
@@ -253,7 +258,18 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard" | "">("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const addWord = useMutation(api.vocabulary.addWord);
+  // const addWord = useMutation(api.vocabulary.addWord);
+  const addWord = async (data: any) => {
+    console.log("Add word (TODO - Flask API):", data);
+    // This will call Flask API to add the word
+    const response = await fetch('/api/vocabulary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to add word');
+    return response.json();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,7 +284,7 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
         word: word.trim(),
         translation: translation.trim(),
         language,
-        bookId: bookId ? bookId as Id<"books"> : undefined,
+        bookId: bookId || undefined,
         context: context.trim() || undefined,
         difficulty: difficulty || undefined,
       });

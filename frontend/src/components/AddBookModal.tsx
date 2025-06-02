@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+// import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import { EpubProcessorWrapper } from "../lib/epubProcessor";
 
@@ -18,8 +18,11 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const addBook = useMutation(api.books.addBook);
-  const generateUploadUrl = useMutation(api.books.generateUploadUrl);
+  // const addBookMutation = useMutation(api.books.addBook);
+  // const generateUploadUrlMutation = useMutation(api.books.generateUploadUrl);
+
+  const addBook = async (data: any) => { console.log("Add book (TODO):", data); return "mockBookId"; }; // Placeholder
+  const generateUploadUrl = async () => { console.log("Generate upload URL (TODO)"); return "/api/upload_book_file"; }; // Placeholder
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -109,34 +112,40 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
     setIsSubmitting(true);
     try {
       let fileId = undefined;
+      let serverAssignedBookId = undefined; // For Flask to assign an ID
       
       if (file) {
-        // Upload file to Convex storage
-        const postUrl = await generateUploadUrl();
-        const result = await fetch(postUrl, {
-          method: "POST",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        
-        if (!result.ok) {
-          throw new Error("Failed to upload file");
-        }
-        
-        const json = await result.json();
-        fileId = json.storageId;
+        // This section needs to be entirely replaced with Flask upload logic
+        // For now, simulate getting a fileId or some identifier from Flask
+        console.log("Simulating file upload to Flask for:", file.name);
+        // const postUrl = await generateUploadUrl(); // Original Convex call
+        // const result = await fetch(postUrl, { // Original Convex call
+        //   method: "POST",
+        //   headers: { "Content-Type": file.type },
+        //   body: file,
+        // });
+        // if (!result.ok) {
+        //   throw new Error("Failed to upload file (Convex)");
+        // }
+        // const json = await result.json();
+        // fileId = json.storageId; // Original Convex fileId
+
+        // Placeholder: In Flask, you'd upload and get back a path or an ID
+        fileId = `uploads/${file.name}`; // Example placeholder, not a real ID from server
       }
 
-      await addBook({
+      // This call also needs to be replaced with a Flask API call
+      // await addBookMutation({
+      serverAssignedBookId = await addBook({
         title: title.trim(),
         author: author.trim(),
         language,
         description: description.trim() || undefined,
         totalPages: totalPages ? parseInt(totalPages) : undefined,
-        fileId,
+        filePath: fileId, // Send the file path/identifier to Flask
       });
       
-      toast.success("Book uploaded successfully!");
+      toast.success("Book data sent to server (TODO: Flask integration)! Book ID: " + serverAssignedBookId);
       onClose();
     } catch (error) {
       toast.error("Failed to upload book");

@@ -1,5 +1,6 @@
-import { Authenticated, Unauthenticated } from "convex/react";
-import { SignOutButton } from "../SignOutButton";
+import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
+// import { Authenticated, Unauthenticated } from "convex/react"; // REMOVED
+// import { SignOutButton } from "./SignOutButton"; // REMOVED - using Clerk's
 import { useState } from "react";
 import { AddBookModal } from "./AddBookModal";
 import { DriveButton } from "../gdrive/DriveButton";
@@ -48,7 +49,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
         {/* Mobile Menu Dropdown */}
         {showMobileMenu && (
           <div className="sm:hidden mt-2 py-2 space-y-1">
-            <Authenticated>
+            <SignedIn>
               <button
                 onClick={() => { onPageChange("library"); setShowMobileMenu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
@@ -74,17 +75,17 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 📊 Stats
               </button>
               <div className="pt-2 border-t">
-                <SignOutButton />
+                <SignOutButton className="w-full text-left px-3 py-2 text-gray-600 rounded text-sm hover:bg-gray-100" />
               </div>
-            </Authenticated>
-            <Unauthenticated>
+            </SignedIn>
+            <SignedOut>
               <button
                 onClick={onShowLogin}
                 className="w-full text-left px-3 py-2 bg-blue-600 text-white rounded text-sm"
               >
-                📧 Sign in with Email
+                📧 Sign in
               </button>
-            </Unauthenticated>
+            </SignedOut>
           </div>
         )}
 
@@ -109,7 +110,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
           </div>
           
           <div className="flex items-center space-x-4">
-            <Authenticated>
+            <SignedIn>
               <nav className="flex items-center space-x-1">
                 <button
                   onClick={() => onPageChange("library")}
@@ -145,28 +146,20 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                   📊 Stats
                 </button>
               </nav>
-              <SignOutButton />
-            </Authenticated>
+              <SignOutButton className="px-3 py-2 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100" />
+            </SignedIn>
             
-            <Unauthenticated>
+            <SignedOut>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Sign in with:</span>
                 <button
                   onClick={onShowLogin}
-                  aria-label="Sign in with email"
+                  aria-label="Sign in"
                   className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                 >
-                  📧 Email
-                </button>
-                <button
-                  onClick={() => window.open('https://accounts.google.com/oauth/authorize?client_id=your-client-id&redirect_uri=your-redirect&scope=https://www.googleapis.com/auth/drive.readonly&response_type=code', '_blank')}
-                  aria-label="Connect Google Drive"
-                  className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                >
-                  📁 Google Drive
+                  📧 Sign in
                 </button>
               </div>
-            </Unauthenticated>
+            </SignedOut>
           </div>
         </div>
       </div>

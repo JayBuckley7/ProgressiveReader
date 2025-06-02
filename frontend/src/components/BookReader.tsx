@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+// import { api } from "../../convex/_generated/api";
+// import { Id } from "../../convex/_generated/dataModel";
 import { useEffect, useState, useRef } from "react";
 // import jpHighlighter from "../../../src/jp-highlighter";
 import { useSettings } from "../contexts/SettingsContext";
@@ -8,17 +8,24 @@ import { ReaderControls } from "./ReaderControls";
 import { SettingsModal } from "./SettingsModal";
 
 interface BookReaderProps {
-  bookId: Id<"books">;
+  bookId: string; // Was: Id<"books">
   currentChapter: number;
   setCurrentChapter: (chapter: number) => void;
   onBack: () => void;
 }
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
-  const book = useQuery(api.books.get, { bookId });
-  const chapter = useQuery(api.books.getChapter, { bookId, chapterIndex: currentChapter });
-  const progress = useQuery(api.reading.getProgress, { bookId });
-  const updateProgress = useMutation(api.reading.updateProgress);
+  // const book = useQuery(api.books.get, { bookId });
+  // const chapter = useQuery(api.books.getChapter, { bookId, chapterIndex: currentChapter });
+  // const progress = useQuery(api.reading.getProgress, { bookId });
+  // const updateProgress = useMutation(api.reading.updateProgress);
+
+  // Placeholder data - replace with Flask API calls
+  const book = { title: "Loading...", totalChapters: 1 }; 
+  const chapter = { content: "<p>Chapter content loading...</p>" }; // Corrected placeholder key
+  const progress = { currentChapter: 0, currentPosition: 0 };
+  const updateProgress = async (data: any) => { console.log("Update progress (TODO):", data); };
+
   const { settings } = useSettings();
   
   const [showSettings, setShowSettings] = useState(false);
@@ -38,15 +45,17 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Update reading progress
   useEffect(() => {
     const updateProgressDebounced = setTimeout(() => {
-      updateProgress({
-        bookId,
-        currentChapter,
-        currentPosition: scrollPosition,
-      });
+      // updateProgress({
+      //   bookId,
+      //   currentChapter,
+      //   currentPosition: scrollPosition,
+      // });
+      // TODO: Call Flask API to update progress
+      console.log("Debounced update progress (TODO):", { bookId, currentChapter, scrollPosition });
     }, 1000);
 
     return () => clearTimeout(updateProgressDebounced);
-  }, [bookId, currentChapter, scrollPosition, updateProgress]);
+  }, [bookId, currentChapter, scrollPosition, /* updateProgress */]); // Removed updateProgress from dependencies for now
 
   // Handle scroll tracking
   useEffect(() => {

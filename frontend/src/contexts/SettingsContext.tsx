@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import React, { createContext, useContext, useEffect, useState } from "react";
+// import { useQuery, useMutation } from "convex/react";
+// import { api } from "../../convex/_generated/api";
 
 type Theme = "light" | "dark" | "system";
 
@@ -26,27 +26,47 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+const defaultSettings: Settings = {
+  theme: "system",
+  fontSize: 16,
+  fontFamily: "Inter",
+  ttsSpeed: 1,
+  jlptEnabled: false,
+  autoTranslate: false,
+  targetLanguage: "English",
+  customCss: "",
+  showPopupOnHover: true,
+  touchscreenSupport: true,
+  disableFadeAnimation: false,
+};
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const dbSettings = useQuery(api.settings.get);
-  const updateSettingsMutation = useMutation(api.settings.update);
+  // const dbSettings = useQuery(api.settings.get);
+  // const updateSettingsMutation = useMutation(api.settings.update);
+  
+  // Placeholder for settings - replace with Flask API calls for persistence
+  const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
 
   // Convert database settings to our Settings interface
-  const settings: Settings | null = dbSettings ? {
-    theme: dbSettings.theme,
-    fontSize: dbSettings.fontSize,
-    fontFamily: dbSettings.fontFamily,
-    ttsSpeed: dbSettings.ttsSpeed,
-    jlptEnabled: dbSettings.jlptEnabled,
-    autoTranslate: dbSettings.autoTranslate,
-    targetLanguage: dbSettings.targetLanguage,
-    customCss: 'customCss' in dbSettings ? dbSettings.customCss : undefined,
-    showPopupOnHover: 'showPopupOnHover' in dbSettings ? dbSettings.showPopupOnHover : undefined,
-    touchscreenSupport: 'touchscreenSupport' in dbSettings ? dbSettings.touchscreenSupport : undefined,
-    disableFadeAnimation: 'disableFadeAnimation' in dbSettings ? dbSettings.disableFadeAnimation : undefined,
-  } : null;
+  // const settings: Settings | null = dbSettings ? {
+  //   theme: dbSettings.theme,
+  //   fontSize: dbSettings.fontSize,
+  //   fontFamily: dbSettings.fontFamily,
+  //   ttsSpeed: dbSettings.ttsSpeed,
+  //   jlptEnabled: dbSettings.jlptEnabled,
+  //   autoTranslate: dbSettings.autoTranslate,
+  //   targetLanguage: dbSettings.targetLanguage,
+  //   customCss: 'customCss' in dbSettings ? dbSettings.customCss : undefined,
+  //   showPopupOnHover: 'showPopupOnHover' in dbSettings ? dbSettings.showPopupOnHover : undefined,
+  //   touchscreenSupport: 'touchscreenSupport' in dbSettings ? dbSettings.touchscreenSupport : undefined,
+  //   disableFadeAnimation: 'disableFadeAnimation' in dbSettings ? dbSettings.disableFadeAnimation : undefined,
+  // } : null;
+  const settings = currentSettings; // Use state directly
 
   const updateSettings = (updates: Partial<Settings>) => {
-    updateSettingsMutation(updates);
+    // updateSettingsMutation(updates);
+    console.log("Update settings (TODO - Flask API call):", updates);
+    setCurrentSettings(prev => ({ ...prev, ...updates }));
   };
 
   // Apply theme to document
@@ -87,7 +107,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     <SettingsContext.Provider value={{
       settings,
       updateSettings,
-      isLoading: dbSettings === undefined,
+      isLoading: false, // Was: dbSettings === undefined,
     }}>
       {children}
     </SettingsContext.Provider>

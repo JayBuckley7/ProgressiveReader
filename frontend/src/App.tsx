@@ -1,23 +1,42 @@
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
-import { SignInForm } from "./SignInForm";
-import { SignOutButton } from "./SignOutButton";
+import { useState } from "react";
+import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+// import { Authenticated, Unauthenticated, useQuery } from "convex/react";
+// import { api } from "../convex/_generated/api";
+// import { Id } from "../convex/_generated/dataModel";
+
+import { SignInForm } from "./components/SignInForm";
+import { SignOutButton } from "./components/SignOutButton"; // This might be unused now, or used inside TopActions
 import { Toaster } from "sonner";
 import BookLibrary from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
 import { SettingsProvider } from "./contexts/SettingsContext";
-import { useState } from "react";
 import { TopActions } from "./components/TopActions";
 import { HeroBanner } from "./components/HeroBanner";
 import { DangerZone } from "./components/DangerZone";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
-import { Id } from "../convex/_generated/dataModel";
+
+// Get Clerk publishable key from environment variable
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 export default function App() {
-  const [currentBookId, setCurrentBookId] = useState<Id<"books"> | null>(null);
+  if (!clerkPubKey) {
+    throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in environment variables");
+  }
+
+  return (
+    <ClerkProvider publishableKey={clerkPubKey}>
+      <AppContent />
+    </ClerkProvider>
+  );
+}
+
+function AppContent() {
+  const [currentBookId, setCurrentBookId] = useState<string | null>(null); // Was Id<"books">
   const [currentChapter, setCurrentChapter] = useState(0);
-  const [currentPage, setCurrentPage] = useState<"library" | "vocabulary" | "stats">("library");
+  const [currentPage, setCurrentPage] = useState<"library" | "vocabulary" | "stats">(
+    "library"
+  );
   const [showLogin, setShowLogin] = useState(false);
 
   return (
@@ -37,7 +56,7 @@ export default function App() {
         <DangerZone />
 
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
-        
+
         <Toaster />
       </div>
     </SettingsProvider>
@@ -53,17 +72,18 @@ function Content({
   setCurrentPage,
   setShowLogin,
 }: {
-  currentBookId: Id<"books"> | null;
-  setCurrentBookId: (id: Id<"books"> | null) => void;
+  currentBookId: string | null; // Was Id<"books">
+  setCurrentBookId: (id: string | null) => void; // Was Id<"books">
   currentChapter: number;
   setCurrentChapter: (chapter: number) => void;
   currentPage: "library" | "vocabulary" | "stats";
   setCurrentPage: (page: "library" | "vocabulary" | "stats") => void;
   setShowLogin: (show: boolean) => void;
 }) {
-  const loggedInUser = useQuery(api.auth.loggedInUser);
+  const { user, isLoaded } = useUser();
 
-  if (loggedInUser === undefined) {
+  // Show loading spinner while Clerk is loading
+  if (!isLoaded) {
     return (
       <div className="flex-1 flex justify-center items-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -73,7 +93,7 @@ function Content({
 
   return (
     <div className="flex flex-col flex-1">
-      <Authenticated>
+      <SignedIn>
         {currentBookId ? (
           <BookReader
             bookId={currentBookId}
@@ -92,16 +112,26 @@ function Content({
             <div className="flex-1 overflow-y-auto">
               {currentPage === "library" ? (
                 <BookLibrary onSelectBook={setCurrentBookId} />
-              ) : (
+              ) : currentPage === "vocabulary" ? (
                 <VocabularyPage />
+              ) : (
+                <div className="p-8 text-center">
+                  <h2 className="text-2xl font-bold mb-4">Reading Statistics</h2>
+                  <p className="text-gray-600">Stats page coming soon...</p>
+                </div>
               )}
             </div>
           </div>
         )}
-      </Authenticated>
-      
-      <Unauthenticated>
+      </SignedIn>
+
+      <SignedOut>
         <div className="flex flex-col flex-1">
+          <TopActions
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onShowLogin={() => setShowLogin(true)}
+          />
           <HeroBanner />
           <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
             <div className="w-full max-w-md mx-auto">
@@ -109,7 +139,7 @@ function Content({
             </div>
           </div>
         </div>
-      </Unauthenticated>
+      </SignedOut>
     </div>
   );
 }

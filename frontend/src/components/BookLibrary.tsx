@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useAction } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+// import { useQuery, useMutation, useAction } from "convex/react";
+// import { api } from "../../convex/_generated/api";
+// import { Id } from "../../convex/_generated/dataModel";
 import { useState, useRef } from "react";
 import { SettingsModal } from "./SettingsModal";
 import { toast } from "sonner";
@@ -10,18 +10,25 @@ import { processBookChapters } from "../lib/utils";
 import { useStorageService } from "../hooks/useStorageService";
 
 interface BookLibraryProps {
-  onSelectBook: (bookId: Id<"books">) => void;
+  onSelectBook: (bookId: string) => void;
 }
 
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
-  // Use the new storage service to fetch books from Firestore
   const { books, isAuthenticated, signIn, uploadBook } = useStorageService();
-  
-  const generateUploadUrl = useMutation(api.books.generateUploadUrl);
-  const createBook = useMutation(api.books.create);
-  const createChapter = useMutation(api.books.createChapter);
-  const updateBookMetadata = useMutation(api.books.updateMetadata);
-  const processEpub = useAction(api.epubProcessor.processEpubFile);
+
+  // const generateUploadUrl = useMutation(api.books.generateUploadUrl);
+  // const createBook = useMutation(api.books.create);
+  // const createChapter = useMutation(api.books.createChapter);
+  // const updateBookMetadata = useMutation(api.books.updateMetadata);
+  // const processEpub = useAction(api.epubProcessor.processEpubFile);
+
+  // Placeholder functions for Convex mutations/actions
+  const generateUploadUrl = async () => { console.log("generateUploadUrl (TODO)"); return "/mock-upload-url"; };
+  const createBook = async (data: any) => { console.log("createBook (TODO)", data); return "mock-book-id"; };
+  const createChapter = async (data: any) => { console.log("createChapter (TODO)", data); };
+  const updateBookMetadata = async (data: any) => { console.log("updateBookMetadata (TODO)", data); };
+  const processEpub = async (data: any) => { console.log("processEpub (TODO)", data); return { chapters: [], metadata: {} }; };
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -213,7 +220,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
           {books.map((book) => (
             <div
               key={book.id}
-              onClick={() => onSelectBook(book.id as Id<"books">)}
+              onClick={() => onSelectBook(book.id as string)}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
             >
               <div className="aspect-[3/4] bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

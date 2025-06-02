@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+// import { api } from "../../convex/_generated/api";
+// import { Id } from "../../convex/_generated/dataModel";
 
 interface ReaderControlsProps {
   currentChapter: number;
   totalChapters: number;
   onPrevChapter: () => void;
   onNextChapter: () => void;
-  bookId: Id<"books">;
+  bookId: string; // Was: Id<"books">
   jpdbHighlighted: boolean;
   onToggleHighlight: () => void;
 }
@@ -23,8 +23,11 @@ export function ReaderControls({
   onToggleHighlight,
 }: ReaderControlsProps) {
   const [showBookmarks, setShowBookmarks] = useState(false);
-  const bookmarks = useQuery(api.reading.getBookmarks, { bookId });
-  const addBookmark = useMutation(api.reading.addBookmark);
+  // const bookmarksQuery = useQuery(api.reading.getBookmarks, { bookId });
+  const bookmarks: any[] = []; // Placeholder
+  
+  // const addBookmarkMutation = useMutation(api.reading.addBookmark);
+  const addBookmark = async (data: any) => { console.log("Add bookmark (TODO):", data); }; // Placeholder
 
   const handleAddBookmark = async () => {
     const note = prompt("Add a note for this bookmark (optional):");
@@ -32,7 +35,7 @@ export function ReaderControls({
       await addBookmark({
         bookId,
         chapterIndex: currentChapter,
-        position: window.scrollY,
+        position: window.scrollY, // Consider how to get scroll position if BookReader contentRef is not directly accessible
         note: note || undefined,
       });
     }
@@ -116,9 +119,9 @@ export function ReaderControls({
           <h3 className="font-semibold mb-3">Bookmarks</h3>
           {bookmarks && bookmarks.length > 0 ? (
             <div className="space-y-2">
-              {bookmarks.map((bookmark) => (
+              {bookmarks.map((bookmark: any) => (
                 <div
-                  key={bookmark._id}
+                  key={bookmark._id || bookmark.id}
                   className="p-2 bg-white dark:bg-gray-600 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-500"
                 >
                   <div className="text-sm font-medium">
