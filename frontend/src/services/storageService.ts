@@ -139,6 +139,10 @@ class StorageService {
             default:
                 result = await this.local.uploadBook(file, meta);
         }
+        console.log('Uploading book metadata to Firestore', {
+            metadata: result,
+            userId: this.auth.currentUser?.uid || 'local'
+        });
         await addDoc(collection(this.db, 'books'), {
             ...result,
             userId: this.auth.currentUser?.uid || 'local'
