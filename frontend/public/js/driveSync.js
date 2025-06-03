@@ -1024,3 +1024,21 @@ export async function uploadCoverToDrive(bookId, bookTitle, coverBlob) {
         throw err;
     }
 }
+
+// ── 12. Expose functions to window for TypeScript integration ────────────
+if (typeof window !== 'undefined') {
+    window.driveSync = {
+        init,
+        uploadBookToDrive,
+        downloadBook,
+        isConnected,
+        launchGoogleAuth,
+        getUserProfile,
+        getFolderId,
+        runSyncLoop,
+        disconnect,
+        listRemoteBooks,
+        deleteRemoteBook,
+        uploadCoverToDrive
+    };
+}

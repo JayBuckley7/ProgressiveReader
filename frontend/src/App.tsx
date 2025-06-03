@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 // import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 // import { api } from "../convex/_generated/api";
@@ -15,6 +15,7 @@ import { HeroBanner } from "./components/HeroBanner";
 import { DangerZone } from "./components/DangerZone";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
+import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
 
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -38,6 +39,38 @@ function AppContent() {
     "library"
   );
   const [showLogin, setShowLogin] = useState(false);
+
+  // Clerk and Google Drive hooks
+  const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
+  const { isDriveConnected, connectToDrive, isLoading: isDriveLoading } = useGoogleDrive();
+
+  useEffect(() => {
+    // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
+    if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
+      // Check if one of the Clerk external accounts is Google
+      // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
+      // Inspect clerkUser.externalAccounts[0].provider to be sure.
+      const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
+        (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
+      );
+
+      if (wasGoogleClerkLogin && !isDriveConnected) {
+        console.log(
+          "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Prompting for Drive auth..."
+        );
+        // Automatically initiate the Google Drive connection flow.
+        // Using 'consent' ensures the user sees the Drive scopes being requested.
+        connectToDrive('consent');
+      }
+    }
+  }, [
+    isClerkLoaded,
+    isClerkSignedIn,
+    clerkUser,
+    isDriveConnected,
+    connectToDrive,
+    isDriveLoading,
+  ]);
 
   return (
     <SettingsProvider>

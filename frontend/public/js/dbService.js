@@ -219,6 +219,7 @@ export async function addBook(title, contentBlob, serverBookId, additionalMetada
  * @returns {Promise<object|null>} The book object or null if not found.
  */
 export async function getBook(bookId) {
+    
     // Ensure bookId is a non-empty string
     if (typeof bookId !== 'string' || bookId.length === 0) {
          console.error('[DBService] Invalid bookId provided to getBook:', bookId);

@@ -1,47 +1,18 @@
 import { useState, useRef } from 'react';
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
-import { BookReader } from "./BookReader";
 import { BookMetadata } from '../services/storageService';
 
-interface Book {
-  _id: Id<"books">;
-  title: string;
-  author?: string;
-  language: string;
-  coverUrl?: string | null;
-  totalPages?: number;
-  description?: string;
-  fileId?: Id<"_storage">;
-}
-
-interface BookCardProps {
+interface BookCardHoverProps {
   book: BookMetadata;
   onSelectBook: (bookId: string) => void;
   onDeleteBook: (bookId: string) => Promise<void>;
-  onUpdateCover: (bookId: string, coverFile: File) => Promise<void>;
+  onUpdateCover: (bookId: string, coverFile: File) => Promise<string | undefined>;
 }
 
-export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardProps) {
-  const [showReader, setShowReader] = useState(false);
+export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardHoverProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const progress = useQuery(api.books.getReadingProgress, { bookId: book.id as Id<"books"> });
-  
-  const progressPercentage = progress && book.totalPages 
-    ? Math.round((progress.currentPage / progress.totalPages) * 100)
-    : 0;
-
-  const handleOpenBook = () => {
-    if (book.fileId) {
-      setShowReader(true);
-    } else {
-      console.log("No file available for:", book.title);
-    }
-  };
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -95,10 +66,6 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   const handleCardClick = () => {
     onSelectBook(book.id as string);
   };
-
-  if (showReader) {
-    return <BookReader bookId={book.id as Id<"books">} onClose={() => setShowReader(false)} />;
-  }
 
   return (
     <div
@@ -189,4 +156,4 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
       </div>
     </div>
   );
-}
+} 

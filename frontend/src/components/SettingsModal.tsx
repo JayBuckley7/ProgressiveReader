@@ -1,6 +1,7 @@
 import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useStorageService } from "../hooks/useStorageService";
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -36,7 +37,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     translating: boolean;
 }) {
     const { settings, updateSettings } = useSettings();
+    const { saveSettings, loadSettings, isAuthenticated } = useStorageService();
     const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
+    const [isCloudLoading, setIsCloudLoading] = useState(false);
 
   const [localState, setLocalState] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
@@ -66,10 +69,164 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     }
   }, [localState, jpdbApiKey]);
 
+  // Auto-load settings from cloud storage when modal opens (if authenticated)
+  useEffect(() => {
+    let hasLoaded = false;
+    
+    const loadCloudSettingsOnOpen = async () => {
+      if (isAuthenticated && !hasLoaded) {
+        hasLoaded = true;
+        console.log('Settings modal opened for authenticated user - checking for cloud settings');
+        try {
+          const cloudSettings = await loadSettings();
+          if (cloudSettings) {
+            applyImportedSettings(cloudSettings);
+            // Don't show success toast for auto-load, just a subtle info
+            console.log('Settings auto-loaded from cloud storage');
+          }
+        } catch (error) {
+          console.warn('Failed to auto-load settings from cloud:', error);
+          // Don't show error for auto-load
+        }
+      }
+    };
+
+    loadCloudSettingsOnOpen();
+  }, [isAuthenticated]); // Remove loadSettings dependency to prevent infinite loop
+
     if (!settings) return null;
 
   const handleChange = <K extends keyof typeof localState>(key: K, value: typeof localState[K]) => {
     setLocalState(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Helper function to create settings object for export/cloud save
+  const createSettingsObject = () => ({
+    // API and model settings
+    openai_api_key: localState.openaiKey,
+    jpdb_api_key: jpdbApiKey,
+    openai_model: localState.openaiModel,
+    target_language: settings.targetLanguage,
+    cefr_index: String(localState.cefrLevel),
+    
+    // Display settings
+    userTheme: settings.theme,
+    fontSize: String(settings.fontSize),
+    autoload_preference: localState.autoload,
+    prefer_due_cards: localState.preferDueCards,
+    
+    // JPDB deck settings
+    jpdbMiningDeckId: localState.jpdbDeckId,
+    customWordCSS: localState.customWordCSS,
+    forqDeckId: localState.forqDeckId,
+    blacklistDeckId: localState.blacklistDeckId,
+    neverForgetDeckId: localState.neverForgetDeckId,
+    contextWidth: String(localState.contextSentenceCount),
+    forqOnMine: localState.autoAddToFORQ,
+    
+    // Keybind settings - for now just store as "None" to match format
+    showPopupKey: "None",
+    addKey: "None",
+    dialogKey: "None",
+    blacklistKey: "None",
+    neverForgetKey: "None",
+    nothingKey: "None",
+    somethingKey: "None",
+    hardKey: "None",
+    goodKey: "None",
+    easyKey: "None",
+    
+    // Accessibility settings
+    showPopupOnHover: settings.showPopupOnHover ?? true,
+    touchscreenSupport: settings.touchscreenSupport ?? false,
+    disableFadeAnimation: settings.disableFadeAnimation ?? false,
+    customPopupCSS: localState.customPopupCSS,
+  });
+
+  // Helper function to apply imported settings
+  const applyImportedSettings = (importedSettings: any) => {
+    // Update local state with imported values
+    const newLocalState = {
+      ...localState,
+      openaiKey: importedSettings.openai_api_key ?? localState.openaiKey,
+      openaiModel: importedSettings.openai_model ?? localState.openaiModel,
+      cefrLevel: parseInt(importedSettings.cefr_index ?? String(localState.cefrLevel)),
+      autoload: importedSettings.autoload_preference ?? localState.autoload,
+      jpdbDeckId: importedSettings.jpdbMiningDeckId ?? localState.jpdbDeckId,
+      forqDeckId: importedSettings.forqDeckId ?? localState.forqDeckId,
+      blacklistDeckId: importedSettings.blacklistDeckId ?? localState.blacklistDeckId,
+      neverForgetDeckId: importedSettings.neverForgetDeckId ?? localState.neverForgetDeckId,
+      contextSentenceCount: parseInt(importedSettings.contextWidth ?? String(localState.contextSentenceCount)) || 1,
+      autoAddToFORQ: importedSettings.forqOnMine ?? localState.autoAddToFORQ,
+      preferDueCards: importedSettings.prefer_due_cards ?? localState.preferDueCards,
+      customWordCSS: importedSettings.customWordCSS ?? localState.customWordCSS,
+      customPopupCSS: importedSettings.customPopupCSS ?? localState.customPopupCSS,
+    };
+    
+    setLocalState(newLocalState);
+    
+    // Update jpdbApiKey if present
+    if (importedSettings.jpdb_api_key !== undefined) {
+      setJpdbApiKey(importedSettings.jpdb_api_key);
+    }
+    
+    // Update settings through context
+    const settingsUpdates: any = {};
+    if (importedSettings.target_language !== undefined) settingsUpdates.targetLanguage = importedSettings.target_language;
+    if (importedSettings.userTheme !== undefined) settingsUpdates.theme = importedSettings.userTheme;
+    if (importedSettings.fontSize !== undefined) settingsUpdates.fontSize = parseInt(importedSettings.fontSize) || 16;
+    if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
+    if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
+    if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
+    
+    if (Object.keys(settingsUpdates).length > 0) {
+      updateSettings(settingsUpdates);
+    }
+  };
+
+  // Cloud save functionality
+  const handleCloudSave = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to save settings to cloud storage');
+      return;
+    }
+    
+    setIsCloudLoading(true);
+    try {
+      const settingsToSave = createSettingsObject();
+      const success = await saveSettings(settingsToSave);
+      if (success) {
+        toast.success('Settings saved to cloud storage successfully!');
+      }
+    } catch (error) {
+      console.error('Cloud save error:', error);
+    } finally {
+      setIsCloudLoading(false);
+    }
+  };
+
+  // Cloud load functionality
+  const handleCloudLoad = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to load settings from cloud storage');
+      return;
+    }
+    
+    setIsCloudLoading(true);
+    try {
+      const cloudSettings = await loadSettings();
+      if (cloudSettings) {
+        applyImportedSettings(cloudSettings);
+        toast.success('Settings loaded from cloud storage successfully!');
+      } else {
+        toast.info('No settings found in cloud storage');
+      }
+    } catch (error) {
+      console.error('Cloud load error:', error);
+      toast.error('Failed to load settings from cloud storage');
+    } finally {
+      setIsCloudLoading(false);
+    }
   };
 
     return (
@@ -305,51 +462,52 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
+                {/* Cloud Storage Buttons */}
+                {isAuthenticated && (
+                  <>
+                    <button
+                      onClick={handleCloudSave}
+                      disabled={isCloudLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCloudLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>☁️</span>
+                          Save to Cloud
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCloudLoad}
+                      disabled={isCloudLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCloudLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                          <span>Loading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>📥</span>
+                          Load from Cloud
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+                
+                {/* File Export/Import Buttons */}
                 <button
                   onClick={() => {
-                    // Export all settings to JSON file with exact field names for backward compatibility
-                    const settingsToExport = {
-                      // API and model settings
-                      openai_api_key: localState.openaiKey,
-                      jpdb_api_key: jpdbApiKey,
-                      openai_model: localState.openaiModel,
-                      target_language: settings.targetLanguage,
-                      cefr_index: String(localState.cefrLevel),
-                      
-                      // Display settings
-                      userTheme: settings.theme,
-                      fontSize: String(settings.fontSize),
-                      autoload_preference: localState.autoload,
-                      prefer_due_cards: localState.preferDueCards,
-                      
-                      // JPDB deck settings
-                      jpdbMiningDeckId: localState.jpdbDeckId,
-                      customWordCSS: localState.customWordCSS,
-                      forqDeckId: localState.forqDeckId,
-                      blacklistDeckId: localState.blacklistDeckId,
-                      neverForgetDeckId: localState.neverForgetDeckId,
-                      contextWidth: String(localState.contextSentenceCount),
-                      forqOnMine: localState.autoAddToFORQ,
-                      
-                      // Keybind settings - for now just store as "None" to match format
-                      showPopupKey: "None",
-                      addKey: "None",
-                      dialogKey: "None",
-                      blacklistKey: "None",
-                      neverForgetKey: "None",
-                      nothingKey: "None",
-                      somethingKey: "None",
-                      hardKey: "None",
-                      goodKey: "None",
-                      easyKey: "None",
-                      
-                      // Accessibility settings
-                      showPopupOnHover: settings.showPopupOnHover ?? true,
-                      touchscreenSupport: settings.touchscreenSupport ?? false,
-                      disableFadeAnimation: settings.disableFadeAnimation ?? false,
-                      customPopupCSS: localState.customPopupCSS,
-                    };
+                    // Export all settings to JSON file using the helper function
+                    const settingsToExport = createSettingsObject();
                     
                     const jsonString = JSON.stringify(settingsToExport, null, 2);
                     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -368,7 +526,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                 >
                   <span>📋</span>
-                  Export Settings
+                  Export to File
                 </button>
                 <button
                   onClick={() => {
@@ -384,51 +542,11 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                           try {
                             const importedSettings = JSON.parse(event.target?.result as string);
                             
-                            // Update local state with imported values
-                            const newLocalState = {
-                              ...localState,
-                              openaiKey: importedSettings.openai_api_key ?? localState.openaiKey,
-                              openaiModel: importedSettings.openai_model ?? localState.openaiModel,
-                              cefrLevel: parseInt(importedSettings.cefr_index ?? String(localState.cefrLevel)),
-                              autoload: importedSettings.autoload_preference ?? localState.autoload,
-                              jpdbDeckId: importedSettings.jpdbMiningDeckId ?? localState.jpdbDeckId,
-                              forqDeckId: importedSettings.forqDeckId ?? localState.forqDeckId,
-                              blacklistDeckId: importedSettings.blacklistDeckId ?? localState.blacklistDeckId,
-                              neverForgetDeckId: importedSettings.neverForgetDeckId ?? localState.neverForgetDeckId,
-                              contextSentenceCount: parseInt(importedSettings.contextWidth ?? String(localState.contextSentenceCount)) || 1,
-                              autoAddToFORQ: importedSettings.forqOnMine ?? localState.autoAddToFORQ,
-                              preferDueCards: importedSettings.prefer_due_cards ?? localState.preferDueCards,
-                              customWordCSS: importedSettings.customWordCSS ?? localState.customWordCSS,
-                              customPopupCSS: importedSettings.customPopupCSS ?? localState.customPopupCSS,
-                            };
-                            
-                            setLocalState(newLocalState);
-                            
-                            // Update jpdbApiKey if present
-                            if (importedSettings.jpdb_api_key !== undefined) {
-                              setJpdbApiKey(importedSettings.jpdb_api_key);
-                            }
-                            
-                            // Update settings through context
-                            const settingsUpdates: any = {};
-                            if (importedSettings.target_language !== undefined) settingsUpdates.targetLanguage = importedSettings.target_language;
-                            if (importedSettings.userTheme !== undefined) settingsUpdates.theme = importedSettings.userTheme;
-                            if (importedSettings.fontSize !== undefined) settingsUpdates.fontSize = parseInt(importedSettings.fontSize) || 16;
-                            
-                            // Note: These are stored in localStorage, not in settings context
-                            // autoload_preference and prefer_due_cards are already handled in localState above
-                            
-                            // Import any missing settings fields that exist in the old format
-                            if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
-                            if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
-                            if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
-                            
-                            if (Object.keys(settingsUpdates).length > 0) {
-                              updateSettings(settingsUpdates);
-                            }
+                            // Use the helper function to apply imported settings
+                            applyImportedSettings(importedSettings);
                             
                             // Show success message
-                            toast.success('Settings imported successfully!');
+                            toast.success('Settings imported from file successfully!');
                             
                             // Optional: Force a page reload to ensure all settings are applied
                             // window.location.reload();
@@ -444,13 +562,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                 >
-                  <span>📥</span>
-                  Import Settings
+                  <span>📁</span>
+                  Import from File
                 </button>
-                            </div>
-                        </div>
-                    )}
-                        </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
         <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 md:p-6 flex-shrink-0">
@@ -502,7 +620,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   </span>
                 ) : <span className="hidden sm:inline">Translate (CEFR)</span>}
                 {!translating && <span className="sm:hidden">CEFR</span>}
-                        </button>
+              </button>
             </div>
             <button
               onClick={onClose}
@@ -515,12 +633,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               "
             >
               Close
-                        </button>
-                    </div>
-                </div>
-            </div>
+            </button>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
 // Enhanced Reusable Input Components

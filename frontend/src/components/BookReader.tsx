@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { SettingsModal } from "./SettingsModal";
+import { useBookContent } from "../hooks/useBookContent";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
@@ -15,14 +16,10 @@ interface BookReaderProps {
 }
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
-  // const book = useQuery(api.books.get, { bookId });
-  // const chapter = useQuery(api.books.getChapter, { bookId, chapterIndex: currentChapter });
-  // const progress = useQuery(api.reading.getProgress, { bookId });
-  // const updateProgress = useMutation(api.reading.updateProgress);
+  // Use the new useBookContent hook instead of placeholder data
+  const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, currentChapter);
 
-  // Placeholder data - replace with Flask API calls
-  const book = { title: "Loading...", totalChapters: 1 }; 
-  const chapter = { content: "<p>Chapter content loading...</p>" }; // Corrected placeholder key
+  // TODO: Progress tracking - replace with real API calls
   const progress = { currentChapter: 0, currentPosition: 0 };
   const updateProgress = async (data: any) => { console.log("Update progress (TODO):", data); };
 
@@ -33,6 +30,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const contentRef = useRef<HTMLDivElement>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
+  const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
 
   // Swipe control state
   const swipeRef = useRef({
@@ -56,6 +54,17 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
     return () => clearTimeout(updateProgressDebounced);
   }, [bookId, currentChapter, scrollPosition, /* updateProgress */]); // Removed updateProgress from dependencies for now
+
+  // Clear translated content when chapter changes
+  useEffect(() => {
+    if (isTranslated && contentRef.current) {
+      console.log('Chapter changed - clearing translated content');
+      // Reset the content container to allow new chapter content to display
+      setIsTranslated(false);
+      // Force a re-render by clearing the innerHTML
+      contentRef.current.innerHTML = '';
+    }
+  }, [currentChapter, isTranslated]);
 
   // Handle scroll tracking
   useEffect(() => {
@@ -89,7 +98,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Swipe controls implementation
   useEffect(() => {
     const contentEl = contentRef.current;
-    if (!contentEl || !book) return;
+    if (!contentEl || !bookContent) return;
 
     const minLockDistance = 10;
     const minSwipeDistance = 60;
@@ -162,17 +171,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       contentEl.removeEventListener('pointermove', handlePointerMove);
       contentEl.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [book, currentChapter]);
+  }, [bookContent, currentChapter]);
 
   /**
    * Translate the current chapter using the backend API.
    * @param useCefr - If true include the CEFR level in the request.
    */
   const translateCurrent = async (useCefr: boolean) => {
-    if (!contentRef.current || !chapter) return;
+    if (!contentRef.current || !currentChapterContent) return;
     setIsTranslating(true);
+    
+    // Get the actual content to translate (either from the rendered content or original)
+    const contentToTranslate = isTranslated 
+      ? currentChapterContent // Use original content if already translated
+      : contentRef.current.innerHTML;
+    
     const payload: any = {
-      content: contentRef.current.innerHTML,
+      content: contentToTranslate,
       target_language: settings?.targetLanguage || "English",
       model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
       api_key: localStorage.getItem("openaiKey") || "",
@@ -189,15 +204,26 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       if (resp.ok) {
         const data = await resp.json();
         if (data.translated_text && contentRef.current) {
-          contentRef.current.innerHTML = data.translated_text;
+          // Clear existing content and set the translated content
+          contentRef.current.innerHTML = `
+            <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
+              <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
+                ${data.translated_text}
+              </div>
+            </div>
+          `;
+          setIsTranslated(true);
+          console.log('Content translated and marked as translated');
         }
       }
+    } catch (error) {
+      console.error('Translation error:', error);
     } finally {
       setIsTranslating(false);
     }
   };
 
-  if (!book) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -206,13 +232,17 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   }
 
   const nextChapter = () => {
-    if (currentChapter < book.totalChapters - 1) {
+    if (bookContent && currentChapter < bookContent.totalChapters - 1) {
+      console.log('Moving to next chapter, clearing any translated content');
+      setIsTranslated(false);
       setCurrentChapter(currentChapter + 1);
     }
   };
 
   const prevChapter = () => {
     if (currentChapter > 0) {
+      console.log('Moving to previous chapter, clearing any translated content');
+      setIsTranslated(false);
       setCurrentChapter(currentChapter - 1);
     }
   };
@@ -228,6 +258,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       }
     }
     setJpdbHighlighted(!jpdbHighlighted);
+  };
+
+  const clearTranslation = () => {
+    if (contentRef.current && isTranslated) {
+      console.log('Clearing translation, returning to original content');
+      contentRef.current.innerHTML = '';
+      setIsTranslated(false);
+    }
   };
 
   return (
@@ -248,10 +286,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           
           <div className="flex-1 min-w-0 border-l pl-3 sm:pl-4 border-gray-200 dark:border-gray-700">
             <h1 className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
-              {book.title}
+              {bookContent?.title}
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              Chapter {currentChapter + 1} of {book.totalChapters}
+              Chapter {currentChapter + 1} of {bookContent?.totalChapters}
+              {isTranslated && (
+                <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                  Translated
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -266,6 +309,20 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </button>
+        
+        {/* Clear Translation Button - only show when translated */}
+        {isTranslated && (
+          <button
+            onClick={clearTranslation}
+            className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ml-2"
+            aria-label="Clear Translation"
+            title="Show original text"
+          >
+            <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Reader Content */}
@@ -277,24 +334,40 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           fontFamily: settings?.fontFamily || 'Inter',
         }}
       >
-        <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
-          {chapter ? (
-            <div 
-              className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: chapter.content }}
-            />
-          ) : (
-            <div className="flex justify-center items-center py-8 sm:py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          )}
-        </div>
+        {/* Only render the normal content structure if not translated */}
+        {!isTranslated && (
+          <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
+            {currentChapterContent ? (
+              <div 
+                className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: currentChapterContent }}
+              />
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="text-red-600 dark:text-red-400 mb-4">
+                  Error loading book: {error}
+                </div>
+                <button
+                  onClick={onBack}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
+                >
+                  Back to Library
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-center items-center py-8 sm:py-16">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            )}
+          </div>
+        )}
+        {/* When translated, the content is directly in contentRef.innerHTML */}
       </div>
 
       {/* Reader Controls */}
       <ReaderControls
         currentChapter={currentChapter}
-        totalChapters={book.totalChapters}
+        totalChapters={bookContent?.totalChapters || 1}
         onPrevChapter={prevChapter}
         onNextChapter={nextChapter}
         bookId={bookId}

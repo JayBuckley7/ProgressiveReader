@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { SettingsModal } from "./SettingsModal";
+import { BookCardHover } from "./BookCardHover";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
 
@@ -8,7 +9,7 @@ interface BookLibraryProps {
 }
 
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
-  const { books, isAuthenticated, signIn, uploadBook } = useStorageService();
+  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder } = useStorageService();
 
   // All book handling is delegated to the storage service.
 
@@ -34,7 +35,14 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
     try {
       // Use the storage service's integrated upload function
-      const uploadedBookMetadata = await uploadBook(file);
+      const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+      
+      const meta = {
+        title: fileName,
+        fileType: fileExtension
+      };
+      
+      const uploadedBookMetadata = await uploadBook(file, meta);
       
       if (uploadedBookMetadata) {
         // All metadata handling is performed in the storage service. Any future
@@ -63,7 +71,20 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Library</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Library</h1>
+          {isAuthenticated && (
+            <button
+              onClick={openCloudFolder}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Open cloud storage folder"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+            </button>
+          )}
+        </div>
         
         <div className="flex gap-4 items-center">
           {!isAuthenticated && (
@@ -77,7 +98,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Sign in with Google
+              Sign In
             </button>
           )}
           <input
@@ -140,7 +161,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             Sign in to access your library
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Sign in with Google to view and manage your books
+            Sign in to view and manage your books
           </p>
           <button
             onClick={signIn}
@@ -152,7 +173,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Sign in with Google
+            Sign In
           </button>
         </div>
       ) : books.length === 0 ? (
@@ -177,36 +198,13 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {books.map((book) => (
-            <div
+            <BookCardHover
               key={book.id}
-              onClick={() => onSelectBook(book.id as string)}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
-            >
-              <div className="aspect-[3/4] bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                {book.coverUrl ? (
-                  <img
-                    src={book.coverUrl}
-                    alt={book.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-white text-4xl">📖</div>
-                )}
-              </div>
-              
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
-                  {book.title}
-                </h3>
-                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>{book.fileType.toUpperCase()}</span>
-                  <span>{book.totalChapters || 1} chapters</span>
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}
-                </div>
-              </div>
-            </div>
+              book={book}
+              onSelectBook={onSelectBook}
+              onDeleteBook={deleteBook}
+              onUpdateCover={updateBookCover}
+            />
           ))}
         </div>
       )}
