@@ -1,8 +1,7 @@
 """Blueprint for storing and retrieving book metadata via Firestore."""
 
 from flask import Blueprint, request, jsonify
-from flask_login import current_user
-from ..utils.firebase_auth import firebase_token_or_login_required
+from flask_login import current_user, login_required
 from google.cloud import firestore
 
 from ..firestore_client import db as fs_db
@@ -11,7 +10,7 @@ metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 
 
 @metadata_bp.route("/books", methods=["GET"])
-@firebase_token_or_login_required
+@login_required
 def get_all_books():
     """Return all stored books for the current user."""
     doc = fs_db.collection("users").document(str(current_user.id)).get()
@@ -20,7 +19,7 @@ def get_all_books():
 
 
 @metadata_bp.route("/books", methods=["POST"])
-@firebase_token_or_login_required
+@login_required
 def add_book():
     """Add a book entry for the current user."""
     data = request.get_json() or {}
@@ -32,7 +31,7 @@ def add_book():
 
 
 @metadata_bp.route("/position", methods=["GET", "POST"])
-@firebase_token_or_login_required
+@login_required
 def read_position():
     """Get or update the user's reading position."""
     doc_ref = fs_db.collection("users").document(str(current_user.id))
