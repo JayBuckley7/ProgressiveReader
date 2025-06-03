@@ -294,6 +294,31 @@ export function useStorageService() {
     }
   };
 
+  const syncBooks = async () => {
+    if (!clerkUser) {
+      toast.error('Please sign in to sync your books');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const onCoverReady = (bookId: string, coverUrl: string) => {
+        setBooks((current) =>
+          current.map((b) => (b.id === bookId ? { ...b, coverUrl } : b))
+        );
+      };
+
+      const synced = await storageService.syncBooks(clerkUser, onCoverReady);
+      setBooks(synced);
+      toast.success('Library synced successfully');
+    } catch (error) {
+      console.error('Error syncing books:', error);
+      toast.error('Failed to sync books');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const saveSettings = async (settings: any) => {
     if (!clerkUser) {
       toast.error('Please sign in to save settings to cloud storage');
@@ -340,7 +365,8 @@ export function useStorageService() {
     getReadingProgress,
     saveReadingProgress,
     openCloudFolder,
+    syncBooks,
     saveSettings,
     loadSettings
   };
-} 
+}

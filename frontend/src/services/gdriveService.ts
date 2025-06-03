@@ -861,6 +861,49 @@ class GDriveService {
   }
 
   /**
+   * Sync metadata.json with actual files in the app folder.
+   * Adds entries for new files and removes entries for deleted files.
+   */
+  public async syncMetadataWithDrive(): Promise<void> {
+    const files = await this.listFiles();
+    const metadataInfo = await this.getMetadataFile();
+    if (!metadataInfo) {
+      console.warn('[GDriveService] No metadata file available for sync');
+      return;
+    }
+
+    const { fileId, data } = metadataInfo;
+    data.books = data.books || {};
+
+    const driveIds = new Set(files.map((f) => f.id));
+    let changed = false;
+
+    for (const file of files) {
+      if (!data.books[file.id]) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'unknown';
+        data.books[file.id] = {
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          fileName: file.name,
+          fileType: ext,
+          uploadedAt: file.modifiedTime || new Date().toISOString(),
+        };
+        changed = true;
+      }
+    }
+
+    for (const existingId of Object.keys(data.books)) {
+      if (!driveIds.has(existingId)) {
+        delete data.books[existingId];
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await this.updateMetadataFile(fileId, data);
+    }
+  }
+
+  /**
    * Open the app folder in Google Drive in a new tab
    */
   public async openFolder(): Promise<void> {
