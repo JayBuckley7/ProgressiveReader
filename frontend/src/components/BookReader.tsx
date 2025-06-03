@@ -373,6 +373,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         bookId={bookId}
         jpdbHighlighted={jpdbHighlighted}
         onToggleHighlight={toggleHighlight}
+        chapterTitles={bookContent?.chapterTitles || []}
+        onSelectChapter={setCurrentChapter}
       />
 
       {/* Settings Modal */}

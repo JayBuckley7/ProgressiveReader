@@ -13,8 +13,7 @@
             "env": {
                 "FLASK_APP": "run.py", 
                 "FLASK_ENV": "development",
-                "FLASK_DEBUG": "1",
-                "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/backend/firebase-adminsdk-credentials.json"
+                "FLASK_DEBUG": "1"
             },
             "args": [
                 "run",
@@ -32,8 +31,7 @@
             "env": {
                 "FLASK_APP": "run.py", 
                 "FLASK_ENV": "development",
-                "FLASK_DEBUG": "0",
-                "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/backend/firebase-adminsdk-credentials.json"
+                "FLASK_DEBUG": "0"
             },
             "args": [
                 "run",

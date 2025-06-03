@@ -1,5 +1,4 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
+
 import { gDriveService } from './gdriveService';
 
 // Declare the existing driveSync functions for TypeScript
@@ -50,18 +49,7 @@ export interface ReadingProgress {
 
 type Provider = 'google' | 'apple' | 'microsoft' | 'email';
 
-const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-
-initializeApp(firebaseConfig);
-
 class StorageService {
-    private db = getFirestore();
 
     private async getAuthHeaders(): Promise<HeadersInit> {
         // Get Clerk session token for API calls
@@ -651,6 +639,36 @@ class StorageService {
         } catch (error) {
             console.error('Error updating book cover:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Sync the user's books with their connected cloud provider.
+     * Currently implemented for Google Drive only.
+     */
+    async syncBooks(clerkUser?: any, onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
+        console.log('Syncing books with cloud storage...');
+
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+
+        switch (provider) {
+            case 'google':
+                if (!gDriveService.isSignedIn()) {
+                    throw new Error('Google Drive not connected. Please connect first.');
+                }
+                await gDriveService.syncMetadataWithDrive();
+                return await this.getUserBooks(onCoverReady);
+
+            case 'microsoft':
+                // TODO: Implement OneDrive sync
+                throw new Error('OneDrive sync not yet implemented');
+
+            case 'apple':
+                // TODO: Implement iCloud sync
+                throw new Error('iCloud sync not yet implemented');
+
+            default:
+                throw new Error(`Cannot sync books for provider: ${provider}. Cloud storage not configured.`);
         }
     }
 

@@ -1,5 +1,4 @@
 """File utility functions."""
-import os
 
 ALLOWED_EXTENSIONS = {'pdf', 'epub', 'mobi', 'txt', 'docx'}
 
