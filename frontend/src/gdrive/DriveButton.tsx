@@ -22,8 +22,15 @@ export function DriveButton() {
     }
     setConnecting(true);
     try {
+      const wasConnected = driveSync.isConnected();
       await driveSync.init(true);
-      setConnected(true);
+      const nowConnected = driveSync.isConnected();
+      setConnected(nowConnected);
+
+      // Reload the page after the initial successful connection
+      if (!wasConnected && nowConnected) {
+        window.location.reload();
+      }
     } catch (e) {
       console.error(e);
       alert('Drive connection failed');
