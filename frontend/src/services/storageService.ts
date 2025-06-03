@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import * as driveSync from '../gdrive/driveSync';
 
 export interface BookMetadata {
@@ -101,6 +101,18 @@ class StorageService {
             console.log('Auth state changed (constructor):', u);
             console.log('Detected provider:', this.provider);
         });
+    }
+
+    async ensureUserDocument(user: User): Promise<void> {
+        const ref = doc(this.db, 'users', user.uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+            await setDoc(ref, {
+                email: user.email,
+                displayName: user.displayName,
+                createdAt: new Date(),
+            });
+        }
     }
 
     private detectProvider(user: User | null): Provider {

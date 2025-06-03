@@ -15,12 +15,17 @@ export function useStorageService() {
     if (clerkLoaded) {
       if (clerkUser) {
         // User is signed in via Clerk
+        const provider =
+          clerkUser.externalAccounts?.[0]?.provider?.toLowerCase() || 'email';
         const firebaseUser = {
           uid: clerkUser.id,
           email: clerkUser.emailAddresses[0]?.emailAddress || '',
           displayName: clerkUser.fullName || clerkUser.username || '',
+          providerData: [{ providerId: provider }],
         } as FirebaseUser;
         setUser(firebaseUser);
+        // Ensure user exists in Firestore
+        void storageService.ensureUserDocument(firebaseUser);
         // Notify storage service about the authenticated user
         storageService.onAuthStateChange(() => {});
         loadUserBooks();
