@@ -1,9 +1,9 @@
-// metadataSync.js - synchronize Firestore metadata with IndexedDB
+// metadataSync.js - synchronize metadata with IndexedDB
 import { addBook, updateBookMetadata, getLocalBooksMetadata, getBook } from './dbService.js';
 import * as driveSync from './driveSync.js';
 
 /**
- * Merge remote metadata from Firestore with local IndexedDB records.
+ * Merge remote metadata with local IndexedDB records.
  * Missing books are created with empty content blobs.
  * @returns {Promise<Array<object>>} Unified list of book metadata.
  */
