@@ -1,5 +1,5 @@
 import { useSettings } from "../contexts/SettingsContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
 
@@ -58,6 +58,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   }));
 
   const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     Object.entries(localKeys).forEach(([key, storageKey]) => {
@@ -71,11 +72,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
   // Auto-load settings from cloud storage when modal opens (if authenticated)
   useEffect(() => {
-    let hasLoaded = false;
-    
     const loadCloudSettingsOnOpen = async () => {
-      if (isAuthenticated && !hasLoaded) {
-        hasLoaded = true;
+      if (isAuthenticated && !hasLoadedRef.current) {
+        hasLoadedRef.current = true;
         console.log('Settings modal opened for authenticated user - checking for cloud settings');
         try {
           const cloudSettings = await loadSettings();
