@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ContentsDrawer } from "./ContentsDrawer";
 import { useMutation, useQuery } from "convex/react";
 // import { api } from "../../convex/_generated/api";
 // import { Id } from "../../convex/_generated/dataModel";
@@ -11,6 +12,8 @@ interface ReaderControlsProps {
   bookId: string; // Was: Id<"books">
   jpdbHighlighted: boolean;
   onToggleHighlight: () => void;
+  chapterTitles: string[];
+  onSelectChapter: (index: number) => void;
 }
 
 export function ReaderControls({
@@ -21,8 +24,10 @@ export function ReaderControls({
   bookId,
   jpdbHighlighted,
   onToggleHighlight,
+  chapterTitles,
+  onSelectChapter,
 }: ReaderControlsProps) {
-  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
   // const bookmarksQuery = useQuery(api.reading.getBookmarks, { bookId });
   const bookmarks: any[] = []; // Placeholder
   
@@ -94,9 +99,9 @@ export function ReaderControls({
           </button>
           
           <button
-            onClick={() => setShowBookmarks(!showBookmarks)}
+            onClick={() => setShowDrawer(!showDrawer)}
             className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            title="View bookmarks"
+            title="Table of contents"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -113,35 +118,14 @@ export function ReaderControls({
         </div>
       </div>
 
-      {/* Bookmarks Panel */}
-      {showBookmarks && (
-        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <h3 className="font-semibold mb-3">Bookmarks</h3>
-          {bookmarks && bookmarks.length > 0 ? (
-            <div className="space-y-2">
-              {bookmarks.map((bookmark: any) => (
-                <div
-                  key={bookmark._id || bookmark.id}
-                  className="p-2 bg-white dark:bg-gray-600 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-500"
-                >
-                  <div className="text-sm font-medium">
-                    Chapter {bookmark.chapterIndex + 1}
-                  </div>
-                  {bookmark.note && (
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {bookmark.note}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No bookmarks yet. Click the bookmark icon to add one.
-            </p>
-          )}
-        </div>
-      )}
+      <ContentsDrawer
+        visible={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        chapterTitles={chapterTitles}
+        currentChapter={currentChapter}
+        onSelectChapter={onSelectChapter}
+        bookmarks={bookmarks}
+      />
     </div>
   );
 }
