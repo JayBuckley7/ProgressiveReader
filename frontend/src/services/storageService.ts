@@ -655,6 +655,36 @@ class StorageService {
     }
 
     /**
+     * Sync the user's books with their connected cloud provider.
+     * Currently implemented for Google Drive only.
+     */
+    async syncBooks(clerkUser?: any, onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
+        console.log('Syncing books with cloud storage...');
+
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+
+        switch (provider) {
+            case 'google':
+                if (!gDriveService.isSignedIn()) {
+                    throw new Error('Google Drive not connected. Please connect first.');
+                }
+                await gDriveService.syncMetadataWithDrive();
+                return await this.getUserBooks(onCoverReady);
+
+            case 'microsoft':
+                // TODO: Implement OneDrive sync
+                throw new Error('OneDrive sync not yet implemented');
+
+            case 'apple':
+                // TODO: Implement iCloud sync
+                throw new Error('iCloud sync not yet implemented');
+
+            default:
+                throw new Error(`Cannot sync books for provider: ${provider}. Cloud storage not configured.`);
+        }
+    }
+
+    /**
      * Open the cloud storage folder where books are stored
      * This method will work with different cloud providers (Google Drive, OneDrive, iCloud)
      */
