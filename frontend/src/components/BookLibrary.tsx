@@ -3,13 +3,17 @@ import { SettingsModal } from "./SettingsModal";
 import { BookCardHover } from "./BookCardHover";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
+import { useGoogleDrive } from "../hooks/useGoogleDrive";
+import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
 
 interface BookLibraryProps {
   onSelectBook: (bookId: string) => void;
 }
 
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
+
   const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
+  const { isDriveConnected } = useGoogleDrive();
 
   // All book handling is delegated to the storage service.
 
@@ -186,6 +190,19 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             </svg>
             Sign In
           </button>
+        </div>
+      ) : !isDriveConnected ? (
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">📤</div>
+          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            Connect Google Drive
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            You are logged in but may need to allow Google Drive scopes to load your books.
+          </p>
+          <div className="flex justify-center">
+            <GoogleDriveConnectButton />
+          </div>
         </div>
       ) : books.length === 0 ? (
         <div className="text-center py-16">
