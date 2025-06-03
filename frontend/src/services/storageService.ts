@@ -1,5 +1,4 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
+
 import { gDriveService } from './gdriveService';
 
 // Declare the existing driveSync functions for TypeScript
@@ -50,18 +49,7 @@ export interface ReadingProgress {
 
 type Provider = 'google' | 'apple' | 'microsoft' | 'email';
 
-const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-
-initializeApp(firebaseConfig);
-
 class StorageService {
-    private db = getFirestore();
 
     private async getAuthHeaders(): Promise<HeadersInit> {
         // Get Clerk session token for API calls
