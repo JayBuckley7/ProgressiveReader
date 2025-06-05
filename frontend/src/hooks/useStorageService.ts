@@ -37,10 +37,13 @@ export function useStorageService() {
     if (!clerkUser || isRefreshingRef.current) {
       return;
     }
-    
+
     try {
       isRefreshingRef.current = true;
       console.log('[useStorageService] Silently refreshing books...');
+
+      const previous = booksRef.current;
+      const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
@@ -53,14 +56,22 @@ export function useStorageService() {
 
       const userBooks = await storageService.getUserBooks(onCoverReady);
 
-      if (areBooksEqual(userBooks, booksRef.current)) {
-        console.log('[useStorageService] Library unchanged - skipping update');
+      const mergedBooks = userBooks.map(book => {
+        const cached = coverMap.get(book.id);
+        return cached ? { ...book, coverUrl: cached } : book;
+      });
+
+      if (areBooksEqual(userBooks, previous)) {
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
       } else {
-        if (booksRef.current.length > 0) {
-          storageService.cleanupBlobUrls(booksRef.current);
+        const newIds = new Set(userBooks.map(b => b.id));
+        const removed = previous.filter(b => !newIds.has(b.id));
+        if (removed.length > 0) {
+          storageService.cleanupBlobUrls(removed);
         }
-        setBooks(userBooks);
-        booksRef.current = userBooks;
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
       }
 
       console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
