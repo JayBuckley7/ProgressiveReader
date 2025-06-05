@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { storageService, BookMetadata, ReadingProgress } from '../services/storageService';
+import { getDemoBooks, getDemoBookFile } from '../demo';
 import { gDriveService } from '../services/gdriveService';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
@@ -27,6 +28,7 @@ export function useStorageService() {
   const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const isDemo = (window as any).IS_DEMO_MODE === true;
 
   useEffect(() => {
     booksRef.current = books;
@@ -34,6 +36,11 @@ export function useStorageService() {
 
   // Memoize the silent refresh function to prevent recreation on every render
   const silentRefreshBooks = useCallback(async () => {
+    if (isDemo) {
+      setBooks(getDemoBooks());
+      booksRef.current = getDemoBooks();
+      return;
+    }
     if (!clerkUser || isRefreshingRef.current) {
       return;
     }
@@ -74,6 +81,13 @@ export function useStorageService() {
 
   // Load user books function
   const loadUserBooks = useCallback(async () => {
+    if (isDemo) {
+        const demoBooks = getDemoBooks();
+        setBooks(demoBooks);
+        booksRef.current = demoBooks;
+        setIsLoading(false);
+        return;
+    }
     if (!clerkUser || isRefreshingRef.current) {
         setBooks([]);
         return;
@@ -200,6 +214,9 @@ export function useStorageService() {
   };
 
   const downloadBook = async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
+    if (isDemo) {
+      return await getDemoBookFile(bookId);
+    }
     if (!clerkUser) {
       toast.error('Please sign in to download books');
       return null;

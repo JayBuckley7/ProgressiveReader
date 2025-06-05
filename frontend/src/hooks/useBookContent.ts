@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { BookMetadata, storageService } from '../services/storageService';
 import { useStorageService } from './useStorageService';
+import { getDemoBookFile } from '../demo';
 
 // Declare the processor classes that will be available on window after loading
 declare global {
@@ -28,6 +29,7 @@ interface UseBookContentReturn {
 
 export function useBookContent(bookId: string, currentChapter: number = 0): UseBookContentReturn {
   const { books } = useStorageService();
+  const isDemo = (window as any).IS_DEMO_MODE === true;
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [currentChapterContent, setCurrentChapterContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,9 +123,11 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         const processors = await loadProcessors();
         console.log('Step 1 complete: Processors loaded');
 
-        // Download book content from Google Drive
-        console.log('Step 2: Downloading book from Google Drive...');
-        const bookBlob = await storageService.downloadBook(bookId, bookMetadata);
+        // Download book content
+        console.log('Step 2: Downloading book content...');
+        const bookBlob = isDemo
+          ? await getDemoBookFile(bookId)
+          : await storageService.downloadBook(bookId, bookMetadata);
         if (!bookBlob) {
           throw new Error('Failed to download book content');
         }

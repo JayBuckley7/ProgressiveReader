@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { initDemoMode } from './demo'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -22,6 +23,9 @@ async function loadCloudStorageModules() {
 }
 
 async function startApp() {
+  if (window.location.pathname.startsWith('/demo')) {
+    initDemoMode();
+  }
   try {
     await loadCloudStorageModules();
     console.log('✅ Cloud storage modules loaded');

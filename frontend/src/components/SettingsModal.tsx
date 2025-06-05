@@ -59,6 +59,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
   const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
   const hasLoadedRef = useRef(false);
+  const isDemo = (window as any).IS_DEMO_MODE === true;
 
   useEffect(() => {
     Object.entries(localKeys).forEach(([key, storageKey]) => {
@@ -282,6 +283,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   onChange={v => handleChange("openaiKey", v)}
                   placeholder="sk-..."
                   type="password"
+                  disabled={isDemo}
                 />
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
                   Server Key Status: <span className="font-semibold text-green-600 dark:text-green-400">✓ Configured</span>
@@ -365,6 +367,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   onChange={setJpdbApiKey}
                   placeholder="Enter your JPDB API key"
                   type="password"
+                  disabled={isDemo}
                 />
                             </div>
 
