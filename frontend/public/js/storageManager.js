@@ -157,7 +157,7 @@ async function prefetchDueCardsIfNeeded() {
 // --- PWA Offline Support ---
 // IndexedDB for storing book data for offline access
 const DB_NAME = 'progressive-reader-db';
-const DB_VERSION = 1;
+const DB_VERSION = 3;
 const STORES = {
     BOOKS: 'books',
     CONTENT: 'content'

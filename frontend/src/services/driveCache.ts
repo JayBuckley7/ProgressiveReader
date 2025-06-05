@@ -2,7 +2,7 @@
 
 export const CACHE_DB_NAME = 'DriveFileCache';
 export const CACHE_STORE_NAME = 'files';
-export const CACHE_DB_VERSION = 1;
+export const CACHE_DB_VERSION = 3;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 

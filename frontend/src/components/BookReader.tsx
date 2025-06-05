@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 // import jpHighlighter from "../../../src/jp-highlighter";
 import { useSettings } from "../contexts/SettingsContext";
@@ -535,9 +534,16 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const toggleTts = () => {
     if (isSpeaking) {
       stopSpeaking();
+      setIsSpeaking(false);
     } else {
       speakCurrentChapter();
+      setIsSpeaking(true);
     }
+  };
+
+  // Function to handle closing the TTS modal without stopping playback
+  const handleCloseTtsModal = () => {
+    setIsSpeaking(false);
   };
 
   useEffect(() => {
@@ -727,6 +733,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         }}
         onStop={stopSpeaking}
         onAdjustRate={adjustRate}
+        onClose={handleCloseTtsModal}
       />
 
       {/* Settings Modal */}
