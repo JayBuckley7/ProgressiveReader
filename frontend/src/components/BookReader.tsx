@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 // import jpHighlighter from "../../../src/jp-highlighter";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
+import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
 import { useBookContent } from "../hooks/useBookContent";
 
@@ -232,6 +233,19 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const mediaSessionSupported = typeof navigator !== 'undefined' && 'mediaSession' in navigator;
 
+  const ttsRateRef = useRef(ttsRate);
+  useEffect(() => {
+    ttsRateRef.current = ttsRate;
+  }, [ttsRate]);
+
+  const textNodeMapRef = useRef<{ node: Text; start: number }[]>([]);
+  const contentTextRef = useRef('');
+  const currentIndexRef = useRef(0);
+  const fallbackHighlightElRef = useRef<HTMLElement | null>(null);
+  const fallbackIntervalRef = useRef<number | null>(null);
+  const boundarySupportedRef = useRef(false);
+  const boundaryCheckedRef = useRef(false);
+
   const selectVoiceForText = (text: string): SpeechSynthesisVoice | null => {
     const voices = window.speechSynthesis.getVoices();
     if (!voices.length) return null;
@@ -258,7 +272,180 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     );
   };
 
-  const speakCurrentChapter = () => {
+  const buildIndexMap = (element: HTMLElement) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+    const map: { node: Text; start: number }[] = [];
+    let index = 0;
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      map.push({ node, start: index });
+      index += node.textContent?.length || 0;
+    }
+    return map;
+  };
+
+  const findNodeOffset = (map: { node: Text; start: number }[], charIndex: number) => {
+    for (let i = map.length - 1; i >= 0; i--) {
+      if (charIndex >= map[i].start) {
+        return { node: map[i].node, offset: charIndex - map[i].start };
+      }
+    }
+    return { node: map[0].node, offset: 0 };
+  };
+
+  const clearHighlight = () => {
+    const h = (window as any).CSS?.highlights;
+    if (h) {
+      h.delete('tts-current-word');
+    } else if (fallbackHighlightElRef.current) {
+      const parent = fallbackHighlightElRef.current.parentNode;
+      if (parent) {
+        while (fallbackHighlightElRef.current.firstChild) {
+          parent.insertBefore(
+            fallbackHighlightElRef.current.firstChild,
+            fallbackHighlightElRef.current
+          );
+        }
+        parent.removeChild(fallbackHighlightElRef.current);
+      }
+      fallbackHighlightElRef.current = null;
+    }
+  };
+
+  const highlightAtIndex = (index: number) => {
+    clearHighlight();
+    const remaining = contentTextRef.current.slice(index);
+    const match = remaining.match(/\S+/);
+    if (!match) return;
+    const word = match[0];
+    const start = index;
+    const end = index + word.length;
+    const startPos = findNodeOffset(textNodeMapRef.current, start);
+    const endPos = findNodeOffset(textNodeMapRef.current, end);
+    const range = document.createRange();
+    try {
+      range.setStart(startPos.node, startPos.offset);
+      range.setEnd(endPos.node, endPos.offset);
+      const h = (window as any).CSS?.highlights;
+      if (h) {
+        const hl = new (window as any).Highlight(range);
+        h.set('tts-current-word', hl);
+      } else {
+        const span = document.createElement('span');
+        span.className = 'tts-highlight';
+        range.surroundContents(span);
+        fallbackHighlightElRef.current = span;
+      }
+    } catch (err) {
+      console.warn('Unable to highlight range', err);
+    }
+  };
+
+  const startFallbackHighlighting = (startIndex: number) => {
+    const words = contentTextRef.current.slice(startIndex).match(/\S+\s*/g);
+    if (!words) return;
+    let offset = startIndex;
+    let i = 0;
+    currentIndexRef.current = offset;
+    highlightAtIndex(offset);
+    fallbackIntervalRef.current = window.setInterval(() => {
+      i++;
+      if (i >= words.length) {
+        stopFallbackHighlighting();
+        return;
+      }
+      offset += words[i - 1].length;
+      currentIndexRef.current = offset;
+      highlightAtIndex(offset);
+    }, 300 / ttsRateRef.current);
+  };
+
+  const stopFallbackHighlighting = () => {
+    if (fallbackIntervalRef.current) {
+      clearInterval(fallbackIntervalRef.current);
+      fallbackIntervalRef.current = null;
+    }
+  };
+
+  const detectBoundaryEventSupport = (): Promise<boolean> => {
+    if (boundaryCheckedRef.current) {
+      return Promise.resolve(boundarySupportedRef.current);
+    }
+    boundaryCheckedRef.current = true;
+    let detected = false;
+    let resolved = false;
+    return new Promise((resolve) => {
+      try {
+        const testUtter = new SpeechSynthesisUtterance('test');
+        testUtter.volume = 0;
+        testUtter.rate = 10;
+        testUtter.onboundary = () => {
+          detected = true;
+        };
+        speechSynthesis.speak(testUtter);
+        const timeoutId = setTimeout(() => {
+          if (!resolved) {
+            if (speechSynthesis.speaking) {
+              speechSynthesis.cancel();
+            }
+            boundarySupportedRef.current = detected;
+            resolved = true;
+            resolve(boundarySupportedRef.current);
+          }
+        }, 1000);
+        testUtter.onend = () => {
+          if (!resolved) {
+            clearTimeout(timeoutId);
+            boundarySupportedRef.current = detected;
+            resolved = true;
+            resolve(boundarySupportedRef.current);
+          }
+        };
+      } catch (err) {
+        console.warn('[tts] Boundary detection failed:', err);
+        boundarySupportedRef.current = false;
+        resolved = true;
+        resolve(false);
+      }
+    });
+  };
+
+  const speakFromIndex = (index: number) => {
+    if (!contentRef.current) return;
+    const text = contentTextRef.current.slice(index);
+    const utter = new SpeechSynthesisUtterance(text);
+    const voice = selectVoiceForText(text);
+    if (voice) {
+      utter.voice = voice;
+      utter.lang = voice.lang;
+    }
+    utter.rate = ttsRateRef.current;
+    if (boundarySupportedRef.current) {
+      utter.onboundary = (e) => {
+        if (e.name === 'word') {
+          currentIndexRef.current = index + e.charIndex;
+          highlightAtIndex(currentIndexRef.current);
+        }
+      };
+    } else {
+      startFallbackHighlighting(index);
+    }
+    utter.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      utteranceRef.current = null;
+      clearHighlight();
+      stopFallbackHighlighting();
+      updatePlaybackState();
+    };
+    speechSynthesis.speak(utter);
+    utteranceRef.current = utter;
+    setIsSpeaking(true);
+    if (isPaused) setIsPaused(false);
+    updatePlaybackState();
+  };
+
+  const speakCurrentChapter = async () => {
     if (isSpeaking) return;
     const el = contentRef.current;
     if (!el) return;
@@ -268,23 +455,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       alert('Sorry, your browser does not support text-to-speech.');
       return;
     }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voice = selectVoiceForText(text);
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-    }
-    utterance.rate = ttsRate;
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-    };
-
-    window.speechSynthesis.speak(utterance);
-    utteranceRef.current = utterance;
-    setIsSpeaking(true);
+    textNodeMapRef.current = buildIndexMap(el);
+    contentTextRef.current = text;
+    currentIndexRef.current = 0;
+    await detectBoundaryEventSupport();
+    speakFromIndex(0);
   };
 
   const stopSpeaking = () => {
@@ -293,6 +468,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setIsSpeaking(false);
       setIsPaused(false);
       utteranceRef.current = null;
+      clearHighlight();
+      stopFallbackHighlighting();
+      updatePlaybackState();
     }
   };
 
@@ -300,6 +478,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (isSpeaking && !isPaused) {
       window.speechSynthesis.pause();
       setIsPaused(true);
+      stopFallbackHighlighting();
+      updatePlaybackState();
     }
   };
 
@@ -307,6 +487,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (isSpeaking && isPaused) {
       window.speechSynthesis.resume();
       setIsPaused(false);
+      if (!boundarySupportedRef.current) {
+        startFallbackHighlighting(currentIndexRef.current);
+      }
+      updatePlaybackState();
     }
   };
 
@@ -318,7 +502,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setIsSpeaking(false);
       setIsPaused(false);
       utteranceRef.current = null;
-      speakCurrentChapter();
+      speakFromIndex(currentIndexRef.current);
     }
   };
 
@@ -528,17 +712,21 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onSelectChapter={setCurrentChapter}
         onToggleTts={toggleTts}
         ttsActive={isSpeaking}
-        ttsPaused={isPaused}
-        ttsRate={ttsRate}
-        onPauseResumeTts={() => {
+      />
+
+      <TtsControlModal
+        visible={isSpeaking}
+        paused={isPaused}
+        rate={ttsRate}
+        onPauseResume={() => {
           if (isPaused) {
             resumeSpeaking();
           } else {
             pauseSpeaking();
           }
         }}
-        onStopTts={stopSpeaking}
-        onAdjustTtsRate={adjustRate}
+        onStop={stopSpeaking}
+        onAdjustRate={adjustRate}
       />
 
       {/* Settings Modal */}

@@ -88,3 +88,7 @@
 :where(.jpdb-word.failed) {
     color: rgb(255, 0, 0);
 }
+
+.tts-highlight { background-color: yellow; }
+::highlight(tts-current-word) { background-color: yellow; color: inherit; }
+

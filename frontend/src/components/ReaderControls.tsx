@@ -14,11 +14,6 @@ interface ReaderControlsProps {
   onSelectChapter: (index: number) => void;
   onToggleTts: () => void;
   ttsActive: boolean;
-  ttsPaused: boolean;
-  ttsRate: number;
-  onPauseResumeTts: () => void;
-  onStopTts: () => void;
-  onAdjustTtsRate: (delta: number) => void;
 }
 
 export function ReaderControls({
@@ -33,11 +28,6 @@ export function ReaderControls({
   onSelectChapter,
   onToggleTts,
   ttsActive,
-  ttsPaused,
-  ttsRate,
-  onPauseResumeTts,
-  onStopTts,
-  onAdjustTtsRate,
 }: ReaderControlsProps) {
   const [showDrawer, setShowDrawer] = useState(false);
   // const bookmarksQuery = useQuery(api.reading.getBookmarks, { bookId });
@@ -145,35 +135,6 @@ export function ReaderControls({
         </div>
       </div>
 
-      {ttsActive && (
-        <div className="flex items-center gap-2 mt-3">
-          <button
-            onClick={onPauseResumeTts}
-            className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border rounded"
-          >
-            {ttsPaused ? 'Resume' : 'Pause'}
-          </button>
-          <button
-            onClick={onStopTts}
-            className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border rounded"
-          >
-            Stop
-          </button>
-          <button
-            onClick={() => onAdjustTtsRate(-0.1)}
-            className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border rounded"
-          >
-            -
-          </button>
-          <span className="text-sm w-10 text-center">{ttsRate.toFixed(1)}x</span>
-          <button
-            onClick={() => onAdjustTtsRate(0.1)}
-            className="px-2 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border rounded"
-          >
-            +
-          </button>
-        </div>
-      )}
 
       <ContentsDrawer
         visible={showDrawer}
