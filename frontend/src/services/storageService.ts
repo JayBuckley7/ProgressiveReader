@@ -1,6 +1,6 @@
 
 import { gDriveService, BOOK_FILE_EXTENSIONS } from './gdriveService';
-import { getCachedFile, cacheFile } from './driveCache';
+import { getCachedFile, cacheFile, getCachedCover, cacheCover } from './driveCache';
 
 
 // Declare the existing driveSync functions for TypeScript
@@ -511,7 +511,13 @@ class StorageService {
     ): Promise<void> {
         try {
             console.log(`[Async] Downloading cover image for book: ${bookTitle}`);
-            const coverBlob = await gDriveService.downloadFile(coverImageId);
+            let coverBlob = await getCachedCover(coverImageId);
+            if (!coverBlob) {
+                coverBlob = await gDriveService.downloadFile(coverImageId);
+                if (coverBlob) {
+                    await cacheCover(coverImageId, coverBlob);
+                }
+            }
             
             if (coverBlob) {
                 // Debug: Log blob details
