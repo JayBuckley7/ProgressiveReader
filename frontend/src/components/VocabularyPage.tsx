@@ -70,31 +70,31 @@ export function VocabularyPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 dark:text-gray-200">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">📝 Vocabulary</h1>
-        <p className="text-gray-600">Track and review your language learning progress</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">📝 Vocabulary</h1>
+        <p className="text-gray-600 dark:text-gray-400">Track and review your language learning progress</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-lg border p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 text-center">
           <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
-          <div className="text-gray-600">Total Words</div>
+          <div className="text-gray-600 dark:text-gray-400">Total Words</div>
         </div>
-        <div className="bg-white rounded-lg border p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 text-center">
           <div className="text-3xl font-bold text-green-600">{stats.mastered}</div>
-          <div className="text-gray-600">Mastered</div>
+          <div className="text-gray-600 dark:text-gray-400">Mastered</div>
         </div>
-        <div className="bg-white rounded-lg border p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 text-center">
           <div className="text-3xl font-bold text-orange-600">{stats.learning}</div>
-          <div className="text-gray-600">Learning</div>
+          <div className="text-gray-600 dark:text-gray-400">Learning</div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white rounded-lg border p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-wrap gap-4 items-center">
             {/* Search */}
@@ -103,14 +103,14 @@ export function VocabularyPage() {
               placeholder="Search words..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             />
 
             {/* Language Filter */}
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             >
               <option value="">All Languages</option>
               {languages.map(lang => (
@@ -122,7 +122,7 @@ export function VocabularyPage() {
             <select
               value={filterMastered}
               onChange={(e) => setFilterMastered(e.target.value as "all" | "mastered" | "learning")}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             >
               <option value="all">All Words</option>
               <option value="learning">Learning</option>
@@ -143,11 +143,11 @@ export function VocabularyPage() {
       {filteredVocabulary.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {vocabulary.length === 0 ? "No vocabulary yet" : "No words found"}
           </h2>
-          <p className="text-gray-600 mb-6">
-            {vocabulary.length === 0 
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {vocabulary.length === 0
               ? "Start adding words as you read to build your vocabulary"
               : "Try adjusting your search or filters"
             }
@@ -196,12 +196,12 @@ function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) 
   };
 
   return (
-    <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-xl font-semibold text-gray-900">{word.word}</h3>
-            <span className="text-lg text-gray-600">→ {word.translation}</span>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{word.word}</h3>
+            <span className="text-lg text-gray-600 dark:text-gray-300">→ {word.translation}</span>
             {word.difficulty && (
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(word.difficulty)}`}>
                 {word.difficulty}
@@ -209,7 +209,7 @@ function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) 
             )}
           </div>
           
-          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {word.language}
             </span>
@@ -220,8 +220,8 @@ function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) 
           </div>
 
           {word.context && (
-            <div className="bg-gray-50 rounded-lg p-3 mb-3">
-              <p className="text-sm text-gray-700 italic">"{word.context}"</p>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-3">
+              <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{word.context}"</p>
             </div>
           )}
         </div>
@@ -230,8 +230,8 @@ function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) 
           onClick={() => onToggleMastered(word._id)}
           className={`ml-4 px-4 py-2 rounded-lg font-medium transition-colors ${
             word.mastered
-              ? "bg-green-100 text-green-800 hover:bg-green-200"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-100 dark:hover:bg-green-800"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
           }`}
         >
           {word.mastered ? "✓ Mastered" : "Learning"}
@@ -297,13 +297,13 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Add New Word</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New Word</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               ✕
             </button>
@@ -311,41 +311,41 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Word *
               </label>
               <input
                 type="text"
                 value={word}
                 onChange={(e) => setWord(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
                 placeholder="Enter the word"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Translation *
               </label>
               <input
                 type="text"
                 value={translation}
                 onChange={(e) => setTranslation(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
                 placeholder="Enter the translation"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Language
               </label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
               >
                 <option value="English">English</option>
                 <option value="Spanish">Spanish</option>
@@ -361,13 +361,13 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Book (Optional)
               </label>
               <select
                 value={bookId}
                 onChange={(e) => setBookId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
               >
                 <option value="">Select a book</option>
                 {books.map(book => (
@@ -379,13 +379,13 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Difficulty
               </label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard" | "")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
               >
                 <option value="">Select difficulty</option>
                 <option value="easy">Easy</option>
@@ -395,14 +395,14 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Context (Optional)
               </label>
               <textarea
                 value={context}
                 onChange={(e) => setContext(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none dark:bg-gray-700 dark:text-white"
                 placeholder="Sentence or context where you found this word"
               />
             </div>
@@ -411,7 +411,7 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
