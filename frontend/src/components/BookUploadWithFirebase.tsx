@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { useStorageService } from '../hooks/useStorageService';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
 
 interface BookUploadWithFirebaseProps {
@@ -12,9 +10,6 @@ export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFireb
   const { user, isAuthenticated, signIn, uploadBook } = useStorageService();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
-  // Convex mutation to sync metadata
-  const syncBookToConvex = useMutation(api.books.createFromDrive);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,14 +36,6 @@ export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFireb
       const bookMetadata = await uploadBook(selectedFile);
       
       if (bookMetadata) {
-        // Optionally sync metadata to Convex for existing features
-        await syncBookToConvex({
-          title: bookMetadata.title,
-          driveFileId: bookMetadata.driveFileId,
-          fileType: bookMetadata.fileType,
-          uploadedAt: bookMetadata.uploadedAt.toISOString(),
-        });
-        
         toast.success('Book uploaded successfully!');
         setSelectedFile(null);
         onUploadComplete?.();

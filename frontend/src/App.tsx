@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
-// import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-// import { api } from "../convex/_generated/api";
-// import { Id } from "../convex/_generated/dataModel";
 
 import { SignInForm } from "./components/SignInForm";
 import { SignOutButton } from "./components/SignOutButton"; // This might be unused now, or used inside TopActions

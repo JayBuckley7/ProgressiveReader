@@ -1,9 +1,8 @@
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useStorageService } from "../hooks/useStorageService";
 import { BookCard } from "./BookCard";
 
 export function Bookshelf() {
-  const books = useQuery(api.books.list) || [];
+  const { books } = useStorageService();
 
   if (books.length === 0) {
     return (

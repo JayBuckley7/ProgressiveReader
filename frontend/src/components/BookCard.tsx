@@ -1,19 +1,17 @@
-import { useState, useRef } from 'react';
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { useState, useRef, useEffect } from 'react';
+import { useStorageService } from '../hooks/useStorageService';
 import { BookReader } from "./BookReader";
-import { BookMetadata } from '../services/storageService';
+import { BookMetadata, ReadingProgress } from '../services/storageService';
 
 interface Book {
-  _id: Id<"books">;
+  _id: string;
   title: string;
   author?: string;
   language: string;
   coverUrl?: string | null;
   totalPages?: number;
   description?: string;
-  fileId?: Id<"_storage">;
+  fileId?: string;
 }
 
 interface BookCardProps {
@@ -29,7 +27,12 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const progress = useQuery(api.books.getReadingProgress, { bookId: book.id as Id<"books"> });
+  const { getReadingProgress } = useStorageService();
+  const [progress, setProgress] = useState<ReadingProgress | null>(null);
+
+  useEffect(() => {
+    getReadingProgress(book.id).then(setProgress);
+  }, [book.id, getReadingProgress]);
   
   const progressPercentage = progress && book.totalPages 
     ? Math.round((progress.currentPage / progress.totalPages) * 100)
@@ -97,7 +100,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   };
 
   if (showReader) {
-    return <BookReader bookId={book.id as Id<"books">} onClose={() => setShowReader(false)} />;
+    return <BookReader bookId={book.id} onClose={() => setShowReader(false)} />;
   }
 
   return (
