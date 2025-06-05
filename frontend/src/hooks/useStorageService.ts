@@ -82,26 +82,41 @@ export function useStorageService() {
     isRefreshingRef.current = true;
     
     try {
-      // Clean up previous blob URLs to prevent memory leaks
-      if (books.length > 0) {
-        storageService.cleanupBlobUrls(books);
-      }
-      
+      const previous = booksRef.current;
+
+      const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
+
       // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId}`);
-        setBooks(currentBooks => 
-          currentBooks.map(book => 
-            book.id === bookId 
-              ? { ...book, coverUrl } 
+        setBooks(currentBooks =>
+          currentBooks.map(book =>
+            book.id === bookId
+              ? { ...book, coverUrl }
               : book
           )
         );
       };
-      
+
       const userBooks = await storageService.getUserBooks(onCoverReady);
-      setBooks(userBooks);
-      booksRef.current = userBooks;
+
+      const mergedBooks = userBooks.map(book => {
+        const cached = coverMap.get(book.id);
+        return cached ? { ...book, coverUrl: cached } : book;
+      });
+
+      if (areBooksEqual(userBooks, previous)) {
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
+      } else {
+        const newIds = new Set(userBooks.map(b => b.id));
+        const removed = previous.filter(b => !newIds.has(b.id));
+        if (removed.length > 0) {
+          storageService.cleanupBlobUrls(removed);
+        }
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
+      }
     } catch (error) {
       console.error('Error loading books:', error);
       
