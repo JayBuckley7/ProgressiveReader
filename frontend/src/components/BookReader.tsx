@@ -324,7 +324,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {/* Reader Content */}
       <div 
         ref={contentRef}
-        className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
+        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
         style={{
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
