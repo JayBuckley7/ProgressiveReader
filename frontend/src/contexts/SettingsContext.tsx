@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStorageService } from "../hooks/useStorageService";
+import { gDriveService } from "../services/gdriveService";
 
 type Theme = "light" | "dark" | "system";
 
@@ -79,28 +80,42 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load settings from cloud once after authentication
+  // Load settings from cloud after authentication and when Drive connects
   useEffect(() => {
-    if (isAuthenticated) {
-      if (!loadedFromCloudRef.current) {
-        loadedFromCloudRef.current = true;
-        loadSettings()
-          .then(data => {
-            if (data) {
-              setCurrentSettings(prev => {
-                const updated = { ...prev, ...data };
-                setSettingsCookie(updated);
-                return updated;
-              });
-            }
-          })
-          .catch(err => console.error('Failed to load settings:', err));
+    const attemptCloudLoad = async () => {
+      if (!isAuthenticated || loadedFromCloudRef.current || !gDriveService.isSignedIn()) {
+        return;
       }
-    } else {
+
+      try {
+        const data = await loadSettings();
+        if (data) {
+          setCurrentSettings(prev => {
+            const updated = { ...prev, ...data };
+            setSettingsCookie(updated);
+            return updated;
+          });
+        }
+        loadedFromCloudRef.current = true;
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    };
+
+    attemptCloudLoad();
+    const unsubscribe = gDriveService.listenToSigninStatus(() => {
+      attemptCloudLoad();
+    });
+
+    if (!isAuthenticated) {
       loadedFromCloudRef.current = false;
       clearSettingsCookie();
     }
-  }, [isAuthenticated]);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isAuthenticated, loadSettings]);
 
   // Convert database settings to our Settings interface
   // const settings: Settings | null = dbSettings ? {
