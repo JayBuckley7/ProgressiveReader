@@ -1,5 +1,7 @@
 
 import { gDriveService, BOOK_FILE_EXTENSIONS } from './gdriveService';
+import { getCachedFile, cacheFile } from './driveCache';
+
 
 // Declare the existing driveSync functions for TypeScript
 declare global {
@@ -374,15 +376,26 @@ class StorageService {
                 if (!gDriveService.isSignedIn()) {
                     throw new Error('Not signed in to Google Drive');
                 }
-                
+
                 if (!metadata.driveFileId) {
                     throw new Error('Google Drive file ID not found for this book.');
                 }
-                
+
+                // Check IndexedDB cache first
+                const cached = await getCachedFile(metadata.driveFileId);
+                if (cached) {
+                    console.log('Retrieved book from cache');
+                    return cached;
+                }
+
                 const blob = await gDriveService.downloadFile(metadata.driveFileId);
                 if (!blob) {
                     throw new Error('Failed to download file from Google Drive, or file was empty.');
                 }
+
+                // Store in cache for future use
+                await cacheFile(metadata.driveFileId, blob);
+
                 return blob;
             } catch (error: any) {
                 console.error('Google Drive download failed:', error);
