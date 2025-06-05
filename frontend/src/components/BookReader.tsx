@@ -266,6 +266,105 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   };
 
+  // -------------------------------
+  // Text-to-Speech functionality
+  // -------------------------------
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [ttsRate, setTtsRate] = useState(settings?.ttsSpeed || 1);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const selectVoiceForText = (text: string): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+
+    const isJapanese = /[\u3040-\u30FF\u4E00-\u9FFF]/.test(text);
+    const isChinese = /[\u4E00-\u9FFF]/.test(text) && !isJapanese;
+    const isKorean = /[\uAC00-\uD7AF]/.test(text);
+
+    if (isJapanese) {
+      return voices.find(v => v.lang.startsWith('ja')) || null;
+    }
+    if (isChinese) {
+      return voices.find(v => v.lang.startsWith('zh')) || null;
+    }
+    if (isKorean) {
+      return voices.find(v => v.lang.startsWith('ko')) || null;
+    }
+    return (
+      voices.find(v =>
+        ['en', 'es', 'fr', 'de', 'it', 'pt', 'da', 'sv', 'nl', 'fi', 'no'].some(prefix =>
+          v.lang.toLowerCase().startsWith(prefix)
+        )
+      ) || voices[0] || null
+    );
+  };
+
+  const speakCurrentChapter = () => {
+    if (isSpeaking) return;
+    const el = contentRef.current;
+    if (!el) return;
+    const text = el.textContent || '';
+    if (!text.trim()) return;
+    if (!('speechSynthesis' in window)) {
+      alert('Sorry, your browser does not support text-to-speech.');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = selectVoiceForText(text);
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+    utterance.rate = ttsRate;
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      utteranceRef.current = null;
+    };
+
+    window.speechSynthesis.speak(utterance);
+    utteranceRef.current = utterance;
+    setIsSpeaking(true);
+  };
+
+  const stopSpeaking = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setIsPaused(false);
+      utteranceRef.current = null;
+    }
+  };
+
+  const pauseSpeaking = () => {
+    if (isSpeaking && !isPaused) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const resumeSpeaking = () => {
+    if (isSpeaking && isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+    }
+  };
+
+  const toggleTts = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      speakCurrentChapter();
+    }
+  };
+
+  useEffect(() => {
+    return () => stopSpeaking();
+  }, []);
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Reader Header */}
@@ -373,6 +472,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onToggleHighlight={toggleHighlight}
         chapterTitles={bookContent?.chapterTitles || []}
         onSelectChapter={setCurrentChapter}
+        onToggleTts={toggleTts}
+        ttsActive={isSpeaking}
       />
 
       {/* Settings Modal */}

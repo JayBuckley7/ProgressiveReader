@@ -12,6 +12,8 @@ interface ReaderControlsProps {
   onToggleHighlight: () => void;
   chapterTitles: ChapterTitle[];
   onSelectChapter: (index: number) => void;
+  onToggleTts: () => void;
+  ttsActive: boolean;
 }
 
 export function ReaderControls({
@@ -24,6 +26,8 @@ export function ReaderControls({
   onToggleHighlight,
   chapterTitles,
   onSelectChapter,
+  onToggleTts,
+  ttsActive,
 }: ReaderControlsProps) {
   const [showDrawer, setShowDrawer] = useState(false);
   // const bookmarksQuery = useQuery(api.reading.getBookmarks, { bookId });
@@ -112,6 +116,21 @@ export function ReaderControls({
             title="Toggle JPDB highlighting"
           >
             <span className="text-sm font-semibold">JP</span>
+          </button>
+
+          <button
+            onClick={onToggleTts}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            title={ttsActive ? 'Stop reading' : 'Read aloud'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5l-6 6H2v2h3l6 6V5zm6.071-.071a10 10 0 010 14.142M15.536 7.464a5 5 0 010 7.072"
+              />
+            </svg>
           </button>
         </div>
       </div>
