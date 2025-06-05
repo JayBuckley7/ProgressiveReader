@@ -816,26 +816,27 @@ class StorageService {
         return new Promise((resolve) => {
             const url = URL.createObjectURL(blob);
             const img = new Image();
-            
-            img.onload = () => {
-                URL.revokeObjectURL(url);
-                console.log(`✅ Blob is valid image: ${img.width}x${img.height}`);
-                resolve(true);
-            };
-            
-            img.onerror = () => {
-                URL.revokeObjectURL(url);
-                console.warn('❌ Blob is not a valid image');
-                resolve(false);
-            };
-            
-            // Set a timeout to avoid hanging
-            setTimeout(() => {
+
+            const timeoutId = setTimeout(() => {
                 URL.revokeObjectURL(url);
                 console.warn('⏰ Image validation timeout');
                 resolve(false);
             }, 5000);
-            
+
+            img.onload = () => {
+                clearTimeout(timeoutId);
+                URL.revokeObjectURL(url);
+                console.log(`✅ Blob is valid image: ${img.width}x${img.height}`);
+                resolve(true);
+            };
+
+            img.onerror = () => {
+                clearTimeout(timeoutId);
+                URL.revokeObjectURL(url);
+                console.warn('❌ Blob is not a valid image');
+                resolve(false);
+            };
+
             img.src = url;
         });
     }
