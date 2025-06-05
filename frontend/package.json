@@ -4,9 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm-run-all --parallel dev:frontend dev:backend",
-    "dev:frontend": "vite --open --host",
-    "dev:backend": "python ../backend/run.py",
+    "dev": "vite --open --host",
     "lint": "tsc -p . --noEmit --pretty false && vite build"
   },
   "dependencies": {

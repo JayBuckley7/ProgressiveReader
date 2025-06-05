@@ -7,16 +7,21 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "~": path.resolve(__dirname, "./src"),
     },
   },
   server: {
+    port: 5175,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       }
-    }
+    },
+    allowedHosts: [
+      'absolutely-communal-sheepdog.ngrok-free.app'
+    ]
   }
 }));

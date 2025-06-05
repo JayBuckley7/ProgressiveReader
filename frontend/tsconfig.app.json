@@ -22,7 +22,7 @@
 
     /* Import paths */
     "paths": {
-      "@/*": ["./src/*"]
+      "~/*": ["./src/*"]
     }
   },
   "include": ["src"]
