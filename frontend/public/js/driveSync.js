@@ -232,9 +232,9 @@ export async function launchGoogleAuth(promptOrScopes = []) {
 
           gToken = {
             access: tokenResponse.access_token,
-            expiry: Date.now() + (tokenResponse.expires_in || 0) * 1000,
+            expiry: Date.now() + (tokenResponse.expires_in || 3600) * 1000,
             userProfile: null, // Initialize
-            scopes: tokenResponse.scope || finalScopeStr 
+            scopes: tokenResponse.scope || finalScopeStr
           };
 
           await fetchAndStoreUserProfile(tokenResponse.access_token); // This populates gToken.userProfile

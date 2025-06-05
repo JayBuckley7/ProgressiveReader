@@ -339,6 +339,11 @@ export class Popup {
                 }
                 #header a { color: #eee; }
             }
+            :host-context(.dark) article {
+                background-color: #222;
+                color: #eee;
+            }
+            :host-context(.dark) #header a { color: #eee; }
         `;
 
         shadow.append(

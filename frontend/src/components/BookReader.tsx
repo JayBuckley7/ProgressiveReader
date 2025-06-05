@@ -29,6 +29,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [isTranslating, setIsTranslating] = useState(false);
   const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
+  const [translatedContent, setTranslatedContent] = useState<string | null>(null);
 
   // Swipe control state
   const swipeRef = useRef({
@@ -55,12 +56,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   // Clear translated content when chapter changes
   useEffect(() => {
-    if (isTranslated && contentRef.current) {
+    if (isTranslated) {
       console.log('Chapter changed - clearing translated content');
-      // Reset the content container to allow new chapter content to display
       setIsTranslated(false);
-      // Force a re-render by clearing the innerHTML
-      contentRef.current.innerHTML = '';
+      setTranslatedContent(null);
     }
   }, [currentChapter, isTranslated]);
 
@@ -176,13 +175,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
    * @param useCefr - If true include the CEFR level in the request.
    */
   const translateCurrent = async (useCefr: boolean) => {
-    if (!contentRef.current || !currentChapterContent) return;
+    if (!currentChapterContent) return;
     setIsTranslating(true);
-    
-    // Get the actual content to translate (either from the rendered content or original)
-    const contentToTranslate = isTranslated 
-      ? currentChapterContent // Use original content if already translated
-      : contentRef.current.innerHTML;
+
+    // Always translate from the original chapter HTML
+    const contentToTranslate = currentChapterContent;
     
     const payload: any = {
       content: contentToTranslate,
@@ -201,15 +198,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       });
       if (resp.ok) {
         const data = await resp.json();
-        if (data.translated_text && contentRef.current) {
-          // Clear existing content and set the translated content
-          contentRef.current.innerHTML = `
+        if (data.translated_text) {
+          setTranslatedContent(`
             <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
               <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
                 ${data.translated_text}
               </div>
             </div>
-          `;
+          `);
           setIsTranslated(true);
           console.log('Content translated and marked as translated');
         }
@@ -576,6 +572,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (bookContent && currentChapter < bookContent.totalChapters - 1) {
       console.log('Moving to next chapter, clearing any translated content');
       setIsTranslated(false);
+      setTranslatedContent(null);
       setCurrentChapter(currentChapter + 1);
     }
   };
@@ -584,6 +581,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (currentChapter > 0) {
       console.log('Moving to previous chapter, clearing any translated content');
       setIsTranslated(false);
+      setTranslatedContent(null);
       setCurrentChapter(currentChapter - 1);
     }
   };
@@ -602,9 +600,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   };
 
   const clearTranslation = () => {
-    if (contentRef.current && isTranslated) {
+    if (isTranslated) {
       console.log('Clearing translation, returning to original content');
-      contentRef.current.innerHTML = '';
+      setTranslatedContent(null);
       setIsTranslated(false);
     }
   };
@@ -669,17 +667,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {/* Reader Content */}
       <div 
         ref={contentRef}
-        className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
+        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
         style={{
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
         }}
       >
-        {/* Only render the normal content structure if not translated */}
-        {!isTranslated && (
+        {isTranslated ? (
+          <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
+            <div
+              className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: translatedContent || '' }}
+            />
+          </div>
+        ) : (
           <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
             {currentChapterContent ? (
-              <div 
+              <div
                 className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: currentChapterContent }}
               />
@@ -702,7 +706,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
             )}
           </div>
         )}
-        {/* When translated, the content is directly in contentRef.innerHTML */}
       </div>
 
       {/* Reader Controls */}

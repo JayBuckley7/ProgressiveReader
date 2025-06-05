@@ -4,42 +4,76 @@ import { gDriveService } from '../services/gdriveService';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
 
+/**
+ * Determine if two book lists contain the same entries.
+ * Order is ignored and only stable fields are compared.
+ */
+function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
+    if (a.length !== b.length) {
+        return false;
+    }
+    const serialize = (arr: BookMetadata[]) =>
+        arr
+            .map(book => `${book.id}-${book.title}-${book.fileType}-${book.coverImageId ?? ''}`)
+            .sort()
+            .join('|');
+    return serialize(a) === serialize(b);
+}
+
 export function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [books, setBooks] = useState<BookMetadata[]>([]);
+  const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    booksRef.current = books;
+  }, [books]);
 
   // Memoize the silent refresh function to prevent recreation on every render
   const silentRefreshBooks = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
       return;
     }
-    
+
     try {
       isRefreshingRef.current = true;
       console.log('[useStorageService] Silently refreshing books...');
-      
-      // Clean up previous blob URLs to prevent memory leaks
-      if (books.length > 0) {
-        storageService.cleanupBlobUrls(books);
-      }
-      
-      // Callback to update individual book covers as they become ready
+
+      const previous = booksRef.current;
+      const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
+
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
-        setBooks(currentBooks => 
-          currentBooks.map(book => 
-            book.id === bookId 
-              ? { ...book, coverUrl } 
-              : book
+        setBooks(currentBooks =>
+          currentBooks.map(book =>
+            book.id === bookId ? { ...book, coverUrl } : book
           )
         );
       };
-      
+
       const userBooks = await storageService.getUserBooks(onCoverReady);
-      setBooks(userBooks);
+
+      const mergedBooks = userBooks.map(book => {
+        const cached = coverMap.get(book.id);
+        return cached ? { ...book, coverUrl: cached } : book;
+      });
+
+      if (areBooksEqual(userBooks, previous)) {
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
+      } else {
+        const newIds = new Set(userBooks.map(b => b.id));
+        const removed = previous.filter(b => !newIds.has(b.id));
+        if (removed.length > 0) {
+          storageService.cleanupBlobUrls(removed);
+        }
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
+      }
+
       console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
     } catch (error) {
       console.error('Error silently refreshing books:', error);
@@ -59,25 +93,41 @@ export function useStorageService() {
     isRefreshingRef.current = true;
     
     try {
-      // Clean up previous blob URLs to prevent memory leaks
-      if (books.length > 0) {
-        storageService.cleanupBlobUrls(books);
-      }
-      
+      const previous = booksRef.current;
+
+      const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
+
       // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId}`);
-        setBooks(currentBooks => 
-          currentBooks.map(book => 
-            book.id === bookId 
-              ? { ...book, coverUrl } 
+        setBooks(currentBooks =>
+          currentBooks.map(book =>
+            book.id === bookId
+              ? { ...book, coverUrl }
               : book
           )
         );
       };
-      
+
       const userBooks = await storageService.getUserBooks(onCoverReady);
-      setBooks(userBooks);
+
+      const mergedBooks = userBooks.map(book => {
+        const cached = coverMap.get(book.id);
+        return cached ? { ...book, coverUrl: cached } : book;
+      });
+
+      if (areBooksEqual(userBooks, previous)) {
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
+      } else {
+        const newIds = new Set(userBooks.map(b => b.id));
+        const removed = previous.filter(b => !newIds.has(b.id));
+        if (removed.length > 0) {
+          storageService.cleanupBlobUrls(removed);
+        }
+        setBooks(mergedBooks);
+        booksRef.current = mergedBooks;
+      }
     } catch (error) {
       console.error('Error loading books:', error);
       

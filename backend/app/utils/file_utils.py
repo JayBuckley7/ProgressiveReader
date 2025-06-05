@@ -26,4 +26,4 @@ def generate_safe_filename(filename, user_id):
     if ext:
         return f"{user_id}_{uuid.uuid4()}.{ext}"
     else:
-        return f"{user_id}_{uuid.uuid4()}" 
+        return f"{user_id}_{uuid.uuid4()}"
