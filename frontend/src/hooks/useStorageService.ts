@@ -128,21 +128,16 @@ export function useStorageService() {
     if (!clerkUser) return;
 
     console.log('[useStorageService] Setting up Google Drive sign-in listener...');
-    
-    // Use a ref to track if we've already set up the listener for this user
-    let listenerSetup = false;
-    
+
     // Listen for Google Drive connection status changes
     const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
       console.log(`[useStorageService] Google Drive sign-in status changed: ${isSignedIn}`);
-      
-      // Only refresh if this is not the initial connection (to avoid double refresh)
-      if (isSignedIn && listenerSetup) {
-        // When Google Drive connects, silently refresh the book list in background
-        console.log('[useStorageService] Google Drive connected - silently refreshing book list...');
+
+      if (isSignedIn) {
+        // When Google Drive connects, refresh the book list so the library updates
+        console.log('[useStorageService] Google Drive connected - refreshing book list...');
         silentRefreshBooks();
       }
-      listenerSetup = true;
     });
 
     // Cleanup listener on component unmount or user change
