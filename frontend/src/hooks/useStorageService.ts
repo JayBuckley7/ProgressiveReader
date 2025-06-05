@@ -265,11 +265,14 @@ export function useStorageService() {
       await window.Clerk.signOut();
       setBooks([]); // Clear books when signing out
       lastUserIdRef.current = null;
-      
+
       // SECURITY: Clear Google Drive tokens when Clerk user signs out
       // This prevents token leakage between different user sessions
       const { gDriveService } = await import('../services/gdriveService');
       gDriveService.onClerkSignOut();
+
+      // Clear persisted settings
+      document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     } else {
       toast.error('Authentication system not loaded yet');
     }

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useStorageService } from "../hooks/useStorageService";
 
 type Theme = "light" | "dark" | "system";
 
@@ -38,12 +39,68 @@ const defaultSettings: Settings = {
   disableFadeAnimation: false,
 };
 
+const SETTINGS_COOKIE = "prSettings";
+
+function getSettingsCookie(): Partial<Settings> | null {
+  const match = document.cookie.match(new RegExp(`${SETTINGS_COOKIE}=([^;]+)`));
+  if (!match) return null;
+  try {
+    return JSON.parse(decodeURIComponent(match[1]));
+  } catch {
+    console.warn("Failed to parse settings cookie");
+    return null;
+  }
+}
+
+function setSettingsCookie(data: Partial<Settings>): void {
+  document.cookie = `${SETTINGS_COOKIE}=${encodeURIComponent(
+    JSON.stringify(data)
+  )}; path=/`;
+}
+
+function clearSettingsCookie(): void {
+  document.cookie = `${SETTINGS_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+}
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // const dbSettings = useQuery(api.settings.get);
   // const updateSettingsMutation = useMutation(api.settings.update);
   
   // Placeholder for settings - replace with Flask API calls for persistence
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
+  const { isAuthenticated, loadSettings } = useStorageService();
+  const loadedFromCloudRef = useRef(false);
+
+  // Load settings from cookie on initial mount
+  useEffect(() => {
+    const cookieSettings = getSettingsCookie();
+    if (cookieSettings) {
+      setCurrentSettings(prev => ({ ...prev, ...cookieSettings }));
+    }
+  }, []);
+
+  // Load settings from cloud once after authentication
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (!loadedFromCloudRef.current) {
+        loadedFromCloudRef.current = true;
+        loadSettings()
+          .then(data => {
+            if (data) {
+              setCurrentSettings(prev => {
+                const updated = { ...prev, ...data };
+                setSettingsCookie(updated);
+                return updated;
+              });
+            }
+          })
+          .catch(err => console.error('Failed to load settings:', err));
+      }
+    } else {
+      loadedFromCloudRef.current = false;
+      clearSettingsCookie();
+    }
+  }, [isAuthenticated]);
 
   // Convert database settings to our Settings interface
   // const settings: Settings | null = dbSettings ? {
@@ -62,9 +119,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const settings = currentSettings; // Use state directly
 
   const updateSettings = (updates: Partial<Settings>) => {
-    // updateSettingsMutation(updates);
     console.log("Update settings (TODO - Flask API call):", updates);
-    setCurrentSettings(prev => ({ ...prev, ...updates }));
+    setCurrentSettings(prev => {
+      const updated = { ...prev, ...updates };
+      setSettingsCookie(updated);
+      return updated;
+    });
   };
 
     // Apply theme to document
