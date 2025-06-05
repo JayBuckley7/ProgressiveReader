@@ -19,8 +19,8 @@ export function TtsControlModal({
 }: TtsControlModalProps) {
   if (!visible) return null;
   return (
-    <div className="fixed bottom-4 right-4 z-40">
-      <div className="flex items-center gap-2 bg-white dark:bg-gray-800 shadow-lg border border-gray-300 dark:border-gray-700 rounded-lg p-3">
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4 pointer-events-none">
+      <div className="flex items-center gap-2 bg-white dark:bg-gray-800 shadow-lg border border-gray-300 dark:border-gray-700 rounded-lg p-3 w-full max-w-xs pointer-events-auto">
         <button
           onClick={onPauseResume}
           className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"

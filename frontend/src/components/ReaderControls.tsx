@@ -50,7 +50,7 @@ export function ReaderControls({
 
   return (
     <div className="bg-white dark:bg-gray-800 border-t px-4 py-3">
-      <div className="flex items-center justify-between max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
         {/* Navigation */}
         <div className="flex items-center gap-4">
           <button
@@ -79,7 +79,7 @@ export function ReaderControls({
         </div>
 
         {/* Progress Bar */}
-        <div className="flex-1 mx-8">
+        <div className="w-full sm:flex-1 sm:mx-8">
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
