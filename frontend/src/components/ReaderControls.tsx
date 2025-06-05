@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ContentsDrawer } from "./ContentsDrawer";
+import type { ChapterTitle } from "../types";
 
 interface ReaderControlsProps {
   currentChapter: number;
@@ -9,7 +10,7 @@ interface ReaderControlsProps {
   bookId: string; // Was: Id<"books">
   jpdbHighlighted: boolean;
   onToggleHighlight: () => void;
-  chapterTitles: string[];
+  chapterTitles: ChapterTitle[];
   onSelectChapter: (index: number) => void;
 }
 
