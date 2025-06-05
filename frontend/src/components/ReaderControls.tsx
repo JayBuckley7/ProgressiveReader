@@ -45,7 +45,7 @@ export function ReaderControls({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-t px-4 py-3">
+    <div className="fixed bottom-0 left-0 w-full z-10 bg-white dark:bg-gray-800 border-t px-4 py-3">
       <div className="flex items-center justify-between max-w-4xl mx-auto">
         {/* Navigation */}
         <div className="flex items-center gap-4">
