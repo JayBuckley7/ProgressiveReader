@@ -1,6 +1,7 @@
 
-import { gDriveService } from './gdriveService';
+import { gDriveService, BOOK_FILE_EXTENSIONS } from './gdriveService';
 import { getCachedFile, cacheFile } from './driveCache';
+
 
 // Declare the existing driveSync functions for TypeScript
 declare global {
@@ -430,6 +431,7 @@ class StorageService {
 
             const { data: metadata } = metadataInfo;
             const bookEntries = metadata.books || {};
+            const coverEntries = metadata.covers || {};
 
             console.log('Found book entries in metadata:', Object.keys(bookEntries).length);
 
@@ -442,6 +444,14 @@ class StorageService {
             const coverDownloadTasks: Promise<void>[] = [];
             
             for (const [bookFileId, bookData] of Object.entries(bookEntries)) {
+                const bookMeta = bookData as any;
+                const extFromMeta = (bookMeta.fileType || bookMeta.fileName?.split('.').pop() || '').toLowerCase();
+
+                if (!BOOK_FILE_EXTENSIONS.includes(extFromMeta)) {
+                    console.log(`Skipping non-book entry ${bookMeta.fileName || bookFileId}`);
+                    continue;
+                }
+
                 // Skip if the book file no longer exists in Drive
                 if (!driveFileIds.has(bookFileId)) {
                     console.log(`Book file ${bookFileId} no longer exists in Drive, skipping`);
@@ -453,6 +463,7 @@ class StorageService {
                 if (!driveFile) continue;
 
                 const bookMetadata = bookData as any;
+                const coverImageId = coverEntries[bookFileId];
                 
                 // Create book metadata immediately without cover
                 const book: BookMetadata = {
@@ -460,7 +471,7 @@ class StorageService {
                     title: bookMetadata.title || driveFile.name.replace(/\.[^/.]+$/, ''), // fallback to filename without extension
                     fileType: bookMetadata.fileType || driveFile.name.split('.').pop()?.toLowerCase() || 'unknown',
                     driveFileId: bookFileId,
-                    coverImageId: bookMetadata.coverImageId,
+                    coverImageId: coverImageId,
                     coverUrl: undefined, // Will be set asynchronously
                     uploadedAt: bookMetadata.uploadedAt ? new Date(bookMetadata.uploadedAt) : new Date(driveFile.modifiedTime || Date.now()),
                     userId: 'current-user', // We don't store user ID since we're privacy-first
@@ -470,8 +481,8 @@ class StorageService {
                 books.push(book);
 
                 // Start async cover download if cover exists
-                if (bookMetadata.coverImageId && driveFileIds.has(bookMetadata.coverImageId) && onCoverReady) {
-                    const coverTask = this.downloadCoverAsync(bookFileId, bookMetadata.coverImageId, bookMetadata.title, onCoverReady);
+                if (coverImageId && driveFileIds.has(coverImageId) && onCoverReady) {
+                    const coverTask = this.downloadCoverAsync(bookFileId, coverImageId, bookMetadata.title, onCoverReady);
                     coverDownloadTasks.push(coverTask);
                 }
             }
@@ -540,9 +551,9 @@ class StorageService {
             // Get metadata to find cover image ID before deleting
             const metadataInfo = await gDriveService.getMetadataFile();
             let coverImageId: string | undefined;
-            
-            if (metadataInfo && metadataInfo.data.books && metadataInfo.data.books[id]) {
-                coverImageId = metadataInfo.data.books[id].coverImageId;
+
+            if (metadataInfo && metadataInfo.data.covers) {
+                coverImageId = metadataInfo.data.covers[id];
             }
 
             // Delete the book file from Google Drive
@@ -595,10 +606,10 @@ class StorageService {
             const metadataInfo = await gDriveService.getMetadataFile();
             let currentCoverImageId: string | undefined;
             let existingBookData: any;
-            
+
             if (metadataInfo && metadataInfo.data.books && metadataInfo.data.books[bookId]) {
                 existingBookData = metadataInfo.data.books[bookId];
-                currentCoverImageId = existingBookData.coverImageId;
+                currentCoverImageId = metadataInfo.data.covers ? metadataInfo.data.covers[bookId] : undefined;
             }
 
             if (!existingBookData) {
@@ -622,9 +633,10 @@ class StorageService {
             // Update metadata by getting the current data and modifying only the coverImageId
             const { fileId, data } = metadataInfo;
             data.books[bookId] = {
-                ...existingBookData,
-                coverImageId: coverImageId
+                ...existingBookData
             };
+            data.covers = data.covers || {};
+            data.covers[bookId] = coverImageId;
 
             const metadataUpdateSuccess = await gDriveService.updateMetadataFile(fileId, data);
 

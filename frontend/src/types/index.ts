@@ -65,5 +65,11 @@ export interface Meaning {
     glosses: string[];
 }
 
+export interface ChapterTitle {
+    index: number;
+    title: string;
+    href: string;
+}
+
 // Required to make this a module
 export {}; 
