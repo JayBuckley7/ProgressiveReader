@@ -1,5 +1,4 @@
 import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
-// import { Authenticated, Unauthenticated } from "convex/react"; // REMOVED
 // import { SignOutButton } from "./SignOutButton"; // REMOVED - using Clerk's
 import { useState } from "react";
 import { DriveButton } from "../gdrive/DriveButton";

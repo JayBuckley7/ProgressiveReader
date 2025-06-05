@@ -1,6 +1,4 @@
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
-// import { Authenticated, Unauthenticated, useQuery } from "convex/react"; // REMOVED
-// import { api } from "../../convex/_generated/api";
 
 export function HeroBanner() {
   const { user } = useUser(); // Get user from Clerk instead

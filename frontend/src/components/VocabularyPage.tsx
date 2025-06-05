@@ -1,8 +1,5 @@
 import { useState } from "react";
-// import { useQuery, useMutation } from "convex/react"; // REMOVED
-// import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
-// import { Id } from "../../convex/_generated/dataModel";
 
 interface VocabularyWord {
   _id: string; // Was: Id<"vocabulary">

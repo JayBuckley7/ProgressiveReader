@@ -1,4 +1,3 @@
-// import { Authenticated, Unauthenticated } from "convex/react";
 import { SignInForm } from "./SignInForm";
 
 export function LoginModal({ onClose }: { onClose: () => void }) {

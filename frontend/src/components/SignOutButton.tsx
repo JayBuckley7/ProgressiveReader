@@ -1,10 +1,8 @@
 "use client";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth } from "convex/react";
+import { useStorageService } from "../hooks/useStorageService";
 
 export function SignOutButton() {
-  const { isAuthenticated } = useConvexAuth();
-  const { signOut } = useAuthActions();
+  const { isAuthenticated, signOut } = useStorageService();
 
   if (!isAuthenticated) {
     return null;
