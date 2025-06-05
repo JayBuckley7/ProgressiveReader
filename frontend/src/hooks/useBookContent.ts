@@ -10,11 +10,13 @@ declare global {
   }
 }
 
+import type { ChapterTitle } from '../types';
+
 interface BookContent {
   title: string;
   totalChapters: number;
   chapters: string[];
-  chapterTitles: string[];
+  chapterTitles: ChapterTitle[];
 }
 
 interface UseBookContentReturn {
@@ -158,7 +160,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         // Get book metadata
         console.log('Step 6: Getting book metadata...');
         const totalChapters = processor.getTotalChapters();
-        const chapterTitles = await processor.getChapterTitles();
+        const chapterTitles = (await processor.getChapterTitles()) as ChapterTitle[];
 
         console.log('Step 6 complete: Book processed successfully:', {
           title: bookMetadata.title,

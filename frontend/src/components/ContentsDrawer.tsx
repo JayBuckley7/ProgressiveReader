@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import type { ChapterTitle } from "../types";
 
 interface ContentsDrawerProps {
   visible: boolean;
   onClose: () => void;
-  chapterTitles: string[];
+  chapterTitles: ChapterTitle[];
   currentChapter: number;
   onSelectChapter: (index: number) => void;
   bookmarks: any[];
@@ -55,16 +56,16 @@ export function ContentsDrawer({
         <div className="overflow-y-auto h-[calc(100%-96px)] p-3 space-y-2">
           {activeTab === "toc" && (
             <ul>
-              {chapterTitles.map((title, idx) => (
-                <li key={idx}>
+              {chapterTitles.map(ch => (
+                <li key={ch.index}>
                   <button
                     onClick={() => {
-                      onSelectChapter(idx);
+                      onSelectChapter(ch.index);
                       onClose();
                     }}
-                    className={`block w-full text-left px-2 py-1 rounded ${idx === currentChapter ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                    className={`block w-full text-left px-2 py-1 rounded ${ch.index === currentChapter ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                   >
-                    {title || `Chapter ${idx + 1}`}
+                    {ch.title || `Chapter ${ch.index + 1}`}
                   </button>
                 </li>
               ))}
