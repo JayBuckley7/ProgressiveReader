@@ -127,4 +127,4 @@ def get_user_email():
         # Clerk stores emails in email_addresses array
         if hasattr(g.user, 'email_addresses') and g.user.email_addresses and len(g.user.email_addresses) > 0:
             return g.user.email_addresses[0].email_address
-    return None 
+    return None
