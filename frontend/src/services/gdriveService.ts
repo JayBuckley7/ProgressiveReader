@@ -25,6 +25,8 @@ const GDRIVE_REFRESH_TOKEN_KEY = 'gdrive_refresh_token';
 const FOLDER_NAME = 'ProgReader'; // Or your app's specific folder name
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
+export const BOOK_FILE_EXTENSIONS = ['epub', 'pdf', 'mobi', 'docx', 'txt'];
+
 interface GoogleUser {
   email: string;
   name: string;
@@ -838,7 +840,13 @@ class GDriveService {
 
     const { fileId, data } = metadataInfo;
     data.books = data.books || {};
-    data.books[bookFileId] = bookData;
+    data.covers = data.covers || {};
+
+    const { coverImageId, ...bookEntry } = bookData;
+    data.books[bookFileId] = bookEntry;
+    if (coverImageId) {
+      data.covers[bookFileId] = coverImageId;
+    }
 
     return await this.updateMetadataFile(fileId, data);
   }
@@ -855,7 +863,10 @@ class GDriveService {
 
     const { fileId, data } = metadataInfo;
     data.books = data.books || {};
+    data.covers = data.covers || {};
+
     delete data.books[bookFileId];
+    delete data.covers[bookFileId];
 
     return await this.updateMetadataFile(fileId, data);
   }
@@ -874,13 +885,19 @@ class GDriveService {
 
     const { fileId, data } = metadataInfo;
     data.books = data.books || {};
+    data.covers = data.covers || {};
 
     const driveIds = new Set(files.map((f) => f.id));
     let changed = false;
 
     for (const file of files) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'unknown';
+
+      if (!BOOK_FILE_EXTENSIONS.includes(ext)) {
+        continue;
+      }
+
       if (!data.books[file.id]) {
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'unknown';
         data.books[file.id] = {
           title: file.name.replace(/\.[^/.]+$/, ''),
           fileName: file.name,
@@ -892,10 +909,21 @@ class GDriveService {
     }
 
     for (const existingId of Object.keys(data.books)) {
-      if (!driveIds.has(existingId)) {
-        delete data.books[existingId];
-        changed = true;
-      }
+        const entry = data.books[existingId] || {};
+        const extFromMeta = (entry.fileType || entry.fileName?.split('.').pop() || '').toLowerCase();
+
+        if (!driveIds.has(existingId) || !BOOK_FILE_EXTENSIONS.includes(extFromMeta)) {
+            delete data.books[existingId];
+            delete data.covers[existingId];
+            changed = true;
+        }
+    }
+
+    for (const [bookId, coverId] of Object.entries(data.covers)) {
+        if (!driveIds.has(coverId)) {
+            delete data.covers[bookId];
+            changed = true;
+        }
     }
 
     if (changed) {
