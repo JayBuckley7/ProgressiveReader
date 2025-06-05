@@ -221,50 +221,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const nextChapter = () => {
-    if (bookContent && currentChapter < bookContent.totalChapters - 1) {
-      console.log('Moving to next chapter, clearing any translated content');
-      setIsTranslated(false);
-      setCurrentChapter(currentChapter + 1);
-    }
-  };
-
-  const prevChapter = () => {
-    if (currentChapter > 0) {
-      console.log('Moving to previous chapter, clearing any translated content');
-      setIsTranslated(false);
-      setCurrentChapter(currentChapter - 1);
-    }
-  };
-
-  const toggleHighlight = async () => {
-    if (!contentRef.current) return;
-    if (!jpdbHighlighted) {
-      // await jpHighlighter.highlightContent(contentRef.current);
-    } else {
-      const saved = contentRef.current.getAttribute('data-original-content');
-      if (saved) {
-        contentRef.current.innerHTML = saved;
-      }
-    }
-    setJpdbHighlighted(!jpdbHighlighted);
-  };
-
-  const clearTranslation = () => {
-    if (contentRef.current && isTranslated) {
-      console.log('Clearing translation, returning to original content');
-      contentRef.current.innerHTML = '';
-      setIsTranslated(false);
-    }
-  };
 
   // -------------------------------
   // Text-to-Speech functionality
@@ -364,6 +320,51 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   useEffect(() => {
     return () => stopSpeaking();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const nextChapter = () => {
+    if (bookContent && currentChapter < bookContent.totalChapters - 1) {
+      console.log('Moving to next chapter, clearing any translated content');
+      setIsTranslated(false);
+      setCurrentChapter(currentChapter + 1);
+    }
+  };
+
+  const prevChapter = () => {
+    if (currentChapter > 0) {
+      console.log('Moving to previous chapter, clearing any translated content');
+      setIsTranslated(false);
+      setCurrentChapter(currentChapter - 1);
+    }
+  };
+
+  const toggleHighlight = async () => {
+    if (!contentRef.current) return;
+    if (!jpdbHighlighted) {
+      // await jpHighlighter.highlightContent(contentRef.current);
+    } else {
+      const saved = contentRef.current.getAttribute('data-original-content');
+      if (saved) {
+        contentRef.current.innerHTML = saved;
+      }
+    }
+    setJpdbHighlighted(!jpdbHighlighted);
+  };
+
+  const clearTranslation = () => {
+    if (contentRef.current && isTranslated) {
+      console.log('Clearing translation, returning to original content');
+      contentRef.current.innerHTML = '';
+      setIsTranslated(false);
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
