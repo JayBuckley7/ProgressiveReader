@@ -4,12 +4,33 @@ import { gDriveService } from '../services/gdriveService';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
 
+/**
+ * Determine if two book lists contain the same entries.
+ * Order is ignored and only stable fields are compared.
+ */
+function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
+    if (a.length !== b.length) {
+        return false;
+    }
+    const serialize = (arr: BookMetadata[]) =>
+        arr
+            .map(book => `${book.id}-${book.title}-${book.fileType}-${book.coverImageId ?? ''}`)
+            .sort()
+            .join('|');
+    return serialize(a) === serialize(b);
+}
+
 export function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [books, setBooks] = useState<BookMetadata[]>([]);
+  const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    booksRef.current = books;
+  }, [books]);
 
   // Memoize the silent refresh function to prevent recreation on every render
   const silentRefreshBooks = useCallback(async () => {
@@ -20,26 +41,28 @@ export function useStorageService() {
     try {
       isRefreshingRef.current = true;
       console.log('[useStorageService] Silently refreshing books...');
-      
-      // Clean up previous blob URLs to prevent memory leaks
-      if (books.length > 0) {
-        storageService.cleanupBlobUrls(books);
-      }
-      
-      // Callback to update individual book covers as they become ready
+
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
-        setBooks(currentBooks => 
-          currentBooks.map(book => 
-            book.id === bookId 
-              ? { ...book, coverUrl } 
-              : book
+        setBooks(currentBooks =>
+          currentBooks.map(book =>
+            book.id === bookId ? { ...book, coverUrl } : book
           )
         );
       };
-      
+
       const userBooks = await storageService.getUserBooks(onCoverReady);
-      setBooks(userBooks);
+
+      if (areBooksEqual(userBooks, booksRef.current)) {
+        console.log('[useStorageService] Library unchanged - skipping update');
+      } else {
+        if (booksRef.current.length > 0) {
+          storageService.cleanupBlobUrls(booksRef.current);
+        }
+        setBooks(userBooks);
+        booksRef.current = userBooks;
+      }
+
       console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
     } catch (error) {
       console.error('Error silently refreshing books:', error);
@@ -78,6 +101,7 @@ export function useStorageService() {
       
       const userBooks = await storageService.getUserBooks(onCoverReady);
       setBooks(userBooks);
+      booksRef.current = userBooks;
     } catch (error) {
       console.error('Error loading books:', error);
       
