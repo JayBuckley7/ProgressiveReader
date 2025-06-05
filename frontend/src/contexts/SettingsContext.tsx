@@ -69,20 +69,41 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setCurrentSettings(prev => ({ ...prev, ...updates }));
   };
 
-  // Apply theme to document
-  useEffect(() => {
-    if (!settings) return;
+    // Apply theme to document
+    useEffect(() => {
+        if (!settings) return;
 
-    const root = document.documentElement;
-    root.classList.remove('user-theme-light', 'user-theme-dark');
-    
-    if (settings.theme === 'light') {
-      root.classList.add('user-theme-light');
-    } else if (settings.theme === 'dark') {
-      root.classList.add('user-theme-dark');
-    }
-    // For 'system', let CSS handle it with prefers-color-scheme
-  }, [settings?.theme]);
+        const root = document.documentElement;
+        root.classList.remove('user-theme-light', 'user-theme-dark', 'dark');
+
+        const applySystemPreference = () => {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (prefersDark) {
+                root.classList.add('dark');
+            } else {
+                root.classList.remove('dark');
+            }
+        };
+
+        if (settings.theme === 'light') {
+            root.classList.add('user-theme-light');
+        } else if (settings.theme === 'dark') {
+            root.classList.add('user-theme-dark');
+            root.classList.add('dark');
+        } else {
+            applySystemPreference();
+        }
+
+        let mediaQuery: MediaQueryList | null = null;
+        if (settings.theme === 'system') {
+            mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            mediaQuery.addEventListener('change', applySystemPreference);
+        }
+
+        return () => {
+            mediaQuery?.removeEventListener('change', applySystemPreference);
+        };
+    }, [settings?.theme]);
 
   // Apply font size
   useEffect(() => {
