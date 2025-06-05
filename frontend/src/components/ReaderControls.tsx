@@ -56,24 +56,57 @@ export function ReaderControls({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-t px-4 py-3">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
-        <div className="flex gap-2 items-center">
-          <button onClick={onPrevChapter} disabled={currentChapter === 0}>← Prev</button>
-          <span>{`Chapter ${currentChapter + 1} / ${totalChapters}`}</span>
-          <button onClick={onNextChapter} disabled={currentChapter + 1 >= totalChapters}>Next →</button>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={onToggleHighlight}>
-            {jpdbHighlighted ? "Disable JPDB Highlight" : "Enable JPDB Highlight"}
+    <div className="bg-white dark:bg-gray-800 border-t px-3 sm:px-4 py-2 sm:py-3 shadow-inner">
+      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onPrevChapter}
+            disabled={currentChapter === 0}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Previous chapter"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <button onClick={onToggleTts}>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Chapter {currentChapter + 1} / {totalChapters}
+          </span>
+          <button
+            onClick={onNextChapter}
+            disabled={currentChapter + 1 >= totalChapters}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Next chapter"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex gap-2 mt-2 sm:mt-0">
+          <button
+            onClick={onToggleHighlight}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            {jpdbHighlighted ? "Disable Highlight" : "Enable Highlight"}
+          </button>
+          <button
+            onClick={onToggleTts}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
             {ttsActive ? "Stop TTS" : "Start TTS"}
           </button>
-          <button onClick={handleAddBookmark} disabled={addBookmarkMutation.isLoading}>
-            Add Bookmark
+          <button
+            onClick={handleAddBookmark}
+            disabled={addBookmarkMutation.isLoading}
+            className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-hover transition-colors disabled:opacity-50"
+          >
+            Bookmark
           </button>
-          <button onClick={() => setShowDrawer(true)}>
+          <button
+            onClick={() => setShowDrawer(true)}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
             Contents
           </button>
         </div>
