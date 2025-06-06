@@ -4,10 +4,15 @@
 FROM node:20 AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
 
-# Ensure the problematic package is rebuilt correctly
-RUN npm rebuild @rollup/rollup-linux-x64-gnu --force || true
+# Remove package-lock.json to avoid npm optional dependency bug
+RUN rm -f package-lock.json
+
+# Fresh install without cache
+RUN npm install
+
+# Explicitly install the rollup package for linux
+RUN npm install @rollup/rollup-linux-x64-gnu --save-optional || true
 
 COPY frontend .
 RUN npm run build
