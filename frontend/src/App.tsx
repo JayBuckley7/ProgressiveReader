@@ -30,12 +30,12 @@ export default function App() {
 }
 
 function AppContent() {
-  const [currentBookId, setCurrentBookId] = useState<string | null>(null); // Was Id<"books">
-  const [currentChapter, setCurrentChapter] = useState(0);
-  const [currentPage, setCurrentPage] = useState<"library" | "vocabulary" | "stats">(
-    "library"
-  );
-  const [showLogin, setShowLogin] = useState(false);
+    const [current_book_id, set_current_book_id] = useState<string | null>(null); // Was Id<"books">
+    const [current_chapter, set_current_chapter] = useState(0);
+    const [current_page, set_current_page] = useState<"library" | "vocabulary" | "stats">(
+        "library"
+    );
+    const [show_login, set_show_login] = useState(false);
 
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
@@ -74,18 +74,18 @@ function AppContent() {
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
         <main className="flex-1 flex flex-col">
           <Content
-            currentBookId={currentBookId}
-            setCurrentBookId={setCurrentBookId}
-            currentChapter={currentChapter}
-            setCurrentChapter={setCurrentChapter}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            setShowLogin={setShowLogin}
+            current_book_id={current_book_id}
+            set_current_book_id={set_current_book_id}
+            current_chapter={current_chapter}
+            set_current_chapter={set_current_chapter}
+            current_page={current_page}
+            set_current_page={set_current_page}
+            set_show_login={set_show_login}
           />
         </main>
         <DangerZone />
 
-        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+        {show_login && <LoginModal onClose={() => set_show_login(false)} />}
 
         <Toaster />
       </div>
@@ -94,21 +94,21 @@ function AppContent() {
 }
 
 function Content({
-  currentBookId,
-  setCurrentBookId,
-  currentChapter,
-  setCurrentChapter,
-  currentPage,
-  setCurrentPage,
-  setShowLogin,
+  current_book_id,
+  set_current_book_id,
+  current_chapter,
+  set_current_chapter,
+  current_page,
+  set_current_page,
+  set_show_login,
 }: {
-  currentBookId: string | null; // Was Id<"books">
-  setCurrentBookId: (id: string | null) => void; // Was Id<"books">
-  currentChapter: number;
-  setCurrentChapter: (chapter: number) => void;
-  currentPage: "library" | "vocabulary" | "stats";
-  setCurrentPage: (page: "library" | "vocabulary" | "stats") => void;
-  setShowLogin: (show: boolean) => void;
+  current_book_id: string | null; // Was Id<"books">
+  set_current_book_id: (id: string | null) => void; // Was Id<"books">
+  current_chapter: number;
+  set_current_chapter: (chapter: number) => void;
+  current_page: "library" | "vocabulary" | "stats";
+  set_current_page: (page: "library" | "vocabulary" | "stats") => void;
+  set_show_login: (show: boolean) => void;
 }) {
   const { user, isLoaded } = useUser();
 
@@ -124,25 +124,25 @@ function Content({
   return (
     <div className="flex flex-col flex-1">
       <SignedIn>
-        {currentBookId ? (
-          <BookReader
-            bookId={currentBookId}
-            currentChapter={currentChapter}
-            setCurrentChapter={setCurrentChapter}
-            onBack={() => setCurrentBookId(null)}
-          />
+          {current_book_id ? (
+            <BookReader
+                bookId={current_book_id}
+                currentChapter={current_chapter}
+                setCurrentChapter={set_current_chapter}
+                onBack={() => set_current_book_id(null)}
+            />
         ) : (
           <div className="flex flex-col flex-1">
-            <TopActions
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              onShowLogin={() => setShowLogin(true)}
-            />
+              <TopActions
+                  currentPage={current_page}
+                  onPageChange={set_current_page}
+                  onShowLogin={() => set_show_login(true)}
+              />
             <HeroBanner />
             <div className="flex-1 overflow-y-auto">
-              {currentPage === "library" ? (
-                <BookLibrary onSelectBook={setCurrentBookId} />
-              ) : currentPage === "vocabulary" ? (
+              {current_page === "library" ? (
+                <BookLibrary onSelectBook={set_current_book_id} />
+              ) : current_page === "vocabulary" ? (
                 <VocabularyPage />
               ) : (
                 <div className="p-8 text-center">
@@ -158,9 +158,9 @@ function Content({
       <SignedOut>
         <div className="flex flex-col flex-1">
           <TopActions
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onShowLogin={() => setShowLogin(true)}
+              currentPage={current_page}
+              onPageChange={set_current_page}
+              onShowLogin={() => set_show_login(true)}
           />
           <HeroBanner />
           <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
