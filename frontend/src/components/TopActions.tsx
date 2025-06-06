@@ -10,7 +10,7 @@ interface TopActionsProps {
 }
 
 export function TopActions({ currentPage, onPageChange, onShowLogin }: TopActionsProps) {
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [show_mobile_menu, set_show_mobile_menu] = useState(false);
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -27,22 +27,22 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
           
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              onClick={() => set_show_mobile_menu(!show_mobile_menu)}
               className="p-1.5 text-gray-600"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={showMobileMenu ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={show_mobile_menu ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
               </svg>
             </button>
           </div>
         </div>
 
         {/* Mobile Menu Dropdown */}
-        {showMobileMenu && (
+        {show_mobile_menu && (
           <div className="sm:hidden mt-2 py-2 space-y-1">
             <SignedIn>
               <button
-                onClick={() => { onPageChange("library"); setShowMobileMenu(false); }}
+                onClick={() => { onPageChange("library"); set_show_mobile_menu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
                   currentPage === "library" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
@@ -50,7 +50,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 📚 Library
               </button>
               <button
-                onClick={() => { onPageChange("vocabulary"); setShowMobileMenu(false); }}
+                onClick={() => { onPageChange("vocabulary"); set_show_mobile_menu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
                   currentPage === "vocabulary" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
@@ -58,7 +58,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 📝 Vocabulary
               </button>
               <button
-                onClick={() => { onPageChange("stats"); setShowMobileMenu(false); }}
+                onClick={() => { onPageChange("stats"); set_show_mobile_menu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
                   currentPage === "stats" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}

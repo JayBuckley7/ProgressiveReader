@@ -15,8 +15,8 @@ interface VocabularyWord {
 
 export function VocabularyPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [show_add_form, set_show_add_form] = useState(false);
+  const [search_term, set_search_term] = useState("");
   const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
 
   // const vocabularyQuery = useQuery(api.vocabulary.list, { 
@@ -35,8 +35,8 @@ export function VocabularyPage() {
 
   // Filter vocabulary based on search and mastered status
   const filteredVocabulary = vocabulary.filter(word => { // Use vocabulary
-    const matchesSearch = word.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         word.translation.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = word.word.toLowerCase().includes(search_term.toLowerCase()) ||
+                         word.translation.toLowerCase().includes(search_term.toLowerCase());
     
     const matchesMastered = filterMastered === "all" || 
                            (filterMastered === "mastered" && word.mastered) ||
@@ -101,8 +101,8 @@ export function VocabularyPage() {
             <input
               type="text"
               placeholder="Search words..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={search_term}
+              onChange={(e) => set_search_term(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             />
 
@@ -131,7 +131,7 @@ export function VocabularyPage() {
           </div>
 
           <button
-            onClick={() => setShowAddForm(true)}
+            onClick={() => set_show_add_form(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             + Add Word
@@ -167,9 +167,9 @@ export function VocabularyPage() {
       )}
 
       {/* Add Word Modal */}
-      {showAddForm && (
+      {show_add_form && (
         <AddWordModal 
-          onClose={() => setShowAddForm(false)}
+          onClose={() => set_show_add_form(false)}
           books={books}
         />
       )}
@@ -253,7 +253,7 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
   const [bookId, setBookId] = useState("");
   const [context, setContext] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard" | "">("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [is_submitting, set_is_submitting] = useState(false);
 
   // const addWord = useMutation(api.vocabulary.addWord);
   const addWord = async (data: any) => {
@@ -275,7 +275,7 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
       return;
     }
 
-    setIsSubmitting(true);
+    set_is_submitting(true);
     try {
       await addWord({
         word: word.trim(),
@@ -291,7 +291,7 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
       toast.error("Failed to add word");
       console.error(error);
     } finally {
-      setIsSubmitting(false);
+      set_is_submitting(false);
     }
   };
 
@@ -417,10 +417,10 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={is_submitting}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Adding..." : "Add Word"}
+                {is_submitting ? "Adding..." : "Add Word"}
               </button>
             </div>
           </form>

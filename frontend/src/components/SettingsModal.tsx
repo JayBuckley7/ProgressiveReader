@@ -21,7 +21,7 @@ const localKeys = {
 };
 
 const cookieKeys = {
-  jpdbApiKey: "jpdbApiKey",
+  jpdb_api_key: "jpdb_api_key",
 };
 
 // Tab configuration with icons
@@ -38,10 +38,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 }) {
     const { settings, updateSettings } = useSettings();
     const { saveSettings, loadSettings, isAuthenticated } = useStorageService();
-    const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
-    const [isCloudLoading, setIsCloudLoading] = useState(false);
+    const [active_tab, set_active_tab] = useState<"general" | "jlpt" | "accessibility">("general");
+    const [is_cloud_loading, set_is_cloud_loading] = useState(false);
 
-  const [localState, setLocalState] = useState(() => ({
+  const [local_state, set_local_state] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
     openaiModel: localStorage.getItem(localKeys.openaiModel) || "gpt-4o-mini",
     cefrLevel: parseInt(localStorage.getItem(localKeys.cefrLevel) || "3"),
@@ -57,18 +57,18 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     customPopupCSS: localStorage.getItem(localKeys.customPopupCSS) || "",
   }));
 
-  const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
+  const [jpdb_api_key, set_jpdb_api_key] = useState(() => document.cookie.match(/jpdb_api_key=([^;]+)/)?.[1] || "");
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     Object.entries(localKeys).forEach(([key, storageKey]) => {
-      const value = localState[key as keyof typeof localState];
+      const value = local_state[key as keyof typeof local_state];
       localStorage.setItem(storageKey, typeof value === "boolean" ? value.toString() : String(value));
     });
-    if (jpdbApiKey) {
-      document.cookie = `jpdbApiKey=${jpdbApiKey}; path=/;`;
+    if (jpdb_api_key) {
+      document.cookie = `jpdb_api_key=${jpdb_api_key}; path=/;`;
     }
-  }, [localState, jpdbApiKey]);
+  }, [local_state, jpdb_api_key]);
 
   // Auto-load settings from cloud storage when modal opens (if authenticated)
   // OPTIMIZATION: Only auto-load settings on first modal open to prevent cascading operations
@@ -108,33 +108,33 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
     if (!settings) return null;
 
-  const handleChange = <K extends keyof typeof localState>(key: K, value: typeof localState[K]) => {
-    setLocalState(prev => ({ ...prev, [key]: value }));
+  const handleChange = <K extends keyof typeof local_state>(key: K, value: typeof local_state[K]) => {
+    set_local_state(prev => ({ ...prev, [key]: value }));
   };
 
   // Helper function to create settings object for export/cloud save
   const createSettingsObject = () => ({
     // API and model settings
-    openai_api_key: localState.openaiKey,
-    jpdb_api_key: jpdbApiKey,
-    openai_model: localState.openaiModel,
+    openai_api_key: local_state.openaiKey,
+    jpdb_api_key: jpdb_api_key,
+    openai_model: local_state.openaiModel,
     target_language: settings.targetLanguage,
-    cefr_index: String(localState.cefrLevel),
+    cefr_index: String(local_state.cefrLevel),
     
     // Display settings
     userTheme: settings.theme,
     fontSize: String(settings.fontSize),
-    autoload_preference: localState.autoload,
-    prefer_due_cards: localState.preferDueCards,
+    autoload_preference: local_state.autoload,
+    prefer_due_cards: local_state.preferDueCards,
     
     // JPDB deck settings
-    jpdbMiningDeckId: localState.jpdbDeckId,
-    customWordCSS: localState.customWordCSS,
-    forqDeckId: localState.forqDeckId,
-    blacklistDeckId: localState.blacklistDeckId,
-    neverForgetDeckId: localState.neverForgetDeckId,
-    contextWidth: String(localState.contextSentenceCount),
-    forqOnMine: localState.autoAddToFORQ,
+    jpdbMiningDeckId: local_state.jpdbDeckId,
+    customWordCSS: local_state.customWordCSS,
+    forqDeckId: local_state.forqDeckId,
+    blacklistDeckId: local_state.blacklistDeckId,
+    neverForgetDeckId: local_state.neverForgetDeckId,
+    contextWidth: String(local_state.contextSentenceCount),
+    forqOnMine: local_state.autoAddToFORQ,
     
     // Keybind settings - for now just store as "None" to match format
     showPopupKey: "None",
@@ -152,34 +152,34 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     showPopupOnHover: settings.showPopupOnHover ?? true,
     touchscreenSupport: settings.touchscreenSupport ?? false,
     disableFadeAnimation: settings.disableFadeAnimation ?? false,
-    customPopupCSS: localState.customPopupCSS,
+    customPopupCSS: local_state.customPopupCSS,
   });
 
   // Helper function to apply imported settings
   const applyImportedSettings = (importedSettings: any) => {
     // Update local state with imported values
     const newLocalState = {
-      ...localState,
-      openaiKey: importedSettings.openai_api_key ?? localState.openaiKey,
-      openaiModel: importedSettings.openai_model ?? localState.openaiModel,
-      cefrLevel: parseInt(importedSettings.cefr_index ?? String(localState.cefrLevel)),
-      autoload: importedSettings.autoload_preference ?? localState.autoload,
-      jpdbDeckId: importedSettings.jpdbMiningDeckId ?? localState.jpdbDeckId,
-      forqDeckId: importedSettings.forqDeckId ?? localState.forqDeckId,
-      blacklistDeckId: importedSettings.blacklistDeckId ?? localState.blacklistDeckId,
-      neverForgetDeckId: importedSettings.neverForgetDeckId ?? localState.neverForgetDeckId,
-      contextSentenceCount: parseInt(importedSettings.contextWidth ?? String(localState.contextSentenceCount)) || 1,
-      autoAddToFORQ: importedSettings.forqOnMine ?? localState.autoAddToFORQ,
-      preferDueCards: importedSettings.prefer_due_cards ?? localState.preferDueCards,
-      customWordCSS: importedSettings.customWordCSS ?? localState.customWordCSS,
-      customPopupCSS: importedSettings.customPopupCSS ?? localState.customPopupCSS,
+      ...local_state,
+      openaiKey: importedSettings.openai_api_key ?? local_state.openaiKey,
+      openaiModel: importedSettings.openai_model ?? local_state.openaiModel,
+      cefrLevel: parseInt(importedSettings.cefr_index ?? String(local_state.cefrLevel)),
+      autoload: importedSettings.autoload_preference ?? local_state.autoload,
+      jpdbDeckId: importedSettings.jpdbMiningDeckId ?? local_state.jpdbDeckId,
+      forqDeckId: importedSettings.forqDeckId ?? local_state.forqDeckId,
+      blacklistDeckId: importedSettings.blacklistDeckId ?? local_state.blacklistDeckId,
+      neverForgetDeckId: importedSettings.neverForgetDeckId ?? local_state.neverForgetDeckId,
+      contextSentenceCount: parseInt(importedSettings.contextWidth ?? String(local_state.contextSentenceCount)) || 1,
+      autoAddToFORQ: importedSettings.forqOnMine ?? local_state.autoAddToFORQ,
+      preferDueCards: importedSettings.prefer_due_cards ?? local_state.preferDueCards,
+      customWordCSS: importedSettings.customWordCSS ?? local_state.customWordCSS,
+      customPopupCSS: importedSettings.customPopupCSS ?? local_state.customPopupCSS,
     };
     
-    setLocalState(newLocalState);
+    set_local_state(newLocalState);
     
-    // Update jpdbApiKey if present
+    // Update jpdb_api_key if present
     if (importedSettings.jpdb_api_key !== undefined) {
-      setJpdbApiKey(importedSettings.jpdb_api_key);
+      set_jpdb_api_key(importedSettings.jpdb_api_key);
     }
     
     // Update settings through context
@@ -203,7 +203,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       return;
     }
     
-    setIsCloudLoading(true);
+    set_is_cloud_loading(true);
     try {
       const settingsToSave = createSettingsObject();
       const success = await saveSettings(settingsToSave);
@@ -213,7 +213,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     } catch (error) {
       console.error('Cloud save error:', error);
     } finally {
-      setIsCloudLoading(false);
+      set_is_cloud_loading(false);
     }
   };
 
@@ -224,7 +224,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       return;
     }
     
-    setIsCloudLoading(true);
+    set_is_cloud_loading(true);
     try {
       const cloudSettings = await loadSettings();
       if (cloudSettings) {
@@ -237,7 +237,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       console.error('Cloud load error:', error);
       toast.error('Failed to load settings from cloud storage');
     } finally {
-      setIsCloudLoading(false);
+      set_is_cloud_loading(false);
     }
   };
 
@@ -269,12 +269,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 
                   rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap
                   transition-all duration-200 transform flex-shrink-0
-                  ${activeTab === tab.id
+                  ${active_tab === tab.id
                     ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md scale-105'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
                   }
                 `}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => set_active_tab(tab.id as any)}
               >
                 <span className="text-sm sm:text-base md:text-lg">{tab.icon}</span>
                 <span className="hidden sm:inline">{tab.label}</span>
@@ -285,13 +285,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
-          {activeTab === "general" && (
+          {active_tab === "general" && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">API Configuration</h3>
                 <TextInput
                   label="OpenAI API Key"
-                  value={localState.openaiKey}
+                  value={local_state.openaiKey}
                   onChange={v => handleChange("openaiKey", v)}
                   placeholder="sk-..."
                   type="password"
@@ -315,7 +315,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
                 <SelectInput
                   label="Preferred Model"
-                  value={localState.openaiModel}
+                  value={local_state.openaiModel}
                   onChange={v => handleChange("openaiModel", v)}
                   options={[
                     { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast)" },
@@ -337,7 +337,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
                 <SelectInput
                   label="Target CEFR Level"
-                  value={String(localState.cefrLevel)}
+                  value={String(local_state.cefrLevel)}
                   onChange={v => handleChange("cefrLevel", parseInt(v))}
                   options={[
                     { value: "0", label: "A1 (Beginner)" },
@@ -353,7 +353,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               <CheckboxInput
                 label="Autoload Translations"
                 description="Automatically load translations when opening a book"
-                checked={localState.autoload}
+                checked={local_state.autoload}
                 onChange={v => handleChange("autoload", v)}
               />
 
@@ -368,14 +368,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
             </div>
           )}
 
-          {activeTab === "jlpt" && (
+          {active_tab === "jlpt" && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB Integration</h3>
                 <TextInput
                   label="JPDB API Key"
-                  value={jpdbApiKey}
-                  onChange={setJpdbApiKey}
+                  value={jpdb_api_key}
+                  onChange={set_jpdb_api_key}
                   placeholder="Enter your JPDB API key"
                   type="password"
                 />
@@ -384,25 +384,25 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <TextInput
                   label="Mining Deck ID"
-                  value={localState.jpdbDeckId}
+                  value={local_state.jpdbDeckId}
                   onChange={v => handleChange("jpdbDeckId", v)}
                   placeholder="e.g., 12345"
                 />
                 <TextInput
                   label="FORQ Deck ID"
-                  value={localState.forqDeckId}
+                  value={local_state.forqDeckId}
                   onChange={v => handleChange("forqDeckId", v)}
                   placeholder="e.g., 67890"
                 />
                 <TextInput
                   label="Blacklist Deck ID"
-                  value={localState.blacklistDeckId}
+                  value={local_state.blacklistDeckId}
                   onChange={v => handleChange("blacklistDeckId", v)}
                   placeholder="e.g., 11111"
                 />
                 <TextInput
                   label="Never Forget Deck ID"
-                  value={localState.neverForgetDeckId}
+                  value={local_state.neverForgetDeckId}
                   onChange={v => handleChange("neverForgetDeckId", v)}
                   placeholder="e.g., 22222"
                 />
@@ -411,7 +411,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               <TextInput
                 label="Context Sentences"
                 type="number"
-                value={String(localState.contextSentenceCount)}
+                value={String(local_state.contextSentenceCount)}
                 onChange={v => handleChange("contextSentenceCount", parseInt(v) || 1)}
                 min="1"
                 max="5"
@@ -421,20 +421,20 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 <CheckboxInput
                   label="Add to FORQ When Mining"
                   description="Automatically add mined cards to your FORQ deck"
-                  checked={localState.autoAddToFORQ}
+                  checked={local_state.autoAddToFORQ}
                   onChange={v => handleChange("autoAddToFORQ", v)}
                 />
                 <CheckboxInput
                   label="Prefer Due Cards"
                   description="Prioritize due cards in translation suggestions"
-                  checked={localState.preferDueCards}
+                  checked={local_state.preferDueCards}
                   onChange={v => handleChange("preferDueCards", v)}
                 />
                             </div>
                         </div>
                     )}
 
-          {activeTab === "accessibility" && (
+          {active_tab === "accessibility" && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-3">
                 <CheckboxInput
@@ -460,14 +460,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                         <div className="space-y-4">
                 <TextInput
                   label="Custom Word CSS"
-                  value={localState.customWordCSS}
+                  value={local_state.customWordCSS}
                   onChange={v => handleChange("customWordCSS", v)}
                   multiline
                   placeholder=".word { color: blue; }"
                 />
                 <TextInput
                   label="Custom Popup CSS"
-                  value={localState.customPopupCSS}
+                  value={local_state.customPopupCSS}
                   onChange={v => handleChange("customPopupCSS", v)}
                   multiline
                   placeholder=".popup { background: white; }"
@@ -480,10 +480,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   <>
                     <button
                       onClick={handleCloudSave}
-                      disabled={isCloudLoading}
+                      disabled={is_cloud_loading}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isCloudLoading ? (
+                      {is_cloud_loading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                           <span>Saving...</span>
@@ -497,10 +497,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                     </button>
                     <button
                       onClick={handleCloudLoad}
-                      disabled={isCloudLoading}
+                      disabled={is_cloud_loading}
                       className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isCloudLoading ? (
+                      {is_cloud_loading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
                           <span>Loading...</span>

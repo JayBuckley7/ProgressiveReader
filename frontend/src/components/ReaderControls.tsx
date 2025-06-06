@@ -30,14 +30,14 @@ export function ReaderControls({
   ttsActive,
   jpdbHighlighted,
 }: ReaderControlsProps) {
-  const [showDrawer, setShowDrawer] = useState(false);
+  const [show_drawer, set_show_drawer] = useState(false);
 
   const { data: bookmarks = [] } =
     api.reading.getBookmarks.useQuery({ bookId });
 
   const addBookmarkMutation = api.reading.addBookmark.useMutation();
 
-  const handleAddBookmark = async () => {
+  const handle_add_bookmark = async () => {
     const note = prompt("Add a note for this bookmark (optional):");
     if (note !== null) {
       await addBookmarkMutation.mutateAsync({
@@ -117,7 +117,7 @@ export function ReaderControls({
 
           {/* add bookmark */}
           <button
-            onClick={handleAddBookmark}
+          onClick={handle_add_bookmark}
             disabled={addBookmarkMutation.isLoading}
             className={`${bigBtn} disabled:opacity-50`}
             aria-label="Add bookmark"
@@ -129,7 +129,7 @@ export function ReaderControls({
 
           {/* table-of-contents / bookmarks drawer */}
           <button
-            onClick={() => setShowDrawer(true)}
+            onClick={() => set_show_drawer(true)}
             className={bigBtn}
             aria-label="Table of contents and bookmarks"
           >
@@ -141,10 +141,10 @@ export function ReaderControls({
       </div>
 
       {/* drawer */}
-      {showDrawer && (
+      {show_drawer && (
         <ContentsDrawer
-          visible={showDrawer}
-          onClose={() => setShowDrawer(false)}
+          visible={show_drawer}
+          onClose={() => set_show_drawer(false)}
           chapterTitles={chapterTitles}
           currentChapter={currentChapter}
           onSelectChapter={onSelectChapter}

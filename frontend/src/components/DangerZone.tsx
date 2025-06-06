@@ -17,17 +17,17 @@ function getCookie(name: string): string | null {
 }
 
 export function DangerZone() {
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [show_prompt, set_show_prompt] = useState(false);
 
   // Mock PWA installation logic
-  const handleInstall = () => {
+  const handle_install = () => {
     console.log("Installing PWA...");
-    setShowPrompt(false);
+    set_show_prompt(false);
   };
 
-  const handleDismiss = () => {
+  const handle_dismiss = () => {
     setCookie("pwaPromptDismissed", "true", 7);
-    setShowPrompt(false);
+    set_show_prompt(false);
   };
 
   // Show prompt after a delay unless recently dismissed
@@ -36,12 +36,12 @@ export function DangerZone() {
       return;
     }
     const timer = setTimeout(() => {
-      setShowPrompt(true);
+      set_show_prompt(true);
     }, 5000);
     return () => clearTimeout(timer);
   }, []);
 
-  if (!showPrompt) return null;
+  if (!show_prompt) return null;
 
   return (
     <div
@@ -58,7 +58,7 @@ export function DangerZone() {
           </p>
           <div className="flex space-x-2">
             <button
-              onClick={handleInstall}
+              onClick={handle_install}
               aria-label="Install app"
               className={
                 "px-3 py-1 bg-blue-600 text-white text-sm rounded " +
@@ -68,7 +68,7 @@ export function DangerZone() {
               Install
             </button>
             <button
-              onClick={handleDismiss}
+              onClick={handle_dismiss}
               aria-label="Dismiss install prompt"
               className={
                 "px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded " +
@@ -80,7 +80,7 @@ export function DangerZone() {
           </div>
         </div>
         <button
-          onClick={handleDismiss}
+          onClick={handle_dismiss}
           aria-label="Close prompt"
           className="text-gray-400 hover:text-gray-600 transition-colors"
         >

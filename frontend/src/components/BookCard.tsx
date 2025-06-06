@@ -22,10 +22,10 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardProps) {
-  const [showReader, setShowReader] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isUpdatingCover, setIsUpdatingCover] = useState(false);
+  const [show_reader, set_show_reader] = useState(false);
+  const [is_hovered, set_is_hovered] = useState(false);
+  const [is_deleting, set_is_deleting] = useState(false);
+  const [is_updating_cover, set_is_updating_cover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getReadingProgress } = useStorageService();
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
@@ -38,15 +38,15 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
     ? Math.round((progress.currentPage / progress.totalPages) * 100)
     : 0;
 
-  const handleOpenBook = () => {
+  const handle_open_book = () => {
     if (book.fileId) {
-      setShowReader(true);
+      set_show_reader(true);
     } else {
       console.log("No file available for:", book.title);
     }
   };
 
-  const handleDeleteClick = async (e: React.MouseEvent) => {
+  const handle_delete_click = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -54,23 +54,23 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
       return;
     }
 
-    setIsDeleting(true);
+    set_is_deleting(true);
     try {
       await onDeleteBook(book.id as string);
     } catch (error) {
       console.error('Error deleting book:', error);
     } finally {
-      setIsDeleting(false);
+      set_is_deleting(false);
     }
   };
 
-  const handleChangeCoverClick = (e: React.MouseEvent) => {
+  const handle_change_cover_click = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     fileInputRef.current?.click();
   };
 
-  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handle_cover_file_change = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,7 +81,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
       return;
     }
 
-    setIsUpdatingCover(true);
+    set_is_updating_cover(true);
     try {
       await onUpdateCover(book.id as string, file);
       // Reset file input
@@ -91,24 +91,24 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
     } catch (error) {
       console.error('Error updating cover:', error);
     } finally {
-      setIsUpdatingCover(false);
+      set_is_updating_cover(false);
     }
   };
 
-  const handleCardClick = () => {
+  const handle_card_click = () => {
     onSelectBook(book.id as string);
   };
 
-  if (showReader) {
-    return <BookReader bookId={book.id} onClose={() => setShowReader(false)} />;
+  if (show_reader) {
+    return <BookReader bookId={book.id} onClose={() => set_show_reader(false)} />;
   }
 
   return (
     <div
       className="book-item-link relative group cursor-pointer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={handleCardClick}
+      onMouseEnter={() => set_is_hovered(true)}
+      onMouseLeave={() => set_is_hovered(false)}
+      onClick={handle_card_click}
     >
       <div className="book-item bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden transform hover:-translate-y-1">
         {/* Cover Wrapper */}
@@ -125,19 +125,19 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
 
           {/* Change Cover Button - appears on hover */}
           <button
-            onClick={handleChangeCoverClick}
-            disabled={isUpdatingCover}
+            onClick={handle_change_cover_click}
+            disabled={is_updating_cover}
             className={`
               btn-change-cover absolute bottom-2 right-2 z-30
               bg-gray-600 hover:bg-gray-500 text-white border-none
               px-2 py-1 rounded-full text-sm cursor-pointer
               opacity-80 hover:opacity-100 transition-all duration-200
-              ${isHovered ? 'flex items-center justify-center' : 'hidden'}
+              ${is_hovered ? 'flex items-center justify-center' : 'hidden'}
               disabled:opacity-50 disabled:cursor-not-allowed
             `}
             title={`Change cover for "${book.title}"`}
           >
-            {isUpdatingCover ? (
+            {is_updating_cover ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
             ) : (
               '📷'
@@ -149,7 +149,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={handleCoverFileChange}
+            onChange={handle_cover_file_change}
             className="hidden"
             onClick={(e) => e.stopPropagation()}
           />
@@ -171,19 +171,19 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
 
         {/* Delete Button - appears on hover */}
         <button
-          onClick={handleDeleteClick}
-          disabled={isDeleting}
+          onClick={handle_delete_click}
+          disabled={is_deleting}
           className={`
             delete-btn absolute top-2 right-2 z-10
             bg-red-500 hover:bg-red-600 text-white border-none
             px-2 py-1 rounded-full text-sm cursor-pointer
             opacity-80 hover:opacity-100 transition-all duration-200
-            ${isHovered ? 'block' : 'hidden'}
+            ${is_hovered ? 'block' : 'hidden'}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
           title={`Delete "${book.title}"`}
         >
-          {isDeleting ? (
+          {is_deleting ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           ) : (
             '✕'

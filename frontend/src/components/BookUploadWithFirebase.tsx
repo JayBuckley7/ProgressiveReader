@@ -8,18 +8,18 @@ interface BookUploadWithFirebaseProps {
 
 export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFirebaseProps) {
   const { user, isAuthenticated, signIn, uploadBook } = useStorageService();
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [is_uploading, set_is_uploading] = useState(false);
+  const [selected_file, set_selected_file] = useState<File | null>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handle_file_select = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
+      set_selected_file(file);
     }
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
+  const handle_upload = async () => {
+    if (!selected_file) return;
 
     if (!isAuthenticated) {
       try {
@@ -30,21 +30,21 @@ export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFireb
       }
     }
 
-    setIsUploading(true);
+    set_is_uploading(true);
     try {
       // Upload to Google Drive via Firebase storage service
-      const bookMetadata = await uploadBook(selectedFile);
+      const bookMetadata = await uploadBook(selected_file);
       
       if (bookMetadata) {
         toast.success('Book uploaded successfully!');
-        setSelectedFile(null);
+        set_selected_file(null);
         onUploadComplete?.();
       }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload book');
     } finally {
-      setIsUploading(false);
+      set_is_uploading(false);
     }
   };
 
@@ -67,8 +67,8 @@ export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFireb
             <input
               type="file"
               accept=".epub,.pdf,.txt,.docx,.mobi"
-              onChange={handleFileSelect}
-              disabled={isUploading}
+              onChange={handle_file_select}
+              disabled={is_uploading}
               className="block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-md file:border-0
@@ -79,19 +79,19 @@ export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFireb
             />
           </div>
           
-          {selectedFile && (
+          {selected_file && (
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Selected: {selectedFile.name}
+              Selected: {selected_file.name}
             </div>
           )}
           
           <button
-            onClick={handleUpload}
-            disabled={!selectedFile || isUploading}
+            onClick={handle_upload}
+            disabled={!selected_file || is_uploading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 
               disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isUploading ? 'Uploading...' : 'Upload to Google Drive'}
+            {is_uploading ? 'Uploading...' : 'Upload to Google Drive'}
           </button>
         </div>
       ) : (

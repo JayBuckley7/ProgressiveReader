@@ -23,13 +23,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   const { settings } = useSettings();
   
-  const [showSettings, setShowSettings] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
+  const [show_settings, set_show_settings] = useState(false);
+  const [scroll_position, set_scroll_position] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
+  const [is_translating, set_is_translating] = useState(false);
+  const [is_translated, set_is_translated] = useState(false); // Track if current content is translated
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
-  const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
+  const [jpdb_highlighted, set_jpdb_highlighted] = useState(false);
 
   // Swipe control state
   const swipeRef = useRef({
@@ -45,36 +45,36 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       // updateProgress({
       //   bookId,
       //   currentChapter,
-      //   currentPosition: scrollPosition,
+      //   currentPosition: scroll_position,
       // });
       // TODO: Call Flask API to update progress
-      console.log("Debounced update progress (TODO):", { bookId, currentChapter, scrollPosition });
+      console.log("Debounced update progress (TODO):", { bookId, currentChapter, scroll_position });
     }, 1000);
 
     return () => clearTimeout(updateProgressDebounced);
-  }, [bookId, currentChapter, scrollPosition, /* updateProgress */]); // Removed updateProgress from dependencies for now
+  }, [bookId, currentChapter, scroll_position, /* updateProgress */]); // Removed updateProgress from dependencies for now
 
   // Clear translated content when chapter changes
   useEffect(() => {
-    if (isTranslated) {
+    if (is_translated) {
       console.log('Chapter changed - clearing translated content');
-      setIsTranslated(false);
+      set_is_translated(false);
       setTranslatedContent(null);
     }
   }, [currentChapter]);
 
   // Handle scroll tracking
   useEffect(() => {
-    const handleScroll = () => {
+    const handle_scroll = () => {
       if (contentRef.current) {
-        setScrollPosition(contentRef.current.scrollTop);
+        set_scroll_position(contentRef.current.scrollTop);
       }
     };
 
     const content = contentRef.current;
     if (content) {
-      content.addEventListener('scroll', handleScroll);
-      return () => content.removeEventListener('scroll', handleScroll);
+      content.addEventListener('scroll', handle_scroll);
+      return () => content.removeEventListener('scroll', handle_scroll);
     }
   }, []);
 
@@ -89,26 +89,26 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   useEffect(() => {
     console.log('🔍 JPDB highlighting effect triggered:', {
       hasContentRef: !!contentRef.current,
-      jpdbHighlighted,
+      jpdb_highlighted,
       hasChapterContent: !!currentChapterContent,
       hasTranslatedContent: !!translatedContent,
-      isTranslated,
-      isTranslating
+      is_translated,
+      is_translating
     });
 
-    // ONLY run highlighting when user explicitly enables it (jpdbHighlighted becomes true)
+    // ONLY run highlighting when user explicitly enables it (jpdb_highlighted becomes true)
     // Do NOT run on content changes unless highlighting is already enabled
-    if (jpdbHighlighted && contentRef.current && !isTranslating) {
+    if (jpdb_highlighted && contentRef.current && !is_translating) {
       const contentElement = contentRef.current.querySelector('.prose');
       console.log('🔍 Content element found:', !!contentElement);
       console.log('🔍 Current content state:', { 
         hasOriginal: !!currentChapterContent, 
         hasTranslated: !!translatedContent, 
-        isTranslated 
+        is_translated 
       });
       
       if (contentElement) {
-        console.log('🔍 About to call highlightContent on', isTranslated ? 'translated' : 'original', 'content...');
+        console.log('🔍 About to call highlightContent on', is_translated ? 'translated' : 'original', 'content...');
         // Use longer timeout to ensure React has finished all re-renders
         const timeoutId = setTimeout(async () => {
           try {
@@ -122,7 +122,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               const currentContent = freshElement.innerHTML;
               
               // Store the appropriate original content based on current state
-              if (isTranslated && translatedContent) {
+              if (is_translated && translatedContent) {
                 // If we're highlighting translated content, store the translated content as "original"
                 // so that when highlighting is removed, we get back the translation, not the raw original
                 freshElement.setAttribute('data-original-content', translatedContent);
@@ -146,7 +146,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         console.log('Available elements:', contentRef.current.querySelector('*'));
       }
     }
-  }, [jpdbHighlighted]); // ONLY depend on jpdbHighlighted state changes
+  }, [jpdb_highlighted]); // ONLY depend on jpdb_highlighted state changes
 
   // Restore scroll position from progress
   useEffect(() => {
@@ -164,7 +164,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     const minSwipeDistance = 60;
     const minVelocity = 0.3;
 
-    const handlePointerDown = (e: PointerEvent) => {
+    const handle_pointer_down = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
       
       // Ignore swipes on interactive elements
@@ -181,7 +181,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       };
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
+    const handle_pointer_move = (e: PointerEvent) => {
       if (e.pointerType !== 'touch' || swipeRef.current.startX === null) return;
 
       const dx = e.clientX - swipeRef.current.startX;
@@ -199,7 +199,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       }
     };
 
-    const handlePointerUp = (e: PointerEvent) => {
+    const handle_pointer_up = (e: PointerEvent) => {
       if (e.pointerType !== 'touch' || swipeRef.current.startX === null || !swipeRef.current.isSwiping) {
         swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
         return;
@@ -222,14 +222,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
     };
 
-    contentEl.addEventListener('pointerdown', handlePointerDown);
-    contentEl.addEventListener('pointermove', handlePointerMove);
-    contentEl.addEventListener('pointerup', handlePointerUp);
+    contentEl.addEventListener('pointerdown', handle_pointer_down);
+    contentEl.addEventListener('pointermove', handle_pointer_move);
+    contentEl.addEventListener('pointerup', handle_pointer_up);
 
     return () => {
-      contentEl.removeEventListener('pointerdown', handlePointerDown);
-      contentEl.removeEventListener('pointermove', handlePointerMove);
-      contentEl.removeEventListener('pointerup', handlePointerUp);
+      contentEl.removeEventListener('pointerdown', handle_pointer_down);
+      contentEl.removeEventListener('pointermove', handle_pointer_move);
+      contentEl.removeEventListener('pointerup', handle_pointer_up);
     };
   }, [bookContent, currentChapter]);
 
@@ -239,7 +239,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
    */
   const translateCurrent = async (useCefr: boolean) => {
     if (!currentChapterContent) return;
-    setIsTranslating(true);
+    set_is_translating(true);
 
     // Always translate from the original chapter HTML
     const contentToTranslate = currentChapterContent;
@@ -269,14 +269,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               </div>
             </div>
           `);
-          setIsTranslated(true);
+          set_is_translated(true);
           console.log('Content translated and marked as translated');
         }
       }
     } catch (error) {
       console.error('Translation error:', error);
     } finally {
-      setIsTranslating(false);
+      set_is_translating(false);
     }
   };
 
@@ -285,16 +285,16 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Text-to-Speech functionality
   // -------------------------------
 
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [ttsRate, setTtsRate] = useState(settings?.ttsSpeed || 1);
+  const [is_speaking, set_is_speaking] = useState(false);
+  const [is_paused, set_is_paused] = useState(false);
+  const [tts_rate, set_tts_rate] = useState(settings?.ttsSpeed || 1);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const mediaSessionSupported = typeof navigator !== 'undefined' && 'mediaSession' in navigator;
 
-  const ttsRateRef = useRef(ttsRate);
+  const tts_rateRef = useRef(tts_rate);
   useEffect(() => {
-    ttsRateRef.current = ttsRate;
-  }, [ttsRate]);
+    tts_rateRef.current = tts_rate;
+  }, [tts_rate]);
 
   const textNodeMapRef = useRef<{ node: Text; start: number }[]>([]);
   const contentTextRef = useRef('');
@@ -415,7 +415,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       offset += words[i - 1].length;
       currentIndexRef.current = offset;
       highlightAtIndex(offset);
-    }, 300 / ttsRateRef.current);
+    }, 300 / tts_rateRef.current);
   };
 
   const stopFallbackHighlighting = () => {
@@ -477,7 +477,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       utter.voice = voice;
       utter.lang = voice.lang;
     }
-    utter.rate = ttsRateRef.current;
+    utter.rate = tts_rateRef.current;
     if (boundarySupportedRef.current) {
       utter.onboundary = (e) => {
         if (e.name === 'word') {
@@ -489,8 +489,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       startFallbackHighlighting(index);
     }
     utter.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
+      set_is_speaking(false);
+      set_is_paused(false);
       utteranceRef.current = null;
       clearHighlight();
       stopFallbackHighlighting();
@@ -498,13 +498,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     };
     speechSynthesis.speak(utter);
     utteranceRef.current = utter;
-    setIsSpeaking(true);
-    if (isPaused) setIsPaused(false);
+    set_is_speaking(true);
+    if (is_paused) set_is_paused(false);
     updatePlaybackState();
   };
 
   const speakCurrentChapter = async () => {
-    if (isSpeaking) return;
+    if (is_speaking) return;
     const el = contentRef.current;
     if (!el) return;
     const text = el.textContent || '';
@@ -521,10 +521,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   };
 
   const stopSpeaking = () => {
-    if (isSpeaking) {
+    if (is_speaking) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      setIsPaused(false);
+      set_is_speaking(false);
+      set_is_paused(false);
       utteranceRef.current = null;
       clearHighlight();
       stopFallbackHighlighting();
@@ -533,18 +533,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   };
 
   const pauseSpeaking = () => {
-    if (isSpeaking && !isPaused) {
+    if (is_speaking && !is_paused) {
       window.speechSynthesis.pause();
-      setIsPaused(true);
+      set_is_paused(true);
       stopFallbackHighlighting();
       updatePlaybackState();
     }
   };
 
   const resumeSpeaking = () => {
-    if (isSpeaking && isPaused) {
+    if (is_speaking && is_paused) {
       window.speechSynthesis.resume();
-      setIsPaused(false);
+      set_is_paused(false);
       if (!boundarySupportedRef.current) {
         startFallbackHighlighting(currentIndexRef.current);
       }
@@ -553,12 +553,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   };
 
   const adjustRate = (delta: number) => {
-    const newRate = Math.min(3, Math.max(0.5, ttsRate + delta));
-    setTtsRate(newRate);
-    if (isSpeaking && utteranceRef.current) {
+    const newRate = Math.min(3, Math.max(0.5, tts_rate + delta));
+    set_tts_rate(newRate);
+    if (is_speaking && utteranceRef.current) {
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      setIsPaused(false);
+      set_is_speaking(false);
+      set_is_paused(false);
       utteranceRef.current = null;
       speakFromIndex(currentIndexRef.current);
     }
@@ -566,8 +566,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   const updatePlaybackState = () => {
     if (!mediaSessionSupported) return;
-    navigator.mediaSession.playbackState = isSpeaking
-      ? isPaused
+    navigator.mediaSession.playbackState = is_speaking
+      ? is_paused
         ? 'paused'
         : 'playing'
       : 'none';
@@ -576,14 +576,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const setupMediaSession = () => {
     if (!mediaSessionSupported) return;
     navigator.mediaSession.setActionHandler('play', () => {
-      if (isPaused) {
+      if (is_paused) {
         resumeSpeaking();
-      } else if (!isSpeaking) {
+      } else if (!is_speaking) {
         speakCurrentChapter();
       }
     });
     navigator.mediaSession.setActionHandler('pause', () => {
-      if (isSpeaking && !isPaused) {
+      if (is_speaking && !is_paused) {
         pauseSpeaking();
       }
     });
@@ -591,23 +591,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   };
 
   const toggleTts = () => {
-    if (isSpeaking) {
+    if (is_speaking) {
       stopSpeaking();
-      setIsSpeaking(false);
+      set_is_speaking(false);
     } else {
       speakCurrentChapter();
-      setIsSpeaking(true);
+      set_is_speaking(true);
     }
   };
 
   // Function to handle closing the TTS modal without stopping playback
-  const handleCloseTtsModal = () => {
-    setIsSpeaking(false);
+  const handle_close_tts_modal = () => {
+    set_is_speaking(false);
   };
 
   useEffect(() => {
     if (settings) {
-      setTtsRate(settings.ttsSpeed);
+      set_tts_rate(settings.ttsSpeed);
     }
   }, [settings]);
 
@@ -621,7 +621,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   useEffect(() => {
     updatePlaybackState();
-  }, [isSpeaking, isPaused]);
+  }, [is_speaking, is_paused]);
 
   if (isLoading) {
     return (
@@ -634,7 +634,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const nextChapter = () => {
     if (bookContent && currentChapter < bookContent.totalChapters - 1) {
       console.log('Moving to next chapter, clearing any translated content');
-      setIsTranslated(false);
+      set_is_translated(false);
       setTranslatedContent(null);
       setCurrentChapter(currentChapter + 1);
     }
@@ -643,7 +643,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const prevChapter = () => {
     if (currentChapter > 0) {
       console.log('Moving to previous chapter, clearing any translated content');
-      setIsTranslated(false);
+      set_is_translated(false);
       setTranslatedContent(null);
       setCurrentChapter(currentChapter - 1);
     }
@@ -651,21 +651,21 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
 
   const clearTranslation = () => {
-    if (isTranslated) {
+    if (is_translated) {
       console.log('Clearing translation, returning to original content');
       setTranslatedContent(null);
-      setIsTranslated(false);
+      set_is_translated(false);
     }
   };
 
   const toggleJpdbHighlight = () => {
-    console.log('🎯 JPDB highlight button clicked, current state:', jpdbHighlighted);
+    console.log('🎯 JPDB highlight button clicked, current state:', jpdb_highlighted);
     console.log('🎯 Available functions:', { 
       initializeJpdb: typeof initializeJpdb, 
       highlightContent: typeof highlightContent 
     });
     
-    setJpdbHighlighted(prev => {
+    set_jpdb_highlighted(prev => {
       const newState = !prev;
       console.log('🎯 Setting JPDB highlight state to:', newState);
       return newState;
@@ -694,7 +694,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               Chapter {currentChapter + 1} of {bookContent?.totalChapters}
-              {isTranslated && (
+              {is_translated && (
                 <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
                   Translated
                 </span>
@@ -704,7 +704,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         </div>
         
         <button
-          onClick={() => setShowSettings(true)}
+          onClick={() => set_show_settings(true)}
           className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           aria-label="Settings"
         >
@@ -715,7 +715,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         </button>
         
         {/* Clear Translation Button - only show when translated */}
-        {isTranslated && (
+        {is_translated && (
           <button
             onClick={clearTranslation}
             className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ml-2"
@@ -738,7 +738,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           fontFamily: settings?.fontFamily || 'Inter',
         }}
       >
-        {isTranslated ? (
+        {is_translated ? (
           <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
             <div
               className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
@@ -783,17 +783,17 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         chapterTitles={bookContent?.chapterTitles || []}
         onSelectChapter={setCurrentChapter}
         onToggleTts={toggleTts}
-        ttsActive={isSpeaking}
+        ttsActive={is_speaking}
         onToggleHighlight={toggleJpdbHighlight}
-        jpdbHighlighted={jpdbHighlighted}
+        jpdb_highlighted={jpdb_highlighted}
       />
 
       <TtsControlModal
-        visible={isSpeaking}
-        paused={isPaused}
-        rate={ttsRate}
+        visible={is_speaking}
+        paused={is_paused}
+        rate={tts_rate}
         onPauseResume={() => {
-          if (isPaused) {
+          if (is_paused) {
             resumeSpeaking();
           } else {
             pauseSpeaking();
@@ -801,15 +801,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         }}
         onStop={stopSpeaking}
         onAdjustRate={adjustRate}
-        onClose={handleCloseTtsModal}
+        onClose={handle_close_tts_modal}
       />
 
       {/* Settings Modal */}
-      {showSettings && (
+      {show_settings && (
         <SettingsModal
-          onClose={() => setShowSettings(false)}
+          onClose={() => set_show_settings(false)}
           onTranslate={(useCefr) => translateCurrent(useCefr)}
-          translating={isTranslating}
+          translating={is_translating}
         />
       )}
     </div>

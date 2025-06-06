@@ -11,10 +11,10 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
   const [author, setAuthor] = useState("");
   const [language, setLanguage] = useState("English");
   const [description, setDescription] = useState("");
-  const [totalPages, setTotalPages] = useState("");
+  const [total_pages, set_total_pages] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [is_submitting, set_is_submitting] = useState(false);
+  const [is_processing, set_is_processing] = useState(false);
   
   // const addBookMutation = useMutation(api.books.addBook);
   // const generateUploadUrlMutation = useMutation(api.books.generateUploadUrl);
@@ -22,7 +22,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
   const addBook = async (data: any) => { console.log("Add book (TODO):", data); return "mockBookId"; }; // Placeholder
   const generateUploadUrl = async () => { console.log("Generate upload URL (TODO)"); return "/api/upload_book_file"; }; // Placeholder
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handle_file_change = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -54,7 +54,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
 
     // Process EPUB files to extract metadata
     if (selectedFile.name.toLowerCase().endsWith('.epub')) {
-      setIsProcessing(true);
+      set_is_processing(true);
       try {
         const arrayBuffer = await selectedFile.arrayBuffer();
         const epubProcessor = new EpubProcessorWrapper();
@@ -86,8 +86,8 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
             };
             setLanguage(languageMap[lang] || 'Other');
           }
-          if (epubProcessor.getTotalChapters() && !totalPages) {
-            setTotalPages(epubProcessor.getTotalChapters().toString());
+          if (epubProcessor.getTotalChapters() && !total_pages) {
+            set_total_pages(epubProcessor.getTotalChapters().toString());
           }
           toast.success("EPUB metadata extracted successfully!");
         }
@@ -95,19 +95,19 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
         console.error("Error processing EPUB:", error);
         toast.error("Could not extract EPUB metadata, but you can still upload the file");
       } finally {
-        setIsProcessing(false);
+        set_is_processing(false);
       }
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handle_submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !author.trim()) {
       toast.error("Title and author are required");
       return;
     }
 
-    setIsSubmitting(true);
+    set_is_submitting(true);
     try {
       let fileId = undefined;
       let serverAssignedBookId = undefined; // For Flask to assign an ID
@@ -139,7 +139,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
         author: author.trim(),
         language,
         description: description.trim() || undefined,
-        totalPages: totalPages ? parseInt(totalPages) : undefined,
+        total_pages: total_pages ? parseInt(total_pages) : undefined,
         filePath: fileId, // Send the file path/identifier to Flask
       });
       
@@ -149,7 +149,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
       toast.error("Failed to upload book");
       console.error(error);
     } finally {
-      setIsSubmitting(false);
+      set_is_submitting(false);
     }
   };
 
@@ -167,7 +167,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
             </button>
           </div>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handle_submit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Book File
@@ -175,14 +175,14 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               <input
                 type="file"
                 accept=".epub,.pdf,.mobi,.txt,application/epub+zip,application/pdf,application/x-mobipocket-ebook,text/plain"
-                onChange={handleFileChange}
+                onChange={handle_file_change}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                disabled={isProcessing}
+                disabled={is_processing}
               />
               <p className="text-xs text-gray-500 mt-1">
                 Supported formats: EPUB, PDF, MOBI, TXT
               </p>
-              {isProcessing && (
+              {is_processing && (
                 <p className="text-xs text-blue-600 mt-1 flex items-center">
                   <span className="animate-spin mr-2">⏳</span>
                   Processing EPUB metadata...
@@ -246,8 +246,8 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               </label>
               <input
                 type="number"
-                value={totalPages}
-                onChange={(e) => setTotalPages(e.target.value)}
+                value={total_pages}
+                onChange={(e) => set_total_pages(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="Number of pages or chapters"
                 min="1"
@@ -277,10 +277,10 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || isProcessing}
+                disabled={is_submitting || is_processing}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Uploading..." : isProcessing ? "Processing..." : "Upload Book"}
+                {is_submitting ? "Uploading..." : is_processing ? "Processing..." : "Upload Book"}
               </button>
             </div>
           </form>
