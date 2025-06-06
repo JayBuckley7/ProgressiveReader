@@ -27,7 +27,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [scrollPosition, setScrollPosition] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
 
@@ -586,18 +585,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   };
 
-  const toggleHighlight = async () => {
-    if (!contentRef.current) return;
-    if (!jpdbHighlighted) {
-      // await jpHighlighter.highlightContent(contentRef.current);
-    } else {
-      const saved = contentRef.current.getAttribute('data-original-content');
-      if (saved) {
-        contentRef.current.innerHTML = saved;
-      }
-    }
-    setJpdbHighlighted(!jpdbHighlighted);
-  };
 
   const clearTranslation = () => {
     if (isTranslated) {
@@ -715,8 +702,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onPrevChapter={prevChapter}
         onNextChapter={nextChapter}
         bookId={bookId}
-        jpdbHighlighted={jpdbHighlighted}
-        onToggleHighlight={toggleHighlight}
         chapterTitles={bookContent?.chapterTitles || []}
         onSelectChapter={setCurrentChapter}
         onToggleTts={toggleTts}
