@@ -77,5 +77,6 @@ substitutions:
   _ENVIRONMENT: 'prod'
 
 options:
-  logging: CLOUD_LOGGING_AND_GCS
-  machineType: 'E2_HIGHCPU_8' 
+  # pick one, or delete this line entirely to keep both targets
+  logging: GCS_ONLY          # or CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
