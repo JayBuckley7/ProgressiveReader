@@ -22,27 +22,27 @@ function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
 
 export function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
-  const [isLoading, setIsLoading] = useState(true);
+  const [is_loading, set_is_loading] = useState(true);
   const [books, setBooks] = useState<BookMetadata[]>([]);
-  const booksRef = useRef<BookMetadata[]>([]);
-  const isRefreshingRef = useRef(false);
-  const lastUserIdRef = useRef<string | null>(null);
+  const books_ref = useRef<BookMetadata[]>([]);
+  const is_refreshing_ref = useRef(false);
+  const last_user_id_ref = useRef<string | null>(null);
 
   useEffect(() => {
-    booksRef.current = books;
+    books_ref.current = books;
   }, [books]);
 
   // Memoize the silent refresh function to prevent recreation on every render
   const silentRefreshBooks = useCallback(async () => {
-    if (!clerkUser || isRefreshingRef.current) {
+    if (!clerkUser || is_refreshing_ref.current) {
       return;
     }
 
     try {
-      isRefreshingRef.current = true;
+      is_refreshing_ref.current = true;
       console.log('[useStorageService] Silently refreshing books...');
 
-      const previous = booksRef.current;
+      const previous = books_ref.current;
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
@@ -63,7 +63,7 @@ export function useStorageService() {
 
       if (areBooksEqual(userBooks, previous)) {
         setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        books_ref.current = mergedBooks;
       } else {
         const newIds = new Set(userBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
@@ -71,7 +71,7 @@ export function useStorageService() {
           storageService.cleanupBlobUrls(removed);
         }
         setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        books_ref.current = mergedBooks;
       }
 
       console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
@@ -79,21 +79,21 @@ export function useStorageService() {
       console.error('Error silently refreshing books:', error);
       // Don't show toast errors for silent refreshes to avoid interrupting user
     } finally {
-      isRefreshingRef.current = false;
+      is_refreshing_ref.current = false;
     }
   }, [clerkUser]);
 
   // Load user books function
   const loadUserBooks = useCallback(async () => {
-    if (!clerkUser || isRefreshingRef.current) {
+    if (!clerkUser || is_refreshing_ref.current) {
         setBooks([]);
         return;
     }
-    setIsLoading(true);
-    isRefreshingRef.current = true;
+    set_is_loading(true);
+    is_refreshing_ref.current = true;
     
     try {
-      const previous = booksRef.current;
+      const previous = books_ref.current;
 
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
@@ -118,7 +118,7 @@ export function useStorageService() {
 
       if (areBooksEqual(userBooks, previous)) {
         setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        books_ref.current = mergedBooks;
       } else {
         const newIds = new Set(userBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
@@ -126,7 +126,7 @@ export function useStorageService() {
           storageService.cleanupBlobUrls(removed);
         }
         setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        books_ref.current = mergedBooks;
       }
     } catch (error) {
       console.error('Error loading books:', error);
@@ -135,21 +135,21 @@ export function useStorageService() {
       toast.error('Failed to load your books');
       setBooks([]);
     } finally {
-      setIsLoading(false);
-      isRefreshingRef.current = false;
+      set_is_loading(false);
+      is_refreshing_ref.current = false;
     }
   }, [clerkUser]);
 
   useEffect(() => {
     // Use Clerk's authentication state instead of Firebase
     if (clerkLoaded) {
-      setIsLoading(false);
+      set_is_loading(false);
       if (clerkUser) {
         // Check if this is a different user to avoid redundant loads
         const currentUserId = clerkUser.id;
-        if (lastUserIdRef.current !== currentUserId) {
+        if (last_user_id_ref.current !== currentUserId) {
           console.log('User signed in with Clerk:', clerkUser);
-          lastUserIdRef.current = currentUserId;
+          last_user_id_ref.current = currentUserId;
           loadUserBooks();
         }
       } else {
@@ -162,7 +162,7 @@ export function useStorageService() {
         }
         
         setBooks([]);
-        lastUserIdRef.current = null;
+        last_user_id_ref.current = null;
         
         // SECURITY: Clear Google Drive tokens when no Clerk user
         // This prevents token leakage if user switches accounts
@@ -252,7 +252,7 @@ export function useStorageService() {
       toast.error('Please sign in to delete books');
       return;
     }
-    setIsLoading(true);
+    set_is_loading(true);
     try {
       await storageService.deleteBook(id);
       // Refresh books after delete
@@ -262,7 +262,7 @@ export function useStorageService() {
       console.error('Error deleting book:', error);
       toast.error('Failed to delete book');
     } finally {
-      setIsLoading(false);
+      set_is_loading(false);
     }
   };
 
@@ -321,7 +321,7 @@ export function useStorageService() {
     if (window.Clerk) {
       await window.Clerk.signOut();
       setBooks([]); // Clear books when signing out
-      lastUserIdRef.current = null;
+      last_user_id_ref.current = null;
 
       // SECURITY: Clear Google Drive tokens when Clerk user signs out
       // This prevents token leakage between different user sessions
@@ -355,7 +355,7 @@ export function useStorageService() {
       return;
     }
 
-    setIsLoading(true);
+    set_is_loading(true);
     try {
       const onCoverReady = (bookId: string, coverUrl: string) => {
         setBooks((current) =>
@@ -370,7 +370,7 @@ export function useStorageService() {
       console.error('Error syncing books:', error);
       toast.error('Failed to sync books');
     } finally {
-      setIsLoading(false);
+      set_is_loading(false);
     }
   };
 
@@ -409,7 +409,7 @@ export function useStorageService() {
 
   return {
     books,
-    isLoading,
+    is_loading,
     isAuthenticated: !!clerkUser && clerkLoaded,
     signIn,
     signOut,
