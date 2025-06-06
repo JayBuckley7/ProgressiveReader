@@ -43,11 +43,6 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Node dependencies
-        run: |
-          set -e                       # fail fast
-          npm ci
-
       - name: Set environment variables
         id: env
         run: |
