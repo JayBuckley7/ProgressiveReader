@@ -184,7 +184,7 @@ export function useStorageService() {
     let hasLoadedBooks = books.length > 0;
 
     // Listen for Google Drive connection status changes
-    const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
+    const unsubscribe = gDriveService.listen_to_signin_status((isSignedIn) => {
       console.log(`[useStorageService] Google Drive sign-in status changed: ${isSignedIn}`);
 
       if (isSignedIn && !hasLoadedBooks) {

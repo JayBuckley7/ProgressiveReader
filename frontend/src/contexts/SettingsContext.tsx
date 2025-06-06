@@ -103,7 +103,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
 
     attemptCloudLoad();
-    const unsubscribe = gDriveService.listenToSigninStatus(() => {
+    const unsubscribe = gDriveService.listen_to_signin_status(() => {
       attemptCloudLoad();
     });
 

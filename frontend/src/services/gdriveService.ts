@@ -47,11 +47,11 @@ class GDriveService {
   private gapi: any = null; // Reference to the gapi client
   private google: any = null; // Reference to the google.accounts.oauth2
   private tokenClient: any = null; // Google Identity Services token client
-  private accessToken: string | null = null;
+  private access_token: string | null = null;
   private accessTokenExpiry: number | null = null; // To store expiry time
   private userProfile: GoogleUser | null = null;
   private listeners: Array<(isSignedIn: boolean) => void> = [];
-  private appFolderId: string | null = null;
+  private app_folder_id: string | null = null;
 
   constructor() {
     this.loadGoogleScripts();
@@ -123,7 +123,7 @@ class GDriveService {
     if (!isClerkAuthenticated) {
       console.log('[GDriveService] No authenticated Clerk user found. Clearing any stored Google Drive tokens for security.');
       this.clearStoredTokens();
-      this.updateSigninStatus(false);
+      this.update_signin_status(false);
       return false;
     }
     
@@ -165,7 +165,7 @@ class GDriveService {
       }
     }
 
-    this.updateSigninStatus(false);
+    this.update_signin_status(false);
     return false;
   }
 
@@ -190,10 +190,10 @@ class GDriveService {
   private clearStoredTokens(): void {
     console.log('[GDriveService] Clearing all stored Google Drive tokens for security');
     localStorage.removeItem(GDRIVE_REFRESH_TOKEN_KEY);
-    this.accessToken = null;
+    this.access_token = null;
     this.accessTokenExpiry = null;
     this.userProfile = null;
-    this.appFolderId = null;
+    this.app_folder_id = null;
     
     // Clear GAPI client token if available
     if (this.gapi && this.gapi.client) {
@@ -274,7 +274,7 @@ class GDriveService {
   private async handleTokenResponse(tokenResponse: any, storeRefreshToken: boolean = true) {
     if (tokenResponse.error) {
       console.error('[GDriveService] Error in token response:', tokenResponse.error);
-      this.updateSigninStatus(false);
+      this.update_signin_status(false);
       return;
     }
     console.log('[GDriveService] Token response received:', tokenResponse);
@@ -286,10 +286,10 @@ class GDriveService {
       console.log('[GDriveService] ⚠️ No refresh token in response. This is normal for web apps using Token Model.');
     }
     
-    this.accessToken = tokenResponse.access_token;
+    this.access_token = tokenResponse.access_token;
     this.accessTokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
 
-    console.log(`[GDriveService] Access token set: ${this.accessToken ? 'YES' : 'NO'}`);
+    console.log(`[GDriveService] Access token set: ${this.access_token ? 'YES' : 'NO'}`);
     console.log(`[GDriveService] Token expiry set to: ${new Date(this.accessTokenExpiry).toISOString()}`);
     console.log(`[GDriveService] Expires in: ${tokenResponse.expires_in} seconds`);
 
@@ -299,7 +299,7 @@ class GDriveService {
     }
 
     if (this.gapi && this.gapi.client) {
-        this.gapi.client.setToken({ access_token: this.accessToken });
+        this.gapi.client.setToken({ access_token: this.access_token });
         console.log('[GDriveService] GAPI client token set.');
     } else {
         console.warn('[GDriveService] GAPI client not available to set token immediately.');
@@ -310,19 +310,19 @@ class GDriveService {
     // Potentially: localStorage.setItem('gdrive_token', JSON.stringify(tokenResponse));
 
     await this.fetchUserProfile();
-    this.updateSigninStatus(true);
+    this.update_signin_status(true);
     console.log('[GDriveService] Sign-in status updated to true.');
     await this.findOrCreateAppFolder(); // Ensure app folder exists after sign-in
   }
   
-  private updateSigninStatus(isSignedIn: boolean) {
+  private update_signin_status(isSignedIn: boolean) {
     this.listeners.forEach(callback => callback(isSignedIn));
   }
 
-  public listenToSigninStatus(callback: (isSignedIn: boolean) => void): () => void {
+  public listen_to_signin_status(callback: (isSignedIn: boolean) => void): () => void {
     this.listeners.push(callback);
     // Immediately invoke with current status if available, otherwise wait for init
-    if (this.accessToken !== null) {
+    if (this.access_token !== null) {
       callback(this.isSignedIn());
     }
     return () => {
@@ -369,9 +369,9 @@ class GDriveService {
   public signOut() {
     console.log('[GDriveService] Signing out and clearing all tokens...');
     
-    if (this.accessToken && this.google?.accounts?.oauth2) {
+    if (this.access_token && this.google?.accounts?.oauth2) {
       try {
-        this.google.accounts.oauth2.revoke(this.accessToken, () => {
+        this.google.accounts.oauth2.revoke(this.access_token, () => {
           console.log('[GDriveService] Access token revoked.');
         });
       } catch (error) {
@@ -380,7 +380,7 @@ class GDriveService {
     }
     
     this.clearStoredTokens();
-    this.updateSigninStatus(false);
+    this.update_signin_status(false);
     console.log('[GDriveService] User signed out and all tokens cleared.');
   }
 
@@ -394,8 +394,8 @@ class GDriveService {
   }
 
   public isSignedIn(): boolean {
-    // return !!this.accessToken;
-    const hasToken = !!this.accessToken;
+    // return !!this.access_token;
+    const hasToken = !!this.access_token;
     const hasExpiry = !!this.accessTokenExpiry;
     const isNotExpired = this.accessTokenExpiry ? Date.now() < this.accessTokenExpiry : false;
     
@@ -408,8 +408,8 @@ class GDriveService {
   }
 
   public async getAccessToken(): Promise<string | null> {
-    if (this.accessToken && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) { // 5 min buffer
-      return this.accessToken;
+    if (this.access_token && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) { // 5 min buffer
+      return this.access_token;
     }
 
     // Access token is missing, expired, or nearing expiry, try to refresh it
@@ -418,13 +418,13 @@ class GDriveService {
       console.log('[GDriveService] Access token expired or needs refresh. Attempting to use refresh token.');
       const tokenData = await this.refreshAccessToken(refreshToken);
       if (tokenData && tokenData.access_token) {
-        this.accessToken = tokenData.access_token;
+        this.access_token = tokenData.access_token;
         this.accessTokenExpiry = Date.now() + (tokenData.expires_in * 1000);
          if (this.gapi && this.gapi.client) {
-            this.gapi.client.setToken({ access_token: this.accessToken });
+            this.gapi.client.setToken({ access_token: this.access_token });
         }
-        this.updateSigninStatus(true); // Notify listeners that we are signed in again
-        return this.accessToken;
+        this.update_signin_status(true); // Notify listeners that we are signed in again
+        return this.access_token;
       } else {
         // Refresh failed, sign out
         console.log('[GDriveService] Refresh token failed. Signing out.');
@@ -443,17 +443,17 @@ class GDriveService {
     if (this.userProfile) return this.userProfile;
     const token = await this.getAccessToken(); // Ensures token is fresh
     if (!token) return null;
-    // if (!this.accessToken) return null; // old way
-    await this.fetchUserProfile(); // fetchUserProfile uses this.accessToken internally
+    // if (!this.access_token) return null; // old way
+    await this.fetchUserProfile(); // fetchUserProfile uses this.access_token internally
     return this.userProfile;
   }
 
   private async fetchUserProfile() {
-    // if (!this.accessToken) { // accessToken might be fetched by getAccessToken() just before this
+    // if (!this.access_token) { // accessToken might be fetched by getAccessToken() just before this
     //   console.warn('[GDriveService] Cannot fetch user profile, no access token.');
     //   return;
     // }
-    const currentToken = this.accessToken; // Use the token active at the start of this attempt
+    const currentToken = this.access_token; // Use the token active at the start of this attempt
     if (!currentToken) {
       console.warn('[GDriveService] Cannot fetch user profile, no access token after getAccessToken attempt.');
       return;
@@ -487,7 +487,7 @@ class GDriveService {
   }
 
   public async getAppFolderId(): Promise<string | null> {
-    if (this.appFolderId) return this.appFolderId;
+    if (this.app_folder_id) return this.app_folder_id;
     // if (!this.isSignedIn() || !this.gapi || !this.gapi.client || !this.gapi.client.drive) { //isSignedIn now checks expiry
     const token = await this.getAccessToken();
     if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
@@ -515,8 +515,8 @@ class GDriveService {
       const files = response.result.files;
       if (files && files.length > 0) {
         console.log(`[GDriveService] Found app folder '${FOLDER_NAME}' with ID: ${files[0].id}`);
-        this.appFolderId = files[0].id;
-        return this.appFolderId;
+        this.app_folder_id = files[0].id;
+        return this.app_folder_id;
       } else {
         // Create the folder if it doesn't exist
         console.log(`[GDriveService] App folder '${FOLDER_NAME}' not found, creating...`);
@@ -529,18 +529,18 @@ class GDriveService {
           fields: 'id',
         });
         console.log(`[GDriveService] Created app folder '${FOLDER_NAME}' with ID: ${createResponse.result.id}`);
-        this.appFolderId = createResponse.result.id;
-        return this.appFolderId;
+        this.app_folder_id = createResponse.result.id;
+        return this.app_folder_id;
       }
     } catch (error) {
       console.error(`[GDriveService] Error finding or creating app folder '${FOLDER_NAME}':`, error);
-      this.appFolderId = null;
+      this.app_folder_id = null;
       return null;
     }
   }
 
   // Placeholder for listFiles, downloadFile, uploadFile, deleteFile
-  // These will require this.appFolderId to be set, or passed as an argument.
+  // These will require this.app_folder_id to be set, or passed as an argument.
 
   public async listFiles(folderIdToUse?: string): Promise<any[]> {
     const currentAppFolderId = folderIdToUse || await this.getAppFolderId(); // getAppFolderId now checks token
@@ -968,7 +968,7 @@ class GDriveService {
       callback: this.handleTokenResponse.bind(this), // Bind context
       error_callback: (error: any) => {
         console.error('[GDriveService] GIS Token Client Error:', error);
-        this.updateSigninStatus(false);
+        this.update_signin_status(false);
       },
       // Try to request offline access (may not work with Token Model)
       hint: 'offline_access', // This might help request refresh tokens

@@ -73,7 +73,7 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
     // Initial check and subscription to sign-in status changes
     updateStateFromService(); // Check initial state
 
-    const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
+    const unsubscribe = gDriveService.listen_to_signin_status((isSignedIn) => {
       console.log('[useGoogleDrive] Sign-in status changed:', isSignedIn);
       setIsDriveConnected(isSignedIn);
       if (isSignedIn) {
