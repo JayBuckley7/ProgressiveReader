@@ -15,20 +15,20 @@ def auth_status():
     if g.user:
         # User is authenticated
         return jsonify({
-            'isAuthenticated': True,
+            'is_authenticated': True,
             'user': {
                 'uid': g.user.id,
                 'email': get_user_email(),
-                'firstName': g.user.first_name,
-                'lastName': g.user.last_name,
+                'first_name': g.user.first_name,
+                'last_name': g.user.last_name,
                 'username': g.user.username,
-                'imageUrl': g.user.image_url
+                'image_url': g.user.image_url
             }
         })
     else:
         # User is not authenticated
         return jsonify({
-            'isAuthenticated': False,
+            'is_authenticated': False,
             'user': None
         })
 
@@ -41,12 +41,12 @@ def get_session():
         return jsonify({'error': 'Not authenticated'}), 401
     
     return jsonify({
-        'userId': g.user.id,
+        'user_id': g.user.id,
         'email': get_user_email(),
-        'firstName': g.user.first_name,
-        'lastName': g.user.last_name,
+        'first_name': g.user.first_name,
+        'last_name': g.user.last_name,
         'username': g.user.username,
-        'createdAt': g.user.created_at.isoformat() if hasattr(g.user.created_at, 'isoformat') else str(g.user.created_at)
+        'created_at': g.user.created_at.isoformat() if hasattr(g.user.created_at, 'isoformat') else str(g.user.created_at)
     })
 
 
