@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { BookMetadata, storageService } from '../services/storageService';
 import { useStorageService } from './useStorageService';
-import { EpubProcessorWrapper } from '../lib/epubProcessor';
-import { TextProcessorWrapper } from '../lib/textProcessor';
+import { EpubProcessorWrapper } from '../lib/epubProcessor.ts';
+import { TextProcessorWrapper } from '../lib/textProcessor.ts';
 
 import type { ChapterTitle } from '../types';
 
