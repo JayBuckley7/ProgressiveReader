@@ -11,6 +11,9 @@ COPY src/ ./src/
 COPY tsconfig.json .
 COPY webpack.config.js .
 
+# Rebuild optional dependencies that may fail to install correctly
+RUN npm rebuild @rollup/rollup-linux-x64-gnu --force || true
+
 # Run the production build script
 RUN npm run build
 
