@@ -1,14 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { BookMetadata, storageService } from '../services/storageService';
 import { useStorageService } from './useStorageService';
-
-// Declare the processor classes that will be available on window after loading
-declare global {
-  interface Window {
-    EpubProcessorWrapper?: any;
-    TextProcessorWrapper?: any;
-  }
-}
+import { EpubProcessorWrapper } from '../lib/epubProcessor';
+import { TextProcessorWrapper } from '../lib/textProcessor';
 
 import type { ChapterTitle } from '../types';
 
@@ -45,50 +39,13 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     return metadata;
   }, [books, bookId]);
 
-  // Load a single script and return a promise
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      // Check if script is already loaded
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = src;
-      script.type = 'module';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-      document.head.appendChild(script);
-    });
-  };
-
-  // Load the book processors by injecting scripts
-  const loadProcessors = async () => {
-    try {
-      console.log('Loading processor scripts...');
-      
-      // Load the processor loader script which imports both classes and assigns them to window
-      await loadScript('/js/processorLoader.js');
-
-      // Wait a bit for the modules to initialize and assign to window
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Check if the classes are available on window
-      if (!window.EpubProcessorWrapper || !window.TextProcessorWrapper) {
-        throw new Error('Processor classes not found on window object after loading');
-      }
-
-      console.log('Processor scripts loaded successfully');
-      
-      return {
-        EpubProcessorWrapper: window.EpubProcessorWrapper,
-        TextProcessorWrapper: window.TextProcessorWrapper
-      };
-    } catch (error) {
-      console.error('Error loading processors:', error);
-      throw new Error(`Failed to load book processors: ${error.message}`);
-    }
+  // Get the book processors (now directly imported)
+  const getProcessors = () => {
+    console.log('Getting processor classes...');
+    return {
+      EpubProcessorWrapper,
+      TextProcessorWrapper
+    };
   };
 
   // Load and process the book
@@ -122,10 +79,10 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         console.log('Loading book content for:', bookMetadata.title, 'ID:', bookId);
         console.log('Book metadata:', bookMetadata);
 
-        // Load the processors
-        console.log('Step 1: Loading processors...');
-        const processors = await loadProcessors();
-        console.log('Step 1 complete: Processors loaded');
+        // Get the processors
+        console.log('Step 1: Getting processors...');
+        const processors = getProcessors();
+        console.log('Step 1 complete: Processors available');
 
         // Download book content from Google Drive
         console.log('Step 2: Downloading book from Google Drive...');
@@ -143,19 +100,25 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
         // Choose the appropriate processor based on file type
         console.log('Step 4: Creating processor for file type:', bookMetadata.fileType);
-        let processor;
+        let processor: EpubProcessorWrapper | TextProcessorWrapper;
+        let loaded: boolean;
+        
         if (bookMetadata.fileType === 'txt' || bookMetadata.fileType === 'docx' || bookMetadata.fileType === 'pdf') {
           processor = new processors.TextProcessorWrapper();
+          console.log('Step 4 complete: Created TextProcessorWrapper');
+          
+          // Load the book with the text processor
+          console.log('Step 5: Loading book with TextProcessorWrapper...');
+          loaded = await processor.loadBook(arrayBuffer, { fileType: bookMetadata.fileType });
         } else {
           // Default to EPUB
           processor = new processors.EpubProcessorWrapper();
+          console.log('Step 4 complete: Created EpubProcessorWrapper');
+          
+          // Load the book with the EPUB processor
+          console.log('Step 5: Loading book with EpubProcessorWrapper...');
+          loaded = await processor.loadBook(arrayBuffer);
         }
-
-        console.log('Step 4 complete: Created processor:', processor.constructor.name);
-
-        // Load the book with the processor
-        console.log('Step 5: Loading book with processor...');
-        const loaded = await processor.loadBook(arrayBuffer, { fileType: bookMetadata.fileType });
         if (!loaded) {
           throw new Error(`Failed to load book using ${processor.constructor.name}`);
         }

@@ -13,6 +13,56 @@ interface BookReaderProps {
   onBack: () => void;
 }
 
+// Helper functions for translation storage
+const getTranslationStorageKey = (bookId: string, chapter: number) => {
+  return `translation_${bookId}_${chapter}`;
+};
+
+const saveTranslationToStorage = (bookId: string, chapter: number, translatedContent: string, useCefr: boolean, settings?: any) => {
+  const key = getTranslationStorageKey(bookId, chapter);
+  const translationData = {
+    content: translatedContent,
+    timestamp: Date.now(),
+    useCefr,
+    targetLanguage: settings?.targetLanguage || "English",
+    cefrLevel: localStorage.getItem("cefrLevel") || "3"
+  };
+  localStorage.setItem(key, JSON.stringify(translationData));
+  console.log('Translation saved to storage:', key, 'with settings:', { 
+    targetLanguage: translationData.targetLanguage, 
+    cefrLevel: translationData.cefrLevel,
+    useCefr 
+  });
+};
+
+const loadTranslationFromStorage = (bookId: string, chapter: number) => {
+  const key = getTranslationStorageKey(bookId, chapter);
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    try {
+      const translationData = JSON.parse(stored);
+      console.log('Translation loaded from storage:', key);
+      return translationData;
+    } catch (error) {
+      console.error('Error parsing stored translation:', error);
+      localStorage.removeItem(key); // Remove corrupted data
+    }
+  }
+  return null;
+};
+
+const clearAllTranslationsForBook = (bookId: string) => {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(`translation_${bookId}_`)) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  console.log(`Cleared ${keysToRemove.length} stored translations for book ${bookId}`);
+};
+
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   // Use the new useBookContent hook instead of placeholder data
   const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, currentChapter);
@@ -30,6 +80,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
+  const [isAutoloaded, setIsAutoloaded] = useState(false); // Track if translation was autoloaded
 
   // Swipe control state
   const swipeRef = useRef({
@@ -54,14 +105,52 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return () => clearTimeout(updateProgressDebounced);
   }, [bookId, currentChapter, scrollPosition, /* updateProgress */]); // Removed updateProgress from dependencies for now
 
-  // Clear translated content when chapter changes
+  // Clear translated content when chapter changes, but check for autoload first
   useEffect(() => {
     if (isTranslated) {
       console.log('Chapter changed - clearing translated content');
       setIsTranslated(false);
       setTranslatedContent(null);
+      setIsAutoloaded(false);
     }
   }, [currentChapter]);
+
+  // Autoload translations when chapter changes if setting is enabled (one-time per chapter load)
+  useEffect(() => {
+    const autoloadEnabled = localStorage.getItem("autoloadTranslations") === "true";
+    
+    // Only autoload on initial chapter load, not when user has already interacted with translations
+    if (autoloadEnabled && currentChapterContent && !isTranslating && !isTranslated) {
+      console.log('Checking for stored translation for autoload...');
+      const storedTranslation = loadTranslationFromStorage(bookId, currentChapter);
+      
+      if (storedTranslation) {
+        // Check if stored translation is still valid (same settings)
+        const currentTargetLanguage = settings?.targetLanguage || "English";
+        const currentCefrLevel = localStorage.getItem("cefrLevel") || "3";
+        
+        const isValid = storedTranslation.targetLanguage === currentTargetLanguage &&
+                       storedTranslation.cefrLevel === currentCefrLevel;
+        
+        console.log('Stored translation validation:', {
+          stored: { targetLanguage: storedTranslation.targetLanguage, cefrLevel: storedTranslation.cefrLevel },
+          current: { targetLanguage: currentTargetLanguage, cefrLevel: currentCefrLevel },
+          isValid
+        });
+        
+        if (isValid) {
+          console.log('✅ Autoloading stored translation for chapter', currentChapter);
+          setTranslatedContent(storedTranslation.content);
+          setIsTranslated(true);
+          setIsAutoloaded(true);
+        } else {
+          console.log('❌ Stored translation is outdated, removing from storage');
+          const key = getTranslationStorageKey(bookId, currentChapter);
+          localStorage.removeItem(key);
+        }
+      }
+    }
+  }, [currentChapter, currentChapterContent, bookId, settings?.targetLanguage]);
 
   // Handle scroll tracking
   useEffect(() => {
@@ -262,14 +351,20 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       if (resp.ok) {
         const data = await resp.json();
         if (data.translated_text) {
-          setTranslatedContent(`
+          const wrappedTranslation = `
             <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
               <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
                 ${data.translated_text}
               </div>
             </div>
-          `);
+          `;
+          setTranslatedContent(wrappedTranslation);
           setIsTranslated(true);
+          setIsAutoloaded(false); // Manual translation, not autoloaded
+          
+          // Save translation to storage for autoload
+          saveTranslationToStorage(bookId, currentChapter, wrappedTranslation, useCefr, settings);
+          
           console.log('Content translated and marked as translated');
         }
       }
@@ -636,6 +731,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       console.log('Moving to next chapter, clearing any translated content');
       setIsTranslated(false);
       setTranslatedContent(null);
+      setIsAutoloaded(false);
       setCurrentChapter(currentChapter + 1);
     }
   };
@@ -645,6 +741,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       console.log('Moving to previous chapter, clearing any translated content');
       setIsTranslated(false);
       setTranslatedContent(null);
+      setIsAutoloaded(false);
       setCurrentChapter(currentChapter - 1);
     }
   };
@@ -655,6 +752,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       console.log('Clearing translation, returning to original content');
       setTranslatedContent(null);
       setIsTranslated(false);
+      setIsAutoloaded(false);
     }
   };
 
@@ -694,11 +792,52 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               Chapter {currentChapter + 1} of {bookContent?.totalChapters}
-              {isTranslated && (
-                <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
-                  Translated
-                </span>
-              )}
+              <span className="ml-2 space-x-2">
+                {isTranslated && (
+                  <>
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      isAutoloaded 
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                    }`}>
+                      {isAutoloaded ? 'Auto-loaded' : 'Translated'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        console.log('Switching to native content');
+                        setIsTranslated(false);
+                      }}
+                      className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-xs cursor-pointer transition-colors"
+                      title="Switch to original text"
+                    >
+                      Native
+                    </button>
+                  </>
+                )}
+                {!isTranslated && (() => {
+                  const storedTranslation = loadTranslationFromStorage(bookId, currentChapter);
+                  const currentTargetLanguage = settings?.targetLanguage || "English";
+                  const currentCefrLevel = localStorage.getItem("cefrLevel") || "3";
+                  const hasValidTranslation = storedTranslation && 
+                    storedTranslation.targetLanguage === currentTargetLanguage &&
+                    storedTranslation.cefrLevel === currentCefrLevel;
+                  
+                  return hasValidTranslation ? (
+                    <button
+                      onClick={() => {
+                        console.log('Switching back to stored translation');
+                        setTranslatedContent(storedTranslation.content);
+                        setIsTranslated(true);
+                        setIsAutoloaded(true);
+                      }}
+                      className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded text-xs cursor-pointer transition-colors"
+                      title="Switch back to translation"
+                    >
+                      Translated
+                    </button>
+                  ) : null;
+                })()}
+              </span>
             </p>
           </div>
         </div>
