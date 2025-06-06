@@ -379,27 +379,27 @@ def get_jpdb_data():
                     'rid': v_entry[VOCAB_FIELDS.index('rid')],
                     'spelling': v_entry[VOCAB_FIELDS.index('spelling')],
                     'reading': v_entry[VOCAB_FIELDS.index('reading')],
-                    'frequencyRank': v_entry[VOCAB_FIELDS.index('frequency_rank')],
-                    'partOfSpeech': v_entry[VOCAB_FIELDS.index('part_of_speech')],
-                    'meaningsChunks': v_entry[VOCAB_FIELDS.index('meanings_chunks')],
-                    'meaningsPartOfSpeech': v_entry[VOCAB_FIELDS.index('meanings_part_of_speech')],
+                    'frequency_rank': v_entry[VOCAB_FIELDS.index('frequency_rank')],
+                    'part_of_speech': v_entry[VOCAB_FIELDS.index('part_of_speech')],
+                    'meanings_chunks': v_entry[VOCAB_FIELDS.index('meanings_chunks')],
+                    'meanings_part_of_speech': v_entry[VOCAB_FIELDS.index('meanings_part_of_speech')],
                     'state': v_entry[VOCAB_FIELDS.index('card_state')] or ['not-in-deck'],
-                    'pitchAccent': v_entry[VOCAB_FIELDS.index('pitch_accent')] or []
+                    'pitch_accent': v_entry[VOCAB_FIELDS.index('pitch_accent')] or []
                 }
                 
                 # Construct meanings list
                 entry_data['meanings'] = []
-                if entry_data['meaningsChunks'] and entry_data['meaningsPartOfSpeech']:
-                    for i, glosses in enumerate(entry_data['meaningsChunks']):
-                        if i < len(entry_data['meaningsPartOfSpeech']):
+                if entry_data['meanings_chunks'] and entry_data['meanings_part_of_speech']:
+                    for i, glosses in enumerate(entry_data['meanings_chunks']):
+                        if i < len(entry_data['meanings_part_of_speech']):
                             entry_data['meanings'].append({
                                 'glosses': glosses,
-                                'partOfSpeech': entry_data['meaningsPartOfSpeech'][i]
+                                'part_of_speech': entry_data['meanings_part_of_speech'][i]
                             })
-                
+
                 # Remove intermediate keys
-                del entry_data['meaningsChunks']
-                del entry_data['meaningsPartOfSpeech']
+                del entry_data['meanings_chunks']
+                del entry_data['meanings_part_of_speech']
                 
                 vocab_map.append(entry_data)
 
@@ -592,7 +592,7 @@ def update_jpdb_word_state():
     # Return a mock new state for the word
     new_state = ['known'] if state else ['new']
     
-    return jsonify({"success": True, "newState": new_state})
+    return jsonify({"success": True, "new_state": new_state})
 
 @api_bp.route('/review_jpdb_card', methods=['POST'])
 def review_jpdb_card():
@@ -635,4 +635,4 @@ def review_jpdb_card():
     else:
         new_state = ['learning']
     
-    return jsonify({"success": True, "newState": new_state})
+    return jsonify({"success": True, "new_state": new_state})
