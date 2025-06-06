@@ -3,63 +3,63 @@ import { useGoogleDrive } from '../hooks/useGoogleDrive';
 
 export const GoogleDriveConnectButton: React.FC = () => {
   const {
-    isDriveConnected,
-    driveUser,
-    isLoading,
+    is_drive_connected,
+    drive_user,
+    is_loading,
     error,
-    connectToDrive,
-    disconnectFromDrive,
-    fetchDriveFiles,
-    getAppFolderId
+    connect_to_drive,
+    disconnect_from_drive,
+    fetch_drive_files,
+    get_app_folder_id
   } = useGoogleDrive();
 
   const handleConnect = () => {
-    // You can prompt for 'select_account' or 'consent' if needed, e.g., connectToDrive('select_account');
-    connectToDrive();
+    // You can prompt for 'select_account' or 'consent' if needed, e.g., connect_to_drive('select_account');
+    connect_to_drive();
   };
 
   const handleDisconnect = () => {
-    disconnectFromDrive();
+    disconnect_from_drive();
   };
 
   const handleFetchFiles = async () => {
-    const folderId = await getAppFolderId();
+    const folderId = await get_app_folder_id();
     if (folderId) {
-      fetchDriveFiles(folderId);
+      fetch_drive_files(folderId);
     }
   };
 
-  if (isLoading && !isDriveConnected && !driveUser) {
+  if (is_loading && !is_drive_connected && !drive_user) {
     return <button disabled>Connecting to Google Drive...</button>;
   }
 
   return (
     <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
-      {isDriveConnected && driveUser ? (
+      {is_drive_connected && drive_user ? (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-            {driveUser.picture && (
+            {drive_user.picture && (
               <img
-                src={driveUser.picture}
-                alt={driveUser.name || 'User'}
+                src={drive_user.picture}
+                alt={drive_user.name || 'User'}
                 style={{ width: '40px', height: '40px', borderRadius: '50%', marginRight: '10px' }}
               />
             )}
             <div>
-              <p style={{ margin: 0 }}>Connected as: <strong>{driveUser.name}</strong></p>
-              <p style={{ margin: 0, fontSize: '0.8em' }}>({driveUser.email})</p>
+              <p style={{ margin: 0 }}>Connected as: <strong>{drive_user.name}</strong></p>
+              <p style={{ margin: 0, fontSize: '0.8em' }}>({drive_user.email})</p>
             </div>
           </div>
           <button onClick={handleDisconnect} style={{ marginRight: '10px' }}>
             Disconnect from Google Drive
           </button>
-          <button onClick={handleFetchFiles} disabled={isLoading} >
-            {isLoading ? 'Fetching Files...' : 'Fetch My Drive Files'}
+          <button onClick={handleFetchFiles} disabled={is_loading} >
+            {is_loading ? 'Fetching Files...' : 'Fetch My Drive Files'}
           </button>
         </div>
       ) : (
-        <button onClick={handleConnect} disabled={isLoading}>
-          {isLoading ? 'Connecting...' : 'Connect to Google Drive'}
+        <button onClick={handleConnect} disabled={is_loading}>
+          {is_loading ? 'Connecting...' : 'Connect to Google Drive'}
         </button>
       )}
       {error && (

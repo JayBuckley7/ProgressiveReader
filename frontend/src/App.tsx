@@ -39,11 +39,11 @@ function AppContent() {
 
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, connectToDrive, isLoading: isDriveLoading } = useGoogleDrive();
+  const { is_drive_connected, connect_to_drive, is_loading: is_drive_loading } = useGoogleDrive();
 
   useEffect(() => {
     // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
-    if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
+    if (isClerkLoaded && isClerkSignedIn && clerkUser && !is_drive_loading) {
       // Check if one of the Clerk external accounts is Google
       // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
       // Inspect clerkUser.externalAccounts[0].provider to be sure.
@@ -51,22 +51,22 @@ function AppContent() {
         (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
       );
 
-      if (wasGoogleClerkLogin && !isDriveConnected) {
+      if (wasGoogleClerkLogin && !is_drive_connected) {
         console.log(
           "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Prompting for Drive auth..."
         );
         // Automatically initiate the Google Drive connection flow.
         // Using 'consent' ensures the user sees the Drive scopes being requested.
-        connectToDrive('consent');
+        connect_to_drive('consent');
       }
     }
   }, [
     isClerkLoaded,
     isClerkSignedIn,
     clerkUser,
-    isDriveConnected,
-    connectToDrive,
-    isDriveLoading,
+    is_drive_connected,
+    connect_to_drive,
+    is_drive_loading,
   ]);
 
   return (

@@ -13,7 +13,7 @@ interface BookLibraryProps {
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
   const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
-  const { isDriveConnected } = useGoogleDrive();
+  const { is_drive_connected } = useGoogleDrive();
 
   // All book handling is delegated to the storage service.
 
@@ -191,7 +191,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             Sign In
           </button>
         </div>
-      ) : !isDriveConnected ? (
+      ) : !is_drive_connected ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📤</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
