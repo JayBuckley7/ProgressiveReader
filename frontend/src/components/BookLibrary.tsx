@@ -17,10 +17,10 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
   // All book handling is delegated to the storage service.
 
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [is_uploading, set_is_uploading] = useState(false);
+  const [upload_progress, set_upload_progress] = useState(0);
+  const [show_settings, set_show_settings] = useState(false);
+  const file_input_ref = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -34,8 +34,8 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       return;
     }
 
-    setIsUploading(true);
-    setUploadProgress(10);
+    set_is_uploading(true);
+    set_upload_progress(10);
 
     try {
       // Use the storage service's integrated upload function
@@ -52,12 +52,12 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
         // All metadata handling is performed in the storage service. Any future
         // chapter processing will hook into that layer.
 
-        setUploadProgress(100);
+        set_upload_progress(100);
         toast.success(`"${uploadedBookMetadata.title}" uploaded successfully!`);
         
         // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+        if (file_input_ref.current) {
+          file_input_ref.current.value = '';
         }
       } else {
           throw new Error("Upload did not return metadata.");
@@ -67,8 +67,8 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       console.error("Upload error:", error);
       toast.error("Failed to upload book");
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
+      set_is_uploading(false);
+      set_upload_progress(0);
     }
   };
 
@@ -117,22 +117,22 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             </button>
           )}
           <input
-            ref={fileInputRef}
+            ref={file_input_ref}
             type="file"
             accept=".epub,.txt,.docx,.pdf"
             onChange={handleFileUpload}
             className="hidden"
-            disabled={isUploading}
+            disabled={is_uploading}
           />
           <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
+            onClick={() => file_input_ref.current?.click()}
+            disabled={is_uploading}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {isUploading ? (
+            {is_uploading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Processing... {uploadProgress}%
+                Processing... {upload_progress}%
               </>
             ) : (
               <>
@@ -144,7 +144,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             )}
           </button>
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={() => set_show_settings(true)}
             className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,12 +155,12 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
         </div>
       </div>
 
-      {isUploading && (
+      {is_uploading && (
         <div className="mb-6">
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
+              style={{ width: `${upload_progress}%` }}
             />
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
@@ -217,7 +217,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             Supported formats: EPUB, TXT, DOCX, PDF
           </p>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => file_input_ref.current?.click()}
             className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover"
           >
             Upload Your First Book
@@ -237,9 +237,9 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
         </div>
       )}
 
-      {showSettings && (
+      {show_settings && (
         <SettingsModal 
-          onClose={() => setShowSettings(false)} 
+          onClose={() => set_show_settings(false)} 
           onTranslate={() => {}} 
           translating={false} 
         />
