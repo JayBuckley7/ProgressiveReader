@@ -452,24 +452,24 @@ export class Popup {
         )}`;
 
         // Group meanings by part of speech
-        const groupedMeanings: { partOfSpeech: string[]; glosses: string[][]; startIndex: number }[] = [];
+        const groupedMeanings: { part_of_speech: string[]; glosses: string[][]; startIndex: number }[] = [];
         let lastPOS: string[] = [];
         for (const [index, meaning] of card.meanings.entries()) {
             if (
                 // Same part of speech as previous meaning?
-                meaning.partOfSpeech.length == lastPOS.length &&
-                meaning.partOfSpeech.every((p, i) => p === lastPOS[i])
+                meaning.part_of_speech.length == lastPOS.length &&
+                meaning.part_of_speech.every((p, i) => p === lastPOS[i])
             ) {
                 // Append to previous meaning group
                 groupedMeanings[groupedMeanings.length - 1].glosses.push(meaning.glosses);
             } else {
                 // Create a new meaning group
                 groupedMeanings.push({
-                    partOfSpeech: meaning.partOfSpeech,
+                    part_of_speech: meaning.part_of_speech,
                     glosses: [meaning.glosses],
                     startIndex: index,
                 });
-                lastPOS = meaning.partOfSpeech;
+                lastPOS = meaning.part_of_speech;
             }
         }
 
@@ -486,12 +486,12 @@ export class Popup {
                 </div>
             </div>,
             <div class='metainfo'>
-                <span class='freq'>{card.frequencyRank ? `Top ${card.frequencyRank}` : ''}</span>
-                {card.pitchAccent.map(pitch => renderPitch(card.reading, pitch))}
+                <span class='freq'>{card.frequency_rank ? `Top ${card.frequency_rank}` : ''}</span>
+                {card.pitch_accent.map(pitch => renderPitch(card.reading, pitch))}
             </div>,
             ...groupedMeanings.flatMap(meanings => [
                 <h2>
-                    {meanings.partOfSpeech
+                    {meanings.part_of_speech
                         .map(pos => PARTS_OF_SPEECH[pos] ?? `(Unknown part of speech #${pos}, please report)`)
                         .filter(x => x.length > 0)
                         .join(', ')}

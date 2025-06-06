@@ -55,13 +55,13 @@ export type Card = {
     state: CardState;
     spelling: string;
     reading: string;
-    frequencyRank: number | null;
-    pitchAccent: string[];
-    meanings: { glosses: string[]; partOfSpeech: string[] }[];
+    frequency_rank: number | null;
+    pitch_accent: string[];
+    meanings: { glosses: string[]; part_of_speech: string[] }[];
 };
 
 export interface Meaning {
-    partOfSpeech: string[];
+    part_of_speech: string[];
     glosses: string[];
 }
 
