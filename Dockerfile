@@ -5,6 +5,10 @@ FROM node:20 AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
+
+# Ensure the problematic package is rebuilt correctly
+RUN npm rebuild @rollup/rollup-linux-x64-gnu --force || true
+
 COPY frontend .
 RUN npm run build
 
