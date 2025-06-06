@@ -17,6 +17,8 @@ let streamingIndicator = null;
 
 let translationBuffer = null;
 let lastRenderedLength = 0;
+let translationActive = false;
+let contentObserver = null;
 
 function _selectDOMElements() {
     translateButton = document.getElementById('translate-btn');
@@ -127,6 +129,36 @@ function createBufferElement() {
     return translationBuffer;
 }
 
+function startContentObserver() {
+    if (!contentArea || contentObserver) return;
+
+    contentObserver = new MutationObserver(() => {
+        if (!translationActive) return;
+
+        const loadFunc = window.storageManager ?
+            window.storageManager.loadTranslationFromLocal : loadTranslationFromLocal;
+        const cached = loadFunc(currentBookIdForTranslation, currentPageIndexForTranslation);
+        if (!cached) return;
+
+        const normalized = ensureChapterWrapper(cached);
+        if (contentArea.innerHTML.trim() !== normalized.trim()) {
+            contentObserver.disconnect();
+            stripExistingWrapper(contentArea);
+            contentArea.innerHTML = normalized;
+            if (normalized !== cached && window.storageManager) {
+                window.storageManager.saveTranslationToLocal(
+                    currentBookIdForTranslation,
+                    currentPageIndexForTranslation,
+                    normalized
+                );
+            }
+            contentObserver.observe(contentArea, { childList: true, subtree: true });
+        }
+    });
+
+    contentObserver.observe(contentArea, { childList: true, subtree: true });
+}
+
 /**
  * Ensure the translated HTML is wrapped in a `.chapter-content` element.
  * Older cached translations may lack this wrapper, which breaks features
@@ -183,6 +215,7 @@ async function callTranslateAPI(payload) {
         alert("Error: Content area not found.");
         return;
     }
+    translationActive = true;
     const buttonElement = payload.cefr_level ? translateCefrButton : translateButton;
     if (!buttonElement) {
         console.error("Translate button not found for this action.");
@@ -506,6 +539,7 @@ function _attachEventListeners() {
 
     if (revertBtn) {
         revertBtn.addEventListener('click', () => {
+            translationActive = false;
             if (originalPageContent) {
                  contentArea.innerHTML = originalPageContent;
                  // originalPageContent should remain as the actual original before any translation
@@ -540,6 +574,7 @@ function initTranslationManager(config) {
 
     _selectDOMElements();
     _attachEventListeners();
+    startContentObserver();
 
     // Initial setup for autoloading translations
     let autoloadInitialized = false;
@@ -584,29 +619,43 @@ function initTranslationManager(config) {
 
     // Listen for ebookContentLoaded event to update content references and handle autoload
     document.addEventListener('ebookContentLoaded', (event) => {
-//         console.log("TranslationManager: Detected new content loaded", event.detail);
-        // Update the original content references when new content is loaded
+        const newIndex = event.detail.chapterIndex;
+        const navigating = newIndex !== currentPageIndexForTranslation;
+
+        if (navigating) {
+            translationActive = false;
+        }
+
         if (contentArea) {
-//             console.log("TranslationManager: Updating content references from:", 
-//                         trueOriginalServerContent.substring(0, 50) + "...",
-//                         "to current content:", 
-//                         contentArea.innerHTML.substring(0, 50) + "...");
-            
-            // Store the new content as the original content
-            trueOriginalServerContent = contentArea.innerHTML;
-            originalPageContent = trueOriginalServerContent;
-            
-            // Update the current page index
-            currentPageIndexForTranslation = event.detail.chapterIndex;
-//             console.log("TranslationManager: Updated page index to:", currentPageIndexForTranslation);
-            
-            // Try autoloading translations after content is loaded
-            initializeAutoload();
-            
-            // Update buttons visibility based on new content
+            if (!translationActive) {
+                trueOriginalServerContent = contentArea.innerHTML;
+                originalPageContent = trueOriginalServerContent;
+            }
+
+            currentPageIndexForTranslation = newIndex;
+
+            if (translationActive) {
+                const loadFunc = window.storageManager ? window.storageManager.loadTranslationFromLocal : loadTranslationFromLocal;
+                const cached = loadFunc(currentBookIdForTranslation, currentPageIndexForTranslation);
+                if (cached) {
+                    const normalized = ensureChapterWrapper(cached);
+                    stripExistingWrapper(contentArea);
+                    contentArea.innerHTML = normalized;
+                    if (normalized !== cached && window.storageManager) {
+                        window.storageManager.saveTranslationToLocal(
+                            currentBookIdForTranslation,
+                            currentPageIndexForTranslation,
+                            normalized
+                        );
+                    }
+                }
+            } else {
+                initializeAutoload();
+            }
+
             updateDisplayButtons();
         } else {
-            console.error("TranslationManager: Content area not available when handling ebookContentLoaded");
+            console.error('TranslationManager: Content area not available when handling ebookContentLoaded');
         }
     });
 
