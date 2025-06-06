@@ -2,7 +2,7 @@
 
 This module provides a minimal stub illustrating how a Cloud Run job could
 fetch an EPUB file from Google Drive, extract metadata, and store that
-metadata in Redis. It purposely discards file content after processing to
+metadata in Firestore. It purposely discards file content after processing to
 avoid hosting any user files.
 """
 

@@ -56,9 +56,9 @@ The application now includes an enhanced JP Highlighter module that provides imp
 
 ## Client Metadata Flow
 
-1. Google Cloud Run indexer extracts metadata from Drive files and stores it in Redis.
+1. Google Cloud Run indexer extracts metadata from Drive files and stores it in the database.
 2. The web client calls `/metadata/{user}/books` and merges results with IndexedDB via `metadataSync.js`.
-3. IndexedDB remains the offline source of truth while Redis provides cross-device updates when online.
+3. IndexedDB remains the offline source of truth while the server provides cross-device updates when online.
 4. The bookshelf UI reads from IndexedDB to render books.
 
 ## Getting Started
@@ -104,7 +104,7 @@ The application now includes an enhanced JP Highlighter module that provides imp
         cp .env.template .env
         ```
     *   Open the newly created `.env` file in a text editor.
-    *   Modify the placeholder values, especially `REDIS_URL`, to match your local setup or cloud services. For example, if you have a Google Cloud Redis instance, set `REDIS_URL` to its connection string (e.g., `redis://<your-redis-ip>:<port>/0`).
+    *   Modify the placeholder values to match your local setup or cloud services.
     *   The `.env` file is included in `.gitignore` and should **not** be committed to version control.
 
 5.  **Install development dependencies (optional):**

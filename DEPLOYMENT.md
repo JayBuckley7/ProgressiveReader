@@ -43,7 +43,7 @@ The application requires server-side secrets to be stored in Google Cloud Secret
    printf "your-strong-secret-key" | gcloud secrets create secret-key --data-file=-
    ```
 
-**Note**: OPENAI_API_KEY, JPDB_API_KEY, and REDIS_URL are user-specific settings that should be configured by individual users within the application interface, not as server-wide secrets.
+**Note**: OPENAI_API_KEY and JPDB_API_KEY are user-specific settings that should be configured by individual users within the application interface, not as server-wide secrets.
 
 ## Deployment Methods
 
@@ -108,7 +108,6 @@ The `cloudbuild.yaml` configuration performs these steps:
 ### User Settings (configured per-user in the app):
 - `OPENAI_API_KEY`: OpenAI API key for AI features (user-specific)
 - `JPDB_API_KEY`: Japanese language learning API key (user-specific)
-- `REDIS_URL`: Redis connection URL (user-specific)
 
 ## Troubleshooting
 
