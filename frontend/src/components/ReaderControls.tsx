@@ -30,7 +30,7 @@ export function ReaderControls({
   ttsActive,
   jpdbHighlighted,
 }: ReaderControlsProps) {
-  const [showDrawer, setShowDrawer] = useState(false);
+  const [show_drawer, set_show_drawer] = useState(false);
 
   const { data: bookmarks = [] } =
     api.reading.getBookmarks.useQuery({ bookId });
@@ -129,7 +129,7 @@ export function ReaderControls({
 
           {/* table-of-contents / bookmarks drawer */}
           <button
-            onClick={() => setShowDrawer(true)}
+            onClick={() => set_show_drawer(true)}
             className={bigBtn}
             aria-label="Table of contents and bookmarks"
           >
@@ -141,10 +141,10 @@ export function ReaderControls({
       </div>
 
       {/* drawer */}
-      {showDrawer && (
+      {show_drawer && (
         <ContentsDrawer
-          visible={showDrawer}
-          onClose={() => setShowDrawer(false)}
+          visible={show_drawer}
+          onClose={() => set_show_drawer(false)}
           chapterTitles={chapterTitles}
           currentChapter={currentChapter}
           onSelectChapter={onSelectChapter}
