@@ -108,6 +108,12 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       return;
     }
 
+    // Skip if already loading this book to prevent duplicate loading
+    if (isLoading && loadedBookIdRef.current === bookId) {
+      console.log('useBookContent: Book is already loading, skipping duplicate request for:', bookId);
+      return;
+    }
+
     const loadBook = async () => {
       try {
         setIsLoading(true);
@@ -194,10 +200,10 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
         console.log('✅ Book loading complete!');
 
-      } catch (error) {
-        console.error('❌ Error loading book content:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load book');
-        loadedBookIdRef.current = null; // Reset on error
+              } catch (error) {
+          console.error('❌ Error loading book content:', error);
+          setError(error instanceof Error ? error.message : 'Failed to load book');
+          loadedBookIdRef.current = null; // Reset on error
       } finally {
         setIsLoading(false);
       }

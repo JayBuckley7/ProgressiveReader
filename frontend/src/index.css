@@ -1,5 +1,5 @@
 /* JPDB highlighter styles */
-/* @import "../../src/jp-highlighter/styles.css"; */
+@import "./styles.css";
 
 @tailwind base;
 @tailwind components;

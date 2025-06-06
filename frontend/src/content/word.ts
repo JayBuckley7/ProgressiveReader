@@ -12,6 +12,21 @@ export type JpdbWordData = {
 
 export type JpdbWord = HTMLElement & { jpdbData: JpdbWordData };
 
+// Helper function to get JPDB data from an element (handles fallback for non-extensible elements)
+export function getJpdbData(element: HTMLElement): JpdbWordData | null {
+    // Try direct property access first
+    if ('jpdbData' in element && (element as any).jpdbData) {
+        return (element as any).jpdbData;
+    }
+    
+    // Fallback to WeakMap if direct property doesn't exist
+    if (window.jpdbDataMap && window.jpdbDataMap.has(element)) {
+        return window.jpdbDataMap.get(element);
+    }
+    
+    return null;
+}
+
 export function getSentences(data: JpdbWordData, contextWidth: number) {
     if (data.sentenceBoundaries === undefined || data.sentenceIndex === undefined) {
         const boundaries = [

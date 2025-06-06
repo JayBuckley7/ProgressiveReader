@@ -1,7 +1,7 @@
 // Import dependencies - no direct CSS import needed
 import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers } from './content/parse';
 import { getCurrentConfig, loadConfig, parseText, JpHighlighterConfig } from './content/api-adapter';
-import { JpdbWord } from './content/word';
+import { JpdbWord, getJpdbData } from './content/word';
 import { nonNull } from './utils/util';
 import { showError } from './components/toast';
 import { Popup } from './components/popup';
@@ -213,10 +213,16 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         }
     }
     
-    // Store original content for later
-    const originalContent = contentElement.innerHTML;
+    // Store original content for later restoration
+    // Only set data-original-content if it hasn't been set already
+    // This allows the calling component (BookReader) to set the appropriate content
+    // (e.g., translated content when highlighting translations)
     if (!contentElement.getAttribute('data-original-content')) {
+        const originalContent = contentElement.innerHTML;
         contentElement.setAttribute('data-original-content', originalContent);
+        Logger.log('Stored original content for restoration');
+    } else {
+        Logger.log('data-original-content already set, preserving existing value');
     }
     
     try {
@@ -236,6 +242,12 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         const tokens = await parseText(textSegments); // Tokens have global offsets
 
         Logger.log(`Received ${tokens.length} tokens from API`);
+        console.log('🔍 Sample tokens:', tokens.slice(0, 3).map(t => ({
+            start: t.start, 
+            end: t.end, 
+            spelling: t.card?.spelling,
+            state: t.card?.state
+        })));
         
         for (const paragraph of paragraphs) { // A paragraph is a Fragment[]
             if (paragraph.length > 0) {
@@ -276,9 +288,17 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                             'Relative Tokens (first):',
                             JSON.stringify(relativeTokens[0])
                         );
+                        
+                        console.log('🔍 About to call applyTokens with:', {
+                            relativeFragments: relativeFragments.length,
+                            relativeTokens: relativeTokens.length,
+                            firstFragmentText: relativeFragments[0]?.node?.data,
+                            firstTokenSpelling: relativeTokens[0]?.card?.spelling
+                        });
                     }
 
                     applyTokens(relativeFragments, relativeTokens);
+                    console.log('🔍 applyTokens call completed for this paragraph');
                 }
             }
         }
@@ -304,17 +324,27 @@ function onWordHoverStart(event: MouseEvent): void {
     
     // Only show popup on hover if the setting is enabled OR the popup key is held
     const currentConfig = getCurrentConfig(); // Get latest config
-    Logger.log('onWordHoverStart: showPopupOnHover =', currentConfig.showPopupOnHover, 'popupKeyHeld =', popupKeyHeld);
+    console.log('🔔 onWordHoverStart triggered');
+    console.log('🔔 showPopupOnHover from config:', currentConfig.showPopupOnHover);
+    console.log('🔔 popupKeyHeld:', popupKeyHeld);
+    console.log('🔔 localStorage showPopupOnHover:', localStorage.getItem('showPopupOnHover'));
     
     if (currentConfig.showPopupOnHover || popupKeyHeld) {
-        Logger.log('Showing popup because:', currentConfig.showPopupOnHover ? 'hover is enabled' : 'popup key is held');
-        if (jpdbWordElement.jpdbData) {
+        console.log('🔔 Will show popup because:', currentConfig.showPopupOnHover ? 'hover is enabled' : 'popup key is held');
+        const jpdbData = getJpdbData(jpdbWordElement);
+        console.log('🔔 jpdbData:', jpdbData);
+        if (jpdbData) {
+            // Set jpdbData for compatibility with existing code
+            if (!('jpdbData' in jpdbWordElement)) {
+                (jpdbWordElement as any).jpdbData = jpdbData;
+            }
+            console.log('🔔 Calling Popup.get().showForWord()');
             Popup.get().showForWord(jpdbWordElement, event.clientX, event.clientY);
         } else {
-            console.error('JpdbWord element is missing jpdbData on hover!', jpdbWordElement);
+            console.error('🔔 JpdbWord element is missing jpdbData on hover!', jpdbWordElement);
         }
     } else {
-        Logger.log('Not showing popup: hover is disabled and key is not held');
+        console.log('🔔 Not showing popup: hover is disabled and key is not held');
     }
 }
 
@@ -335,7 +365,12 @@ function globalKeydownListener(event: KeyboardEvent) {
         // If a word is already hovered, show the popup immediately
         if (currentHover) {
             const [wordElement, x, y] = currentHover;
-            if (wordElement.jpdbData) {
+            const jpdbData = getJpdbData(wordElement);
+        if (jpdbData) {
+            // Set jpdbData for compatibility with existing code
+            if (!('jpdbData' in wordElement)) {
+                (wordElement as any).jpdbData = jpdbData;
+            }
                 Logger.log('Showing popup because popup key was pressed while hovering a word');
                 Popup.get().showForWord(wordElement, x, y);
             }
@@ -376,10 +411,13 @@ function globalKeyupListener(event: KeyboardEvent) {
 
 // Main initialization function
 export async function initialize(contentElement: HTMLElement): Promise<void> {
+    console.log('🏗️ initialize() called');
     try {
         await waitForCSS();
         let currentConfig = loadConfig(); // Initial config load
+        console.log('🏗️ About to call setWordHoverHandlers');
         setWordHoverHandlers(onWordHoverStart, onWordHoverStop);
+        console.log('🏗️ setWordHoverHandlers completed');
 
         // Add global key listeners for hotkeys
         window.addEventListener('keydown', globalKeydownListener);

@@ -174,19 +174,26 @@ export function useStorageService() {
   }, [clerkUser?.id, clerkLoaded, loadUserBooks]); // Use user ID instead of user object
 
   // Listen for Google Drive sign-in status changes and auto-refresh books
+  // OPTIMIZATION: Prevent redundant listener setup and unnecessary book refreshes
   useEffect(() => {
     if (!clerkUser) return;
 
     console.log('[useStorageService] Setting up Google Drive sign-in listener...');
 
+    // Track if we've already loaded books to prevent unnecessary refreshes
+    let hasLoadedBooks = books.length > 0;
+
     // Listen for Google Drive connection status changes
     const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
       console.log(`[useStorageService] Google Drive sign-in status changed: ${isSignedIn}`);
 
-      if (isSignedIn) {
-        // When Google Drive connects, refresh the book list so the library updates
+      if (isSignedIn && !hasLoadedBooks) {
+        // Only refresh books if we haven't loaded them yet
         console.log('[useStorageService] Google Drive connected - refreshing book list...');
+        hasLoadedBooks = true;
         silentRefreshBooks();
+      } else if (isSignedIn && hasLoadedBooks) {
+        console.log('[useStorageService] Google Drive connected but books already loaded, skipping refresh');
       }
     });
 
@@ -195,7 +202,7 @@ export function useStorageService() {
       console.log('[useStorageService] Cleaning up Google Drive sign-in listener');
       unsubscribe();
     };
-  }, [clerkUser?.id, silentRefreshBooks]); // Use user ID instead of user object
+  }, [clerkUser?.id]); // Remove silentRefreshBooks dependency to prevent recreation
 
   // Cleanup blob URLs when component unmounts
   useEffect(() => {

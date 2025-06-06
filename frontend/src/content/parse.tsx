@@ -3,6 +3,13 @@ import { nonNull } from '../utils/util';
 import { jsxCreateElement } from '../utils/jsx';
 import { JpdbWord } from './word';
 
+// Global WeakMap for storing JPDB data when elements are not extensible
+declare global {
+    interface Window {
+        jpdbDataMap?: WeakMap<HTMLElement, any>;
+    }
+}
+
 export type Fragment = {
     start: number;
     end: number;
@@ -78,6 +85,11 @@ function splitFragment(fragments: Fragment[], fragmentIndex: number, splitOffset
 }
 
 function insertBefore(newNode: Node, referenceNode: Node) {
+    // Ensure newNode is actually a proper DOM Node
+    if (!(newNode instanceof Node)) {
+        console.error('insertBefore: newNode is not a proper DOM Node:', newNode);
+        throw new TypeError('Failed to execute insertBefore: parameter 1 is not of type Node.');
+    }
     nonNull(referenceNode.parentElement).insertBefore(newNode, referenceNode);
 }
 
@@ -106,8 +118,10 @@ export function setWordHoverHandlers(
     startHandler: (e: MouseEvent) => void,
     stopHandler: () => void
 ) {
+    console.log('🔧 setWordHoverHandlers called with:', typeof startHandler, typeof stopHandler);
     onWordHoverStart = startHandler;
     onWordHoverStop = stopHandler;
+    console.log('🔧 Handlers set, onWordHoverStart is now:', typeof onWordHoverStart);
 }
 
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
@@ -126,7 +140,9 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 splitFragment(fragments, fragmentIndex, token.start);
             }
 
-            wrap(fragment.node, <span class='jpdb-word unparsed'></span>);
+            const unparsedWrapper = document.createElement('span');
+            unparsedWrapper.className = 'jpdb-word unparsed';
+            wrap(fragment.node, unparsedWrapper);
 
             curOffset += fragment.length;
 
@@ -141,21 +157,40 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 splitFragment(fragments, fragmentIndex, token.end);
             }
 
-            // Check if token.card and token.card.state exist before using join
-            const stateClassNames = token.card && token.card.state ? token.card.state.join(' ') : 'unknown';
-            const className = `jpdb-word ${stateClassNames}`;
+            // Create class name exactly like the original implementation
+            const className = `jpdb-word ${token.card.state.join(' ')}`;
             
             const wrapper = (
-                token.rubies.length > 0 && !fragment.hasRuby ? (
-                    <ruby class={className} onmouseenter={onWordHoverStart} onmouseleave={onWordHoverStop}></ruby>
-                ) : (
-                    <span class={className} onmouseenter={onWordHoverStart} onmouseleave={onWordHoverStop}></span>
-                )
+                token.rubies.length > 0 && !fragment.hasRuby ? 
+                    document.createElement('ruby') : 
+                    document.createElement('span')
             ) as JpdbWord;
+            
+            wrapper.className = className;
+            
+            // Add debugging and ensure we use current handlers
+            wrapper.addEventListener('mouseenter', (e) => {
+                console.log('🎯 mouseenter event fired on wrapper');
+                console.log('🎯 onWordHoverStart function type:', typeof onWordHoverStart);
+                if (typeof onWordHoverStart === 'function') {
+                    onWordHoverStart(e);
+                } else {
+                    console.error('🎯 onWordHoverStart is not a function!', onWordHoverStart);
+                }
+            });
+            wrapper.addEventListener('mouseleave', (e) => {
+                console.log('🎯 mouseleave event fired on wrapper');
+                console.log('🎯 onWordHoverStop function type:', typeof onWordHoverStop);
+                if (typeof onWordHoverStop === 'function') {
+                    onWordHoverStop();
+                } else {
+                    console.error('🎯 onWordHoverStop is not a function!', onWordHoverStop);
+                }
+            });
 
-            const idx = reverseIndex.get(`${token.card?.vid || 0}/${token.card?.sid || 0}`);
+            const idx = reverseIndex.get(`${token.card.vid}/${token.card.sid}`);
             if (idx === undefined) {
-                reverseIndex.set(`${token.card?.vid || 0}/${token.card?.sid || 0}`, { className, elements: [wrapper] });
+                reverseIndex.set(`${token.card.vid}/${token.card.sid}`, { className, elements: [wrapper] });
             } else {
                 idx.elements.push(wrapper);
             }
@@ -174,16 +209,23 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                         // Ruby is contained in fragment
                         if (ruby.start > fragment.start) {
                             splitFragment(fragments, fragmentIndex, ruby.start);
-                            insertAfter(<rt></rt>, fragment.node);
+                            const emptyRt = document.createElement('rt');
+                            insertAfter(emptyRt, fragment.node);
                             fragment = fragments[++fragmentIndex];
                         }
 
                         if (ruby.end < fragment.end) {
                             splitFragment(fragments, fragmentIndex, ruby.end);
-                            insertAfter(<rt class='jpdb-furi'>{ruby.text}</rt>, fragment.node);
+                            const rubyTextRt = document.createElement('rt');
+                            rubyTextRt.className = 'jpdb-furi';
+                            rubyTextRt.textContent = ruby.text;
+                            insertAfter(rubyTextRt, fragment.node);
                             fragment = fragments[++fragmentIndex];
                         } else {
-                            insertAfter(<rt class='jpdb-furi'>{ruby.text}</rt>, fragment.node);
+                            const rubyTextRt = document.createElement('rt');
+                            rubyTextRt.className = 'jpdb-furi';  
+                            rubyTextRt.textContent = ruby.text;
+                            insertAfter(rubyTextRt, fragment.node);
                         }
                     }
                 }
@@ -198,6 +240,8 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
 
     // Wrap any left-over fragments in unparsed wrappers
     for (const fragment of fragments.slice(fragmentIndex)) {
-        wrap(fragment.node, <span class='jpdb-word unparsed'></span>);
+        const unparsedWrapper = document.createElement('span');
+        unparsedWrapper.className = 'jpdb-word unparsed';
+        wrap(fragment.node, unparsedWrapper);
     }
 } 

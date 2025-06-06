@@ -1,34 +1,4 @@
-/* JPDB Word Styles */
-.jpdb-word {
-    display: inline;
-    border-radius: 2px;
-    padding: 0 1px;
-}
-
-.jpdb-word.unparsed {
-    color: inherit;
-}
-
-/* Word state colors - make them more specific and bolder */
-.jpdb-word.known { color: var(--color-jpdb-known, #28a745) !important; font-weight: bold; }
-.jpdb-word.learning { color: var(--color-jpdb-learning, #ffc107) !important; font-weight: bold; }
-.jpdb-word.new { color: var(--color-jpdb-new, #007bff) !important; font-weight: bold; }
-.jpdb-word.due { color: var(--color-jpdb-due, #dc3545) !important; font-weight: bold; }
-.jpdb-word.failed { color: var(--color-jpdb-failed, #fd7e14) !important; font-weight: bold; }
-.jpdb-word.suspended { color: var(--color-jpdb-suspended, #6c757d) !important; font-weight: bold; }
-.jpdb-word.blacklisted { color: var(--color-jpdb-blacklisted, #28a745) !important; font-weight: bold; }
-.jpdb-word.locked { color: var(--color-jpdb-locked, #adb5bd) !important; font-weight: bold; }
-.jpdb-word.not-in-deck { color: var(--color-jpdb-not-in-deck, #6610f2) !important; font-weight: bold; }
-.jpdb-word.never-forget { color: var(--color-jpdb-never-forget, #00c5a8) !important; font-weight: bold; }
-.jpdb-word.unknown { color: #ff0000 !important; font-weight: bold; }
-
-/* Ruby text styling */
-.jpdb-furi {
-    font-size: 0.6em;
-    color: inherit;
-    opacity: 0.8;
-} 
-
+/* JPDB Word Styles - matching original jpd-breader implementation */
 :where(rt) {
     user-select: none;
     pointer-events: none;

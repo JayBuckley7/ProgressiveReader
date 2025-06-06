@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-// import jpHighlighter from "../../../src/jp-highlighter";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
 import { useBookContent } from "../hooks/useBookContent";
+import { initialize as initializeJpdb, highlightContent } from "~/index";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
@@ -29,6 +29,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
+  const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
 
   // Swipe control state
   const swipeRef = useRef({
@@ -60,7 +61,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setIsTranslated(false);
       setTranslatedContent(null);
     }
-  }, [currentChapter, isTranslated]);
+  }, [currentChapter]);
 
   // Handle scroll tracking
   useEffect(() => {
@@ -80,9 +81,72 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Initialize JPDB highlighter
   useEffect(() => {
     if (contentRef.current) {
-      // jpHighlighter.initialize(contentRef.current);
+      initializeJpdb(contentRef.current);
     }
   }, []);
+
+  // Apply JPDB highlighting when user explicitly enables it
+  useEffect(() => {
+    console.log('🔍 JPDB highlighting effect triggered:', {
+      hasContentRef: !!contentRef.current,
+      jpdbHighlighted,
+      hasChapterContent: !!currentChapterContent,
+      hasTranslatedContent: !!translatedContent,
+      isTranslated,
+      isTranslating
+    });
+
+    // ONLY run highlighting when user explicitly enables it (jpdbHighlighted becomes true)
+    // Do NOT run on content changes unless highlighting is already enabled
+    if (jpdbHighlighted && contentRef.current && !isTranslating) {
+      const contentElement = contentRef.current.querySelector('.prose');
+      console.log('🔍 Content element found:', !!contentElement);
+      console.log('🔍 Current content state:', { 
+        hasOriginal: !!currentChapterContent, 
+        hasTranslated: !!translatedContent, 
+        isTranslated 
+      });
+      
+      if (contentElement) {
+        console.log('🔍 About to call highlightContent on', isTranslated ? 'translated' : 'original', 'content...');
+        // Use longer timeout to ensure React has finished all re-renders
+        const timeoutId = setTimeout(async () => {
+          try {
+            // Double-check the element still exists and has content
+            const freshElement = contentRef.current?.querySelector('.prose') as HTMLElement;
+            if (freshElement && freshElement.textContent && freshElement.textContent.trim()) {
+              console.log('🔍 Proceeding with highlighting, element text length:', freshElement.textContent.length);
+              
+              // CRITICAL: Preserve the current content before highlighting
+              // This ensures we don't lose translations when highlighting is applied
+              const currentContent = freshElement.innerHTML;
+              
+              // Store the appropriate original content based on current state
+              if (isTranslated && translatedContent) {
+                // If we're highlighting translated content, store the translated content as "original"
+                // so that when highlighting is removed, we get back the translation, not the raw original
+                freshElement.setAttribute('data-original-content', translatedContent);
+              } else if (currentChapterContent) {
+                // If we're highlighting original content, store the original content
+                freshElement.setAttribute('data-original-content', currentChapterContent);
+              }
+              
+              await highlightContent(freshElement);
+              console.log('✅ highlightContent completed successfully');
+            } else {
+              console.warn('⚠️ Content element is empty or missing when trying to highlight');
+            }
+          } catch (error) {
+            console.error('❌ Error in highlightContent:', error);
+          }
+        }, 300); // Increased timeout to ensure React is done rendering
+        return () => clearTimeout(timeoutId);
+      } else {
+        console.warn('⚠️ Could not find .prose element in contentRef');
+        console.log('Available elements:', contentRef.current.querySelector('*'));
+      }
+    }
+  }, [jpdbHighlighted]); // ONLY depend on jpdbHighlighted state changes
 
   // Restore scroll position from progress
   useEffect(() => {
@@ -594,6 +658,20 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   };
 
+  const toggleJpdbHighlight = () => {
+    console.log('🎯 JPDB highlight button clicked, current state:', jpdbHighlighted);
+    console.log('🎯 Available functions:', { 
+      initializeJpdb: typeof initializeJpdb, 
+      highlightContent: typeof highlightContent 
+    });
+    
+    setJpdbHighlighted(prev => {
+      const newState = !prev;
+      console.log('🎯 Setting JPDB highlight state to:', newState);
+      return newState;
+    });
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Reader Header */}
@@ -706,6 +784,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onSelectChapter={setCurrentChapter}
         onToggleTts={toggleTts}
         ttsActive={isSpeaking}
+        onToggleHighlight={toggleJpdbHighlight}
+        jpdbHighlighted={jpdbHighlighted}
       />
 
       <TtsControlModal

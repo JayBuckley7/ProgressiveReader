@@ -71,12 +71,25 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   }, [localState, jpdbApiKey]);
 
   // Auto-load settings from cloud storage when modal opens (if authenticated)
+  // OPTIMIZATION: Only auto-load settings on first modal open to prevent cascading operations
   useEffect(() => {
     const loadCloudSettingsOnOpen = async () => {
       if (isAuthenticated && !hasLoadedRef.current) {
         hasLoadedRef.current = true;
         console.log('Settings modal opened for authenticated user - checking for cloud settings');
         try {
+          // Check if we already have settings loaded to avoid unnecessary cloud operations
+          const hasExistingSettings = settings && (
+            settings.targetLanguage !== 'English' || 
+            settings.theme !== 'system' || 
+            settings.fontSize !== 16
+          );
+          
+          if (hasExistingSettings) {
+            console.log('Settings already loaded, skipping auto-load to prevent duplicate operations');
+            return;
+          }
+          
           const cloudSettings = await loadSettings();
           if (cloudSettings) {
             applyImportedSettings(cloudSettings);
@@ -91,7 +104,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     };
 
     loadCloudSettingsOnOpen();
-  }, [isAuthenticated]); // Remove loadSettings dependency to prevent infinite loop
+  }, [isAuthenticated, settings]); // Add settings dependency to check for existing data
 
     if (!settings) return null;
 

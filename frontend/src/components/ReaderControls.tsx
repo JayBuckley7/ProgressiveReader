@@ -119,7 +119,7 @@ export function ReaderControls({
           <button
             onClick={handleAddBookmark}
             disabled={addBookmarkMutation.isLoading}
-            className={`${bigBtn} bg-primary text-white hover:bg-primary-hover disabled:opacity-50`}
+            className={`${bigBtn} disabled:opacity-50`}
             aria-label="Add bookmark"
           >
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -143,6 +143,7 @@ export function ReaderControls({
       {/* drawer */}
       {showDrawer && (
         <ContentsDrawer
+          visible={showDrawer}
           onClose={() => setShowDrawer(false)}
           chapterTitles={chapterTitles}
           currentChapter={currentChapter}

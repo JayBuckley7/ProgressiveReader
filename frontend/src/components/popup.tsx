@@ -391,14 +391,29 @@ export class Popup {
     }
 
     fadeIn() {
-        const currentConfig = getCurrentConfig();
-        const disableFade = currentConfig.customPopupCSS?.includes('disable-fade-animation') || currentConfig.disableFadeAnimation;
-        if (!disableFade) {
-            this.#outerStyle.transition = 'opacity 60ms ease-in, visibility 60ms';
+        try {
+            console.log('🔔 [Popup] fadeIn() called');
+            console.log('🔔 [Popup] Element exists:', !!this.#element);
+            console.log('🔔 [Popup] outerStyle exists:', !!this.#outerStyle);
+            console.log('🔔 [Popup] Current element style:', this.#element.style.cssText);
+            
+            const currentConfig = getCurrentConfig();
+            const disableFade = currentConfig.customPopupCSS?.includes('disable-fade-animation') || currentConfig.disableFadeAnimation;
+            console.log('🔔 [Popup] Fade animation disabled:', disableFade);
+            
+            if (!disableFade) {
+                this.#outerStyle.transition = 'opacity 60ms ease-in, visibility 60ms';
+            }
+            this.#outerStyle.opacity = '1';
+            this.#outerStyle.visibility = 'visible';
+            this.isVisible = true;
+            
+            console.log('🔔 [Popup] After fadeIn - element style:', this.#element.style.cssText);
+            console.log('🔔 [Popup] After fadeIn - isVisible:', this.isVisible);
+            console.log('🔔 [Popup] Element in DOM:', document.body.contains(this.#element));
+        } catch (error) {
+            console.error('🔔 [Popup] Error in fadeIn:', error);
         }
-        this.#outerStyle.opacity = '1';
-        this.#outerStyle.visibility = 'visible';
-        this.isVisible = true;
     }
 
     fadeOut() {
@@ -544,80 +559,102 @@ export class Popup {
     }
 
     showForWord(word: JpdbWord, mouseX = 0, mouseY = 0) {
-        const currentConfig = getCurrentConfig();
-        console.log('Popup showForWord called:', word);
-        console.log('Current popup config (showPopupOnHover from getCurrentConfig()):', currentConfig.showPopupOnHover);
-        
-        const data = word.jpdbData;
-        
-        if (!data || !data.token || !data.token.card) {
-            console.error('Invalid word data or missing card data');
-            return;
-        }
+        try {
+            console.log('🔔 [Popup] showForWord called with word:', word);
+            console.log('🔔 [Popup] word.jpdbData exists:', !!word.jpdbData);
+            
+            const currentConfig = getCurrentConfig();
+            console.log('🔔 [Popup] Current popup config (showPopupOnHover from getCurrentConfig()):', currentConfig.showPopupOnHover);
+            
+            const data = word.jpdbData;
+            
+            if (!data) {
+                console.error('🔔 [Popup] No jpdbData on word element');
+                return;
+            }
+            
+            if (!data.token) {
+                console.error('🔔 [Popup] No token in jpdbData');
+                return;
+            }
+            
+            if (!data.token.card) {
+                console.error('🔔 [Popup] No card in token data');
+                return;
+            }
 
-        this.setData(data); // Because we need the dimensions of the popup with the new data
+            console.log('🔔 [Popup] Data validation passed, calling setData');
+            this.setData(data); // Because we need the dimensions of the popup with the new data
 
-        const bbox = getClosestClientRect(word, mouseX, mouseY);
+            console.log('🔔 [Popup] Getting word bounding box');
+            const bbox = getClosestClientRect(word, mouseX, mouseY);
 
-        const wordLeft = window.scrollX + bbox.left;
-        const wordTop = window.scrollY + bbox.top;
-        const wordRight = window.scrollX + bbox.right;
-        const wordBottom = window.scrollY + bbox.bottom;
+            const wordLeft = window.scrollX + bbox.left;
+            const wordTop = window.scrollY + bbox.top;
+            const wordRight = window.scrollX + bbox.right;
+            const wordBottom = window.scrollY + bbox.bottom;
 
-        // window.innerWidth/Height technically contains the scrollbar, so it's not 100% accurate
-        // Good enough for this though
-        const leftSpace = bbox.left;
-        const topSpace = bbox.top;
-        const rightSpace = window.innerWidth - bbox.right;
-        const bottomSpace = window.innerHeight - bbox.bottom;
+            // window.innerWidth/Height technically contains the scrollbar, so it's not 100% accurate
+            // Good enough for this though
+            const leftSpace = bbox.left;
+            const topSpace = bbox.top;
+            const rightSpace = window.innerWidth - bbox.right;
+            const bottomSpace = window.innerHeight - bbox.bottom;
 
-        const popupHeight = this.#element.offsetHeight;
-        const popupWidth = this.#element.offsetWidth;
+            const popupHeight = this.#element.offsetHeight;
+            const popupWidth = this.#element.offsetWidth;
 
-        const minLeft = window.scrollX;
-        const maxLeft = window.scrollX + window.innerWidth - popupWidth;
-        const minTop = window.scrollY;
-        const maxTop = window.scrollY + window.innerHeight - popupHeight;
+            const minLeft = window.scrollX;
+            const maxLeft = window.scrollX + window.innerWidth - popupWidth;
+            const minTop = window.scrollY;
+            const maxTop = window.scrollY + window.innerHeight - popupHeight;
 
-        let left = wordLeft;
-        let top = wordBottom + 5;
+            let left = wordLeft;
+            let top = wordBottom + 5;
 
-        if (topSpace < popupHeight && bottomSpace < popupHeight) {
-            // Not enough vertical space either way
-            if (bottomSpace > topSpace) {
-                // More space below than above
-                top = wordBottom + 5;
-            } else {
-                // More space above than below
+            if (topSpace < popupHeight && bottomSpace < popupHeight) {
+                // Not enough vertical space either way
+                if (bottomSpace > topSpace) {
+                    // More space below than above
+                    top = wordBottom + 5;
+                } else {
+                    // More space above than below
+                    top = wordTop - popupHeight - 5;
+                }
+            } else if (bottomSpace < popupHeight) {
+                // Not enough space below the word
                 top = wordTop - popupHeight - 5;
             }
-        } else if (bottomSpace < popupHeight) {
-            // Not enough space below the word
-            top = wordTop - popupHeight - 5;
-        }
 
-        if (leftSpace < popupWidth / 2 && rightSpace < popupWidth / 2) {
-            // Not enough horizontal space either way
-            if (leftSpace > rightSpace) {
-                // More space left than right
+            if (leftSpace < popupWidth / 2 && rightSpace < popupWidth / 2) {
+                // Not enough horizontal space either way
+                if (leftSpace > rightSpace) {
+                    // More space left than right
+                    left = wordRight - popupWidth;
+                } else {
+                    // More space right than left
+                    left = wordLeft;
+                }
+            } else if (wordLeft + popupWidth > maxLeft) {
+                // Popup would go offscreen to the right
                 left = wordRight - popupWidth;
-            } else {
-                // More space right than left
-                left = wordLeft;
             }
-        } else if (wordLeft + popupWidth > maxLeft) {
-            // Popup would go offscreen to the right
-            left = wordRight - popupWidth;
+
+            // Ensure the popup stays within the viewport
+            left = Math.max(minLeft, Math.min(maxLeft, left));
+            top = Math.max(minTop, Math.min(maxTop, top));
+
+            console.log('🔔 [Popup] Setting popup position:', { left, top });
+            this.#outerStyle.left = `${left}px`;
+            this.#outerStyle.top = `${top}px`;
+
+            console.log('🔔 [Popup] About to call fadeIn()');
+            this.fadeIn();
+            console.log('🔔 [Popup] fadeIn() completed successfully');
+        } catch (error) {
+            console.error('🔔 [Popup] Error in showForWord:', error);
+            console.error('🔔 [Popup] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         }
-
-        // Ensure the popup stays within the viewport
-        left = Math.max(minLeft, Math.min(maxLeft, left));
-        top = Math.max(minTop, Math.min(maxTop, top));
-
-        this.#outerStyle.left = `${left}px`;
-        this.#outerStyle.top = `${top}px`;
-
-        this.fadeIn();
     }
 
     updateStyle(newCSS?: string) {

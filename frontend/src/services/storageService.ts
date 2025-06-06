@@ -59,6 +59,9 @@ export interface ReadingProgress {
 type Provider = 'google' | 'apple' | 'microsoft' | 'email';
 
 class StorageService {
+    // Cache for book metadata to prevent redundant API calls
+    private bookListCache: { data: BookMetadata[], timestamp: number } | null = null;
+    private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
     private async getAuthHeaders(): Promise<HeadersInit> {
         // Get Clerk session token for API calls
@@ -206,8 +209,11 @@ class StorageService {
                         cloudProvider: 'google'
                     };
 
-                    console.log('✅ Book uploaded to user\'s cloud storage successfully. Privacy-first: no metadata stored in our backend.');
-                    
+                                console.log('✅ Book uploaded to user\'s cloud storage successfully. Privacy-first: no metadata stored in our backend.');
+            
+            // Clear cache since book list has changed
+            this.clearBookListCache();
+            
                     return bookMetadata;
 
                 } catch (error: any) {
@@ -429,6 +435,26 @@ class StorageService {
                 return [];
             }
 
+            // Check cache first to prevent redundant API calls
+            const now = Date.now();
+            if (this.bookListCache && (now - this.bookListCache.timestamp < this.CACHE_DURATION)) {
+                console.log('getUserBooks: Using cached book list to prevent redundant API calls');
+                
+                // Still trigger cover downloads if callback provided
+                if (onCoverReady) {
+                    this.bookListCache.data.forEach(book => {
+                        if (book.coverUrl) {
+                            onCoverReady(book.id, book.coverUrl);
+                        } else if (book.coverImageId) {
+                            // Start async cover download for uncached covers
+                            this.downloadCoverAsync(book.id, book.coverImageId, book.title, onCoverReady);
+                        }
+                    });
+                }
+                
+                return this.bookListCache.data;
+            }
+
             // Get metadata.json file which contains book-to-cover mappings
             const metadataInfo = await gDriveService.getMetadataFile();
             if (!metadataInfo) {
@@ -495,6 +521,12 @@ class StorageService {
             }
 
             console.log(`Processed ${books.length} books from metadata (covers downloading in background)`);
+            
+            // Cache the book list to prevent redundant API calls
+            this.bookListCache = {
+                data: books,
+                timestamp: Date.now()
+            };
             
             // Don't wait for cover downloads - return books immediately
             // Covers will be updated via the callback as they become available
@@ -602,6 +634,9 @@ class StorageService {
             } else {
                 console.log('✅ Book metadata removed successfully');
             }
+
+            // Clear cache since book list has changed
+            this.clearBookListCache();
             
         } catch (error) {
             console.error('Error deleting book from Google Drive:', error);
@@ -826,6 +861,11 @@ class StorageService {
                 URL.revokeObjectURL(book.coverUrl);
             }
         });
+    }
+
+    // Clear book list cache when books are modified
+    private clearBookListCache(): void {
+        this.bookListCache = null;
     }
 
     /**
