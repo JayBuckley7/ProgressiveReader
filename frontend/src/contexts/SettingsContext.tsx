@@ -68,35 +68,35 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // const updateSettingsMutation = useMutation(api.settings.update);
   
   // Placeholder for settings - replace with Flask API calls for persistence
-  const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
+  const [current_settings, set_current_settings] = useState<Settings>(defaultSettings);
   const { isAuthenticated, loadSettings } = useStorageService();
-  const loadedFromCloudRef = useRef(false);
+  const loaded_from_cloud_ref = useRef(false);
 
   // Load settings from cookie on initial mount
   useEffect(() => {
     const cookieSettings = getSettingsCookie();
     if (cookieSettings) {
-      setCurrentSettings(prev => ({ ...prev, ...cookieSettings }));
+      set_current_settings(prev => ({ ...prev, ...cookieSettings }));
     }
   }, []);
 
   // Load settings from cloud after authentication and when Drive connects
   useEffect(() => {
     const attemptCloudLoad = async () => {
-      if (!isAuthenticated || loadedFromCloudRef.current || !gDriveService.isSignedIn()) {
+      if (!isAuthenticated || loaded_from_cloud_ref.current || !gDriveService.isSignedIn()) {
         return;
       }
 
       try {
         const data = await loadSettings();
         if (data) {
-          setCurrentSettings(prev => {
+          set_current_settings(prev => {
             const updated = { ...prev, ...data };
             setSettingsCookie(updated);
             return updated;
           });
         }
-        loadedFromCloudRef.current = true;
+        loaded_from_cloud_ref.current = true;
       } catch (err) {
         console.error('Failed to load settings:', err);
       }
@@ -108,7 +108,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!isAuthenticated) {
-      loadedFromCloudRef.current = false;
+      loaded_from_cloud_ref.current = false;
       clearSettingsCookie();
     }
 
@@ -131,11 +131,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   //   touchscreenSupport: 'touchscreenSupport' in dbSettings ? dbSettings.touchscreenSupport : undefined,
   //   disableFadeAnimation: 'disableFadeAnimation' in dbSettings ? dbSettings.disableFadeAnimation : undefined,
   // } : null;
-  const settings = currentSettings; // Use state directly
+  const settings = current_settings; // Use state directly
 
   const updateSettings = (updates: Partial<Settings>) => {
     console.log("Update settings (TODO - Flask API call):", updates);
-    setCurrentSettings(prev => {
+    set_current_settings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
       return updated;
