@@ -1,4 +1,4 @@
-import { jsxCreateElement } from '../utils/jsx';
+import { jsxCreateElement as createElement } from '../utils/jsx';
 import { nonNull } from '../utils/util';
 import { getCurrentConfig, mineWord, reviewCard, updateWordState, JpHighlighterConfig } from '../content/api-adapter';
 import { getSentences, JpdbWord, JpdbWordData } from '../content/word';
@@ -123,7 +123,7 @@ function getClosestClientRect(elem: HTMLElement, x: number, y: number): DOMRect 
 
 function renderPitch(reading: string, pitch: string) {
     if (reading.length != pitch.length - 1) {
-        return <span>Error: invalid pitch</span>;
+        return createElement('span', {}, 'Error: invalid pitch');
     }
 
     try {
@@ -133,20 +133,20 @@ function renderPitch(reading: string, pitch: string) {
         let low = pitch[0] === 'L';
 
         for (const border of borders) {
-            parts.push(<span class={low ? 'low' : 'high'}>{reading.slice(lastBorder, border)}</span>);
+            parts.push(createElement('span', { class: low ? 'low' : 'high' }, reading.slice(lastBorder, border)) as HTMLSpanElement);
             lastBorder = border;
             low = !low;
         }
 
         if (lastBorder != reading.length) {
             // No switch after last part
-            parts.push(<span class={low ? 'low-final' : 'high-final'}>{reading.slice(lastBorder)}</span>);
+            parts.push(createElement('span', { class: low ? 'low-final' : 'high-final' }, reading.slice(lastBorder)) as HTMLSpanElement);
         }
 
-        return <span class='pitch'>{parts}</span>;
+        return createElement('span', { class: 'pitch' }, ...parts);
     } catch (error) {
         console.error(error);
-        return <span>Error: invalid pitch</span>;
+        return createElement('span', {}, 'Error: invalid pitch');
     }
 }
 
@@ -180,24 +180,24 @@ export class Popup {
     constructor(demoMode = false) {
         this.#demoMode = demoMode;
 
-        this.#element = (
-            <div
-                id='jpdb-popup'
-                onmousedown={(event: MouseEvent) => {
-                    event.stopPropagation();
-                }}
-                onclick={(event: MouseEvent) => {
-                    event.stopPropagation();
-                }}
-                onwheel={(event: WheelEvent) => {
-                    event.stopPropagation();
-                }}
-                style={`all:initial;z-index:2147483647;${
-                    demoMode ? '' : 'position:absolute;top:0;left:0;opacity:0;visibility:hidden;'
-                };`}></div>
-        );
+        this.#element = createElement('div', {
+            id: 'jpdb-popup',
+            onmousedown: (event: MouseEvent) => {
+                event.stopPropagation();
+            },
+            onclick: (event: MouseEvent) => {
+                event.stopPropagation();
+            },
+            onwheel: (event: WheelEvent) => {
+                event.stopPropagation();
+            },
+            style: `all:initial;z-index:2147483647;${
+                demoMode ? '' : 'position:absolute;top:0;left:0;opacity:0;visibility:hidden;'
+            };`
+        }) as HTMLElement;
 
-        const shadow = this.#element.attachShadow({ mode: 'closed' });
+        // Use regular DOM instead of Shadow DOM for compatibility
+        const shadow = this.#element; // this.#element.attachShadow({ mode: 'closed' });
 
         const popupStyles = document.createElement('style');
         popupStyles.textContent = `
@@ -346,44 +346,43 @@ export class Popup {
             :host-context(.dark) #header a { color: #eee; }
         `;
 
+        this.#customStyle = createElement('style') as HTMLElement;
+        this.#mineButtons = createElement('section', { id: 'mine-buttons' }) as HTMLElement;
+        this.#vocabSection = createElement('section', { id: 'vocab-content' }) as HTMLElement;
+        
+        const reviewButtons = createElement('section', { id: 'review-buttons' }, 
+            createElement('button', {
+                class: 'nothing',
+                onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'nothing')
+            }, 'Nothing'),
+            createElement('button', {
+                class: 'something', 
+                onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'something')
+            }, 'Something'),
+            createElement('button', {
+                class: 'hard',
+                onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'hard')
+            }, 'Hard'),
+            createElement('button', {
+                class: 'good',
+                onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'good')
+            }, 'Good'),
+            createElement('button', {
+                class: 'easy',
+                onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'easy')
+            }, 'Easy')
+        ) as HTMLElement;
+
+        const article = createElement('article', { lang: 'ja' }, 
+            this.#mineButtons,
+            reviewButtons,
+            this.#vocabSection
+        ) as HTMLElement;
+
         shadow.append(
             popupStyles,
-            (this.#customStyle = <style></style>),
-            <article lang='ja'>
-                {(this.#mineButtons = <section id='mine-buttons'></section>)}
-                <section id='review-buttons'>
-                    <button
-                        class='nothing'
-                        onclick={
-                            demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'nothing')
-                        }>
-                        Nothing
-                    </button>
-                    <button
-                        class='something'
-                        onclick={
-                            demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'something')
-                        }>
-                        Something
-                    </button>
-                    <button
-                        class='hard'
-                        onclick={demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'hard')}>
-                        Hard
-                    </button>
-                    <button
-                        class='good'
-                        onclick={demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'good')}>
-                        Good
-                    </button>
-                    <button
-                        class='easy'
-                        onclick={demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'easy')}>
-                        Easy
-                    </button>
-                </section>
-                {(this.#vocabSection = <section id='vocab-content'></section>)}
-            </article>,
+            this.#customStyle,
+            article
         );
 
         this.#outerStyle = this.#element.style;
@@ -446,101 +445,58 @@ export class Popup {
         }
 
         const card = this.#data.token.card;
+        const url = `https://jpdb.io/vocabulary/${card.vid}/${encodeURIComponent(card.spelling)}/${encodeURIComponent(card.reading)}`;
 
-        const url = `https://jpdb.io/vocabulary/${card.vid}/${encodeURIComponent(card.spelling)}/${encodeURIComponent(
-            card.reading,
-        )}`;
-
-        // Group meanings by part of speech
-        const groupedMeanings: { partOfSpeech: string[]; glosses: string[][]; startIndex: number }[] = [];
-        let lastPOS: string[] = [];
-        for (const [index, meaning] of card.meanings.entries()) {
-            if (
-                // Same part of speech as previous meaning?
-                meaning.partOfSpeech.length == lastPOS.length &&
-                meaning.partOfSpeech.every((p, i) => p === lastPOS[i])
-            ) {
-                // Append to previous meaning group
-                groupedMeanings[groupedMeanings.length - 1].glosses.push(meaning.glosses);
-            } else {
-                // Create a new meaning group
-                groupedMeanings.push({
-                    partOfSpeech: meaning.partOfSpeech,
-                    glosses: [meaning.glosses],
-                    startIndex: index,
-                });
-                lastPOS = meaning.partOfSpeech;
-            }
-        }
-
-        this.#vocabSection.replaceChildren(
-            <div id='header'>
-                <a lang='ja' href={url} target='_blank'>
-                    <span class='spelling'>{card.spelling}</span>
-                    <span class='reading'>{card.spelling !== card.reading ? `(${card.reading})` : ''}</span>
-                </a>
-                <div class='state'>
-                    {card.state.map(s => (
-                        <span class={s}>{s}</span>
-                    ))}
-                </div>
-            </div>,
-            <div class='metainfo'>
-                <span class='freq'>{card.frequencyRank ? `Top ${card.frequencyRank}` : ''}</span>
-                {card.pitchAccent.map(pitch => renderPitch(card.reading, pitch))}
-            </div>,
-            ...groupedMeanings.flatMap(meanings => [
-                <h2>
-                    {meanings.partOfSpeech
-                        .map(pos => PARTS_OF_SPEECH[pos] ?? `(Unknown part of speech #${pos}, please report)`)
-                        .filter(x => x.length > 0)
-                        .join(', ')}
-                </h2>,
-                <ol start={meanings.startIndex + 1}>
-                    {meanings.glosses.map(glosses => (
-                        <li>{glosses.join('; ')}</li>
-                    ))}
-                </ol>,
-            ]),
+        // Create header with word info
+        const header = createElement('div', { id: 'header' },
+            createElement('a', { lang: 'ja', href: url, target: '_blank' },
+                createElement('span', { class: 'spelling' }, card.spelling),
+                card.spelling !== card.reading ? createElement('span', { class: 'reading' }, ` (${card.reading})`) : ''
+            ),
+            createElement('div', { class: 'state' },
+                ...card.state.map(s => createElement('span', { class: s }, s))
+            )
         );
 
+        // Create metainfo
+        const metainfo = createElement('div', { class: 'metainfo' },
+            createElement('span', { class: 'freq' }, card.frequencyRank ? `Top ${card.frequencyRank}` : ''),
+            ...card.pitchAccent.map(pitch => renderPitch(card.reading, pitch))
+        );
+
+        // Create meanings list (simplified)
+        const meaningsList = createElement('ol', {},
+            ...card.meanings.map(meaning => 
+                createElement('li', {}, meaning.glosses.join('; '))
+            )
+        );
+
+        this.#vocabSection.replaceChildren(header, metainfo, meaningsList);
+
+        // Create mine buttons
         const blacklisted = card.state.includes('blacklisted');
         const neverForget = card.state.includes('never-forget');
 
-        this.#mineButtons.replaceChildren(
-            <button
-                class='add'
-                onclick={
-                    this.#demoMode
-                        ? undefined
-                        : () =>
-                              mineWord(
-                                  this.#data.token.card,
-                                  getCurrentConfig().forqOnMine,
-                                  getSentences(this.#data, getCurrentConfig().contextWidth).trim() || undefined,
-                              )
-                }>
-                Add
-            </button>,
-            <button
-                class='blacklist'
-                onclick={
-                    this.#demoMode
-                        ? undefined
-                        : async () => await updateWordState(this.#data.token.card, 'blacklist', !blacklisted)
-                }>
-                {!blacklisted ? 'Blacklist' : 'Remove from blacklist'}
-            </button>,
-            <button
-                class='never-forget'
-                onclick={
-                    this.#demoMode
-                        ? undefined
-                        : async () => await updateWordState(this.#data.token.card, 'never-forget', !neverForget)
-                }>
-                {!neverForget ? 'Never forget' : 'Unmark as never forget'}
-            </button>,
-        );
+        const addButton = createElement('button', {
+            class: 'add',
+            onclick: this.#demoMode ? undefined : () => mineWord(
+                this.#data.token.card,
+                getCurrentConfig().forqOnMine,
+                getSentences(this.#data, getCurrentConfig().contextWidth).trim() || undefined
+            )
+        }, 'Add');
+
+        const blacklistButton = createElement('button', {
+            class: 'blacklist',
+            onclick: this.#demoMode ? undefined : async () => await updateWordState(this.#data.token.card, 'blacklist', !blacklisted)
+        }, !blacklisted ? 'Blacklist' : 'Remove from blacklist');
+
+        const neverForgetButton = createElement('button', {
+            class: 'never-forget',
+            onclick: this.#demoMode ? undefined : async () => await updateWordState(this.#data.token.card, 'never-forget', !neverForget)
+        }, !neverForget ? 'Never forget' : 'Unmark as never forget');
+
+        this.#mineButtons.replaceChildren(addButton, blacklistButton, neverForgetButton);
     }
 
     setData(data: JpdbWordData) {

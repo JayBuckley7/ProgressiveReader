@@ -5,6 +5,7 @@ import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
 import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index";
+import { loadConfig as loadJpdbConfig } from "~/content/api-adapter";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
@@ -201,6 +202,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         // Use longer timeout to ensure React has finished all re-renders
         const timeoutId = setTimeout(async () => {
           try {
+            // Reload configuration to ensure latest settings are used
+            const config = loadJpdbConfig();
+            console.log('🔍 Reloaded JPDB config for highlighting:', { 
+              showPopupOnHover: config.showPopupOnHover,
+              apiKey: !!config.apiKey 
+            });
+            
             // Double-check the element still exists and has content
             const freshElement = contentRef.current?.querySelector('.prose') as HTMLElement;
             if (freshElement && freshElement.textContent && freshElement.textContent.trim()) {
@@ -766,6 +774,20 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     setJpdbHighlighted(prev => {
       const newState = !prev;
       console.log('🎯 Setting JPDB highlight state to:', newState);
+      
+      // If enabling highlighting, ensure JPDB config is reloaded to get latest settings
+      if (newState && contentRef.current) {
+        console.log('🎯 Re-initializing JPDB with latest settings...');
+        setTimeout(() => {
+          if (contentRef.current) {
+            // Reload configuration first to ensure latest settings are used
+            const config = loadJpdbConfig();
+            console.log('🎯 Reloaded JPDB config:', config);
+            initializeJpdb(contentRef.current);
+          }
+        }, 100);
+      }
+      
       return newState;
     });
   };

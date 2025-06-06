@@ -9,12 +9,12 @@ const localKeys = {
   openaiModel: "openaiModel",
   cefrLevel: "cefrLevel",
   autoload: "autoloadTranslations",
-  jpdbDeckId: "jpdbDeckId",
+  jpdbDeckId: "jpdbMiningDeckId", // Changed to match JPDB integration expectation
   forqDeckId: "forqDeckId",
   blacklistDeckId: "blacklistDeckId",
   neverForgetDeckId: "neverForgetDeckId",
-  contextSentenceCount: "contextSentenceCount",
-  autoAddToFORQ: "autoAddToFORQ",
+  contextSentenceCount: "contextWidth", // Changed to match JPDB integration expectation
+  autoAddToFORQ: "forqOnMine", // Changed to match JPDB integration expectation
   preferDueCards: "preferDueCards",
   customWordCSS: "customWordCSS",
   customPopupCSS: "customPopupCSS",
@@ -61,13 +61,19 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    // Store all local settings to localStorage using the mapped keys
     Object.entries(localKeys).forEach(([key, storageKey]) => {
       const value = localState[key as keyof typeof localState];
       localStorage.setItem(storageKey, typeof value === "boolean" ? value.toString() : String(value));
     });
+    
+    // Store JPDB API key in both cookie formats for compatibility
     if (jpdbApiKey) {
       document.cookie = `jpdbApiKey=${jpdbApiKey}; path=/;`;
+      document.cookie = `jpdb_api_key=${jpdbApiKey}; path=/;`;
     }
+    
+    console.log('🔔 Synced all settings to localStorage and cookies');
   }, [localState, jpdbApiKey]);
 
   // Auto-load settings from cloud storage when modal opens (if authenticated)

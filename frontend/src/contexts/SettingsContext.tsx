@@ -72,11 +72,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loadSettings } = useStorageService();
   const loadedFromCloudRef = useRef(false);
 
-  // Load settings from cookie on initial mount
+  // Load settings from cookie on initial mount and sync to localStorage
   useEffect(() => {
     const cookieSettings = getSettingsCookie();
     if (cookieSettings) {
-      setCurrentSettings(prev => ({ ...prev, ...cookieSettings }));
+      setCurrentSettings(prev => {
+        const updated = { ...prev, ...cookieSettings };
+        
+        // Sync accessibility settings to localStorage for JPDB integration
+        localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
+        localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
+        localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
+        console.log('🔔 Initial sync of accessibility settings to localStorage');
+        
+        return updated;
+      });
+    } else {
+      // If no cookie settings, sync defaults to localStorage
+      localStorage.setItem('showPopupOnHover', String(defaultSettings.showPopupOnHover));
+      localStorage.setItem('touchscreenSupport', String(defaultSettings.touchscreenSupport));
+      localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
+      console.log('🔔 Initial sync of default accessibility settings to localStorage');
     }
   }, []);
 
@@ -138,6 +154,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setCurrentSettings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
+      
+      // Sync accessibility settings to localStorage for JPDB integration
+      if ('showPopupOnHover' in updates) {
+        localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
+        console.log('🔔 Synced showPopupOnHover to localStorage:', updated.showPopupOnHover);
+      }
+      if ('touchscreenSupport' in updates) {
+        localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
+        console.log('🔔 Synced touchscreenSupport to localStorage:', updated.touchscreenSupport);
+      }
+      if ('disableFadeAnimation' in updates) {
+        localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
+        console.log('🔔 Synced disableFadeAnimation to localStorage:', updated.disableFadeAnimation);
+      }
+      
       return updated;
     });
   };

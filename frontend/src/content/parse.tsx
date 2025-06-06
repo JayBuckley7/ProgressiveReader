@@ -1,6 +1,6 @@
 import { Token } from '../types';
 import { nonNull } from '../utils/util';
-import { jsxCreateElement } from '../utils/jsx';
+import { jsxCreateElement as createElement } from '../utils/jsx';
 import { JpdbWord } from './word';
 
 // Global WeakMap for storing JPDB data when elements are not extensible
