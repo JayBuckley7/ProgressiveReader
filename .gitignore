@@ -172,3 +172,6 @@ frontend/dist/
 
 # Local environment overrides
 .env.local
+
+# Setup scripts and secrets (should not be committed)
+setup-*

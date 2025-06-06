@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --open --host",
+    "build": "vite build",
     "lint": "tsc -p . --noEmit --pretty false && vite build"
   },
   "dependencies": {
