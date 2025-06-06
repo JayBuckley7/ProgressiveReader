@@ -14,13 +14,13 @@ interface VocabularyWord {
 }
 
 export function VocabularyPage() {
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
+  const [selected_language, set_selected_language] = useState<string>("");
+  const [show_add_form, set_show_add_form] = useState(false);
+  const [search_term, set_search_term] = useState("");
+  const [filter_mastered, set_filter_mastered] = useState<"all" | "mastered" | "learning">("all");
 
-  // const vocabularyQuery = useQuery(api.vocabulary.list, { 
-  //   language: selectedLanguage || undefined 
+  // const vocabularyQuery = useQuery(api.vocabulary.list, {
+  //   language: selected_language || undefined
   // }) || [];
   const vocabulary: VocabularyWord[] = []; // Placeholder, was vocabularyList
 
@@ -28,27 +28,27 @@ export function VocabularyPage() {
   const books: any[] = []; // Placeholder
 
   // const toggleMasteredMutation = useMutation(api.vocabulary.toggleMastered);
-  const toggleMastered = async (data: any) => { console.log("Toggle mastered (TODO):", data); }; // Was toggleMasteredMutation
+  const toggle_mastered = async (data: any) => { console.log("Toggle mastered (TODO):", data); }; // Was toggleMasteredMutation
 
   // Get unique languages from vocabulary
   const languages = Array.from(new Set(vocabulary.map(word => word.language))); // Use vocabulary
 
   // Filter vocabulary based on search and mastered status
-  const filteredVocabulary = vocabulary.filter(word => { // Use vocabulary
-    const matchesSearch = word.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         word.translation.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesMastered = filterMastered === "all" || 
-                           (filterMastered === "mastered" && word.mastered) ||
-                           (filterMastered === "learning" && !word.mastered);
+  const filtered_vocabulary = vocabulary.filter(word => { // Use vocabulary
+    const matchesSearch = word.word.toLowerCase().includes(search_term.toLowerCase()) ||
+                         word.translation.toLowerCase().includes(search_term.toLowerCase());
+
+    const matchesMastered = filter_mastered === "all" ||
+                           (filter_mastered === "mastered" && word.mastered) ||
+                           (filter_mastered === "learning" && !word.mastered);
     
     return matchesSearch && matchesMastered;
   });
 
-  const handleToggleMastered = async (wordId: string) => { // Was: Id<"vocabulary">
+  const handle_toggle_mastered = async (wordId: string) => { // Was: Id<"vocabulary">
     try {
       // await toggleMasteredMutation({ wordId });
-      await toggleMastered({ wordId }); // Use toggleMastered
+      await toggle_mastered({ wordId }); // Use toggleMastered
     } catch (error) {
       toast.error("Failed to update word status");
     }
@@ -101,15 +101,15 @@ export function VocabularyPage() {
             <input
               type="text"
               placeholder="Search words..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={search_term}
+              onChange={(e) => set_search_term(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             />
 
             {/* Language Filter */}
             <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
+              value={selected_language}
+              onChange={(e) => set_selected_language(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             >
               <option value="">All Languages</option>
@@ -120,8 +120,8 @@ export function VocabularyPage() {
 
             {/* Mastered Filter */}
             <select
-              value={filterMastered}
-              onChange={(e) => setFilterMastered(e.target.value as "all" | "mastered" | "learning")}
+              value={filter_mastered}
+              onChange={(e) => set_filter_mastered(e.target.value as "all" | "mastered" | "learning")}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             >
               <option value="all">All Words</option>
@@ -131,7 +131,7 @@ export function VocabularyPage() {
           </div>
 
           <button
-            onClick={() => setShowAddForm(true)}
+            onClick={() => set_show_add_form(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             + Add Word
@@ -140,7 +140,7 @@ export function VocabularyPage() {
       </div>
 
       {/* Vocabulary List */}
-      {filteredVocabulary.length === 0 ? (
+      {filtered_vocabulary.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -155,21 +155,21 @@ export function VocabularyPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filteredVocabulary.map((word) => (
+          {filtered_vocabulary.map((word) => (
             <VocabularyCard 
               key={word._id} 
               word={word} 
               books={books}
-              onToggleMastered={handleToggleMastered}
+              onToggleMastered={handle_toggle_mastered}
             />
           ))}
         </div>
       )}
 
       {/* Add Word Modal */}
-      {showAddForm && (
-        <AddWordModal 
-          onClose={() => setShowAddForm(false)}
+      {show_add_form && (
+        <AddWordModal
+          onClose={() => set_show_add_form(false)}
           books={books}
         />
       )}
