@@ -5,14 +5,14 @@ import * as driveSync from './driveSync';
  * Button UI for connecting to Google Drive and triggering sync.
  */
 export function DriveButton() {
-  const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(driveSync.isConnected());
+  const [connecting, set_connecting] = useState(false);
+  const [connected, set_connected] = useState(driveSync.isConnected());
 
   useEffect(() => {
-    setConnected(driveSync.isConnected());
+    set_connected(driveSync.isConnected());
   }, []);
 
-  const handleConnect = async () => {
+  const handle_connect = async () => {
     if (connected) {
       const folder = driveSync.getFolderId();
       if (folder) {
@@ -20,12 +20,12 @@ export function DriveButton() {
       }
       return;
     }
-    setConnecting(true);
+    set_connecting(true);
     try {
       const wasConnected = driveSync.isConnected();
       await driveSync.init(true);
       const nowConnected = driveSync.isConnected();
-      setConnected(nowConnected);
+      set_connected(nowConnected);
 
       // Reload the page after the initial successful connection
       if (!wasConnected && nowConnected) {
@@ -34,18 +34,18 @@ export function DriveButton() {
     } catch (e) {
       console.error(e);
       alert('Drive connection failed');
-      setConnected(false);
+      set_connected(false);
     } finally {
-      setConnecting(false);
+      set_connecting(false);
     }
   };
 
-  const handleSync = async () => {
+  const handle_sync = async () => {
     await driveSync.runSyncLoop();
   };
 
   const profile = driveSync.getUserProfile();
-  const buttonText = connecting
+  const button_text = connecting
     ? 'Connecting…'
     : connected
       ? profile?.name?.split(' ')[0] || 'Connected'
@@ -55,16 +55,16 @@ export function DriveButton() {
     <div className="flex items-center gap-2">
       <button
         id="connect-drive-btn"
-        onClick={handleConnect}
+        onClick={handle_connect}
         disabled={connecting}
         className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
       >
-        {buttonText}
+        {button_text}
       </button>
       {connected && (
         <button
           id="btn-sync"
-          onClick={handleSync}
+          onClick={handle_sync}
           className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
         >
           Sync Now
