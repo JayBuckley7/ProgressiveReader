@@ -9,20 +9,37 @@ function initSideDrawer() {
     }
 
     toggleDrawerBtn.addEventListener('click', () => {
-        drawer.classList.toggle('open');
-        // Optional: Toggle body class if needed for margin adjustments
-        document.body.classList.toggle('drawer-open'); 
+        if (drawer.classList.contains('open')) {
+            closeDrawer();
+        } else {
+            openDrawer();
+        }
     });
 
-    drawerCloseBtn.addEventListener('click', () => {
-        drawer.classList.remove('open');
-        document.body.classList.remove('drawer-open');
-    });
+    drawerCloseBtn.addEventListener('click', closeDrawer);
     
 //     console.log("SideDrawer initialized.");
 }
 
+function openDrawer() {
+    const drawer = document.getElementById('side-drawer');
+    if (drawer && !drawer.classList.contains('open')) {
+        drawer.classList.add('open');
+        document.body.classList.add('drawer-open');
+    }
+}
+
+function closeDrawer() {
+    const drawer = document.getElementById('side-drawer');
+    if (drawer && drawer.classList.contains('open')) {
+        drawer.classList.remove('open');
+        document.body.classList.remove('drawer-open');
+    }
+}
+
 // Expose if needed, but init pattern is better
 window.sideDrawerManager = {
-    initSideDrawer
-}; 
+    initSideDrawer,
+    openDrawer,
+    closeDrawer
+};

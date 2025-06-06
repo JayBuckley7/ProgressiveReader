@@ -92,8 +92,11 @@ function _updateCefrOutput() {
 
 function openSettingsModal() {
     if (settingsModal) {
-        _loadSettingsToUI(); 
+        _loadSettingsToUI();
         settingsModal.classList.add('active');
+        if (window.sideDrawerManager && typeof window.sideDrawerManager.openDrawer === 'function') {
+            window.sideDrawerManager.openDrawer();
+        }
     }
 }
 
