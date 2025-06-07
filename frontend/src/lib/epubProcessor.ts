@@ -1,6 +1,6 @@
 export interface ChapterTitle {
   index: number;
-  title: string;
+  label: string;
   href: string;
 }
 
@@ -11,6 +11,11 @@ export interface ChapterTitle {
  * and provides a simple interface for the reader.
  */
 export class EpubProcessorWrapper {
+    processor: EpubProcessor | null;
+    isReady: boolean;
+    metadata: any | null;
+    totalChapters: number;
+
     constructor() {
         this.processor      = null;
         this.isReady        = false;
@@ -22,7 +27,7 @@ export class EpubProcessorWrapper {
      * Load a book from its ArrayBuffer content.
      * Returns true on success, false on error.
      */
-    async loadBook(bookBinaryContent) {
+    async loadBook(bookBinaryContent: ArrayBuffer): Promise<boolean> {
         try {
 
             if (!(bookBinaryContent instanceof ArrayBuffer) || bookBinaryContent.byteLength < 512) {
@@ -44,12 +49,12 @@ export class EpubProcessorWrapper {
         }
     }
 
-    getBookTitle() {
+    getBookTitle(): string {
         return this.isReady && this.metadata?.title ? this.metadata.title : 'Untitled Book';
     }
-    getTotalChapters() { return this.totalChapters; }
+    getTotalChapters(): number { return this.totalChapters; }
 
-    async getIndexFromCfi(cfi) {
+    async getIndexFromCfi(cfi: string): Promise<number> {
         if (!this.isReady || !this.processor) return -1;
         try {
             return await this.processor.getIndexFromCfi(cfi);
@@ -62,7 +67,7 @@ export class EpubProcessorWrapper {
     /**
      * Return processed HTML for one chapter (body innerHTML).
      */
-    async getChapterHtml(index) {
+    async getChapterHtml(index: number): Promise<string | null> {
         if (!this.isReady || !this.processor) {
             console.error('EpubProcessorWrapper: Not ready for getChapterHtml');
             return null;
@@ -82,7 +87,7 @@ export class EpubProcessorWrapper {
     /**
      * Fetch the cover image as a Blob (or null if not present).
      */
-    async getCoverBlob() {
+    async getCoverBlob(): Promise<Blob | null> {
         if (!this.isReady || !this.processor) {
             console.error('EpubProcessorWrapper: Not ready for getCoverBlob');
             return null;
@@ -104,7 +109,7 @@ export class EpubProcessorWrapper {
         }
     }
 
-    async getChapterTitles() {
+    async getChapterTitles(): Promise<ChapterTitle[]> {
         if (!this.isReady || !this.processor) return [];
         try {
             return await this.processor.getChapterTitles();
@@ -114,14 +119,14 @@ export class EpubProcessorWrapper {
         }
     }
 
-    _createProcessor(epubDataBuffer) { return new EpubProcessor(epubDataBuffer); }
+    _createProcessor(epubDataBuffer: ArrayBuffer): EpubProcessor { return new EpubProcessor(epubDataBuffer); }
 }
 
 
 /* ------------------------------------------------------------------
- *  Helper: dynamically load <script src="…"> once per page
+ *  Helper: dynamically load <script src="..."> once per page
  * ------------------------------------------------------------------ */
-function loadScript(url) {
+function loadScript(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${url}"]`)) {
             resolve();      // already present / loading
@@ -131,7 +136,7 @@ function loadScript(url) {
         s.src     = url;
         s.async   = true;
         s.onload  = () => resolve();
-        s.onerror = err => {
+        s.onerror = () => {
             document.head.removeChild(s);
             reject(new Error(`Failed to load script: ${url}`));
         };
@@ -144,7 +149,15 @@ function loadScript(url) {
  *  Internal EpubProcessor  –  uses epub.js directly
  * ------------------------------------------------------------------ */
 class EpubProcessor {
-    constructor(epubDataBuffer) {
+    book: any | null;
+    isReady: boolean;
+    epubJsLib: any | null;
+    jszip: any | null;
+    dependenciesLoaded: boolean;
+    loadingPromise: Promise<boolean> | null;
+    readyPromise: Promise<void>;
+
+    constructor(epubDataBuffer: ArrayBuffer) {
         if (!(epubDataBuffer instanceof ArrayBuffer)) {
             throw new Error('EpubProcessor (internal) requires an ArrayBuffer.');
         }
@@ -160,7 +173,7 @@ class EpubProcessor {
     }
 
     /* --------- load JSZip + epub.js dynamically if needed --------- */
-    async _ensureDependencies() {
+    async _ensureDependencies(): Promise<boolean> {
         if (this.dependenciesLoaded) return true;
         if (this.loadingPromise)     return this.loadingPromise;
 
@@ -193,7 +206,7 @@ class EpubProcessor {
     }
 
     /* ---------- init book with automatic blob URL replacements ---------- */
-    async _initialize(epubDataBuffer) {
+    async _initialize(epubDataBuffer: ArrayBuffer): Promise<void> {
         await this._ensureDependencies();
 
         this.book = this.epubJsLib(epubDataBuffer, { replacements: 'blobUrl' });
@@ -205,7 +218,7 @@ class EpubProcessor {
         this.isReady = true;
     }
 
-    async ensureReady() {
+    async ensureReady(): Promise<void> {
         if (!this.isReady) await this.readyPromise;
         if (!this.isReady)  throw new Error('EpubProcessor (internal) could not be initialized.');
     }
@@ -213,7 +226,7 @@ class EpubProcessor {
     /* ============================================================
      *  Fast chapter renderer – fulfils the wrapper contract
      * ========================================================== */
-    async getChapterHtml(index) {
+    async getChapterHtml(index: number): Promise<string | null> {
         await this.ensureReady();
 
         const spineItem = this.book.spine.get(index);
@@ -242,15 +255,15 @@ class EpubProcessor {
     }
 
     /* ---- helper: remove <script> and <link rel="stylesheet"> ---- */
-    _stripScriptsAndStyles(doc) {
+    _stripScriptsAndStyles(doc: Document): void {
         doc.querySelectorAll('script, link[rel="stylesheet"]').forEach(el => el.remove());
     }
 
     /* -------- metadata / helper methods -------- */
-    async getTotalChapters() { await this.ensureReady(); return this.book.spine.spineItems.length; }
-    async getMetadata()      { await this.ensureReady(); return this.book.packaging?.metadata || {}; }
+    async getTotalChapters(): Promise<number> { await this.ensureReady(); return this.book.spine.spineItems.length; }
+    async getMetadata(): Promise<any> { await this.ensureReady(); return this.book.packaging?.metadata || {}; }
 
-    async getIndexFromCfi(cfi) {
+    async getIndexFromCfi(cfi: string): Promise<number> {
         await this.ensureReady();
         try {
             const item = this.book.spine.get(cfi);
@@ -262,11 +275,11 @@ class EpubProcessor {
         }
     }
 
-    async getChapterTitles() {
+    async getChapterTitles(): Promise<ChapterTitle[]> {
         await this.ensureReady();
         try {
             if (!this.book.navigation?.toc) return [];
-            return this.book.navigation.toc.map((item, index) => ({
+            return this.book.navigation.toc.map((item: any, index: number) => ({
                 index: index,
                 label: item.label.trim(),
                 href: item.href,
