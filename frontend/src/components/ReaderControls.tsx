@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ContentsDrawer } from "./ContentsDrawer";
-import { api } from "~/utils/api";
+import { api } from "~/utils/api.ts";
 import type { ChapterTitle } from "../types";
 
 interface ReaderControlsProps {

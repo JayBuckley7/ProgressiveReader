@@ -4,8 +4,8 @@ import { ReaderControls } from "./ReaderControls";
 import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
 import { useBookContent } from "../hooks/useBookContent";
-import { initialize as initializeJpdb, highlightContent } from "~/index";
-import { loadConfig as loadJpdbConfig } from "~/content/api-adapter";
+import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
+import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
