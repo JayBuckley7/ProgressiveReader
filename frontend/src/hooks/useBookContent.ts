@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { BookMetadata, storageService } from '~/services/storageService';
-import { useStorageService } from '~/hooks/useStorageService';
-import { EpubProcessorWrapper } from '~/lib/epubProcessor';
-import { TextProcessorWrapper } from '~/lib/textProcessor';
+import { BookMetadata, storageService } from '~/services/storageService.ts';
+import { useStorageService } from '~/hooks/useStorageService.ts';
+import { EpubProcessorWrapper } from '~/lib/epubProcessor.ts';
+import { TextProcessorWrapper } from '~/lib/textProcessor.ts';
 
-import type { ChapterTitle } from '~/types';
+import type { ChapterTitle } from '~/types/index.ts';
 
 interface BookContent {
   title: string;
