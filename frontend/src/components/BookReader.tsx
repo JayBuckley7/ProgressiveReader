@@ -813,7 +813,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               {bookContent?.title}
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              Chapter {currentChapter + 1} of {bookContent?.totalChapters}
+              {bookContent?.chapterTitles?.[currentChapter]?.label || `Chapter ${currentChapter + 1}`} of {bookContent?.totalChapters}
               <span className="ml-2 space-x-2">
                 {isTranslated && (
                   <>

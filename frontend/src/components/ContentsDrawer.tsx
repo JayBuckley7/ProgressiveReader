@@ -65,7 +65,7 @@ export function ContentsDrawer({
                     }}
                     className={`block w-full text-left px-2 py-1 rounded ${ch.index === currentChapter ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                   >
-                    {ch.title || `Chapter ${ch.index + 1}`}
+                    {ch.label || `Chapter ${ch.index + 1}`}
                   </button>
                 </li>
               ))}
@@ -77,7 +77,7 @@ export function ContentsDrawer({
                 <ul className="space-y-2">
                   {bookmarks.map((bookmark: any) => (
                     <li key={bookmark._id || bookmark.id} className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <div className="text-sm font-medium">Chapter {bookmark.chapterIndex + 1}</div>
+                      <div className="text-sm font-medium">{chapterTitles?.[bookmark.chapterIndex]?.label || `Chapter ${bookmark.chapterIndex + 1}`}</div>
                       {bookmark.note && (
                         <div className="text-xs text-gray-600 dark:text-gray-400">{bookmark.note}</div>
                       )}

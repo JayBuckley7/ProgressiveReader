@@ -229,9 +229,15 @@ class EpubProcessor {
     async getChapterHtml(index: number): Promise<string | null> {
         await this.ensureReady();
 
-        const spineItem = this.book.spine.get(index);
-        if (!spineItem) {
+        const tocItem = this.book.navigation?.toc?.[index];
+        if (!tocItem) {
             console.error('EpubProcessor (internal): Invalid chapter index:', index);
+            return null;
+        }
+        
+        const spineItem = this.book.spine.get(tocItem.href);
+        if (!spineItem) {
+            console.error('EpubProcessor (internal): Could not find spine item for href:', tocItem.href);
             return null;
         }
 
@@ -260,7 +266,10 @@ class EpubProcessor {
     }
 
     /* -------- metadata / helper methods -------- */
-    async getTotalChapters(): Promise<number> { await this.ensureReady(); return this.book.spine.spineItems.length; }
+    async getTotalChapters(): Promise<number> { 
+        await this.ensureReady(); 
+        return this.book.navigation?.toc?.length || 0; 
+    }
     async getMetadata(): Promise<any> { await this.ensureReady(); return this.book.packaging?.metadata || {}; }
 
     async getIndexFromCfi(cfi: string): Promise<number> {

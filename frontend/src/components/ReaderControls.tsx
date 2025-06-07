@@ -49,7 +49,7 @@ export function ReaderControls({
     }
   };
 
-  /** shared classes for “big” square icon buttons */
+  /** shared classes for "big" square icon buttons */
   const bigBtn =
     "p-3 rounded-lg transition-colors text-gray-600 dark:text-gray-400 " +
     "hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700";
@@ -71,8 +71,8 @@ export function ReaderControls({
             </svg>
           </button>
 
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 select-none">
-            Chapter {currentChapter + 1} / {totalChapters}
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 select-none truncate">
+            {chapterTitles?.[currentChapter]?.label || `Chapter ${currentChapter + 1}`}
           </span>
 
           <button

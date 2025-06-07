@@ -24,15 +24,16 @@ def translate_content():
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
-    content = data.get('content') 
-    target_language = data.get('target_language')
-    model = data.get('model')
+    content = data.get('text')  # Changed from 'content' to 'text'
+    target_language = data.get('target_lang')
+    model = data.get('model', 'gpt-4-turbo') # Default to gpt-4-turbo
     user_api_key = data.get('api_key')
     cefr_level = data.get('cefr_level')
-    stream = data.get('stream', False)  # New parameter to enable streaming
+    stream = data.get('stream', False)
+    use_cefr = data.get('use_cefr', False) # Get use_cefr flag
 
-    if content is None or target_language is None or model is None:
-        return jsonify({"error": "Missing required fields: content, target_language, model"}), 400
+    if content is None or target_language is None:
+        return jsonify({"error": "Missing required fields: text, target_lang"}), 400
 
 
     api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY')
@@ -48,7 +49,7 @@ def translate_content():
     user_prompt_prefix = (
         f"Translate the following HTML content to {target_language}"
     )
-    if cefr_level:
+    if use_cefr and cefr_level: # Check use_cefr flag
         user_prompt_prefix += (
             f", simplifying for CEFR level {cefr_level}. Preserve HTML tags."
         )
