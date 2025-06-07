@@ -103,21 +103,22 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         let processor: EpubProcessorWrapper | TextProcessorWrapper;
         let loaded: boolean;
         
-        if (bookMetadata.fileType === 'txt' || bookMetadata.fileType === 'docx' || bookMetadata.fileType === 'pdf') {
-          processor = new processors.TextProcessorWrapper();
-          console.log('Step 4 complete: Created TextProcessorWrapper');
-          
-          // Load the book with the text processor
-          console.log('Step 5: Loading book with TextProcessorWrapper...');
-          loaded = await processor.loadBook(arrayBuffer, { fileType: bookMetadata.fileType });
-        } else {
-          // Default to EPUB
+        if (bookMetadata.fileType === 'epub') {
+          // Use EPUB processor
           processor = new processors.EpubProcessorWrapper();
           console.log('Step 4 complete: Created EpubProcessorWrapper');
           
           // Load the book with the EPUB processor
           console.log('Step 5: Loading book with EpubProcessorWrapper...');
           loaded = await processor.loadBook(arrayBuffer);
+        } else {
+          // Default to Text processor for other types
+          processor = new processors.TextProcessorWrapper();
+          console.log('Step 4 complete: Created TextProcessorWrapper');
+          
+          // Load the book with the text processor
+          console.log('Step 5: Loading book with TextProcessorWrapper...');
+          loaded = await processor.loadBook(arrayBuffer, { fileType: bookMetadata.fileType });
         }
         if (!loaded) {
           throw new Error(`Failed to load book using ${processor.constructor.name}`);
