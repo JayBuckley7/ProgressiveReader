@@ -7,20 +7,17 @@
 name: Deploy to Cloud Run via Cloud Build
 
 on:
-  # Automatic path
   push:
-    branches: [ main ]
-
-  # Manual path (adds the "Run workflow" button on every branch)
-  workflow_dispatch: {}
+    branches: [ main ]        # automatic path
+  workflow_dispatch: {}       # manual path (“Run workflow” button)
 
 jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
     permissions:
-      contents: 'read'
-      id-token: 'write'  # needed for OIDC
+      contents: read
+      id-token: write         # needed for OIDC
 
     steps:
       - name: Checkout repository
@@ -30,7 +27,6 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/49477009498/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-          # The service account you created for CI/CD
           service_account: github-actions@floofgg.iam.gserviceaccount.com
 
       - name: Set up Google Cloud SDK
@@ -38,25 +34,31 @@ jobs:
         with:
           project_id: floofgg
 
+      # ───────────────────────────────────────────────────────
+      # Node 18 + npm cache based on frontend/package-lock.json
+      # ───────────────────────────────────────────────────────
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install Node dependencies
+      - name: Install Node dependencies (frontend)
+        working-directory: frontend   # ★ point to folder that HAS the lock file
         run: |
-          set -e                       # fail fast
+          set -e
           npm ci
 
       - name: Set environment variables
         id: env
         run: |
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "SERVICE_NAME=progressive-reader" >> $GITHUB_OUTPUT
-            echo "ENVIRONMENT=prod"                    >> $GITHUB_OUTPUT
+            echo "SERVICE_NAME=progressive-reader"  >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=prod"                 >> $GITHUB_OUTPUT
           else
-            echo "SERVICE_NAME=dev-progressive-reader"  >> $GITHUB_OUTPUT
-            echo "ENVIRONMENT=dev"                     >> $GITHUB_OUTPUT
+            echo "SERVICE_NAME=dev-progressive-reader" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=dev"                  >> $GITHUB_OUTPUT
           fi
 
       - name: Submit build to Cloud Build
@@ -65,13 +67,13 @@ jobs:
           env
           echo "---"
           echo "Attempting to unset SERVICE_URL if it exists..."
-          unset SERVICE_URL || true # Allow to continue if it does not exist
+          unset SERVICE_URL || true
           echo "---"
           echo "Current environment variables (after potential unset):"
           env
           echo "---"
           echo "GCloud command to be executed:"
-          set -x # Print command before execution
+          set -x
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
