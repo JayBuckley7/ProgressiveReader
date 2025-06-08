@@ -2,12 +2,6 @@
 import os
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecretkey-fallback')
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-    SERVER_DEFAULT_MODEL = os.environ.get('DEFAULT_MODEL', 'gpt-4o-mini')
-    UPLOAD_FOLDER = 'user_epubs'
-    # Derive COVER_EXPORT_FOLDER from UPLOAD_FOLDER
-    COVER_EXPORT_FOLDER = UPLOAD_FOLDER 
     ALLOWED_EXTENSIONS = {'epub', 'txt', 'docx', 'pdf', 'mobi'}
     # JPDB API Limits (can be configured here)
     MAX_BYTES_PER_API_BATCH = 15000 

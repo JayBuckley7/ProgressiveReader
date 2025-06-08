@@ -3,8 +3,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
 
-from ..firestore_client import db as fs_db
-
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
 

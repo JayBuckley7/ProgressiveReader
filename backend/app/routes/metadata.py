@@ -4,8 +4,6 @@ from flask import Blueprint, request, jsonify
 from flask_login import current_user, login_required
 from google.cloud import firestore
 
-from ..firestore_client import db as fs_db
-
 metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 
 

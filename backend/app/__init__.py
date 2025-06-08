@@ -66,16 +66,6 @@ def create_app(config_class=Config) -> Flask:
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.addFilter(FilterImageRequests())
 
-    # Ensure the upload folder exists
-    upload_folder_path = os.path.join(app.root_path, '..', app.config['UPLOAD_FOLDER'])
-    upload_folder_abs_path = os.path.abspath(upload_folder_path)
-    if not os.path.exists(upload_folder_abs_path):
-        try:
-            os.makedirs(upload_folder_abs_path)
-            app.logger.info(f"Created upload directory: {upload_folder_abs_path}")
-        except OSError as e:
-            app.logger.error(f"Error creating upload directory {upload_folder_abs_path}: {e}")
-
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def spa(path):

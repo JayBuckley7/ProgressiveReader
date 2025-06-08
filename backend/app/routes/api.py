@@ -6,7 +6,6 @@ import re
 import json
 from ..utils.clerk_auth import require_auth, get_user_id, get_user_email
 from ..utils.file_utils import allowed_file
-from ..firestore_client import db as fs_db
 import uuid
 import logging
 from datetime import datetime

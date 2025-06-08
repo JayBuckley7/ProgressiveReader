@@ -1,120 +1,65 @@
 steps:
-  # 1. Build Docker Image
-  - name: gcr.io/cloud-builders/docker
-    id: Build Docker Image
+  # 1. Build Docker image and tag with commit SHA and latest
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Build Docker Image"
     args:
-      - build
-      - --no-cache
-      - '--build-arg'
-      - 'VITE_GDRIVE_CLIENT_ID=${_VITE_GDRIVE_CLIENT_ID}'
-      - '--build-arg'
-      - 'VITE_GAPI_KEY=${_VITE_GAPI_KEY}'
-      - '--build-arg'
-      - 'VITE_CLERK_PUBLISHABLE_KEY=${_VITE_CLERK_PUBLISHABLE_KEY}'
-      - '--build-arg'
-      - 'VITE_CONVEX_URL=${_VITE_CONVEX_URL}'
-      - '--build-arg'
-      - 'VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}'
-      - '--build-arg'
-      - 'VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}'
-      - '--build-arg'
-      - 'VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}'
-      - '--build-arg'
-      - 'VITE_FIREBASE_STORAGE_BUCKET=${_VITE_FIREBASE_STORAGE_BUCKET}'
-      - '--build-arg'
-      - 'VITE_FIREBASE_MESSAGING_SENDER_ID=${_VITE_FIREBASE_MESSAGING_SENDER_ID}'
-      - '--build-arg'
-      - 'VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}'
-      - -t
-      - >-
-        us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}
-      - -t
-      - >-
-        us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
-      - .
-      - -f
-      - Dockerfile
+      - "build"
+      - "-t"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
+      - "-t"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
+      - "."
 
-  # 2. Push to Artifact Registry
-  - name: gcr.io/cloud-builders/docker
-    id: Push to Artifact Registry
-    waitFor: [Build Docker Image]
+  # 2. Push image with commit SHA tag
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push to Artifact Registry"
+    waitFor: ["Build Docker Image"]
     args:
-      - push
-      - >-
-        us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}
+      - "push"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
 
-  - name: gcr.io/cloud-builders/docker
-    id: Push latest tag
-    waitFor: [Build Docker Image]
+  # 3. Push latest tag
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push latest tag"
+    waitFor: ["Build Docker Image"]
     args:
-      - push
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
+      - "push"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
-  # 3. Deploy to Cloud Run (with VPC access)
-  - name: gcr.io/cloud-builders/gcloud
-    id: Deploy to Cloud Run
-    waitFor: [Push to Artifact Registry, Push latest tag]
+  # 4. Run build verification tests against health endpoint
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "BVT"
+    waitFor: ["Push to Artifact Registry"]
+    entrypoint: "bash"
     args:
-      - run
-      - deploy
-      - ${_SERVICE_NAME}
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}'
-      - '--region=us-central1'
-      - '--platform=managed'
-      - '--project=$PROJECT_ID'
-      - '--service-account=progressive-reader-bvt-sa@${PROJECT_ID}.iam.gserviceaccount.com'
-      - '--port=8080'
-      - '--ingress=all'
-      - '--concurrency=80'
-      - '--timeout=300'
-      - '--min-instances=0'
-      - '--max-instances=10'
-      - '--set-env-vars=APP_ENV=${_ENVIRONMENT},CLERK_SECRET_KEY=${_CLERK_SECRET_KEY}'
-      - '--vpc-connector=floof-connector'
-      - '--vpc-egress=private-ranges-only'
-      - '--cpu-boost'
-      - '--allow-unauthenticated'
-
-  # 4. Run Build Verification Tests (BVT)
-  - name: gcr.io/cloud-builders/gcloud
-    id: BVT
-    waitFor: [Deploy to Cloud Run]
-    entrypoint: 'bash'
-    args:
-      - '-c'
+      - "-c"
       - |
-        SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region us-central1 --format 'value(status.url)')
-        HEALTH_CHECK_URL="$${SERVICE_URL}/health"
-        echo "Performing BVT by checking health at: $${HEALTH_CHECK_URL}"
-        curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$${HEALTH_CHECK_URL}" || \
-          (echo "BVT failed for $${HEALTH_CHECK_URL}" && exit 1)
-        echo "BVT passed for $${HEALTH_CHECK_URL}"
+        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
+        HEALTH_CHECK_URL="${SERVICE_URL}/health"
+        echo "Performing BVT by checking health at: ${HEALTH_CHECK_URL}"
+        curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "${HEALTH_CHECK_URL}" || (echo "BVT failed for ${HEALTH_CHECK_URL}" && exit 1)
+        echo "BVT passed for ${HEALTH_CHECK_URL}"
+
+  # 5. Deploy to Cloud Run
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Deploy to Cloud Run"
+    waitFor: ["BVT"]
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud run deploy ${_SERVICE_NAME} \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+          --set-secrets OPENAI_API_KEY=openai-api-key:latest,JPDB_API_KEY=jpdb-api-key:latest,REDIS_URL=redis-url:latest \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --set-env-vars APP_ENV=${_ENVIRONMENT} \
+          --vpc-connector floof-connector \
+          --vpc-egress private-ranges-only
 
 images:
-  - >-
-    us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}
+  - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
 
-timeout: "1200s"
-
-# Substitutions for variables passed from GitHub Actions
-substitutions:
-  _COMMIT_SHA: ''
-  _SERVICE_NAME: 'progressive-reader-dev'
-  _ENVIRONMENT: 'dev'
-  _VITE_GDRIVE_CLIENT_ID: ''
-  _VITE_GAPI_KEY: ''
-  _VITE_CLERK_PUBLISHABLE_KEY: ''
-  _VITE_CONVEX_URL: ''
-  _VITE_FIREBASE_API_KEY: ''
-  _VITE_FIREBASE_AUTH_DOMAIN: ''
-  _VITE_FIREBASE_PROJECT_ID: ''
-  _VITE_FIREBASE_STORAGE_BUCKET: ''
-  _VITE_FIREBASE_MESSAGING_SENDER_ID: ''
-  _VITE_FIREBASE_APP_ID: ''
-  _CLERK_SECRET_KEY: ''
-
-options:
-  # pick one, or delete this line entirely to keep both targets
-  logging: GCS_ONLY          # or CLOUD_LOGGING_ONLY
-  machineType: 'E2_HIGHCPU_8'
+timeout: "1200s" 

@@ -43,6 +43,11 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Install Node dependencies
+        run: |
+          set -e                       # fail fast
+          npm ci
+
       - name: Set environment variables
         id: env
         run: |
@@ -50,7 +55,7 @@ jobs:
             echo "SERVICE_NAME=progressive-reader" >> $GITHUB_OUTPUT
             echo "ENVIRONMENT=prod"                    >> $GITHUB_OUTPUT
           else
-            echo "SERVICE_NAME=progressive-reader-dev"  >> $GITHUB_OUTPUT
+            echo "SERVICE_NAME=dev-progressive-reader"  >> $GITHUB_OUTPUT
             echo "ENVIRONMENT=dev"                     >> $GITHUB_OUTPUT
           fi
 
@@ -70,7 +75,7 @@ jobs:
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
-            --substitutions=_COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \
+            --substitutions=COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \
             --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .
           set +x

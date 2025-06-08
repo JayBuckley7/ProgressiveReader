@@ -1,58 +1,41 @@
-# Multi-stage build for Progressive Reader
+# Stage 1: Build frontend with Vite
+FROM node:18 AS frontend-builder
+WORKDIR /frontend
 
-# --- Frontend build stage ---
-FROM node:20 AS frontend
-WORKDIR /app/frontend
+# Copy package files and install dependencies
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
 
-# Declare ARGs for Vite environment variables
-ARG VITE_GDRIVE_CLIENT_ID
-ARG VITE_GAPI_KEY
-ARG VITE_CLERK_PUBLISHABLE_KEY
-ARG VITE_CONVEX_URL
-ARG VITE_FIREBASE_API_KEY
-ARG VITE_FIREBASE_AUTH_DOMAIN
-ARG VITE_FIREBASE_PROJECT_ID
-ARG VITE_FIREBASE_STORAGE_BUCKET
-ARG VITE_FIREBASE_MESSAGING_SENDER_ID
-ARG VITE_FIREBASE_APP_ID
-ARG VITE_BACKEND_URL=""
-
-COPY frontend/package*.json ./
-
-# Remove package-lock.json to avoid npm optional dependency bug
-RUN rm -f package-lock.json
-
-# Fresh install without cache
-RUN npm install
-
-# Explicitly install the rollup package for linux
-RUN npm install @rollup/rollup-linux-x64-gnu --save-optional || true
-
-COPY frontend .
-
-# Create .env file from build arguments
-RUN echo "VITE_GDRIVE_CLIENT_ID=${VITE_GDRIVE_CLIENT_ID}" >> .env.production
-RUN echo "VITE_GAPI_KEY=${VITE_GAPI_KEY}" >> .env.production
-RUN echo "VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}" >> .env.production
-RUN echo "VITE_CONVEX_URL=${VITE_CONVEX_URL}" >> .env.production
-RUN echo "VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}" >> .env.production
-RUN echo "VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN}" >> .env.production
-RUN echo "VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID}" >> .env.production
-RUN echo "VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET}" >> .env.production
-RUN echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID}" >> .env.production
-RUN echo "VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID}" >> .env.production
-RUN echo "VITE_BACKEND_URL=${VITE_BACKEND_URL}" >> .env.production
-
+# Copy entire frontend directory and build
+COPY frontend/ ./
 RUN npm run build
 
-# --- Backend stage ---
+# Stage 2: Build Python backend and assemble final image
 FROM python:3.11-slim
+
+# Prevent Python from buffering stdout/stderr
 ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
+
+# Install Python dependencies
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY --from=frontend /app/frontend/dist ./backend/app/static
-COPY backend ./backend
 
-# Default command uses gunicorn for production
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "run:app", "--chdir", "backend"]
+# Copy backend application code
+COPY backend/app ./app
+COPY backend/run.py ./
+COPY backend/config.py ./
+COPY backend/instance ./instance
+
+# Copy built frontend assets into Flask static folder
+# Flask static_folder is set to './app/static'
+RUN mkdir -p /app/app/static
+COPY --from=frontend-builder /frontend/dist/ /app/app/static/
+
+# Expose port and set environment variable
+EXPOSE 8080
+ENV PORT=8080
+
+# Run the Flask app with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:app"] 
