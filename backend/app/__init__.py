@@ -3,6 +3,7 @@ import os
 import logging
 from flask import Flask, send_from_directory, jsonify
 from flask_login import LoginManager
+from flask_cors import CORS
 from config import Config
 from .models import db, User
 from dotenv import load_dotenv
@@ -35,10 +36,14 @@ def load_user(user_id: str):
 def create_app(config_class=Config) -> Flask:
     load_dotenv()
     app = Flask(
-        __name__, 
-        instance_relative_config=False,
-        template_folder='../templates' # Explicitly set template folder relative to app root
+        __name__,
+        static_folder="static",      # points at backend/app/static
+        static_url_path=""           # serve at /
     )
+    
+    # Initialize CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    
     app.config.from_object(config_class)
 
     # Database configuration (production should use a durable backend)
@@ -71,21 +76,16 @@ def create_app(config_class=Config) -> Flask:
         except OSError as e:
             app.logger.error(f"Error creating upload directory {upload_folder_abs_path}: {e}")
 
-
-
-    # --- Add routes for PWA resources ---
-    @app.route('/offline')
-    def offline():
-        return send_from_directory('static', 'offline.html')
-        
-    @app.route('/service-worker.js')
-    def service_worker():
-        return send_from_directory('static/js', 'service-worker.js')
-        
-    @app.route('/manifest.json')
-    def manifest():
-        return send_from_directory('static', 'manifest.json')
-    # --- End PWA routes ---
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def spa(path):
+        """
+        Let React/Vite router handle every route, always return index.html
+        """
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, "index.html")
 
     # --- Health Check Endpoint ---
     @app.route('/health')

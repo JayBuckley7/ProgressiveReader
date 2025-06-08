@@ -4,11 +4,36 @@ steps:
     id: Build Docker Image
     args:
       - build
+      - --no-cache
+      - '--build-arg'
+      - 'VITE_GDRIVE_CLIENT_ID=${_VITE_GDRIVE_CLIENT_ID}'
+      - '--build-arg'
+      - 'VITE_GAPI_KEY=${_VITE_GAPI_KEY}'
+      - '--build-arg'
+      - 'VITE_CLERK_PUBLISHABLE_KEY=${_VITE_CLERK_PUBLISHABLE_KEY}'
+      - '--build-arg'
+      - 'VITE_CONVEX_URL=${_VITE_CONVEX_URL}'
+      - '--build-arg'
+      - 'VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}'
+      - '--build-arg'
+      - 'VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}'
+      - '--build-arg'
+      - 'VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}'
+      - '--build-arg'
+      - 'VITE_FIREBASE_STORAGE_BUCKET=${_VITE_FIREBASE_STORAGE_BUCKET}'
+      - '--build-arg'
+      - 'VITE_FIREBASE_MESSAGING_SENDER_ID=${_VITE_FIREBASE_MESSAGING_SENDER_ID}'
+      - '--build-arg'
+      - 'VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}'
       - -t
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+      - >-
+        us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}
       - -t
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
+      - >-
+        us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest
       - .
+      - -f
+      - Dockerfile
 
   # 2. Push to Artifact Registry
   - name: gcr.io/cloud-builders/docker
@@ -16,7 +41,8 @@ steps:
     waitFor: [Build Docker Image]
     args:
       - push
-      - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+      - >-
+        us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}
 
   - name: gcr.io/cloud-builders/docker
     id: Push latest tag
@@ -29,26 +55,26 @@ steps:
   - name: gcr.io/cloud-builders/gcloud
     id: Deploy to Cloud Run
     waitFor: [Push to Artifact Registry, Push latest tag]
-    entrypoint: bash
     args:
-      - -c
-      - |
-        gcloud run deploy ${_SERVICE_NAME} \
-          --image=us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA} \
-          --service-account=progressive-reader-bvt-sa@${PROJECT_ID}.iam.gserviceaccount.com \
-          --region=us-central1 \
-          --platform=managed \
-          --allow-unauthenticated \
-          --set-env-vars=APP_ENV=${_ENVIRONMENT} \
-          --project=$PROJECT_ID \
-          --vpc-connector=floof-connector \
-          --vpc-egress=private-ranges-only \
-          --port=8080 \
-          --memory=1Gi \
-          --cpu=1 \
-          --max-instances=10 \
-          --min-instances=0 \
-          --timeout=300
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--project=$PROJECT_ID'
+      - '--service-account=progressive-reader-bvt-sa@${PROJECT_ID}.iam.gserviceaccount.com'
+      - '--port=8080'
+      - '--ingress=all'
+      - '--concurrency=80'
+      - '--timeout=300'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--set-env-vars=APP_ENV=${_ENVIRONMENT},CLERK_SECRET_KEY=${_CLERK_SECRET_KEY}'
+      - '--vpc-connector=floof-connector'
+      - '--vpc-egress=private-ranges-only'
+      - '--cpu-boost'
+      - '--allow-unauthenticated'
 
   # 4. Run Build Verification Tests (BVT)
   - name: gcr.io/cloud-builders/gcloud
@@ -66,14 +92,27 @@ steps:
         echo "BVT passed for $${HEALTH_CHECK_URL}"
 
 images:
-  - us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${COMMIT_SHA}
+  - >-
+    us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}
 
 timeout: "1200s"
 
 # Substitutions for variables passed from GitHub Actions
 substitutions:
-  _SERVICE_NAME: 'progressive-reader'
-  _ENVIRONMENT: 'prod'
+  _COMMIT_SHA: ''
+  _SERVICE_NAME: 'progressive-reader-dev'
+  _ENVIRONMENT: 'dev'
+  _VITE_GDRIVE_CLIENT_ID: ''
+  _VITE_GAPI_KEY: ''
+  _VITE_CLERK_PUBLISHABLE_KEY: ''
+  _VITE_CONVEX_URL: ''
+  _VITE_FIREBASE_API_KEY: ''
+  _VITE_FIREBASE_AUTH_DOMAIN: ''
+  _VITE_FIREBASE_PROJECT_ID: ''
+  _VITE_FIREBASE_STORAGE_BUCKET: ''
+  _VITE_FIREBASE_MESSAGING_SENDER_ID: ''
+  _VITE_FIREBASE_APP_ID: ''
+  _CLERK_SECRET_KEY: ''
 
 options:
   # pick one, or delete this line entirely to keep both targets

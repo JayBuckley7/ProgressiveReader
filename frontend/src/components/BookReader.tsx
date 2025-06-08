@@ -343,9 +343,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     
     const payload: any = {
       content: contentToTranslate,
-      target_language: settings?.targetLanguage || "English",
+      target_lang: settings?.targetLanguage || "English",
       model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
       api_key: localStorage.getItem("openaiKey") || "",
+      use_cefr: useCefr,
     };
     if (useCefr) {
       payload.cefr_level = localStorage.getItem("cefrLevel") || "B2";

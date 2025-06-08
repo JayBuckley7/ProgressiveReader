@@ -24,7 +24,7 @@ def translate_content():
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
-    content = data.get('text')  # Changed from 'content' to 'text'
+    content = data.get('content')
     target_language = data.get('target_lang')
     model = data.get('model', 'gpt-4-turbo') # Default to gpt-4-turbo
     user_api_key = data.get('api_key')
@@ -33,7 +33,7 @@ def translate_content():
     use_cefr = data.get('use_cefr', False) # Get use_cefr flag
 
     if content is None or target_language is None:
-        return jsonify({"error": "Missing required fields: text, target_lang"}), 400
+        return jsonify({"error": "Missing required fields: content, target_lang"}), 400
 
 
     api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY')
