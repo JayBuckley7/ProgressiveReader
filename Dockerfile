@@ -1,5 +1,5 @@
 # Stage 1: Build frontend with Vite
-FROM node:18 AS frontend-builder
+FROM node:20 AS frontend-builder
 WORKDIR /frontend
 
 # Copy package files and install dependencies
