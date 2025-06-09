@@ -26,7 +26,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/run.py ./
 COPY backend/config.py ./
-COPY backend/instance ./instance
+# The backend/instance directory isn't committed or needed; ensure it's present
+RUN mkdir -p instance
 
 # Copy built frontend assets into Flask static folder
 # Flask static_folder is set to './app/static'
