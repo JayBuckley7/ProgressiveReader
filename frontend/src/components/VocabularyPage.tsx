@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getDueCards, Card as DueCard } from "../services/dueCardsService";
 import { toast } from "sonner";
 
 interface VocabularyWord {
@@ -19,6 +20,8 @@ export function VocabularyPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
 
+  const [dueCards, setDueCards] = useState<DueCard[]>([]);
+
   // const vocabularyQuery = useQuery(api.vocabulary.list, { 
   //   language: selectedLanguage || undefined 
   // }) || [];
@@ -29,6 +32,15 @@ export function VocabularyPage() {
 
   // const toggleMasteredMutation = useMutation(api.vocabulary.toggleMastered);
   const toggleMastered = async (data: any) => { console.log("Toggle mastered (TODO):", data); }; // Was toggleMasteredMutation
+
+  // Fetch due cards if preference is enabled
+  useEffect(() => {
+    if (localStorage.getItem('preferDueCards') === 'true') {
+      getDueCards()
+        .then(cards => setDueCards(cards))
+        .catch(err => console.error('Failed to load due cards', err));
+    }
+  }, []);
 
   // Get unique languages from vocabulary
   const languages = Array.from(new Set(vocabulary.map(word => word.language))); // Use vocabulary
@@ -92,6 +104,20 @@ export function VocabularyPage() {
           <div className="text-gray-600 dark:text-gray-400">Learning</div>
         </div>
       </div>
+
+      {dueCards.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-8">
+          <h2 className="text-xl font-bold mb-4">JPDB Due Cards</h2>
+          <ul className="grid gap-2">
+            {dueCards.map(card => (
+              <li key={card.id} className="flex justify-between">
+                <span>{card.term}</span>
+                <span className="text-gray-600 dark:text-gray-300">{card.meaning}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
