@@ -21,6 +21,7 @@ class Config:
         'pitch_accent',
     ]
     JPDB_API_URL = 'https://jpdb.io/api/v1/parse'
+    JPDB_REVIEW_URL = 'https://jpdb.io/api/v1/review'
     SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "True").lower() in (
         "true",

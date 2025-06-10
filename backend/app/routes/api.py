@@ -625,11 +625,46 @@ def review_jpdb_card():
     ):
         return jsonify({'error': 'Invalid rating'}), 400
 
-    # Here you would implement the JPDB review API call
-    # For now, we'll just return a success response
-    current_app.logger.info(f"Reviewing card vid={vid}, sid={sid}, rating={rating}")
-    
-    # Return a mock new state for the word
+    # Map local rating values to JPDB API grade values
+    grade = 'okay' if rating == 'good' else rating
+
+    headers = {
+        'Authorization': f'Bearer {jpdb_api_key}',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    }
+    review_url = current_app.config.get('JPDB_REVIEW_URL',
+                                        'https://jpdb.io/api/v1/review')
+
+    payload = {
+        'vid': vid,
+        'sid': sid,
+        'grade': grade,
+    }
+
+    try:
+        response = requests.post(review_url, headers=headers, json=payload)
+        current_app.logger.info(
+            f"JPDB review response status: {response.status_code}")
+        response.raise_for_status()
+        # JPDB's API returns minimal data; we ignore it and predict state below
+    except requests.exceptions.HTTPError as http_err:
+        try:
+            error_detail = response.json().get('error')
+        except Exception:
+            error_detail = response.text
+        current_app.logger.error(
+            f"JPDB HTTP error: {http_err} - Detail: {error_detail}")
+        return jsonify({'error': f'JPDB error: {error_detail}'}), response.status_code
+    except requests.RequestException as req_err:
+        current_app.logger.error(
+            f"JPDB request failed: {req_err}", exc_info=True)
+        return jsonify({'error': 'Failed to contact JPDB'}), 500
+
+    current_app.logger.info(
+        f"Reviewed card vid={vid}, sid={sid}, rating={rating}")
+
+    # Predict new card state locally for UI update
     if rating in ('good', 'easy', 'pass', 'known'):
         new_state = ['known']
     elif rating in ('nothing', 'hard', 'fail'):
@@ -637,7 +672,7 @@ def review_jpdb_card():
     else:
         new_state = ['learning']
 
-    return jsonify({"success": True, "newState": new_state})
+    return jsonify({'success': True, 'newState': new_state})
 
 
 # ---------------------------------------------------------------------------
