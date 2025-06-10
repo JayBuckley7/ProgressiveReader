@@ -1,4 +1,6 @@
-// Mock API client for now - replace with actual tRPC or API client implementation
+import { useEffect, useState } from "react";
+
+// Simple fetch-based API client
 export interface Bookmark {
   id: string;
   bookId: string;
@@ -9,68 +11,88 @@ export interface Bookmark {
 }
 
 // Mock hook to simulate useQuery behavior
-function mockUseQuery<T>(data: T) {
-  return {
-    data,
-    isLoading: false,
-    error: null,
-  };
+function useQuery<T>(fetchFn: () => Promise<T>) {
+  const [data, setData] = useState<T | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    fetchFn()
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e as Error);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchFn]);
+
+  return { data, isLoading, error };
 }
 
 // Mock hook to simulate useMutation behavior
-function mockUseMutation<TVariables, TData>(
+function useMutation<TVariables, TData>(
   mutationFn: (variables: TVariables) => Promise<TData>,
-  options?: {
-    onSuccess?: (data: TData) => void;
-    onError?: (error: Error) => void;
-  }
+  options?: { onSuccess?: (data: TData) => void; onError?: (err: Error) => void }
 ) {
-  return {
-    mutateAsync: async (variables: TVariables) => {
-      try {
-        const result = await mutationFn(variables);
-        options?.onSuccess?.(result);
-        return result;
-      } catch (error) {
-        options?.onError?.(error as Error);
-        throw error;
-      }
-    },
-    isLoading: false,
+  const [isLoading, setIsLoading] = useState(false);
+  const mutateAsync = async (variables: TVariables) => {
+    setIsLoading(true);
+    try {
+      const result = await mutationFn(variables);
+      options?.onSuccess?.(result);
+      return result;
+    } catch (err) {
+      options?.onError?.(err as Error);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
+  return { mutateAsync, isLoading };
 }
 
 // Mock API client
 export const api = {
   reading: {
     getBookmarks: {
-      useQuery: ({ bookId }: { bookId: string }) => {
-        // Mock bookmarks data - replace with actual API call
-        const mockBookmarks: Bookmark[] = [];
-        return mockUseQuery(mockBookmarks);
-      },
+      useQuery: ({ bookId }: { bookId: string }) =>
+        useQuery<Bookmark[]>(async () => {
+          const res = await fetch(`/api/bookmarks?bookId=${encodeURIComponent(bookId)}`);
+          if (!res.ok) throw new Error('Failed to load bookmarks');
+          return res.json();
+        }),
     },
     addBookmark: {
       useMutation: (options?: {
         onSuccess?: () => void;
         onError?: (error: Error) => void;
       }) => {
-        return mockUseMutation(
+        return useMutation(
           async (variables: {
             bookId: string;
             chapterIndex: number;
             position: number;
             note?: string;
           }) => {
-            // Mock implementation - replace with actual API call
-            console.log('Adding bookmark:', variables);
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 100));
-            return { id: Date.now().toString(), ...variables, createdAt: new Date() };
+            const res = await fetch('/api/bookmarks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(variables),
+            });
+            if (!res.ok) throw new Error('Failed to add bookmark');
+            return res.json();
           },
           options
         );
       },
     },
   },
-}; 
+};
