@@ -7,6 +7,7 @@ from flask_cors import CORS
 from config import Config
 from .models import db, User
 from dotenv import load_dotenv
+import json
 
 # Define a filter for logging
 class FilterImageRequests(logging.Filter):
@@ -35,6 +36,17 @@ def load_user(user_id: str):
 
 def create_app(config_class=Config) -> Flask:
     load_dotenv()
+
+    # Load additional configuration from a mounted secret if available
+    secret_path = os.environ.get("APP_CONFIG_PATH", "/secrets/app-config")
+    if os.path.exists(secret_path):
+        try:
+            with open(secret_path, "r") as f:
+                config_data = json.load(f)
+            for key, value in config_data.items():
+                os.environ.setdefault(key, str(value))
+        except Exception as e:
+            logging.warning(f"Failed to load secrets from {secret_path}: {e}")
     app = Flask(
         __name__,
         static_folder="static",      # points at backend/app/static
