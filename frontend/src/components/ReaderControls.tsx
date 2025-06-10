@@ -55,7 +55,7 @@ export function ReaderControls({
     "hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700";
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-t px-3 sm:px-4 py-2 sm:py-3 shadow-inner">
+    <div className="bg-white dark:bg-gray-800 border-t px-3 sm:px-4 py-2 sm:py-3 shadow-inner fixed bottom-0 inset-x-0 z-30">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
 
         {/* ─────────── chapter navigation ─────────── */}
