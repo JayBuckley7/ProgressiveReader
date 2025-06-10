@@ -18,27 +18,36 @@ function getCookie(name: string): string | null {
 
 export function DangerZone() {
   const [showPrompt, setShowPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
-  // Mock PWA installation logic
-  const handleInstall = () => {
-    console.log("Installing PWA...");
-    setShowPrompt(false);
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      await deferredPrompt.userChoice;
+    } finally {
+      setCookie("pwaPromptDismissed", "true", 7);
+      setShowPrompt(false);
+      setDeferredPrompt(null);
+    }
   };
 
   const handleDismiss = () => {
     setCookie("pwaPromptDismissed", "true", 7);
     setShowPrompt(false);
+    setDeferredPrompt(null);
   };
 
-  // Show prompt after a delay unless recently dismissed
+  // Listen for the PWA install prompt event
   useEffect(() => {
-    if (getCookie("pwaPromptDismissed") === "true") {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setShowPrompt(true);
-    }, 5000);
-    return () => clearTimeout(timer);
+    const handler = (e: any) => {
+      if (getCookie("pwaPromptDismissed") === "true") return;
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setTimeout(() => setShowPrompt(true), 5000);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   if (!showPrompt) return null;
