@@ -330,6 +330,10 @@ export function useStorageService() {
 
       // Clear persisted settings
       document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      localStorage.removeItem('prSettings');
+      localStorage.removeItem('showPopupOnHover');
+      localStorage.removeItem('touchscreenSupport');
+      localStorage.removeItem('disableFadeAnimation');
     } else {
       toast.error('Authentication system not loaded yet');
     }
