@@ -175,3 +175,7 @@ frontend/dist/
 
 # Setup scripts and secrets (should not be committed)
 setup-*
+
+# local env
+/node_modules
+/env.json

@@ -176,3 +176,8 @@ frontend/dist/
 # Setup scripts and secrets (should not be committed)
 setup-*
 !frontend/src/lib/**
+
+# For more information, run:
+#   $ gcloud topic gcloudignore
+#
+env.json
