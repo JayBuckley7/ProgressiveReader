@@ -59,7 +59,7 @@ steps:
           gcloud run deploy ${_SERVICE_NAME} \
             --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
             --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-            --set-secrets OPENAI_API_KEY=openai-api-key:latest,JPDB_API_KEY=jpdb-api-key:latest,REDIS_URL=redis-url:latest,CLERK_SECRET_KEY=clerk-secret-key:latest \
+            --mount-secrets /secrets=app-config:latest \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
