@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { toast } from "sonner";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { TtsControlModal } from "./TtsControlModal";
@@ -337,16 +338,22 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const translateCurrent = async (useCefr: boolean) => {
     if (!currentChapterContent) return;
     setIsTranslating(true);
+    const toastId = toast.loading("Translating...", {
+      id: "translating",
+      duration: Infinity,
+      style: { backgroundColor: "#4b8dff", color: "white" },
+    });
 
     // Always translate from the original chapter HTML
     const contentToTranslate = currentChapterContent;
-    
+
     const payload: any = {
       content: contentToTranslate,
       target_lang: settings?.targetLanguage || "English",
       model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
       api_key: localStorage.getItem("openaiKey") || "",
       use_cefr: useCefr,
+      stream: true,
     };
     if (useCefr) {
       payload.cefr_level = localStorage.getItem("cefrLevel") || "B2";
@@ -354,33 +361,72 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     try {
       const resp = await fetch("/api/translate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
         body: JSON.stringify(payload),
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.translated_text) {
-          const wrappedTranslation = `
-            <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
-              <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
-                ${data.translated_text}
-              </div>
-            </div>
-          `;
-          setTranslatedContent(wrappedTranslation);
-          setIsTranslated(true);
-          setIsAutoloaded(false); // Manual translation, not autoloaded
-          
-          // Save translation to storage for autoload
-          saveTranslationToStorage(bookId, currentChapter, wrappedTranslation, useCefr, settings);
-          
-          console.log('Content translated and marked as translated');
+      if (resp.ok && resp.body) {
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let accumulated = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+          for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith("data:")) continue;
+            const dataStr = line.replace(/^data:\s*/, "");
+            if (dataStr === "[DONE]") continue;
+            let event;
+            try {
+              event = JSON.parse(dataStr);
+            } catch (e) {
+              console.error("Failed to parse event", e, dataStr);
+              continue;
+            }
+            if (event.content) {
+              accumulated += event.content;
+              const wrapped = `
+                <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
+                  <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
+                    ${accumulated}
+                  </div>
+                </div>
+              `;
+              setTranslatedContent(wrapped);
+            }
+            if (event.complete && event.translated_text) {
+              accumulated = event.translated_text;
+              const finalWrapped = `
+                <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
+                  <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
+                    ${event.translated_text}
+                  </div>
+                </div>
+              `;
+              setTranslatedContent(finalWrapped);
+              setIsTranslated(true);
+              setIsAutoloaded(false);
+              saveTranslationToStorage(bookId, currentChapter, finalWrapped, useCefr, settings);
+            }
+          }
         }
+      } else {
+        toast.error("Translation request failed");
       }
     } catch (error) {
-      console.error('Translation error:', error);
+      console.error("Translation error:", error);
+      toast.error("Translation error");
     } finally {
       setIsTranslating(false);
+      toast.dismiss(toastId);
     }
   };
 
