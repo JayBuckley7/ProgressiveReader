@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { prefetchDueCards } from "./services/dueCardsService";
 import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 
 import { SignInForm } from "./components/SignInForm";
@@ -68,6 +69,13 @@ function AppContent() {
     connectToDrive,
     isDriveLoading,
   ]);
+
+  // Prefetch JPDB due cards on startup if enabled
+  useEffect(() => {
+    if (localStorage.getItem('preferDueCards') === 'true') {
+      prefetchDueCards();
+    }
+  }, []);
 
   return (
     <SettingsProvider>
