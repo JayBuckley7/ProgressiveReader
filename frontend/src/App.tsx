@@ -11,6 +11,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { TopActions } from "./components/TopActions";
 import { HeroBanner } from "./components/HeroBanner";
 import { DangerZone } from "./components/DangerZone";
+import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
 import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
@@ -91,6 +92,7 @@ function AppContent() {
             setShowLogin={setShowLogin}
           />
         </main>
+        <Footer />
         <DangerZone />
 
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
