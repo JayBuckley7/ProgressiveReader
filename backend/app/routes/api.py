@@ -4,7 +4,9 @@ from openai import OpenAI
 import requests
 import re
 import json
-from ..utils.clerk_auth import require_auth, get_user_id, get_user_email
+from ..utils.clerk_auth import require_auth, optional_auth, get_user_id, get_user_email
+from ..models import db, Bookmark
+from flask import g
 from ..utils.file_utils import allowed_file
 import uuid
 import logging
@@ -634,5 +636,68 @@ def review_jpdb_card():
         new_state = ['failed']
     else:
         new_state = ['learning']
-    
+
     return jsonify({"success": True, "newState": new_state})
+
+
+# ---------------------------------------------------------------------------
+#  Bookmark Endpoints
+# ---------------------------------------------------------------------------
+
+@api_bp.route('/bookmarks', methods=['GET'])
+@optional_auth
+def get_bookmarks():
+    """Return bookmarks for the given book"""
+    book_id = request.args.get('bookId')
+    if not book_id:
+        return jsonify({'error': 'Missing bookId'}), 400
+
+    query = Bookmark.query.filter_by(book_id=book_id)
+    if g.get('user'):
+        query = query.filter_by(user_id=g.user.id)
+    bookmarks = query.order_by(Bookmark.created_at).all()
+
+    return jsonify([
+        {
+            'id': b.id,
+            'bookId': b.book_id,
+            'chapterIndex': b.chapter_index,
+            'position': b.position,
+            'note': b.note,
+            'createdAt': b.created_at.isoformat() if b.created_at else None,
+        }
+        for b in bookmarks
+    ])
+
+
+@api_bp.route('/bookmarks', methods=['POST'])
+@optional_auth
+def add_bookmark():
+    """Create a bookmark for the current user (if any)."""
+    data = request.get_json() or {}
+    book_id = data.get('bookId')
+    chapter_index = data.get('chapterIndex')
+    position = data.get('position')
+    note = data.get('note')
+
+    if not book_id or chapter_index is None or position is None:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    bookmark = Bookmark(
+        user_id=g.user.id if g.get('user') else None,
+        book_id=book_id,
+        chapter_index=chapter_index,
+        position=position,
+        note=note,
+    )
+    db.session.add(bookmark)
+    db.session.commit()
+
+    return jsonify({
+        'id': bookmark.id,
+        'bookId': bookmark.book_id,
+        'chapterIndex': bookmark.chapter_index,
+        'position': bookmark.position,
+        'note': bookmark.note,
+        'createdAt': bookmark.created_at.isoformat() if bookmark.created_at else None,
+    }), 201
