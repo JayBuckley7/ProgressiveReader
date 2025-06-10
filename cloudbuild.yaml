@@ -56,16 +56,16 @@ steps:
     args:
       - "-c"
       - |
-        gcloud run deploy ${_SERVICE_NAME} \
-          --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
-          --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --set-secrets OPENAI_API_KEY=openai-api-key:latest,JPDB_API_KEY=jpdb-api-key:latest,REDIS_URL=redis-url:latest,CLERK_SECRET_KEY=clerk-secret-key:latest \
-          --region us-central1 \
-          --platform managed \
-          --allow-unauthenticated \
-          --set-env-vars APP_ENV=${_ENVIRONMENT} \
-          --vpc-connector floof-connector \
-          --vpc-egress private-ranges-only
+          gcloud run deploy ${_SERVICE_NAME} \
+            --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+            --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+            --mount-secrets /secrets=app-config:latest \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars APP_ENV=${_ENVIRONMENT} \
+            --vpc-connector floof-connector \
+            --vpc-egress private-ranges-only
 
 images:
   - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
