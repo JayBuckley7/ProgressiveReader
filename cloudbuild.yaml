@@ -4,6 +4,14 @@ steps:
     id: "Build Docker Image"
     args:
       - "build"
+      - "--build-arg"
+      - "VITE_CLERK_PUBLISHABLE_KEY=${_VITE_CLERK_PUBLISHABLE_KEY}"
+      - "--build-arg"
+      - "VITE_GDRIVE_CLIENT_ID=${_VITE_GDRIVE_CLIENT_ID}"
+      - "--build-arg"
+      - "VITE_GAPI_KEY=${_VITE_GAPI_KEY}"
+      - "--build-arg"
+      - "CLERK_SECRET_KEY=${_CLERK_SECRET_KEY}"
       - "-t"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
       - "-t"
@@ -51,7 +59,7 @@ steps:
         gcloud run deploy ${_SERVICE_NAME} \
           --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
           --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-          --set-secrets OPENAI_API_KEY=openai-api-key:latest,JPDB_API_KEY=jpdb-api-key:latest,REDIS_URL=redis-url:latest \
+          --set-secrets OPENAI_API_KEY=openai-api-key:latest,JPDB_API_KEY=jpdb-api-key:latest,REDIS_URL=redis-url:latest,CLERK_SECRET_KEY=clerk-secret-key:latest \
           --region us-central1 \
           --platform managed \
           --allow-unauthenticated \
