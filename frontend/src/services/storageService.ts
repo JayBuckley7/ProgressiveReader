@@ -10,7 +10,6 @@ import {
 } from './driveCache';
 
 
-// Declare the existing driveSync functions for TypeScript
 declare global {
     interface Window {
         Clerk: any;

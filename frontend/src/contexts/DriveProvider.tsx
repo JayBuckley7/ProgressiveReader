@@ -36,6 +36,8 @@ export function DriveProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshState();
+    const unsubscribe = gDriveService.listenToSigninStatus(refreshState);
+    return () => unsubscribe();
   }, [refreshState]);
 
   const signIn = useCallback(async (prompt?: 'select_account' | 'consent' | '') => {

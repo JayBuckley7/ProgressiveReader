@@ -26,7 +26,9 @@ export default function App() {
 
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
-      <AppContent />
+      <DriveProvider>
+        <AppContent />
+      </DriveProvider>
     </ClerkProvider>
   );
 }
@@ -42,11 +44,10 @@ function AppContent() {
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { isConnected: isDriveConnected, signIn: connectToDrive } = useDrive();
-  const isDriveLoading = false;
 
   useEffect(() => {
-    // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
-    if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
+    // Only proceed if Clerk sign-in is complete and user data is available.
+    if (isClerkLoaded && isClerkSignedIn && clerkUser) {
       // Check if one of the Clerk external accounts is Google
       // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
       // Inspect clerkUser.externalAccounts[0].provider to be sure.
@@ -69,7 +70,6 @@ function AppContent() {
     clerkUser,
     isDriveConnected,
     connectToDrive,
-    isDriveLoading,
   ]);
 
   // Prefetch JPDB due cards on startup if enabled
@@ -80,7 +80,6 @@ function AppContent() {
   }, []);
 
   return (
-    <DriveProvider>
     <SettingsProvider>
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
         <main className="flex-1 flex flex-col">
@@ -102,7 +101,6 @@ function AppContent() {
         <Toaster />
       </div>
     </SettingsProvider>
-    </DriveProvider>
   );
 }
 
