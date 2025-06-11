@@ -1,38 +1,38 @@
 """Blueprint for storing and retrieving book metadata via Firestore."""
 
 from flask import Blueprint, request, jsonify
-from flask_login import current_user, login_required
+from ..utils.clerk_auth import require_auth, get_user_id
 from google.cloud import firestore
 
 metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 
 
 @metadata_bp.route("/books", methods=["GET"])
-@login_required
+@require_auth
 def get_all_books():
     """Return all stored books for the current user."""
-    doc = fs_db.collection("users").document(str(current_user.id)).get()
+    doc = fs_db.collection("users").document(str(get_user_id())).get()
     books = doc.to_dict().get("books", []) if doc.exists else []
     return jsonify(books)
 
 
 @metadata_bp.route("/books", methods=["POST"])
-@login_required
+@require_auth
 def add_book():
     """Add a book entry for the current user."""
     data = request.get_json() or {}
     if "id" not in data:
         return jsonify({"error": "Missing id"}), 400
-    user_doc = fs_db.collection("users").document(str(current_user.id))
+    user_doc = fs_db.collection("users").document(str(get_user_id()))
     user_doc.set({"books": firestore.ArrayUnion([data])}, merge=True)
     return jsonify(success=True)
 
 
 @metadata_bp.route("/position", methods=["GET", "POST"])
-@login_required
+@require_auth
 def read_position():
     """Get or update the user's reading position."""
-    doc_ref = fs_db.collection("users").document(str(current_user.id))
+    doc_ref = fs_db.collection("users").document(str(get_user_id()))
     if request.method == "GET":
         snap = doc_ref.get()
         pos = 0

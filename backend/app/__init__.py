@@ -2,10 +2,9 @@
 import os
 import logging
 from flask import Flask, send_from_directory, jsonify
-from flask_login import LoginManager
 from flask_cors import CORS
 from config import Config
-from .models import db, User
+from .models import db
 from dotenv import load_dotenv
 import json
 
@@ -18,21 +17,6 @@ class FilterImageRequests(logging.Filter):
         return not ('GET /image/' in msg and ' 200 ' in msg)
 
 
-login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
-
-@login_manager.unauthorized_handler
-def _unauth():
-    """Return a 401 JSON response for unauthorized API calls."""
-    return jsonify(error='Auth required'), 401
-
-
-@login_manager.user_loader
-def load_user(user_id: str):
-    """Load a user for Flask-Login given their ID."""
-    if user_id is None:
-        return None
-    return User.query.get(int(user_id))
 
 def create_app(config_class=Config) -> Flask:
     load_dotenv()
@@ -66,7 +50,6 @@ def create_app(config_class=Config) -> Flask:
     os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
-    login_manager.init_app(app)
     app.config.update({
         "SESSION_COOKIE_SAMESITE": "Lax",
         "SESSION_COOKIE_SECURE": True,
