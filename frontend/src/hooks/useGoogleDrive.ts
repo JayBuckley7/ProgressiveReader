@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { gDriveService } from '../services/gdriveService';
+import { driveApiService } from '../services/driveApiService';
 
 interface GoogleDriveFile {
   id: string;
@@ -40,7 +40,7 @@ interface UseGoogleDriveReturn {
 }
 
 export const useGoogleDrive = (): UseGoogleDriveReturn => {
-  const [isDriveConnected, setIsDriveConnected] = useState<boolean>(gDriveService.isSignedIn());
+  const [isDriveConnected, setIsDriveConnected] = useState<boolean>(true);
   const [driveUser, setDriveUser] = useState<GoogleUserProfile | null>(null);
   const [driveFiles, setDriveFiles] = useState<GoogleDriveFile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false); // For async operations like fetching files
@@ -50,19 +50,10 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
     setIsLoading(true);
     setError(null);
     try {
-      const signedIn = gDriveService.isSignedIn();
-      setIsDriveConnected(signedIn);
-      if (signedIn) {
-        const profile = await gDriveService.getUserProfile();
-        setDriveUser(profile as GoogleUserProfile | null);
-        // Optionally, fetch files immediately upon connection or leave it to an explicit call
-        // await fetchDriveFiles(); 
-      } else {
-        setDriveUser(null);
-        setDriveFiles([]);
-      }
+      // In the server-driven model we assume Drive is available once the user is authenticated
+      setIsDriveConnected(true);
     } catch (e: any) {
-      console.error('[useGoogleDrive] Error updating state from service:', e);
+      console.error('[useGoogleDrive] Error updating state:', e);
       setError(e);
     } finally {
       setIsLoading(false);
@@ -70,36 +61,17 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
   }, []);
 
   useEffect(() => {
-    // Initial check and subscription to sign-in status changes
-    updateStateFromService(); // Check initial state
-
-    const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
-      console.log('[useGoogleDrive] Sign-in status changed:', isSignedIn);
-      setIsDriveConnected(isSignedIn);
-      if (isSignedIn) {
-        updateStateFromService(); // Fetch profile etc. on sign-in
-      } else {
-        setDriveUser(null); // Clear user data on sign-out
-        setDriveFiles([]); // Clear files on sign-out
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
+    updateStateFromService();
   }, [updateStateFromService]);
 
-  const connectToDrive = useCallback((prompt?: 'select_account' | 'consent' | '') => {
+  const connectToDrive = useCallback(() => {
     setError(null);
-    // setIsLoading(true); // Optionally set loading during the sign-in attempt prompt
-    // The actual loading/state change will be handled by the listener and updateStateFromService
-    gDriveService.signIn(prompt);
+    setIsDriveConnected(true);
   }, []);
 
   const disconnectFromDrive = useCallback(() => {
     setError(null);
-    gDriveService.signOut();
-    // State updates (isConnected, user) will be handled by the listener
+    setIsDriveConnected(false);
   }, []);
 
   const fetchDriveFiles = useCallback(async (folderId?: string) => {
@@ -110,7 +82,7 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
     setIsLoading(true);
     setError(null);
     try {
-      const files = await gDriveService.listFiles(folderId);
+      const files = await driveApiService.listFiles(folderId);
       setDriveFiles(files as GoogleDriveFile[]);
     } catch (e: any) {
       console.error('[useGoogleDrive] Error fetching files:', e);
@@ -135,7 +107,7 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
       setIsLoading(true);
       setError(null);
       try {
-        const uploadedFile = await gDriveService.uploadFile(fileName, fileBlob, mimeType, folderId);
+        const uploadedFile = await driveApiService.uploadFile(fileBlob, fileName, mimeType, folderId);
         if (uploadedFile) {
           // Optionally, refresh the file list
           // await fetchDriveFiles(folderId || await gDriveService.getAppFolderId()); 
@@ -162,7 +134,7 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
       setIsLoading(true);
       setError(null);
       try {
-        const blob = await gDriveService.downloadFile(fileId);
+        const blob = await driveApiService.downloadFile(fileId);
         return blob;
       } catch (e: any) {
         console.error('[useGoogleDrive] Error downloading file:', e);
@@ -184,7 +156,7 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
       setIsLoading(true);
       setError(null);
       try {
-        const success = await gDriveService.deleteFile(fileId);
+        const success = await driveApiService.deleteFile(fileId);
         if (success) {
           // Optionally, refresh the file list
           // await fetchDriveFiles(await gDriveService.getAppFolderId());
@@ -210,8 +182,11 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
     setIsLoading(true);
     setError(null);
     try {
-        const id = await gDriveService.getAppFolderId();
-        return id;
+        const files = await driveApiService.listFiles();
+        if (files.length > 0) {
+            return files[0].id; // placeholder, backend handles folder logic
+        }
+        return null;
     } catch (e: any) {
         console.error('[useGoogleDrive] Error getting app folder ID:', e);
         setError(e);
