@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
-import * as driveSync from './driveSync';
+import { gDriveService } from '../services/gdriveService';
 
 /**
  * Button UI for connecting to Google Drive and triggering sync.
  */
 export function DriveButton() {
   const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(driveSync.isConnected());
+  const [connected, setConnected] = useState(gDriveService.isSignedIn());
+  const [profile, setProfile] = useState<any | null>(null);
 
   useEffect(() => {
-    setConnected(driveSync.isConnected());
+    setConnected(gDriveService.isSignedIn());
+    if (gDriveService.isSignedIn()) {
+      gDriveService.getUserProfile().then(setProfile);
+    }
   }, []);
 
   const handleConnect = async () => {
     if (connected) {
-      const folder = driveSync.getFolderId();
+      const folder = await gDriveService.getAppFolderId();
       if (folder) {
         window.open(`https://drive.google.com/drive/u/0/folders/${folder}`);
       }
@@ -22,10 +26,14 @@ export function DriveButton() {
     }
     setConnecting(true);
     try {
-      const wasConnected = driveSync.isConnected();
-      await driveSync.init(true);
-      const nowConnected = driveSync.isConnected();
+      const wasConnected = gDriveService.isSignedIn();
+      await gDriveService.signIn('consent');
+      const nowConnected = gDriveService.isSignedIn();
       setConnected(nowConnected);
+      if (nowConnected) {
+        const prof = await gDriveService.getUserProfile();
+        setProfile(prof);
+      }
 
       // Reload the page after the initial successful connection
       if (!wasConnected && nowConnected) {
@@ -41,10 +49,9 @@ export function DriveButton() {
   };
 
   const handleSync = async () => {
-    await driveSync.runSyncLoop();
+    await gDriveService.listFiles();
   };
 
-  const profile = driveSync.getUserProfile();
   const buttonText = connecting
     ? 'Connecting…'
     : connected
