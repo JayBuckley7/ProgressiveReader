@@ -15,6 +15,7 @@ import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
 import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
+import { gDriveService } from "./services/gdriveService";
 
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -41,7 +42,7 @@ function AppContent() {
 
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, connectToDrive, isLoading: isDriveLoading } = useGoogleDrive();
+  const { isDriveConnected, isLoading: isDriveLoading } = useGoogleDrive();
 
   useEffect(() => {
     // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
@@ -59,7 +60,7 @@ function AppContent() {
         );
         // Automatically initiate the Google Drive connection flow.
         // Using 'consent' ensures the user sees the Drive scopes being requested.
-        connectToDrive('consent');
+        gDriveService.signIn('consent');
       }
     }
   }, [
@@ -67,7 +68,6 @@ function AppContent() {
     isClerkSignedIn,
     clerkUser,
     isDriveConnected,
-    connectToDrive,
     isDriveLoading,
   ]);
 
