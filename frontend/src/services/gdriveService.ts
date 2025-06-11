@@ -225,7 +225,7 @@ class GDriveService {
 
   private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
     try {
-      const response = await fetch('/auth/google/token', {
+      const response = await fetch('/drive/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
