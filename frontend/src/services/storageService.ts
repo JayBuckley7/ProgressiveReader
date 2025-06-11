@@ -905,39 +905,18 @@ class StorageService {
      * Save user settings to cloud storage
      * Uses the same provider detection as openCloudFolder for consistency
      */
-    async saveSettings(settings: any, clerkUser?: any): Promise<void> {
-        console.log('Saving settings to user\'s cloud storage...');
-        
-        const provider = this.detectProviderFromClerkUser(clerkUser);
-        
-        switch (provider) {
-            case 'google':
-                if (!gDriveService.isSignedIn()) {
-                    throw new Error('Google Drive not connected. Please connect first.');
-                }
-                
-                try {
-                    const success = await gDriveService.saveSettings(settings);
-                    if (!success) {
-                        throw new Error('Failed to save settings to Google Drive');
-                    }
-                    console.log('✅ Settings saved to Google Drive successfully');
-                } catch (error: any) {
-                    console.error('Google Drive settings save failed:', error);
-                    throw new Error(`Failed to save settings to Google Drive: ${error.message || 'Unknown error'}`);
-                }
-                break;
-                
-            case 'microsoft':
-                // TODO: Implement OneDrive settings save
-                throw new Error('OneDrive settings save not yet implemented');
-                
-            case 'apple':
-                // TODO: Implement iCloud settings save
-                throw new Error('iCloud settings save not yet implemented');
-                
-            default:
-                throw new Error(`Cannot save settings for provider: ${provider}. Cloud storage not configured.`);
+    async saveSettings(settings: any): Promise<void> {
+        console.log('Saving settings via backend API...');
+
+        const headers = await this.getAuthHeaders();
+        const response = await fetch('/settings', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to save settings: ${response.status} ${response.statusText}`);
         }
     }
 
@@ -945,46 +924,25 @@ class StorageService {
      * Load user settings from cloud storage
      * Returns null if no settings found or user not connected
      */
-    async loadSettings(clerkUser?: any): Promise<any | null> {
-        console.log('Loading settings from user\'s cloud storage...');
-        
-        const provider = this.detectProviderFromClerkUser(clerkUser);
-        
-        switch (provider) {
-            case 'google':
-                if (!gDriveService.isSignedIn()) {
-                    console.log('Google Drive not connected, cannot load settings');
-                    return null;
-                }
-                
-                try {
-                    const settings = await gDriveService.loadSettings();
-                    if (settings) {
-                        console.log('✅ Settings loaded from Google Drive successfully');
-                        return settings;
-                    } else {
-                        console.log('📋 No settings file found in Google Drive');
-                        return null;
-                    }
-                } catch (error: any) {
-                    console.error('Google Drive settings load failed:', error);
-                    // Don't throw error, just return null for missing settings
-                    return null;
-                }
-                
-            case 'microsoft':
-                // TODO: Implement OneDrive settings load
-                console.log('OneDrive settings load not yet implemented');
-                return null;
-                
-            case 'apple':
-                // TODO: Implement iCloud settings load
-                console.log('iCloud settings load not yet implemented');
-                return null;
-                
-            default:
-                console.log(`Cannot load settings for provider: ${provider}. Using local defaults.`);
-                return null;
+    async loadSettings(): Promise<any | null> {
+        console.log('Loading settings via backend API...');
+
+        const headers = await this.getAuthHeaders();
+        const response = await fetch('/settings', {
+            method: 'GET',
+            headers
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        try {
+            const settings = await response.json();
+            return settings || null;
+        } catch (error) {
+            console.error('Failed to parse settings JSON:', error);
+            return null;
         }
     }
 }
