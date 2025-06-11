@@ -19,8 +19,6 @@ const BASE_SCOPES = [
   // 'https://www.googleapis.com/auth/drive', // Full drive access (use with caution)
 ].join(' ');
 
-// Key for storing refresh token in localStorage
-const GDRIVE_REFRESH_TOKEN_KEY = 'gdrive_refresh_token';
 
 const FOLDER_NAME = 'ProgReader'; // Or your app's specific folder name
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
@@ -129,24 +127,14 @@ class GDriveService {
     
     console.log('[GDriveService] Clerk user authenticated. Proceeding with Google Drive session restoration.');
     
-    // First try to get a refresh token from localStorage
-    const refreshToken = localStorage.getItem(GDRIVE_REFRESH_TOKEN_KEY);
-    if (refreshToken) {
-      console.log('[GDriveService] Found refresh token. Attempting to get new access token.');
-      try {
-        const tokenResponse = await this.refreshAccessToken(refreshToken);
-        if (tokenResponse && tokenResponse.access_token) {
-          this.handleTokenResponse(tokenResponse, false); // false: don't store refresh token again
-          return true; // Successfully restored
-        } else {
-          // If refresh fails, clear the stored token to avoid loops
-          localStorage.removeItem(GDRIVE_REFRESH_TOKEN_KEY);
-          console.log('[GDriveService] Refresh token invalid, removed from storage');
-        }
-      } catch (error) {
-        console.error('[GDriveService] Error using refresh token:', error);
-        localStorage.removeItem(GDRIVE_REFRESH_TOKEN_KEY);
+    try {
+      const tokenResponse = await this.fetchAccessTokenFromServer();
+      if (tokenResponse && tokenResponse.access_token) {
+        this.handleTokenResponse(tokenResponse, false);
+        return true;
       }
+    } catch (error) {
+      console.error('[GDriveService] Failed to fetch access token from server:', error);
     }
 
     // If no refresh token or refresh failed, try silent sign-in
@@ -189,7 +177,6 @@ class GDriveService {
 
   private clearStoredTokens(): void {
     console.log('[GDriveService] Clearing all stored Google Drive tokens for security');
-    localStorage.removeItem(GDRIVE_REFRESH_TOKEN_KEY);
     this.accessToken = null;
     this.accessTokenExpiry = null;
     this.userProfile = null;
@@ -236,37 +223,23 @@ class GDriveService {
     });
   }
 
-  private async refreshAccessToken(refreshToken: string): Promise<TokenData | null> {
+  private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
     try {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
+      const response = await fetch('/auth/google/token', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          client_id: GDRIVE_CLIENT_ID,
-          // client_secret: YOUR_CLIENT_SECRET, // Client secret is NOT used for web clients
-          refresh_token: refreshToken,
-          grant_type: 'refresh_token',
-        }),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[GDriveService] Error refreshing access token:', errorData);
-        // If refresh token is invalid (e.g., revoked), clear it
-        if (errorData.error === 'invalid_grant') {
-            localStorage.removeItem(GDRIVE_REFRESH_TOKEN_KEY);
-            this.signOut(); // Sign out fully
-        }
+        console.error('[GDriveService] Error fetching access token from server:', await response.text());
         return null;
       }
       const tokenData: TokenData = await response.json();
-      console.log('[GDriveService] Access token refreshed:', tokenData);
-      // Note: A new refresh token is typically NOT issued during a refresh token grant
-      // So we continue to use the original one.
+      console.log('[GDriveService] Access token fetched from server:', tokenData);
       return tokenData;
     } catch (error) {
-      console.error('[GDriveService] Exception during access token refresh:', error);
+      console.error('[GDriveService] Exception while fetching access token from server:', error);
       return null;
     }
   }
@@ -293,9 +266,8 @@ class GDriveService {
     console.log(`[GDriveService] Token expiry set to: ${new Date(this.accessTokenExpiry).toISOString()}`);
     console.log(`[GDriveService] Expires in: ${tokenResponse.expires_in} seconds`);
 
-    if (tokenResponse.refresh_token && storeRefreshToken) {
-      localStorage.setItem(GDRIVE_REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
-      console.log('[GDriveService] Refresh token stored.');
+    if (tokenResponse.refresh_token) {
+      console.log('[GDriveService] Refresh token received but will not be stored on the client.');
     }
 
     if (this.gapi && this.gapi.client) {
@@ -307,7 +279,6 @@ class GDriveService {
     
 
     // Store token details if needed (e.g., expiry for proactive refresh)
-    // Potentially: localStorage.setItem('gdrive_token', JSON.stringify(tokenResponse));
 
     await this.fetchUserProfile();
     this.updateSigninStatus(true);
@@ -412,31 +383,22 @@ class GDriveService {
       return this.accessToken;
     }
 
-    // Access token is missing, expired, or nearing expiry, try to refresh it
-    const refreshToken = localStorage.getItem(GDRIVE_REFRESH_TOKEN_KEY);
-    if (refreshToken) {
-      console.log('[GDriveService] Access token expired or needs refresh. Attempting to use refresh token.');
-      const tokenData = await this.refreshAccessToken(refreshToken);
+    // Access token is missing, expired, or nearing expiry. Request a new one from the server
+    try {
+      const tokenData = await this.fetchAccessTokenFromServer();
       if (tokenData && tokenData.access_token) {
         this.accessToken = tokenData.access_token;
         this.accessTokenExpiry = Date.now() + (tokenData.expires_in * 1000);
-         if (this.gapi && this.gapi.client) {
-            this.gapi.client.setToken({ access_token: this.accessToken });
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken({ access_token: this.accessToken });
         }
-        this.updateSigninStatus(true); // Notify listeners that we are signed in again
+        this.updateSigninStatus(true);
         return this.accessToken;
-      } else {
-        // Refresh failed, sign out
-        console.log('[GDriveService] Refresh token failed. Signing out.');
-        this.signOut();
-        return null;
       }
-    } else {
-      // No refresh token, sign out or prompt for sign-in
-      console.log('[GDriveService] No access token and no refresh token. User needs to sign in.');
-      // this.signOut(); // Or let UI handle this state
-      return null;
+    } catch (error) {
+      console.error('[GDriveService] Failed to fetch access token from server:', error);
     }
+    return null;
   }
   
   public async getUserProfile(): Promise<GoogleUser | null> {
