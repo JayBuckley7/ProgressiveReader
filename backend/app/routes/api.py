@@ -184,6 +184,7 @@ def toggle_jlpt():
     return jsonify({'success': True, 'jlpt_highlighting_enabled': is_enabled})
 
 @api_bp.route('/due_cards', methods=['POST'])
+@require_auth
 def due_cards():
     """Return JPDB due cards for the authenticated user."""
     data = request.get_json(silent=True) or {}

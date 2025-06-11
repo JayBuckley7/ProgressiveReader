@@ -71,12 +71,16 @@ function AppContent() {
     isDriveLoading,
   ]);
 
-  // Prefetch JPDB due cards on startup if enabled
+  // Prefetch JPDB due cards only after user is signed in if enabled
   useEffect(() => {
-    if (localStorage.getItem('preferDueCards') === 'true') {
+    if (
+      isClerkLoaded &&
+      isClerkSignedIn &&
+      localStorage.getItem('preferDueCards') === 'true'
+    ) {
       prefetchDueCards();
     }
-  }, []);
+  }, [isClerkLoaded, isClerkSignedIn]);
 
   return (
     <SettingsProvider>
