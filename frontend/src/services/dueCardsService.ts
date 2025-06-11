@@ -58,6 +58,14 @@ async function fetchDueCardsFromAPI(): Promise<Card[]> {
   return allCards;
 }
 
+export async function forceFetchDueCards(): Promise<Card[]> {
+  const cards = await fetchDueCardsFromAPI();
+  if (cards.length > 0) {
+    cacheCards(cards);
+  }
+  return cards;
+}
+
 export async function getDueCards(): Promise<Card[]> {
   let cards = getCachedCards();
 
