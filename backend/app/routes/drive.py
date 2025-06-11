@@ -19,16 +19,26 @@ GDRIVE_BASE = 'https://www.googleapis.com/drive/v3'
 UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
 
 
-def get_google_access_token(user_id: str) -> str | None:
+def _get_google_token_object(user_id: str):
+    """Return the OAuth token object for the user or None."""
     if not clerk_client:
         logger.error('Clerk client not configured')
         return None
     try:
-        tokens = clerk_client.users.get_o_auth_access_token(user_id=user_id, provider='oauth_google')
+        tokens = clerk_client.users.get_o_auth_access_token(
+            user_id=user_id, provider='oauth_google'
+        )
         if tokens and len(tokens) > 0:
-            return tokens[0].token
+            return tokens[0]
     except Exception as e:
         logger.error('Failed to retrieve Google token from Clerk: %s', e)
+    return None
+
+
+def get_google_access_token(user_id: str) -> str | None:
+    token_obj = _get_google_token_object(user_id)
+    if token_obj:
+        return token_obj.token
     return None
 
 
@@ -100,3 +110,21 @@ def delete_file(file_id):
     if r.status_code == 204:
         return jsonify({'success': True})
     return jsonify({'error': r.text}), r.status_code
+
+
+@drive_bp.route('/token', methods=['POST'])
+@require_auth
+def google_token():
+    """Return the current user's Google OAuth access token."""
+    user_id = get_user_id()
+    token_obj = _get_google_token_object(user_id)
+    if not token_obj or not token_obj.token:
+        return jsonify({'error': 'No Google token'}), 400
+
+    expires_in = None
+    if getattr(token_obj, 'expires_at', None) is not None:
+        import time
+
+        expires_in = max(0, int(token_obj.expires_at - int(time.time())))
+
+    return jsonify({'access_token': token_obj.token, 'expires_in': expires_in})
