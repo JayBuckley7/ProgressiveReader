@@ -11,7 +11,8 @@ metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 @require_auth
 def get_all_books():
     """Return all stored books for the current user."""
-    doc = fs_db.collection("users").document(str(get_user_id())).get()
+    user_id = get_user_id()
+    doc = fs_db.collection("users").document(str(user_id)).get()
     books = doc.to_dict().get("books", []) if doc.exists else []
     return jsonify(books)
 
@@ -23,7 +24,8 @@ def add_book():
     data = request.get_json() or {}
     if "id" not in data:
         return jsonify({"error": "Missing id"}), 400
-    user_doc = fs_db.collection("users").document(str(get_user_id()))
+    user_id = get_user_id()
+    user_doc = fs_db.collection("users").document(str(user_id))
     user_doc.set({"books": firestore.ArrayUnion([data])}, merge=True)
     return jsonify(success=True)
 
@@ -32,7 +34,8 @@ def add_book():
 @require_auth
 def read_position():
     """Get or update the user's reading position."""
-    doc_ref = fs_db.collection("users").document(str(get_user_id()))
+    user_id = get_user_id()
+    doc_ref = fs_db.collection("users").document(str(user_id))
     if request.method == "GET":
         snap = doc_ref.get()
         pos = 0
