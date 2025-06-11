@@ -41,6 +41,29 @@ const defaultSettings: Settings = {
 };
 
 const SETTINGS_COOKIE = "prSettings";
+const SETTINGS_STORAGE = "prSettings";
+
+function getSettingsStorage(): Partial<Settings> | null {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    console.warn("Failed to parse settings from localStorage");
+    return null;
+  }
+}
+
+function setSettingsStorage(data: Partial<Settings>): void {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE, JSON.stringify(data));
+  } catch {
+    console.warn("Failed to persist settings to localStorage");
+  }
+}
+
+function clearSettingsStorage(): void {
+  localStorage.removeItem(SETTINGS_STORAGE);
+}
 
 function getSettingsCookie(): Partial<Settings> | null {
   const match = document.cookie.match(new RegExp(`${SETTINGS_COOKIE}=([^;]+)`));
@@ -69,21 +92,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   
   // Placeholder for settings - replace with Flask API calls for persistence
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
-  const { isAuthenticated, loadSettings } = useStorageService();
+  const { isAuthenticated, loadSettings, books } = useStorageService();
   const loadedFromCloudRef = useRef(false);
 
-  // Load settings from cookie on initial mount and sync to localStorage
+  // Load settings from localStorage or cookie on initial mount
   useEffect(() => {
-    const cookieSettings = getSettingsCookie();
-    if (cookieSettings) {
+    const stored = getSettingsStorage() || getSettingsCookie();
+    if (stored) {
       setCurrentSettings(prev => {
-        const updated = { ...prev, ...cookieSettings };
+        const updated = { ...prev, ...stored };
         
         // Sync accessibility settings to localStorage for JPDB integration
         localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
         console.log('🔔 Initial sync of accessibility settings to localStorage');
+
+        setSettingsStorage(updated);
         
         return updated;
       });
@@ -93,6 +118,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('touchscreenSupport', String(defaultSettings.touchscreenSupport));
       localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
       console.log('🔔 Initial sync of default accessibility settings to localStorage');
+      setSettingsStorage(defaultSettings);
     }
   }, []);
 
@@ -109,6 +135,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           setCurrentSettings(prev => {
             const updated = { ...prev, ...data };
             setSettingsCookie(updated);
+            setSettingsStorage(updated);
             return updated;
           });
         }
@@ -126,12 +153,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated) {
       loadedFromCloudRef.current = false;
       clearSettingsCookie();
+      clearSettingsStorage();
     }
 
     return () => {
       unsubscribe();
     };
-  }, [isAuthenticated, loadSettings]);
+  }, [isAuthenticated, loadSettings, books.length]);
 
   // Convert database settings to our Settings interface
   // const settings: Settings | null = dbSettings ? {
@@ -154,7 +182,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setCurrentSettings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
-      
+      setSettingsStorage(updated);
+
       // Sync accessibility settings to localStorage for JPDB integration
       if ('showPopupOnHover' in updates) {
         localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));

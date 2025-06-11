@@ -373,6 +373,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         let buffer = "";
         let accumulated = "";
 
+        let firstChunk = true;
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
@@ -392,6 +393,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               continue;
             }
             if (event.content) {
+              if (firstChunk) {
+                setIsTranslated(true);
+                firstChunk = false;
+              }
               accumulated += event.content;
               const wrapped = `
                 <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">

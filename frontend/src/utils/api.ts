@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 // Simple fetch-based API client
 export interface Bookmark {
@@ -63,12 +63,15 @@ function useMutation<TVariables, TData>(
 export const api = {
   reading: {
     getBookmarks: {
-      useQuery: ({ bookId }: { bookId: string }) =>
-        useQuery<Bookmark[]>(async () => {
+      useQuery: ({ bookId }: { bookId: string }) => {
+        const fetchBookmarks = useCallback(async () => {
           const res = await fetch(`/api/bookmarks?bookId=${encodeURIComponent(bookId)}`);
           if (!res.ok) throw new Error('Failed to load bookmarks');
           return res.json();
-        }),
+        }, [bookId]);
+
+        return useQuery<Bookmark[]>(fetchBookmarks);
+      },
     },
     addBookmark: {
       useMutation: (options?: {

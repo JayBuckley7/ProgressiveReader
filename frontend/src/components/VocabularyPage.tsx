@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getDueCards, forceFetchDueCards, Card as DueCard } from "../services/dueCardsService";
 import { toast } from "sonner";
 
 interface VocabularyWord {
@@ -19,6 +20,8 @@ export function VocabularyPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
 
+  const [dueCards, setDueCards] = useState<DueCard[]>([]);
+
   // const vocabularyQuery = useQuery(api.vocabulary.list, { 
   //   language: selectedLanguage || undefined 
   // }) || [];
@@ -29,6 +32,15 @@ export function VocabularyPage() {
 
   // const toggleMasteredMutation = useMutation(api.vocabulary.toggleMastered);
   const toggleMastered = async (data: any) => { console.log("Toggle mastered (TODO):", data); }; // Was toggleMasteredMutation
+
+  // Fetch due cards if preference is enabled
+  useEffect(() => {
+    if (localStorage.getItem('preferDueCards') === 'true') {
+      getDueCards()
+        .then(cards => setDueCards(cards))
+        .catch(err => console.error('Failed to load due cards', err));
+    }
+  }, []);
 
   // Get unique languages from vocabulary
   const languages = Array.from(new Set(vocabulary.map(word => word.language))); // Use vocabulary
@@ -44,6 +56,17 @@ export function VocabularyPage() {
     
     return matchesSearch && matchesMastered;
   });
+
+  const handleRefreshDueCards = async () => {
+    try {
+      const cards = await forceFetchDueCards();
+      setDueCards(cards);
+      toast.success('Fetched due cards');
+    } catch (err) {
+      console.error('Failed to fetch due cards', err);
+      toast.error('Failed to fetch due cards');
+    }
+  };
 
   const handleToggleMastered = async (wordId: string) => { // Was: Id<"vocabulary">
     try {
@@ -91,6 +114,28 @@ export function VocabularyPage() {
           <div className="text-3xl font-bold text-orange-600">{stats.learning}</div>
           <div className="text-gray-600 dark:text-gray-400">Learning</div>
         </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-8">
+        <h2 className="text-xl font-bold mb-4">JPDB Due Cards</h2>
+        {dueCards.length > 0 ? (
+          <ul className="grid gap-2 mb-4">
+            {dueCards.map(card => (
+              <li key={card.id} className="flex justify-between">
+                <span>{card.term}</span>
+                <span className="text-gray-600 dark:text-gray-300">{card.meaning}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-600 dark:text-gray-400 mb-4">No due cards loaded.</p>
+        )}
+        <button
+          onClick={handleRefreshDueCards}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+        >
+          Refresh Due Cards
+        </button>
       </div>
 
       {/* Controls */}

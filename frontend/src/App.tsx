@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { prefetchDueCards } from "./services/dueCardsService";
 import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 
 import { SignInForm } from "./components/SignInForm";
@@ -10,6 +11,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import { TopActions } from "./components/TopActions";
 import { HeroBanner } from "./components/HeroBanner";
 import { DangerZone } from "./components/DangerZone";
+import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
 import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
@@ -69,6 +71,13 @@ function AppContent() {
     isDriveLoading,
   ]);
 
+  // Prefetch JPDB due cards on startup if enabled
+  useEffect(() => {
+    if (localStorage.getItem('preferDueCards') === 'true') {
+      prefetchDueCards();
+    }
+  }, []);
+
   return (
     <SettingsProvider>
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -83,6 +92,7 @@ function AppContent() {
             setShowLogin={setShowLogin}
           />
         </main>
+        <Footer />
         <DangerZone />
 
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
