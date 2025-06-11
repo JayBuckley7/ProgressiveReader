@@ -1,17 +1,17 @@
 import React from 'react';
-import { useGoogleDrive } from '../hooks/useGoogleDrive';
+import { useDrive } from '../contexts/DriveProvider';
 
 export const GoogleDriveConnectButton: React.FC = () => {
   const {
-    isDriveConnected,
-    driveUser,
-    isLoading,
-    error,
-    connectToDrive,
-    disconnectFromDrive,
-    fetchDriveFiles,
+    isConnected: isDriveConnected,
+    user: driveUser,
+    signIn: connectToDrive,
+    signOut: disconnectFromDrive,
+    listFiles: fetchDriveFiles,
     getAppFolderId
-  } = useGoogleDrive();
+  } = useDrive();
+  const isLoading = false;
+  const error = null;
 
   const handleConnect = () => {
     // You can prompt for 'select_account' or 'consent' if needed, e.g., connectToDrive('select_account');

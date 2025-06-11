@@ -1,54 +1,32 @@
-import { useEffect, useState } from 'react';
-import * as driveSync from './driveSync';
+import { useState } from 'react';
+import { useDrive } from '../contexts/DriveProvider';
 
 /**
  * Button UI for connecting to Google Drive and triggering sync.
  */
 export function DriveButton() {
+  const { isConnected, signIn } = useDrive();
   const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(driveSync.isConnected());
-
-  useEffect(() => {
-    setConnected(driveSync.isConnected());
-  }, []);
 
   const handleConnect = async () => {
-    if (connected) {
-      const folder = driveSync.getFolderId();
-      if (folder) {
-        window.open(`https://drive.google.com/drive/u/0/folders/${folder}`);
-      }
+    if (isConnected) {
       return;
     }
     setConnecting(true);
     try {
-      const wasConnected = driveSync.isConnected();
-      await driveSync.init(true);
-      const nowConnected = driveSync.isConnected();
-      setConnected(nowConnected);
-
-      // Reload the page after the initial successful connection
-      if (!wasConnected && nowConnected) {
-        window.location.reload();
-      }
+      await signIn('consent');
     } catch (e) {
       console.error(e);
       alert('Drive connection failed');
-      setConnected(false);
     } finally {
       setConnecting(false);
     }
   };
 
-  const handleSync = async () => {
-    await driveSync.runSyncLoop();
-  };
-
-  const profile = driveSync.getUserProfile();
   const buttonText = connecting
     ? 'Connecting…'
-    : connected
-      ? profile?.name?.split(' ')[0] || 'Connected'
+    : isConnected
+      ? 'Connected'
       : 'Connect Drive';
 
   return (
@@ -61,15 +39,7 @@ export function DriveButton() {
       >
         {buttonText}
       </button>
-      {connected && (
-        <button
-          id="btn-sync"
-          onClick={handleSync}
-          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
-          Sync Now
-        </button>
-      )}
+      {/* Legacy sync button removed */}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { SettingsModal } from "./SettingsModal";
 import { BookCardHover } from "./BookCardHover";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
-import { useGoogleDrive } from "../hooks/useGoogleDrive";
+import { useDrive } from "../contexts/DriveProvider";
 import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
 
 interface BookLibraryProps {
@@ -13,7 +13,7 @@ interface BookLibraryProps {
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
   const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
-  const { isDriveConnected } = useGoogleDrive();
+  const { isConnected: isDriveConnected } = useDrive();
 
   // All book handling is delegated to the storage service.
 

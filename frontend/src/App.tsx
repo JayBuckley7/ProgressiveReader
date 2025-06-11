@@ -8,13 +8,13 @@ import { Toaster } from "sonner";
 import BookLibrary from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { DriveProvider, useDrive } from "./contexts/DriveProvider";
 import { TopActions } from "./components/TopActions";
 import { HeroBanner } from "./components/HeroBanner";
 import { DangerZone } from "./components/DangerZone";
 import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
-import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
 
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -41,7 +41,8 @@ function AppContent() {
 
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, connectToDrive, isLoading: isDriveLoading } = useGoogleDrive();
+  const { isConnected: isDriveConnected, signIn: connectToDrive } = useDrive();
+  const isDriveLoading = false;
 
   useEffect(() => {
     // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
@@ -79,6 +80,7 @@ function AppContent() {
   }, []);
 
   return (
+    <DriveProvider>
     <SettingsProvider>
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
         <main className="flex-1 flex flex-col">
@@ -100,6 +102,7 @@ function AppContent() {
         <Toaster />
       </div>
     </SettingsProvider>
+    </DriveProvider>
   );
 }
 
