@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGoogleDrive } from '../hooks/useGoogleDrive';
+import { gDriveService } from '../services/gdriveService';
 
 export const GoogleDriveConnectButton: React.FC = () => {
   const {
@@ -7,19 +8,17 @@ export const GoogleDriveConnectButton: React.FC = () => {
     driveUser,
     isLoading,
     error,
-    connectToDrive,
-    disconnectFromDrive,
     fetchDriveFiles,
     getAppFolderId
   } = useGoogleDrive();
 
   const handleConnect = () => {
-    // You can prompt for 'select_account' or 'consent' if needed, e.g., connectToDrive('select_account');
-    connectToDrive();
+    // You can prompt for 'select_account' or 'consent' if needed
+    gDriveService.signIn('consent');
   };
 
   const handleDisconnect = () => {
-    disconnectFromDrive();
+    gDriveService.signOut();
   };
 
   const handleFetchFiles = async () => {
