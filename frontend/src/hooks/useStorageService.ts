@@ -380,17 +380,17 @@ export function useStorageService() {
 
   const saveSettings = async (settings: any) => {
     if (!clerkUser) {
-      toast.error('Please sign in to save settings to cloud storage');
+      toast.error('Please sign in to save settings');
       return false;
     }
 
     try {
-      await storageService.saveSettings(settings, clerkUser);
-      toast.success('Settings saved to cloud storage');
+      await storageService.saveSettings(settings);
+      toast.success('Settings saved');
       return true;
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Failed to save settings to cloud storage');
+      toast.error('Failed to save settings');
       return false;
     }
   };
@@ -402,7 +402,7 @@ export function useStorageService() {
     }
 
     try {
-      const settings = await storageService.loadSettings(clerkUser);
+      const settings = await storageService.loadSettings();
       return settings;
     } catch (error) {
       console.error('Error loading settings:', error);
