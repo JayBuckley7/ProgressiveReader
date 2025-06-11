@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStorageService } from "../hooks/useStorageService";
-import { gDriveService } from "../services/gdriveService";
 
 type Theme = "light" | "dark" | "system";
 
@@ -122,10 +121,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load settings from cloud after authentication and when Drive connects
+  // Load settings from Clerk after authentication
   useEffect(() => {
     const attemptCloudLoad = async () => {
-      if (!isAuthenticated || loadedFromCloudRef.current || !gDriveService.isSignedIn()) {
+      if (!isAuthenticated || loadedFromCloudRef.current) {
         return;
       }
 
@@ -146,9 +145,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
 
     attemptCloudLoad();
-    const unsubscribe = gDriveService.listenToSigninStatus(() => {
-      attemptCloudLoad();
-    });
 
     if (!isAuthenticated) {
       loadedFromCloudRef.current = false;
@@ -156,9 +152,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       clearSettingsStorage();
     }
 
-    return () => {
-      unsubscribe();
-    };
+    return () => {};
   }, [isAuthenticated, loadSettings, books.length]);
 
   // Convert database settings to our Settings interface
