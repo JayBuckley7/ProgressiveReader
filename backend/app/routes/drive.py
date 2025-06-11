@@ -121,10 +121,16 @@ def google_token():
     if not token_obj or not token_obj.token:
         return jsonify({'error': 'No Google token'}), 400
 
-    expires_in = None
-    if getattr(token_obj, 'expires_at', None) is not None:
+    expires_in = 0
+    expires_at = getattr(token_obj, 'expires_at', None)
+    if expires_at is not None:
         import time
 
-        expires_in = max(0, int(token_obj.expires_at - int(time.time())))
+        try:
+            exp_ts = int(float(expires_at))
+        except (TypeError, ValueError):
+            logger.warning("Unexpected expires_at value: %r", expires_at)
+            exp_ts = int(time.time())
+        expires_in = max(0, exp_ts - int(time.time()))
 
     return jsonify({'access_token': token_obj.token, 'expires_in': expires_in})
