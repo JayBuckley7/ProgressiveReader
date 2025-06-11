@@ -9,26 +9,7 @@ if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Publishable Key')
 }
 
-// Load the cloud storage modules before starting React
-async function loadCloudStorageModules() {
-  return new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = '/js/driveSync.js';
-    script.type = 'module';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load cloud storage modules'));
-    document.head.appendChild(script);
-  });
-}
-
 async function startApp() {
-  try {
-    await loadCloudStorageModules();
-    console.log('✅ Cloud storage modules loaded');
-  } catch (error) {
-    console.warn('⚠️ Failed to load cloud storage modules:', error);
-    // Continue anyway - app will work without cloud storage
-  }
 
   // Only use StrictMode in development to avoid excessive loading in production
   const isDevelopment = import.meta.env.MODE === 'development';

@@ -1,53 +1,40 @@
-import { useEffect, useState } from 'react';
-import * as driveSync from './driveSync';
+import { useState } from 'react';
+import { useDrive } from '../contexts/DriveProvider';
 
 /**
  * Button UI for connecting to Google Drive and triggering sync.
  */
 export function DriveButton() {
+  const { isSignedIn, profile, signIn, openFolder } = useDrive();
   const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(driveSync.isConnected());
-
-  useEffect(() => {
-    setConnected(driveSync.isConnected());
-  }, []);
 
   const handleConnect = async () => {
-    if (connected) {
-      const folder = driveSync.getFolderId();
-      if (folder) {
-        window.open(`https://drive.google.com/drive/u/0/folders/${folder}`);
-      }
+    if (isSignedIn) {
+      await openFolder();
       return;
     }
     setConnecting(true);
     try {
-      const wasConnected = driveSync.isConnected();
-      await driveSync.init(true);
-      const nowConnected = driveSync.isConnected();
-      setConnected(nowConnected);
-
-      // Reload the page after the initial successful connection
-      if (!wasConnected && nowConnected) {
+      const wasConnected = isSignedIn;
+      await signIn('consent');
+      if (!wasConnected && isSignedIn) {
         window.location.reload();
       }
     } catch (e) {
       console.error(e);
       alert('Drive connection failed');
-      setConnected(false);
     } finally {
       setConnecting(false);
     }
   };
 
   const handleSync = async () => {
-    await driveSync.runSyncLoop();
+    await openFolder();
   };
 
-  const profile = driveSync.getUserProfile();
   const buttonText = connecting
     ? 'Connecting…'
-    : connected
+    : isSignedIn
       ? profile?.name?.split(' ')[0] || 'Connected'
       : 'Connect Drive';
 
@@ -61,7 +48,7 @@ export function DriveButton() {
       >
         {buttonText}
       </button>
-      {connected && (
+      {isSignedIn && (
         <button
           id="btn-sync"
           onClick={handleSync}

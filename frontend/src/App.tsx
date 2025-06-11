@@ -14,7 +14,7 @@ import { DangerZone } from "./components/DangerZone";
 import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
-import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
+import { DriveProvider, useDrive } from "./contexts/DriveProvider";
 
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -26,7 +26,9 @@ export default function App() {
 
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
-      <AppContent />
+      <DriveProvider>
+        <AppContent />
+      </DriveProvider>
     </ClerkProvider>
   );
 }
@@ -41,11 +43,11 @@ function AppContent() {
 
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, connectToDrive, isLoading: isDriveLoading } = useGoogleDrive();
+  const { isSignedIn: isDriveConnected, signIn: connectToDrive } = useDrive();
 
   useEffect(() => {
     // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
-    if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
+    if (isClerkLoaded && isClerkSignedIn && clerkUser) {
       // Check if one of the Clerk external accounts is Google
       // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
       // Inspect clerkUser.externalAccounts[0].provider to be sure.
@@ -68,7 +70,6 @@ function AppContent() {
     clerkUser,
     isDriveConnected,
     connectToDrive,
-    isDriveLoading,
   ]);
 
   // Prefetch JPDB due cards only after user is signed in if enabled
