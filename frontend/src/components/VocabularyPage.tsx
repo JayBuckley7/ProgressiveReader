@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getDueCards, forceFetchDueCards, Card as DueCard } from "../services/dueCardsService";
 import { toast } from "sonner";
+import { BookmarkletHelper } from "./BookmarkletHelper";
 
 interface VocabularyWord {
   _id: string; // Was: Id<"vocabulary">
@@ -21,6 +22,7 @@ export function VocabularyPage() {
   const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
 
   const [dueCards, setDueCards] = useState<DueCard[]>([]);
+  const [showBookmarkletHelper, setShowBookmarkletHelper] = useState(false);
 
   // const vocabularyQuery = useQuery(api.vocabulary.list, { 
   //   language: selectedLanguage || undefined 
@@ -34,13 +36,14 @@ export function VocabularyPage() {
   const toggleMastered = async (data: any) => { console.log("Toggle mastered (TODO):", data); }; // Was toggleMasteredMutation
 
   // Fetch due cards if preference is enabled
-  useEffect(() => {
-    if (localStorage.getItem('preferDueCards') === 'true') {
-      getDueCards()
-        .then(cards => setDueCards(cards))
-        .catch(err => console.error('Failed to load due cards', err));
-    }
-  }, []);
+  // Removed automatic fetching - cards are now fetched manually only
+  // useEffect(() => {
+  //   if (localStorage.getItem('preferDueCards') === 'true') {
+  //     getDueCards()
+  //       .then(cards => setDueCards(cards))
+  //       .catch(err => console.error('Failed to load due cards', err));
+  //   }
+  // }, []);
 
   // Get unique languages from vocabulary
   const languages = Array.from(new Set(vocabulary.map(word => word.language))); // Use vocabulary
@@ -57,15 +60,45 @@ export function VocabularyPage() {
     return matchesSearch && matchesMastered;
   });
 
-  const handleRefreshDueCards = async () => {
+  const handleFetchDueCards = async () => {
     try {
+      // Check if JPDB credentials are configured
+      const jpdbUsername = localStorage.getItem('jpdbUsername') || '';
+      const jpdbPassword = localStorage.getItem('jpdbPassword') || '';
+      const jpdbCookie = localStorage.getItem('jpdbCookie') || '';
+
+      if (!jpdbUsername && !jpdbPassword && !jpdbCookie) {
+        // No credentials configured - show bookmarklet helper
+        setShowBookmarkletHelper(true);
+        return;
+      }
+
+      // Credentials are configured, proceed with fetch
       const cards = await forceFetchDueCards();
       setDueCards(cards);
-      toast.success('Fetched due cards');
-    } catch (err) {
+      toast.success(`Fetched ${cards.length} due cards`);
+    } catch (err: any) {
       console.error('Failed to fetch due cards', err);
-      toast.error('Failed to fetch due cards');
+      
+      if (err.message === 'JPDB_CREDENTIALS_MISSING') {
+        toast.error('JPDB credentials not configured. Please check settings.');
+      } else if (err.message.includes('401') || err.message.includes('Authentication')) {
+        toast.error('JPDB authentication failed. Please check your credentials in settings.');
+      } else {
+        toast.error('Failed to fetch due cards. Please try again or check your connection.');
+      }
     }
+  };
+
+  const handleCookieExtracted = (cookie: string) => {
+    localStorage.setItem('jpdbCookie', cookie);
+    setShowBookmarkletHelper(false);
+    toast.success('JPDB cookie saved! Now fetching due cards...');
+    
+    // Automatically fetch due cards after saving cookie
+    setTimeout(() => {
+      handleFetchDueCards();
+    }, 500);
   };
 
   const handleToggleMastered = async (wordId: string) => { // Was: Id<"vocabulary">
@@ -131,10 +164,10 @@ export function VocabularyPage() {
           <p className="text-gray-600 dark:text-gray-400 mb-4">No due cards loaded.</p>
         )}
         <button
-          onClick={handleRefreshDueCards}
+          onClick={handleFetchDueCards}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
-          Refresh Due Cards
+          Fetch Due Cards
         </button>
       </div>
 
@@ -212,10 +245,17 @@ export function VocabularyPage() {
       )}
 
       {/* Add Word Modal */}
-      {showAddForm && (
+            {showAddForm && (
         <AddWordModal 
-          onClose={() => setShowAddForm(false)}
+          onClose={() => setShowAddForm(false)} 
           books={books}
+        />
+      )}
+
+      {showBookmarkletHelper && (
+        <BookmarkletHelper
+          onCookieExtracted={handleCookieExtracted}
+          onClose={() => setShowBookmarkletHelper(false)}
         />
       )}
     </div>

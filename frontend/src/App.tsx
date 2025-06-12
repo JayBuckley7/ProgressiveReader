@@ -78,7 +78,8 @@ function AppContent() {
       isClerkSignedIn &&
       localStorage.getItem('preferDueCards') === 'true'
     ) {
-      prefetchDueCards();
+      // Removed automatic prefetching - due cards are now fetched manually only
+    // prefetchDueCards();
     }
   }, [isClerkLoaded, isClerkSignedIn]);
 

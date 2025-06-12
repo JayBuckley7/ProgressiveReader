@@ -88,6 +88,7 @@ def create_app(config_class=Config) -> Flask:
         from .routes import settings  # User settings endpoints
         from .routes import auth  # Authentication routes
         from .routes import drive  # Google Drive proxy routes
+        from .routes import due_cards_google  # JPDB due cards with Google OAuth
         # Register Blueprints
         app.register_blueprint(main.main_bp)
         app.register_blueprint(reader.reader_bp)
@@ -96,6 +97,7 @@ def create_app(config_class=Config) -> Flask:
         app.register_blueprint(settings.settings_bp)
         app.register_blueprint(auth.auth_bp)
         app.register_blueprint(drive.drive_bp)
+        app.register_blueprint(due_cards_google.due_cards_google_bp)
 
         db.create_all()
 

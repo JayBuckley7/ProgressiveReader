@@ -179,3 +179,6 @@ setup-*
 # local env
 /node_modules
 /env.json
+userinput.py
+.cursor/rules/10x.mdc
+

@@ -18,6 +18,9 @@ const localKeys = {
   preferDueCards: "preferDueCards",
   customWordCSS: "customWordCSS",
   customPopupCSS: "customPopupCSS",
+  jpdbUsername: "jpdbUsername",
+  jpdbPassword: "jpdbPassword",
+  jpdbCookie: "jpdbCookie",
 };
 
 const cookieKeys = {
@@ -55,6 +58,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     preferDueCards: localStorage.getItem(localKeys.preferDueCards) === "true",
     customWordCSS: localStorage.getItem(localKeys.customWordCSS) || "",
     customPopupCSS: localStorage.getItem(localKeys.customPopupCSS) || "",
+    jpdbUsername: localStorage.getItem(localKeys.jpdbUsername) || "",
+    jpdbPassword: localStorage.getItem(localKeys.jpdbPassword) || "",
+    jpdbCookie: localStorage.getItem(localKeys.jpdbCookie) || "",
   }));
 
   const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
@@ -351,7 +357,70 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   placeholder="Enter your JPDB API key"
                   type="password"
                 />
-                            </div>
+                
+                <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
+                  <h4 className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-3">Due Cards Authentication</h4>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
+                    For due cards feature, provide either username/password OR session cookie (not both)
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <TextInput
+                      label="JPDB Username"
+                      value={localState.jpdbUsername}
+                      onChange={v => handleChange("jpdbUsername", v)}
+                      placeholder="Your JPDB username"
+                    />
+                    <TextInput
+                      label="JPDB Password"
+                      value={localState.jpdbPassword}
+                      onChange={v => handleChange("jpdbPassword", v)}
+                      placeholder="Your JPDB password"
+                      type="password"
+                    />
+                  </div>
+                  
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TextInput
+                        label="JPDB Session Cookie (Alternative)"
+                        value={localState.jpdbCookie}
+                        onChange={v => handleChange("jpdbCookie", v)}
+                        placeholder="e.g., sid=your_session_id_here"
+                        type="password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Open JPDB in new tab
+                          window.open('https://jpdb.io/login', '_blank');
+                          
+                          // Wait a moment then prompt for cookie
+                          setTimeout(() => {
+                            const instructions = `
+1. Log in to JPDB in the new tab that just opened
+2. Press F12 to open Developer Tools
+3. Go to Application tab → Cookies → jpdb.io
+4. Find the 'sid' cookie and copy its value
+5. Paste it below (format: sid=your_value_here)`;
+                            
+                            const cookie = prompt(instructions + '\n\nPaste your JPDB session cookie:');
+                            if (cookie && cookie.trim()) {
+                              handleChange("jpdbCookie", cookie.trim());
+                            }
+                          }, 2000);
+                        }}
+                        className="mt-6 px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
+                      >
+                        Get Cookie
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Advanced: Use browser dev tools to copy your JPDB session cookie, or click "Get Cookie" for help
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <TextInput

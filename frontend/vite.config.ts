@@ -42,6 +42,26 @@ export default defineConfig(({ mode }) => {
             target: backendUrl,
             changeOrigin: true,
             secure: false,
+          },
+          '/settings': {
+            target: backendUrl,
+            changeOrigin: true,
+            secure: false,
+          },
+          '/drive': {
+            target: backendUrl,
+            changeOrigin: true,
+            secure: false,
+          },
+          '/auth': {
+            target: backendUrl,
+            changeOrigin: true,
+            secure: false,
+          },
+          '/metadata': {
+            target: backendUrl,
+            changeOrigin: true,
+            secure: false,
           }
         },
       }),

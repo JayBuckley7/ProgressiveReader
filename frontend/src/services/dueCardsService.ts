@@ -1,3 +1,5 @@
+import { getAuthHeaders } from '../utils/auth';
+
 export interface Card {
   id: string;
   term: string;
@@ -33,13 +35,32 @@ async function fetchDueCardsFromAPI(): Promise<Card[]> {
   const PAGE_SIZE = 50;
   let allCards: Card[] = [];
 
+  // Get JPDB credentials from localStorage
+  const jpdbUsername = localStorage.getItem('jpdbUsername') || '';
+  const jpdbPassword = localStorage.getItem('jpdbPassword') || '';
+  const jpdbCookie = localStorage.getItem('jpdbCookie') || '';
+
+  // Check if we have any credentials
+  if (!jpdbUsername && !jpdbPassword && !jpdbCookie) {
+    throw new Error('JPDB_CREDENTIALS_MISSING');
+  }
+
   while (true) {
+    const headers = await getAuthHeaders();
+    const requestBody: any = { offset };
+    
+    // Add JPDB credentials to the request
+    if (jpdbUsername && jpdbPassword) {
+      requestBody.username = jpdbUsername;
+      requestBody.password = jpdbPassword;
+    } else if (jpdbCookie) {
+      requestBody.cookie = jpdbCookie;
+    }
+
     const response = await fetch('/api/due_cards', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ offset }),
+      headers,
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
