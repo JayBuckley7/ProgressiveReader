@@ -63,6 +63,8 @@ export function DangerZone() {
         
         if (choiceResult.outcome === 'accepted') {
           setDeferredPrompt(null);
+          setShowPrompt(false);
+          setCookie("pwaPromptDismissed", "true", 30); // Dismiss for 30 days after successful install
         }
       } catch (error) {
         console.error('PWA install error:', error);
@@ -77,7 +79,7 @@ export function DangerZone() {
 
 
   // Only show install button when PWA prompt is available and not installed
-  const isPWAInstalled = window.matchMedia('(display-mode: standalone)').matches;
+  const isPWAInstalled = window.matchMedia?.('(display-mode: standalone)')?.matches || false;
   const canShowInstallButton = !isPWAInstalled && deferredPrompt;
 
   return (
