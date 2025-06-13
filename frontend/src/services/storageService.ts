@@ -376,7 +376,7 @@ class StorageService {
      * Download a book's file content from cloud storage
      */
     async downloadBook(bookId: string, metadata: BookMetadata): Promise<Blob> {
-        console.log('Downloading book from user\'s google cloud storage');
+        console.log('Downloading book (with offline cache support)');
         
         // Check if this book is already being downloaded
         if (activeDownloads.has(bookId)) {
@@ -386,19 +386,19 @@ class StorageService {
         
         const downloadPromise = (async () => {
             try {
-                if (!gDriveService.isSignedIn()) {
-                    throw new Error('Not signed in to Google Drive');
-                }
-
                 if (!metadata.driveFileId) {
                     throw new Error('Google Drive file ID not found for this book.');
                 }
 
-                // Check IndexedDB cache first
+                // Always check IndexedDB cache first so offline books can load
                 const cached = await getCachedFile(metadata.driveFileId);
                 if (cached) {
                     console.log('Retrieved book from cache');
                     return cached;
+                }
+
+                if (!gDriveService.isSignedIn()) {
+                    throw new Error('Not signed in to Google Drive');
                 }
 
                 const blob = await gDriveService.downloadFile(metadata.driveFileId);
