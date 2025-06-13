@@ -287,14 +287,33 @@ export function useStorageService() {
   };
 
   const downloadBook = async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
+    // First try to get from cache if offline or if signed out
+    const { getCachedFile } = await import('../services/driveCache');
+    const cachedBlob = await getCachedFile(bookId);
+    
+    if (!navigator.onLine && cachedBlob) {
+      console.log('Using cached book content (offline)');
+      return cachedBlob;
+    }
+    
     if (!clerkUser) {
+      if (cachedBlob) {
+        console.log('Using cached book content (signed out)');
+        return cachedBlob;
+      }
       toast.error('Please sign in to download books');
       return null;
     }
 
     try {
-      return await storageService.downloadBook(bookId, metadata);
+      const onlineBlob = await storageService.downloadBook(bookId, metadata);
+      return onlineBlob;
     } catch (error) {
+      console.warn('Online download failed, trying cache:', error);
+      if (cachedBlob) {
+        console.log('Using cached book content (fallback)');
+        return cachedBlob;
+      }
       console.error('Error downloading book:', error);
       toast.error('Failed to download book from cloud storage');
       throw error;
