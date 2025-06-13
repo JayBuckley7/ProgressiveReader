@@ -16,9 +16,9 @@ interface Book {
 
 interface BookCardProps {
   book: BookMetadata;
-  onSelectBook: (bookId: string) => void;
-  onDeleteBook: (bookId: string) => Promise<void>;
-  onUpdateCover: (bookId: string, coverFile: File) => Promise<void>;
+  onSelectBook?: (bookId: string) => void;
+  onDeleteBook?: (bookId: string) => Promise<void>;
+  onUpdateCover?: (bookId: string, coverFile: File) => Promise<void>;
 }
 
 export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardProps) {
@@ -26,8 +26,9 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { getReadingProgress } = useStorageService();
+  const { getReadingProgress, downloadBookForOffline } = useStorageService();
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
 
     setIsDeleting(true);
     try {
-      await onDeleteBook(book.id as string);
+      await onDeleteBook?.(book.id as string);
     } catch (error) {
       console.error('Error deleting book:', error);
     } finally {
@@ -83,7 +84,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
 
     setIsUpdatingCover(true);
     try {
-      await onUpdateCover(book.id as string, file);
+      await onUpdateCover?.(book.id as string, file);
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -96,7 +97,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   };
 
   const handleCardClick = () => {
-    onSelectBook(book.id as string);
+    onSelectBook?.(book.id as string);
   };
 
   if (showReader) {
@@ -187,6 +188,36 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           ) : (
             '✕'
+          )}
+        </button>
+
+        {/* Offline Download Button - appears on hover */}
+        <button
+          onClick={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDownloading(true);
+            try {
+              await downloadBookForOffline(book);
+            } finally {
+              setIsDownloading(false);
+            }
+          }}
+          disabled={isDownloading}
+          className={`
+            absolute bottom-2 left-2 z-10
+            bg-blue-600 hover:bg-blue-500 text-white border-none
+            px-2 py-1 rounded-full text-sm cursor-pointer
+            opacity-80 hover:opacity-100 transition-all duration-200
+            ${isHovered ? 'block' : 'hidden'}
+            disabled:opacity-50 disabled:cursor-not-allowed
+          `}
+          title="Save for offline"
+        >
+          {isDownloading ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            '⬇'
           )}
         </button>
       </div>

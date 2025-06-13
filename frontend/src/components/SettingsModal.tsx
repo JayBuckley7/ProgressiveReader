@@ -335,6 +335,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 onChange={v => handleChange("autoload", v)}
               />
 
+              <CheckboxInput
+                label="Cache Translations"
+                description="Store last translation per chapter for offline use"
+                checked={settings.cacheTranslations ?? true}
+                onChange={v => updateSettings({ cacheTranslations: v })}
+              />
+
               <SliderInput
                 label="Font Size"
                 value={settings.fontSize}
