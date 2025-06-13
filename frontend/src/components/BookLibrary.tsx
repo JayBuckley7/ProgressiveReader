@@ -222,17 +222,50 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             Sign In
           </button>
         </div>
-      ) : !isDriveConnected ? (
+      ) : !isDriveConnected && books.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📤</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Connect Google Drive
+            Connect Google Drive for Cloud Storage
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            You are logged in but may need to allow Google Drive scopes to load your books.
+            Connect Google Drive to sync your books across devices. You can still upload and read books without it.
           </p>
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-4">
             <GoogleDriveConnectButton />
+            <div className="text-sm text-gray-400">
+              or
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover"
+            >
+              Upload a Book to Get Started
+            </button>
+          </div>
+        </div>
+      ) : !isDriveConnected && books.length > 0 ? (
+        <div className="space-y-6">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-yellow-600 dark:text-yellow-400">⚠️</div>
+              <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">Offline Mode</h3>
+            </div>
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm mb-3">
+              You're viewing offline books only. Connect Google Drive to access your cloud library and sync across devices.
+            </p>
+            <GoogleDriveConnectButton />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {books.map((book) => (
+              <BookCardHover
+                key={book.id}
+                book={book}
+                onSelectBook={onSelectBook}
+                onDeleteBook={deleteBook}
+                onUpdateCover={updateBookCover}
+              />
+            ))}
           </div>
         </div>
       ) : books.length === 0 ? (
