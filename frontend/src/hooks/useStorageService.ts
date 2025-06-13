@@ -271,6 +271,10 @@ export function useStorageService() {
     const blob = await downloadBook(meta.id, meta);
     if (!blob) return;
 
+    // Cache the actual book content in IndexedDB using driveCache
+    const { cacheFile } = await import('../services/driveCache');
+    await cacheFile(meta.id, blob);
+
     if (meta.coverImageId) {
       let cover = await getCoverForFile(meta.id);
       if (!cover) {
@@ -287,6 +291,14 @@ export function useStorageService() {
       }
     }
     addOfflineBook(meta);
+    
+    // Refresh the book list to show the newly cached book
+    if (clerkUser) {
+      await silentRefreshBooks();
+    } else {
+      await loadOfflineBooks();
+    }
+    
     toast.success('Book cached for offline use');
   };
 
