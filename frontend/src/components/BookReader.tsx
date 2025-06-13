@@ -21,6 +21,7 @@ const getTranslationStorageKey = (bookId: string, chapter: number) => {
 };
 
 const saveTranslationToStorage = (bookId: string, chapter: number, translatedContent: string, useCefr: boolean, settings?: any) => {
+  if (settings && settings.cacheTranslations === false) return;
   const key = getTranslationStorageKey(bookId, chapter);
   const translationData = {
     content: translatedContent,
@@ -30,10 +31,10 @@ const saveTranslationToStorage = (bookId: string, chapter: number, translatedCon
     cefrLevel: localStorage.getItem("cefrLevel") || "3"
   };
   localStorage.setItem(key, JSON.stringify(translationData));
-  console.log('Translation saved to storage:', key, 'with settings:', { 
-    targetLanguage: translationData.targetLanguage, 
+  console.log('Translation saved to storage:', key, 'with settings:', {
+    targetLanguage: translationData.targetLanguage,
     cefrLevel: translationData.cefrLevel,
-    useCefr 
+    useCefr
   });
 };
 
@@ -122,9 +123,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Autoload translations when chapter changes if setting is enabled (one-time per chapter load)
   useEffect(() => {
     const autoloadEnabled = localStorage.getItem("autoloadTranslations") === "true";
+    const cachingEnabled = settings?.cacheTranslations !== false;
     
     // Only autoload on initial chapter load, not when user has already interacted with translations
-    if (autoloadEnabled && currentChapterContent && !isTranslating && !isTranslated) {
+    if (autoloadEnabled && cachingEnabled && currentChapterContent && !isTranslating && !isTranslated) {
       console.log('Checking for stored translation for autoload...');
       const storedTranslation = loadTranslationFromStorage(bookId, currentChapter);
       
@@ -233,6 +235,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               
               await highlightContent(freshElement);
               console.log('✅ highlightContent completed successfully');
+              if (settings?.cacheTranslations !== false && isTranslated && translatedContent) {
+                const html = contentRef.current?.innerHTML;
+                if (html) {
+                  saveTranslationToStorage(bookId, currentChapter, html, lastUseCefr, settings);
+                }
+              }
             } else {
               console.warn('⚠️ Content element is empty or missing when trying to highlight');
             }
@@ -892,7 +900,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
                   </>
                 )}
                 {!isTranslated && (() => {
-                  const storedTranslation = loadTranslationFromStorage(bookId, currentChapter);
+                  const storedTranslation = settings?.cacheTranslations !== false ? loadTranslationFromStorage(bookId, currentChapter) : null;
                   const currentTargetLanguage = settings?.targetLanguage || "English";
                   const currentCefrLevel = localStorage.getItem("cefrLevel") || "3";
                   const hasValidTranslation = storedTranslation && 

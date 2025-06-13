@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { storageService, BookMetadata, ReadingProgress } from '../services/storageService';
 import { gDriveService } from '../services/gdriveService';
+import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibrary';
+import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
 
@@ -83,6 +85,13 @@ export function useStorageService() {
     }
   }, [clerkUser]);
 
+  const loadOfflineBooks = useCallback(async () => {
+    setIsLoading(true);
+    const offline = await getOfflineBooksWithCovers();
+    setBooks(offline);
+    setIsLoading(false);
+  }, []);
+
   // Load user books function
   const loadUserBooks = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
@@ -155,23 +164,34 @@ export function useStorageService() {
       } else {
         // User is not signed in - clear everything for security
         console.log('User not signed in with Clerk - clearing data for security');
-        
+
         // Clean up blob URLs before clearing books
         if (books.length > 0) {
           storageService.cleanupBlobUrls(books);
         }
-        
+
         setBooks([]);
         lastUserIdRef.current = null;
-        
+
         // SECURITY: Clear Google Drive tokens when no Clerk user
         // This prevents token leakage if user switches accounts
         import('../services/gdriveService').then(({ gDriveService }) => {
           gDriveService.onClerkSignOut();
         });
+
+        getOfflineBooksWithCovers().then(b => {
+          setBooks(b);
+          setIsLoading(false);
+        });
       }
     }
   }, [clerkUser?.id, clerkLoaded, loadUserBooks]); // Use user ID instead of user object
+
+  useEffect(() => {
+    if (!clerkUser && clerkLoaded) {
+      loadOfflineBooks();
+    }
+  }, [clerkUser, clerkLoaded, loadOfflineBooks]);
 
   // Listen for Google Drive sign-in status changes and auto-refresh books
   // OPTIMIZATION: Prevent redundant listener setup and unnecessary book refreshes
@@ -245,6 +265,29 @@ export function useStorageService() {
       toast.error('Failed to download book from cloud storage');
       throw error;
     }
+  };
+
+  const downloadBookForOffline = async (meta: BookMetadata) => {
+    const blob = await downloadBook(meta.id, meta);
+    if (!blob) return;
+
+    if (meta.coverImageId) {
+      let cover = await getCoverForFile(meta.id);
+      if (!cover) {
+        cover = await getCachedCover(meta.coverImageId);
+        if (!cover && gDriveService.isSignedIn()) {
+          cover = await gDriveService.downloadFile(meta.coverImageId);
+          if (cover) {
+            await cacheCover(meta.coverImageId, cover);
+          }
+        }
+        if (cover) {
+          await cacheCoverForFile(meta.id, cover);
+        }
+      }
+    }
+    addOfflineBook(meta);
+    toast.success('Book cached for offline use');
   };
 
   const deleteBook = async (id: string) => {
@@ -425,6 +468,7 @@ export function useStorageService() {
     saveReadingProgress,
     openCloudFolder,
     syncBooks,
+    downloadBookForOffline,
     saveSettings,
     loadSettings
   };

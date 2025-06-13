@@ -15,6 +15,7 @@ interface Settings {
   showPopupOnHover?: boolean;
   touchscreenSupport?: boolean;
   disableFadeAnimation?: boolean;
+  cacheTranslations?: boolean;
 }
 
 interface SettingsContextType {
@@ -37,6 +38,7 @@ const defaultSettings: Settings = {
   showPopupOnHover: true,
   touchscreenSupport: true,
   disableFadeAnimation: false,
+  cacheTranslations: true,
 };
 
 const SETTINGS_COOKIE = "prSettings";
@@ -105,6 +107,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
+        localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
         console.log('🔔 Initial sync of accessibility settings to localStorage');
 
         setSettingsStorage(updated);
@@ -116,6 +119,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('showPopupOnHover', String(defaultSettings.showPopupOnHover));
       localStorage.setItem('touchscreenSupport', String(defaultSettings.touchscreenSupport));
       localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
+      localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
       console.log('🔔 Initial sync of default accessibility settings to localStorage');
       setSettingsStorage(defaultSettings);
     }
@@ -190,6 +194,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if ('disableFadeAnimation' in updates) {
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
         console.log('🔔 Synced disableFadeAnimation to localStorage:', updated.disableFadeAnimation);
+      }
+      if ('cacheTranslations' in updates) {
+        localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
       }
       
       return updated;
