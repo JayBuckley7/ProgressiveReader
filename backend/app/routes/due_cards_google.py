@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 import logging
 import requests
-from ..utils.auth import require_auth
+from ..utils.clerk_auth import require_auth
 from ..utils.jpdb_due import fetch_all_due_cards
 
 logger = logging.getLogger(__name__)
