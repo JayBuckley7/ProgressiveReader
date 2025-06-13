@@ -47,6 +47,9 @@ export function useStorageService() {
       const previous = booksRef.current;
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
+      // Always include offline books in silent refresh
+      const offlineBooks = await getOfflineBooksWithCovers();
+
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
         setBooks(currentBooks =>
@@ -56,18 +59,28 @@ export function useStorageService() {
         );
       };
 
-      const userBooks = await storageService.getUserBooks(onCoverReady);
+      let userBooks: BookMetadata[] = [];
+      try {
+        userBooks = await storageService.getUserBooks(onCoverReady);
+      } catch (error) {
+        console.warn('Could not refresh cloud books, keeping offline books:', error);
+      }
 
-      const mergedBooks = userBooks.map(book => {
+      // Merge offline and online books, removing duplicates (prioritize online version)
+      const onlineBookIds = new Set(userBooks.map(b => b.id));
+      const uniqueOfflineBooks = offlineBooks.filter(book => !onlineBookIds.has(book.id));
+      const allBooks = [...userBooks, ...uniqueOfflineBooks];
+
+      const mergedBooks = allBooks.map(book => {
         const cached = coverMap.get(book.id);
         return cached ? { ...book, coverUrl: cached } : book;
       });
 
-      if (areBooksEqual(userBooks, previous)) {
+      if (areBooksEqual(allBooks, previous)) {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       } else {
-        const newIds = new Set(userBooks.map(b => b.id));
+        const newIds = new Set(allBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
         if (removed.length > 0) {
           storageService.cleanupBlobUrls(removed);
@@ -76,7 +89,7 @@ export function useStorageService() {
         booksRef.current = mergedBooks;
       }
 
-      console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
+      console.log(`[useStorageService] Silent refresh complete - ${userBooks.length} cloud books, ${uniqueOfflineBooks.length} offline-only books`);
     } catch (error) {
       console.error('Error silently refreshing books:', error);
       // Don't show toast errors for silent refreshes to avoid interrupting user
@@ -92,7 +105,7 @@ export function useStorageService() {
     setIsLoading(false);
   }, []);
 
-  // Load user books function
+  // Load user books function - now includes offline books
   const loadUserBooks = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
         setBooks([]);
@@ -103,8 +116,10 @@ export function useStorageService() {
     
     try {
       const previous = booksRef.current;
-
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
+
+      // Always load offline books first
+      const offlineBooks = await getOfflineBooksWithCovers();
 
       // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
@@ -118,18 +133,28 @@ export function useStorageService() {
         );
       };
 
-      const userBooks = await storageService.getUserBooks(onCoverReady);
+      let userBooks: BookMetadata[] = [];
+      try {
+        userBooks = await storageService.getUserBooks(onCoverReady);
+      } catch (error) {
+        console.warn('Could not load cloud books, using offline books only:', error);
+      }
 
-      const mergedBooks = userBooks.map(book => {
+      // Merge offline and online books, removing duplicates (prioritize online version)
+      const onlineBookIds = new Set(userBooks.map(b => b.id));
+      const uniqueOfflineBooks = offlineBooks.filter(book => !onlineBookIds.has(book.id));
+      const allBooks = [...userBooks, ...uniqueOfflineBooks];
+
+      const mergedBooks = allBooks.map(book => {
         const cached = coverMap.get(book.id);
         return cached ? { ...book, coverUrl: cached } : book;
       });
 
-      if (areBooksEqual(userBooks, previous)) {
+      if (areBooksEqual(allBooks, previous)) {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       } else {
-        const newIds = new Set(userBooks.map(b => b.id));
+        const newIds = new Set(allBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
         if (removed.length > 0) {
           storageService.cleanupBlobUrls(removed);
@@ -137,12 +162,21 @@ export function useStorageService() {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       }
+
+      console.log(`[useStorageService] Loaded ${userBooks.length} cloud books and ${uniqueOfflineBooks.length} offline-only books`);
     } catch (error) {
       console.error('Error loading books:', error);
       
-      // Since we're not using backend API, just show a generic error
-      toast.error('Failed to load your books');
-      setBooks([]);
+      // Fallback to offline books only
+      try {
+        const offlineBooks = await getOfflineBooksWithCovers();
+        setBooks(offlineBooks);
+        console.log(`[useStorageService] Fallback: loaded ${offlineBooks.length} offline books`);
+      } catch (offlineError) {
+        console.error('Error loading offline books:', offlineError);
+        toast.error('Failed to load your books');
+        setBooks([]);
+      }
     } finally {
       setIsLoading(false);
       isRefreshingRef.current = false;
