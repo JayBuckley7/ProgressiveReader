@@ -217,40 +217,17 @@
             });
         });
         
-        // Function to load books from IndexedDB
+        const OFFLINE_BOOKS_KEY = 'prOfflineBooks';
+
+        // Function to load books from localStorage
         async function loadOfflineBooks() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('progressive-reader-db', 3);
-                
-                request.onerror = event => {
-                    reject('IndexedDB error: ' + event.target.errorCode);
-                };
-                
-                request.onsuccess = event => {
-                    const db = event.target.result;
-                    const transaction = db.transaction(['books'], 'readonly');
-                    const booksStore = transaction.objectStore('books');
-                    const getAllRequest = booksStore.getAll();
-                    
-                    getAllRequest.onsuccess = () => {
-                        resolve(getAllRequest.result || []);
-                    };
-                    
-                    getAllRequest.onerror = event => {
-                        reject('Error fetching books: ' + event.target.errorCode);
-                    };
-                };
-                
-                request.onupgradeneeded = event => {
-                    // This should not happen in the offline page as the DB should already exist
-                    // But just in case, we'll set up the store
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains('books')) {
-                        db.createObjectStore('books', { keyPath: 'id' });
-                    }
-                    resolve([]);
-                };
-            });
+            try {
+                const raw = localStorage.getItem(OFFLINE_BOOKS_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.error('Error parsing offline books:', e);
+                return [];
+            }
         }
         
         // Function to display offline books in the UI
@@ -348,15 +325,15 @@
         // Function to get cached cover for a book
         async function getCachedCoverForBook(bookId, coverImageId) {
             return new Promise((resolve) => {
-                const request = indexedDB.open('progressive-reader-db', 3);
+                const request = indexedDB.open('DriveFileCache', 3);
                 
                 request.onsuccess = event => {
                     const db = event.target.result;
                     
                     // Try to get cover by book ID first
-                    const transaction1 = db.transaction(['covers'], 'readonly');
-                    const coversStore = transaction1.objectStore('covers');
-                    const getRequest1 = coversStore.get(`book-${bookId}`);
+                    const txFile = db.transaction(['coversByFile'], 'readonly');
+                    const fileStore = txFile.objectStore('coversByFile');
+                    const getRequest1 = fileStore.get(bookId);
                     
                     getRequest1.onsuccess = () => {
                         if (getRequest1.result && getRequest1.result.blob) {
@@ -366,7 +343,9 @@
                         
                         // If not found by book ID, try by cover image ID
                         if (coverImageId) {
-                            const getRequest2 = coversStore.get(coverImageId);
+                            const txCover = db.transaction(['covers'], 'readonly');
+                            const coverStore = txCover.objectStore('covers');
+                            const getRequest2 = coverStore.get(coverImageId);
                             getRequest2.onsuccess = () => {
                                 if (getRequest2.result && getRequest2.result.blob) {
                                     resolve(getRequest2.result.blob);
