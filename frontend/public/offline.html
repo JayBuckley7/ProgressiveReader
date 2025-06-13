@@ -132,23 +132,11 @@
                 window.location.reload();
             });
             
-            // Check if we have IndexedDB support
-            if ('indexedDB' in window) {
-                // Try to load books from IndexedDB
-                loadOfflineBooks()
-                    .then(books => {
-                        if (books && books.length > 0) {
-                            displayOfflineBooks(books);
-                        } else {
-                            noBooksMessage.textContent = 'No books available offline.';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading offline books:', error);
-                        noBooksMessage.textContent = 'Error loading your books.';
-                    });
+            const books = loadOfflineBooks();
+            if (books.length > 0) {
+                displayOfflineBooks(books);
             } else {
-                noBooksMessage.textContent = 'Your browser does not support offline storage.';
+                noBooksMessage.textContent = 'No books available offline.';
             }
             
             // Listen for online event
@@ -156,41 +144,15 @@
                 window.location.href = '/';
             });
         });
-        
-        // Function to load books from IndexedDB
-        async function loadOfflineBooks() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('progressive-reader-db', 3);
-                
-                request.onerror = event => {
-                    reject('IndexedDB error: ' + event.target.errorCode);
-                };
-                
-                request.onsuccess = event => {
-                    const db = event.target.result;
-                    const transaction = db.transaction(['books'], 'readonly');
-                    const booksStore = transaction.objectStore('books');
-                    const getAllRequest = booksStore.getAll();
-                    
-                    getAllRequest.onsuccess = () => {
-                        resolve(getAllRequest.result || []);
-                    };
-                    
-                    getAllRequest.onerror = event => {
-                        reject('Error fetching books: ' + event.target.errorCode);
-                    };
-                };
-                
-                request.onupgradeneeded = event => {
-                    // This should not happen in the offline page as the DB should already exist
-                    // But just in case, we'll set up the store
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains('books')) {
-                        db.createObjectStore('books', { keyPath: 'id' });
-                    }
-                    resolve([]);
-                };
-            });
+
+        // Load offline book metadata from localStorage
+        function loadOfflineBooks() {
+            try {
+                const raw = localStorage.getItem('prOfflineBooks');
+                return raw ? JSON.parse(raw) : [];
+            } catch {
+                return [];
+            }
         }
         
         // Function to display offline books in the UI
