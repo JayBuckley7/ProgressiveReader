@@ -269,11 +269,55 @@ export function useStorageService() {
   }, [books]);
 
   const uploadBook = async (file: File, meta: {title: string; fileType: string; cover?: Blob}) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to upload books');
-      return null;
+    // If offline or no user, store locally
+    if (!navigator.onLine || !clerkUser) {
+      try {
+        // Create a local book metadata object
+        const localBookId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const localBookMetadata: BookMetadata = {
+          id: localBookId,
+          title: meta.title,
+          fileType: meta.fileType,
+          uploadedAt: new Date(),
+          userId: clerkUser?.id || 'local',
+          cloudProvider: 'local',
+          totalChapters: 1 // Default, can be updated later
+        };
+
+        // Cache the book content
+        const { cacheFile } = await import('../services/driveCache');
+        await cacheFile(localBookId, file);
+
+        // Cache the cover if provided
+        if (meta.cover) {
+          const { cacheCoverForFile } = await import('../services/driveCache');
+          await cacheCoverForFile(localBookId, meta.cover);
+          localBookMetadata.coverUrl = URL.createObjectURL(meta.cover);
+        }
+
+        // Add to offline books
+        addOfflineBook(localBookMetadata);
+
+        // Refresh the book list
+        if (clerkUser) {
+          await silentRefreshBooks();
+        } else {
+          await loadOfflineBooks();
+        }
+
+        const message = !navigator.onLine ? 
+          'Book uploaded locally (offline mode)' : 
+          'Book uploaded locally';
+        toast.success(message);
+        return localBookMetadata;
+      } catch (error) {
+        console.error('Error uploading book locally:', error);
+        toast.error('Failed to upload book locally');
+        throw error;
+      }
     }
 
+    // Online upload with user signed in
     try {
       const book = await storageService.uploadBook(file, meta, clerkUser);
       await loadUserBooks(); // Refresh the list
