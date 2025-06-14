@@ -4,6 +4,7 @@ import { BookCardHover } from "./BookCardHover";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
 import { useGoogleDrive } from "../hooks/useGoogleDrive";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
 
 interface BookLibraryProps {
@@ -14,6 +15,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
   const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
   const { isDriveConnected } = useGoogleDrive();
+  const isOnline = useOnlineStatus();
 
   // All book handling is delegated to the storage service.
 
@@ -78,7 +80,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-2 sm:gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Library</h1>
-          {isAuthenticated && navigator.onLine && (
+          {isAuthenticated && isOnline && (
             <>
               <button
                 onClick={openCloudFolder}
@@ -161,7 +163,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       </div>
 
       {/* Mobile-friendly action buttons for authenticated users */}
-      {isAuthenticated && navigator.onLine && (
+      {isAuthenticated && isOnline && (
         <div className="flex sm:hidden gap-2 mb-4">
           <button
             onClick={openCloudFolder}
@@ -226,17 +228,17 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📤</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            {navigator.onLine ? 'Connect Google Drive for Cloud Storage' : 'Offline Mode'}
+            {isOnline ? 'Connect Google Drive for Cloud Storage' : 'Offline Mode'}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {navigator.onLine ? 
+            {isOnline ? 
               'Connect Google Drive to sync your books across devices. You can still upload and read books without it.' :
               'You are currently offline. You can still upload and read books locally.'
             }
           </p>
           <div className="flex flex-col items-center gap-4">
-            {navigator.onLine && <GoogleDriveConnectButton />}
-            {navigator.onLine && (
+            {isOnline && <GoogleDriveConnectButton />}
+            {isOnline && (
               <div className="text-sm text-gray-400">
                 or
               </div>
@@ -245,7 +247,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
               onClick={() => fileInputRef.current?.click()}
               className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover"
             >
-              {navigator.onLine ? 'Upload a Book to Get Started' : 'Upload a Book (Local Storage)'}
+              {isOnline ? 'Upload a Book to Get Started' : 'Upload a Book (Local Storage)'}
             </button>
           </div>
         </div>
@@ -255,16 +257,16 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             <div className="flex items-center gap-3 mb-2">
               <div className="text-yellow-600 dark:text-yellow-400">⚠️</div>
               <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
-                {navigator.onLine ? 'Offline Mode' : 'You are offline'}
+                {isOnline ? 'Offline Mode' : 'You are offline'}
               </h3>
             </div>
             <p className="text-yellow-700 dark:text-yellow-300 text-sm mb-3">
-              {navigator.onLine ? 
+              {isOnline ? 
                 "You're viewing offline books only. Connect Google Drive to access your cloud library and sync across devices." :
                 "You're currently offline. Viewing cached books only. Connect to the internet to sync with your cloud library."
               }
             </p>
-            {navigator.onLine && <GoogleDriveConnectButton />}
+            {isOnline && <GoogleDriveConnectButton />}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {books.map((book) => (
