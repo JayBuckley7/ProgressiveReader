@@ -16,6 +16,7 @@ interface Settings {
   touchscreenSupport?: boolean;
   disableFadeAnimation?: boolean;
   cacheTranslations?: boolean;
+  forceOffline?: boolean;
 }
 
 interface SettingsContextType {
@@ -39,6 +40,7 @@ const defaultSettings: Settings = {
   touchscreenSupport: true,
   disableFadeAnimation: false,
   cacheTranslations: true,
+  forceOffline: false,
 };
 
 const SETTINGS_COOKIE = "prSettings";
@@ -108,6 +110,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
+        localStorage.setItem('forceOffline', String(updated.forceOffline));
         console.log('🔔 Initial sync of accessibility settings to localStorage');
 
         setSettingsStorage(updated);
@@ -120,6 +123,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('touchscreenSupport', String(defaultSettings.touchscreenSupport));
       localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
       localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
+      localStorage.setItem('forceOffline', String(defaultSettings.forceOffline));
       console.log('🔔 Initial sync of default accessibility settings to localStorage');
       setSettingsStorage(defaultSettings);
     }
@@ -197,6 +201,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
       if ('cacheTranslations' in updates) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
+      }
+      if ('forceOffline' in updates) {
+        localStorage.setItem('forceOffline', String(updated.forceOffline));
+        // Reload the page to apply the new online/offline status globally
+        window.location.reload();
       }
       
       return updated;

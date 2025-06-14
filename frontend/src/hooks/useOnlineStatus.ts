@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export function useOnlineStatus() {
-  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const { settings } = useSettings();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -16,6 +23,10 @@ export function useOnlineStatus() {
     };
   }, []);
 
-  return online;
+  if (settings?.forceOffline) {
+    return false;
+  }
+
+  return isOnline;
 }
 

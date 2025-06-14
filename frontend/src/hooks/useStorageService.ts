@@ -5,6 +5,7 @@ import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibra
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
+import { useOnlineStatus } from './useOnlineStatus';
 
 /**
  * Determine if two book lists contain the same entries.
@@ -29,6 +30,7 @@ export function useStorageService() {
   const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     booksRef.current = books;
@@ -114,6 +116,20 @@ export function useStorageService() {
     setIsLoading(true);
     isRefreshingRef.current = true;
     
+    if (!isOnline) {
+      console.log('[useStorageService] Offline mode: loading local books only.');
+      try {
+        const offlineBooks = await getOfflineBooksWithCovers();
+        setBooks(offlineBooks);
+        console.log(`[useStorageService] Fallback: loaded ${offlineBooks.length} offline books`);
+      } catch (offlineError) {
+        console.error('Error loading offline books:', offlineError);
+        toast.error('Failed to load your books');
+        setBooks([]);
+      }
+      return;
+    }
+    
     try {
       const previous = booksRef.current;
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
@@ -181,7 +197,7 @@ export function useStorageService() {
       setIsLoading(false);
       isRefreshingRef.current = false;
     }
-  }, [clerkUser]);
+  }, [clerkUser, isOnline]);
 
   useEffect(() => {
     // Use Clerk's authentication state instead of Firebase
@@ -270,7 +286,7 @@ export function useStorageService() {
 
   const uploadBook = async (file: File, meta: {title: string; fileType: string; cover?: Blob}) => {
     // If offline or no user, store locally
-    if (!navigator.onLine || !clerkUser) {
+    if (!isOnline || !clerkUser) {
       try {
         // Create a local book metadata object
         const localBookId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -305,7 +321,7 @@ export function useStorageService() {
           await loadOfflineBooks();
         }
 
-        const message = !navigator.onLine ? 
+        const message = !isOnline ? 
           'Book uploaded locally (offline mode)' : 
           'Book uploaded locally';
         toast.success(message);
@@ -331,75 +347,94 @@ export function useStorageService() {
   };
 
   const downloadBook = async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
-    // First try to get from cache if offline or if signed out
-    const { getCachedFile } = await import('../services/driveCache');
-    const cachedBlob = await getCachedFile(bookId);
-    
-    if (!navigator.onLine && cachedBlob) {
-      console.log('Using cached book content (offline)');
-      return cachedBlob;
-    }
-    
-    if (!clerkUser) {
-      if (cachedBlob) {
-        console.log('Using cached book content (signed out)');
-        return cachedBlob;
-      }
-      toast.error('Please sign in to download books');
-      return null;
+    // Deduplication logic
+    let promise = activeDownloads.get(bookId);
+    if (promise) {
+      return promise;
     }
 
-    try {
-      const onlineBlob = await storageService.downloadBook(bookId, metadata);
-      return onlineBlob;
-    } catch (error) {
-      console.warn('Online download failed, trying cache:', error);
-      if (cachedBlob) {
-        console.log('Using cached book content (fallback)');
-        return cachedBlob;
+    const doDownload = async () => {
+      try {
+        const cachedBlob = await getCachedFile(bookId);
+        if (cachedBlob) {
+          console.log(`[useStorageService] Book ${bookId} found in local cache.`);
+          return cachedBlob;
+        }
+
+        const message = !isOnline ?
+          "You are offline. This book is not in your cache." :
+          "This book is not in your local cache. Download from cloud?";
+        
+        if (!isOnline) {
+          toast.error(message);
+          return null;
+        }
+
+        const shouldDownload = window.confirm(message);
+        if (!shouldDownload) return null;
+
+        const cloudBlob = await storageService.downloadBook(bookId, metadata);
+        if (cloudBlob) {
+          await cacheFile(bookId, cloudBlob);
+          return cloudBlob;
+        }
+        return null;
+      } finally {
+        activeDownloads.delete(bookId);
       }
-      console.error('Error downloading book:', error);
-      toast.error('Failed to download book from cloud storage');
-      throw error;
-    }
+    };
+
+    promise = doDownload();
+    activeDownloads.set(bookId, promise);
+    return promise;
   };
 
   const downloadBookForOffline = async (meta: BookMetadata) => {
-    const blob = await downloadBook(meta.id, meta);
-    if (!blob) return;
+    try {
+      if (!isOnline && !await getCachedFile(meta.id)) {
+        toast.error('You must be online to download a book for the first time.');
+        return;
+      }
 
-    // Cache the actual book content in IndexedDB using driveCache
-    const { cacheFile } = await import('../services/driveCache');
-    await cacheFile(meta.id, blob);
-    if (meta.driveFileId && meta.driveFileId !== meta.id) {
-      await cacheFile(meta.driveFileId, blob);
-    }
+      const blob = await downloadBook(meta.id, meta);
+      if (blob) {
+        // Cache the actual book content in IndexedDB using driveCache
+        const { cacheFile } = await import('../services/driveCache');
+        await cacheFile(meta.id, blob);
+        if (meta.driveFileId && meta.driveFileId !== meta.id) {
+          await cacheFile(meta.driveFileId, blob);
+        }
 
-    if (meta.coverImageId) {
-      let cover = await getCoverForFile(meta.id);
-      if (!cover) {
-        cover = await getCachedCover(meta.coverImageId);
-        if (!cover && gDriveService.isSignedIn()) {
-          cover = await gDriveService.downloadFile(meta.coverImageId);
-          if (cover) {
-            await cacheCover(meta.coverImageId, cover);
+        if (meta.coverImageId) {
+          let cover = await getCoverForFile(meta.id);
+          if (!cover) {
+            cover = await getCachedCover(meta.coverImageId);
+            if (!cover && gDriveService.isSignedIn()) {
+              cover = await gDriveService.downloadFile(meta.coverImageId);
+              if (cover) {
+                await cacheCover(meta.coverImageId, cover);
+              }
+            }
+            if (cover) {
+              await cacheCoverForFile(meta.id, cover);
+            }
           }
         }
-        if (cover) {
-          await cacheCoverForFile(meta.id, cover);
+        addOfflineBook(meta);
+        
+        // Refresh the book list to show the newly cached book
+        if (clerkUser) {
+          await silentRefreshBooks();
+        } else {
+          await loadOfflineBooks();
         }
+        
+        toast.success('Book cached for offline use');
       }
+    } catch (error) {
+      console.error('Error downloading book for offline:', error);
+      toast.error('Failed to download book for offline use');
     }
-    addOfflineBook(meta);
-    
-    // Refresh the book list to show the newly cached book
-    if (clerkUser) {
-      await silentRefreshBooks();
-    } else {
-      await loadOfflineBooks();
-    }
-    
-    toast.success('Book cached for offline use');
   };
 
   const deleteBook = async (id: string) => {

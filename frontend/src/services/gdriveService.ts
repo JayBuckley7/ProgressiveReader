@@ -52,16 +52,24 @@ class GDriveService {
   private appFolderId: string | null = null;
 
   constructor() {
-    if (navigator.onLine) {
+    const isForcedOffline = localStorage.getItem('forceOffline') === 'true';
+    if (navigator.onLine && !isForcedOffline) {
       this.loadGoogleScripts();
     } else {
-      console.log('[GDriveService] Offline at startup, skipping Google script loading.');
+      console.log('[GDriveService] Offline at startup (or forced), skipping Google script loading.');
       // Listen for when we come back online
       window.addEventListener('online', this.handleOnline, { once: true });
     }
   }
 
   private handleOnline = () => {
+    const isForcedOffline = localStorage.getItem('forceOffline') === 'true';
+    if (isForcedOffline) {
+      console.log('[GDriveService] Application is online, but offline mode is forced. Deferring script loading.');
+      // Re-add the listener in case the setting is toggled back
+      window.addEventListener('online', this.handleOnline, { once: true });
+      return;
+    }
     console.log('[GDriveService] Application is now online. Loading Google scripts...');
     this.loadGoogleScripts();
     // No need to remove the listener as { once: true } does it automatically

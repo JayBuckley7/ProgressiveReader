@@ -189,32 +189,24 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
 }
 
 // Main function to apply JPDB highlighting to a content element
-
-
 export async function highlightContent(contentElement: HTMLElement, bookId?: string, chapter?: number): Promise<void> {
     Logger.log('highlightContent called', contentElement);
     
-    let currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
+    // Reload config on each highlight to catch any settings changes
+    const currentConfig = loadConfig();
     Logger.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));
-    Logger.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
-    Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
+
+    // Determine if we're online, respecting the forced offline setting
+    const isForcedOffline = localStorage.getItem('forceOffline') === 'true';
+    const isOnline = navigator.onLine && !isForcedOffline;
+
+    // We are offline if the browser says we are, or if the user has forced offline mode
+    const isOffline = !isOnline;
     
-    const directCookieCheck = document.cookie.includes('jpdb_api_key=') && 
-                             document.cookie.split('jpdb_api_key=')[1]?.split(';')[0]?.trim();
-    
-    if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
-        console.error('JPDB API Key is not set in config');
-        if (directCookieCheck) {
-            Logger.log('Found API key directly in cookie, attempting to use it and reload config');
-            // This scenario is less likely now with centralized config, but as a safeguard:
-            // Manually setting and reloading could be an option, but loadConfig should handle it.
-            // For now, we rely on loadConfig having done its job. If key is still missing, alert.
-             alert('JPDB API Key is not set. Please set it in settings. Attempted to load from cookie.');
-            return;
-        } else {
-            alert('JPDB API Key is not set. Please set it in settings.');
-            return;
-        }
+    const text = contentElement.textContent;
+    if (!text) {
+        Logger.log('No text to highlight.');
+        return;
     }
     
     // Store original content for later restoration
@@ -250,11 +242,11 @@ export async function highlightContent(contentElement: HTMLElement, bookId?: str
             }
         }
         if (!tokens) {
-            if (!navigator.onLine) {
+            if (isOffline) {
                 Logger.log('Offline and no cached highlights available');
                 return;
             }
-            Logger.log('About to parse text with API...');
+            Logger.log('Online, fetching tokens from API');
             tokens = await parseText(textSegments); // Tokens have global offsets
             if (bookId && chapter !== undefined) {
                 saveHighlights(bookId, chapter, tokens);

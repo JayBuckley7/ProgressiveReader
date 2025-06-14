@@ -499,9 +499,15 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
                 <CheckboxInput
                   label="Disable Fade Animation"
-                  description="Remove fade effects for better performance"
+                  description="Removes fade-in animations for faster transitions"
                   checked={settings.disableFadeAnimation ?? false}
-                  onChange={v => updateSettings({ disableFadeAnimation: v })}
+                  onChange={(v) => updateSettings({ disableFadeAnimation: v })}
+                />
+                <CheckboxInput
+                  label="Force Offline Status"
+                  checked={settings.forceOffline ?? false}
+                  onChange={(v) => updateSettings({ forceOffline: v })}
+                  description="Simulate being offline to test caching and offline functionality."
                 />
               </div>
 

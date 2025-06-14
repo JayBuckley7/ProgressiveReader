@@ -1,4 +1,3 @@
-
 import { gDriveService, BOOK_FILE_EXTENSIONS } from './gdriveService';
 import {
     getCachedFile,
@@ -107,6 +106,11 @@ class StorageService {
         }
     }
 
+    private isOnline(): boolean {
+        const isForcedOffline = localStorage.getItem('forceOffline') === 'true';
+        return navigator.onLine && !isForcedOffline;
+    }
+
     /**
      * Upload book to user's cloud storage - NEVER to our servers
      * Only metadata pointers are stored in our backend
@@ -116,7 +120,10 @@ class StorageService {
 
         const provider = this.detectProviderFromClerkUser(clerkUser);
 
-        if (!navigator.onLine || provider === 'email') {
+        if (!this.isOnline() || provider === 'email') {
+            console.log('Offline or local-only user, handling upload locally.');
+            // This is where you would add logic to save the book to local storage (e.g., IndexedDB)
+            // For now, we'll just throw an error to indicate it's not implemented.
             try {
                 let coverBlob = meta.cover;
                 if (!coverBlob && meta.fileType === 'epub') {
