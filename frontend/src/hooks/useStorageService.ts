@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { storageService, BookMetadata, ReadingProgress } from '../services/storageService';
 import { gDriveService } from '../services/gdriveService';
 import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibrary';
-import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
+import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, getCachedFile } from '../services/driveCache';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
 import { useOnlineStatus } from './useOnlineStatus';

@@ -8,6 +8,7 @@ import {
     cacheCoverForFile
 } from './driveCache';
 import { addOfflineBook } from '../utils/offlineLibrary';
+import { toast } from 'react-hot-toast';
 
 
 // Declare the existing driveSync functions for TypeScript
@@ -448,11 +449,8 @@ class StorageService {
                 }
 
                 if (!gDriveService.isSignedIn()) {
-                    console.log('Not signed in to Google Drive. Attempting to sign in...');
-                    await gDriveService.signIn('consent'); // Or 'select_account'
-                    if (!gDriveService.isSignedIn()) {
-                        throw new Error('Google Drive sign-in is required to download books.');
-                    }
+                    toast.error('Please connect to Google Drive in settings to download your book.');
+                    throw new Error('Not signed in to Google Drive');
                 }
 
                 const blob = await gDriveService.downloadFile(metadata.driveFileId);
