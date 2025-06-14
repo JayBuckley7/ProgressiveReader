@@ -28,7 +28,9 @@ export default function App() {
 
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
-      <AppContent />
+      <SettingsProvider>
+        <AppContent />
+      </SettingsProvider>
     </ClerkProvider>
   );
 }
@@ -87,27 +89,25 @@ function AppContent() {
   }, [isClerkLoaded, isClerkSignedIn]);
 
   return (
-    <SettingsProvider>
-      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-        <main className="flex-1 flex flex-col">
-          <Content
-            currentBookId={currentBookId}
-            setCurrentBookId={setCurrentBookId}
-            currentChapter={currentChapter}
-            setCurrentChapter={setCurrentChapter}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            setShowLogin={setShowLogin}
-          />
-        </main>
-        <Footer />
-        <DangerZone />
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 flex flex-col">
+        <Content
+          currentBookId={currentBookId}
+          setCurrentBookId={setCurrentBookId}
+          currentChapter={currentChapter}
+          setCurrentChapter={setCurrentChapter}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          setShowLogin={setShowLogin}
+        />
+      </main>
+      <Footer />
+      <DangerZone />
 
-        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
 
-        <Toaster />
-      </div>
-    </SettingsProvider>
+      <Toaster />
+    </div>
   );
 }
 
