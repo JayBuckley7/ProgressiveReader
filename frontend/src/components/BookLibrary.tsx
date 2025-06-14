@@ -87,6 +87,11 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-2 sm:gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Library</h1>
+          {!isOnline && (
+            <span className="bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-gray-700 dark:text-gray-300">
+              Offline
+            </span>
+          )}
           {isAuthenticated && isOnline && (
             <>
               <button
@@ -270,35 +275,6 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             >
               {isOnline ? 'Upload a Book to Get Started' : 'Upload a Book (Local Storage)'}
             </button>
-          </div>
-        </div>
-      ) : !isDriveConnected && books.length > 0 ? (
-        <div className="space-y-6">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="text-yellow-600 dark:text-yellow-400">⚠️</div>
-              <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">
-                {isOnline ? 'Offline Mode' : 'You are offline'}
-              </h3>
-            </div>
-            <p className="text-yellow-700 dark:text-yellow-300 text-sm mb-3">
-              {isOnline ? 
-                "You're viewing offline books only. Connect Google Drive to access your cloud library and sync across devices." :
-                "You're currently offline. Viewing cached books only. Connect to the internet to sync with your cloud library."
-              }
-            </p>
-            {isOnline && <GoogleDriveConnectButton />}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {books.map((book) => (
-              <BookCardHover
-                key={book.id}
-                book={book}
-                onSelectBook={onSelectBook}
-                onDeleteBook={deleteBook}
-                onUpdateCover={updateBookCover}
-              />
-            ))}
           </div>
         </div>
       ) : books.length === 0 ? (
