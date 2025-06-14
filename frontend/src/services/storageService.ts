@@ -8,7 +8,7 @@ import {
     cacheCoverForFile
 } from './driveCache';
 import { addOfflineBook } from '../utils/offlineLibrary';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 
 // Declare the existing driveSync functions for TypeScript
