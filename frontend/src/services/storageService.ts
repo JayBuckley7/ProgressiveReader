@@ -8,6 +8,7 @@ import {
     getCoverForFile,
     cacheCoverForFile
 } from './driveCache';
+import { addOfflineBook } from '../utils/offlineLibrary';
 
 
 // Declare the existing driveSync functions for TypeScript
@@ -112,9 +113,45 @@ class StorageService {
      */
     async uploadBook(file: File, meta: {title: string; fileType: string; cover?: Blob}, clerkUser?: any): Promise<BookMetadata> {
         console.log('Uploading book to user\'s cloud storage. Privacy-first: no content stored in our backend.');
-        
+
         const provider = this.detectProviderFromClerkUser(clerkUser);
-        
+
+        if (!navigator.onLine || provider === 'email') {
+            try {
+                let coverBlob = meta.cover;
+                if (!coverBlob && meta.fileType === 'epub') {
+                    try {
+                        const extracted = await this.extractCoverFromEpub(file);
+                        if (extracted) coverBlob = extracted;
+                    } catch (err) {
+                        console.warn('Failed to extract cover from EPUB:', err);
+                    }
+                }
+
+                const localId = `local-${crypto.randomUUID()}`;
+                await cacheFile(localId, file);
+                if (coverBlob) {
+                    await cacheCoverForFile(localId, coverBlob);
+                }
+
+                const localMeta: BookMetadata = {
+                    id: localId,
+                    title: meta.title,
+                    fileType: meta.fileType,
+                    uploadedAt: new Date(),
+                    userId: clerkUser?.id || 'local',
+                    cloudProvider: 'local',
+                    coverUrl: coverBlob ? URL.createObjectURL(coverBlob) : undefined
+                };
+                addOfflineBook(localMeta);
+                this.clearBookListCache();
+                return localMeta;
+            } catch (err) {
+                console.error('Local book upload failed:', err);
+                throw err;
+            }
+        }
+
         switch (provider) {
             case 'google':
                 try {
