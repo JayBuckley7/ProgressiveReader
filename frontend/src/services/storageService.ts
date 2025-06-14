@@ -340,82 +340,17 @@ class StorageService {
      * Dynamically load epub.js library and its dependencies
      */
     private async loadEpubJs(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            // Check if both libraries are already loaded
-            if ((window as any).ePub && (window as any).JSZip) {
-                resolve();
-                return;
-            }
-
-            // Load dependencies in sequence: JSZip first, then epub.js
-            this.loadDependenciesSequentially()
-                .then(() => resolve())
-                .catch(reject);
-        });
-    }
-
-    /**
-     * Load JSZip and epub.js in the correct order
-     */
-    private async loadDependenciesSequentially(): Promise<void> {
-        // First load JSZip if not already loaded
-        if (!(window as any).JSZip) {
-            await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
-            if (!(window as any).JSZip) {
-                throw new Error('JSZip failed to load');
-            }
+        if ((window as any).ePub && (window as any).JSZip) {
+            return;
         }
 
-        // Then load epub.js if not already loaded
-        if (!(window as any).ePub) {
-            await this.loadScript('https://unpkg.com/epubjs@0.3.93/dist/epub.min.js');
-            if (!(window as any).ePub) {
-                throw new Error('epub.js failed to load');
-            }
-        }
+        const jszipMod = await import('jszip');
+        (window as any).JSZip = (jszipMod as any).default || jszipMod;
+
+        const epubMod = await import('epubjs');
+        (window as any).ePub = (epubMod as any).default || (epubMod as any);
     }
 
-    /**
-     * Load a single script and return a promise
-     */
-    private async loadScript(url: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            // Check if script is already present
-            if (document.querySelector(`script[src="${url}"]`)) {
-                // Wait for it to finish loading
-                const checkLoaded = () => {
-                    const isJSZip = url.includes('jszip');
-                    const isEpub = url.includes('epub');
-                    
-                    if ((isJSZip && (window as any).JSZip) || 
-                        (isEpub && (window as any).ePub) ||
-                        (!isJSZip && !isEpub)) {
-                        resolve();
-                    } else {
-                        setTimeout(checkLoaded, 100);
-                    }
-                };
-                checkLoaded();
-                return;
-            }
-
-            // Create and load the script
-            const script = document.createElement('script');
-            script.src = url;
-            script.async = true;
-            
-            script.onload = () => {
-                resolve();
-            };
-            
-            script.onerror = () => {
-                document.head.removeChild(script);
-                reject(new Error(`Failed to load script: ${url}`));
-            };
-            
-            document.head.appendChild(script);
-        });
-    }
 
     /**
      * Download a book's file content from cloud storage

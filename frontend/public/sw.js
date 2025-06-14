@@ -8,9 +8,33 @@ const PRECACHE_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
+async function gatherDynamicAssets() {
+  const assets = [...PRECACHE_ASSETS];
+
+  try {
+    const indexRes = await fetch('/index.html', { cache: 'no-store' });
+    if (indexRes.ok) {
+      const text = await indexRes.text();
+      const regex = /\"(\/assets\/[^\"]+)\"/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        assets.push(match[1]);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to gather dynamic assets', err);
+  }
+
+  return assets;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const assets = await gatherDynamicAssets();
+      await cache.addAll(assets);
+    })()
   );
   self.skipWaiting();
 });

@@ -124,28 +124,6 @@ export class EpubProcessorWrapper {
 
 
 /* ------------------------------------------------------------------
- *  Helper: dynamically load <script src="..."> once per page
- * ------------------------------------------------------------------ */
-function loadScript(url: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${url}"]`)) {
-            resolve();      // already present / loading
-            return;
-        }
-        const s   = document.createElement('script');
-        s.src     = url;
-        s.async   = true;
-        s.onload  = () => resolve();
-        s.onerror = () => {
-            document.head.removeChild(s);
-            reject(new Error(`Failed to load script: ${url}`));
-        };
-        document.head.appendChild(s);
-    });
-}
-
-
-/* ------------------------------------------------------------------
  *  Internal EpubProcessor  –  uses epub.js directly
  * ------------------------------------------------------------------ */
 class EpubProcessor {
@@ -185,21 +163,24 @@ class EpubProcessor {
             return true;
         }
 
-        const jszipUrl  = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-        const epubjsUrl = 'https://unpkg.com/epubjs@0.3.93/dist/epub.min.js';
-
         this.loadingPromise = (async () => {
-            await loadScript(jszipUrl);
-            if (!window.JSZip) throw new Error('JSZip failed to load.');
-            this.jszip = window.JSZip;
+            try {
+                const jszipMod = await import('jszip');
+                this.jszip = (jszipMod as any).default || jszipMod;
+                (window as any).JSZip = this.jszip;
 
-            await loadScript(epubjsUrl);
-            if (!window.ePub) throw new Error('epub.js failed to load.');
-            this.epubJsLib = window.ePub;
+                const epubMod = await import('epubjs');
+                this.epubJsLib = (epubMod as any).default || (epubMod as any);
+                (window as any).ePub = this.epubJsLib;
 
-            this.dependenciesLoaded = true;
-            this.loadingPromise     = null;
-            return true;
+                this.dependenciesLoaded = true;
+                this.loadingPromise     = null;
+                return true;
+            } catch (err) {
+                console.error('Failed to load EPUB dependencies', err);
+                this.loadingPromise = null;
+                throw err;
+            }
         })();
 
         return this.loadingPromise;

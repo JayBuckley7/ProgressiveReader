@@ -100,27 +100,37 @@ class TextProcessor {
 
   async _ensureJsZip(): Promise<boolean> {
     if (this.dependenciesLoaded) return true;
-    if (window.JSZip) {
-      this.jszip = window.JSZip;
+
+    if (this.jszip) {
       this.dependenciesLoaded = true;
       return true;
     }
-    const jszipUrl = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    await loadScript(jszipUrl);
-    if (!window.JSZip) throw new Error('JSZip failed to load');
-    this.jszip = window.JSZip;
-    this.dependenciesLoaded = true;
-    return true;
+
+    try {
+      const mod = await import('jszip');
+      this.jszip = (mod as any).default || mod;
+      (window as any).JSZip = this.jszip;
+      this.dependenciesLoaded = true;
+      return true;
+    } catch (err) {
+      console.error('Failed to load JSZip module', err);
+      throw err;
+    }
   }
 
   async _ensurePdfJs(): Promise<boolean> {
-    if (window.pdfjsLib) return true;
-    const pdfjsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    await loadScript(pdfjsUrl);
-    if (!window.pdfjsLib) throw new Error('pdf.js failed to load');
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-    return true;
+    if ((window as any).pdfjsLib) return true;
+
+    try {
+      const pdfjsLib = await import('pdfjs-dist/build/pdf');
+      const worker = await import('pdfjs-dist/build/pdf.worker.min?url');
+      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = (worker as any).default;
+      (window as any).pdfjsLib = pdfjsLib;
+      return true;
+    } catch (err) {
+      console.error('Failed to load pdf.js module', err);
+      throw err;
+    }
   }
 
   async _initialize(): Promise<void> {
