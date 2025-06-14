@@ -239,7 +239,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
                 freshElement.setAttribute('data-original-content', currentChapterContent);
               }
               
-              await highlightContent(freshElement);
+              await highlightContent(freshElement, bookId, currentChapter);
               console.log('✅ highlightContent completed successfully');
               if (settings?.cacheTranslations !== false && isTranslated && translatedContent) {
                 const html = contentRef.current?.innerHTML;

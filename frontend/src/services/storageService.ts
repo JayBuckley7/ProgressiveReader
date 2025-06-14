@@ -116,7 +116,7 @@ class StorageService {
 
         const provider = this.detectProviderFromClerkUser(clerkUser);
 
-        if (!navigator.onLine || provider === 'email' || provider === 'local') {
+        if (!navigator.onLine || provider === 'email') {
             try {
                 let coverBlob = meta.cover;
                 if (!coverBlob && meta.fileType === 'epub') {

@@ -7,6 +7,8 @@ import { showError } from './components/toast';
 import { Popup } from './components/popup';
 import { Keybind } from './types'; // Corrected import path for Keybind
 import Logger from './utils/logger';
+import { saveHighlights, loadHighlights } from './utils/offlineHighlights';
+import type { Token } from './types';
 
 let currentHover: [JpdbWord, number, number] | null = null;
 let popupKeyHeld = false; // Add popupKeyHeld state
@@ -187,7 +189,9 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
 }
 
 // Main function to apply JPDB highlighting to a content element
-export async function highlightContent(contentElement: HTMLElement): Promise<void> {
+
+
+export async function highlightContent(contentElement: HTMLElement, bookId?: string, chapter?: number): Promise<void> {
     Logger.log('highlightContent called', contentElement);
     
     let currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
@@ -237,9 +241,25 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         document.body.style.cursor = 'wait';
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
         Logger.log(`Created ${paragraphs.length} paragraph fragments`);
-        
-        Logger.log('About to parse text with API...');
-        const tokens = await parseText(textSegments); // Tokens have global offsets
+
+        let tokens: Token[] | null = null;
+        if (bookId && chapter !== undefined) {
+            tokens = loadHighlights(bookId, chapter);
+            if (tokens) {
+                Logger.log('Loaded highlight tokens from cache');
+            }
+        }
+        if (!tokens) {
+            if (!navigator.onLine) {
+                Logger.log('Offline and no cached highlights available');
+                return;
+            }
+            Logger.log('About to parse text with API...');
+            tokens = await parseText(textSegments); // Tokens have global offsets
+            if (bookId && chapter !== undefined) {
+                saveHighlights(bookId, chapter, tokens);
+            }
+        }
 
         Logger.log(`Received ${tokens.length} tokens from API`);
         console.log('🔍 Sample tokens:', tokens.slice(0, 3).map(t => ({

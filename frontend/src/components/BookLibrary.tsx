@@ -13,9 +13,11 @@ interface BookLibraryProps {
 
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
-  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
+  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks, loadOfflineBooks } = useStorageService();
   const { isDriveConnected } = useGoogleDrive();
   const isOnline = useOnlineStatus();
+
+  const [offlineMode, setOfflineMode] = useState(false);
 
   // All book handling is delegated to the storage service.
 
@@ -23,6 +25,11 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleContinueOffline = async () => {
+    await loadOfflineBooks();
+    setOfflineMode(true);
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -202,7 +209,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
         </div>
       )}
 
-      {!isAuthenticated ? (
+      {!isAuthenticated && !offlineMode ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🔐</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -223,8 +230,14 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             </svg>
             Sign In
           </button>
+          <button
+            onClick={handleContinueOffline}
+            className="mt-4 text-sm text-primary underline"
+          >
+            Continue Offline
+          </button>
         </div>
-      ) : !isDriveConnected && books.length === 0 ? (
+      ) : !isDriveConnected && books.length === 0 && !offlineMode ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📤</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -238,6 +251,9 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
           </p>
           <div className="flex flex-col items-center gap-4">
             {isOnline && <GoogleDriveConnectButton />}
+            <button onClick={handleContinueOffline} className="text-sm text-primary underline">
+              Continue Offline
+            </button>
             {isOnline && (
               <div className="text-sm text-gray-400">
                 or

@@ -587,6 +587,7 @@ export function useStorageService() {
     syncBooks,
     downloadBookForOffline,
     saveSettings,
-    loadSettings
+    loadSettings,
+    loadOfflineBooks
   };
 }
