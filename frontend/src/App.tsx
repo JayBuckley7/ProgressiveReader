@@ -1,65 +1,98 @@
-import { useState, useEffect } from "react";
-import { prefetchDueCards } from "./services/dueCardsService";
 import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
-
-import { SignInForm } from "./components/SignInForm";
-import { SignOutButton } from "./components/SignOutButton"; // This might be unused now, or used inside TopActions
-import { Toaster } from "sonner";
+import { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
 import BookLibrary from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
-import { SettingsProvider } from "./contexts/SettingsContext";
+import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
+import { OnlineStatusProvider, useOnlineStatus } from "./contexts/OnlineStatusContext";
 import { TopActions } from "./components/TopActions";
 import { HeroBanner } from "./components/HeroBanner";
-import { DangerZone } from "./components/DangerZone";
+import VocabularyPage from "./components/VocabularyPage";
 import { Footer } from "./components/Footer";
-import { VocabularyPage } from "./components/VocabularyPage";
+import { DangerZone } from "./components/DangerZone";
 import { LoginModal } from "./components/LoginModal";
-import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
-import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { gDriveService } from "./services/gdriveService";
 
-// Get Clerk publishable key from environment variable
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISH_KEY;
 
-function App() {
-  if (!clerkPubKey) {
-    throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in environment variables");
-  }
-
-  return (
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <SettingsProvider>
-        <Main />
-      </SettingsProvider>
-    </ClerkProvider>
-  );
+if (!clerkPubKey) {
+  throw new Error("Missing Publishable Key");
 }
 
-function Main() {
-  return <AppContent />;
+function App() {
+  return (
+    <OnlineStatusProvider>
+      <SettingsProvider>
+        <ClerkProvider publishableKey={clerkPubKey}>
+          <AppContent />
+        </ClerkProvider>
+      </SettingsProvider>
+    </OnlineStatusProvider>
+  );
 }
 
 function AppContent() {
-  const [currentBookId, setCurrentBookId] = useState<string | null>(null); // Was Id<"books">
-  const [currentChapter, setCurrentChapter] = useState(0);
-  const [currentPage, setCurrentPage] = useState<"library" | "vocabulary" | "stats">(
-    "library"
-  );
+  const { settings } = useSettings();
+  const { isOnline } = useOnlineStatus();
+  const [currentBookId, setCurrentBookId] = useState<string | null>(null);
+  const [currentChapter, setCurrentChapter] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState("library");
   const [showLogin, setShowLogin] = useState(false);
+  const { isSignedIn: isClerkSignedIn } = useUser();
+
+  useEffect(() => {
+    gDriveService.init(isClerkSignedIn);
+  }, [isClerkSignedIn]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <main className="flex-1 flex flex-col">
-        <GoogleDriveInitializer />
-        <Content
-          currentBookId={currentBookId}
-          setCurrentBookId={setCurrentBookId}
-          currentChapter={currentChapter}
-          setCurrentChapter={setCurrentChapter}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          setShowLogin={setShowLogin}
-        />
+    <div className={`App theme-${settings.theme} font-${settings.fontFamily}`} style={{ fontSize: `${settings.fontSize}px` }}>
+      <main className="flex flex-col flex-1">
+        <SignedIn>
+          {currentBookId ? (
+            <BookReader
+              bookId={currentBookId}
+              currentChapter={currentChapter}
+              setCurrentChapter={setCurrentChapter}
+              onBack={() => setCurrentBookId(null)}
+            />
+          ) : (
+            <div className="flex flex-col flex-1">
+              <TopActions
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                onShowLogin={() => setShowLogin(true)}
+              />
+              <HeroBanner />
+              <div className="flex-1 overflow-y-auto">
+                {currentPage === "library" ? (
+                  <BookLibrary onSelectBook={setCurrentBookId} />
+                ) : currentPage === "vocabulary" ? (
+                  <VocabularyPage />
+                ) : (
+                  <div className="p-8 text-center">
+                    <h2 className="text-2xl font-bold mb-4">Reading Statistics</h2>
+                    <p className="text-gray-600">Stats page coming soon...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </SignedIn>
+
+        <SignedOut>
+          <div className="flex flex-col flex-1">
+            <TopActions
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              onShowLogin={() => setShowLogin(true)}
+            />
+            <HeroBanner />
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">Welcome to Progressive Reader</h2>
+              <p className="text-gray-600">Please sign in to access your library.</p>
+            </div>
+          </div>
+        </SignedOut>
       </main>
       <Footer />
       <DangerZone />
@@ -71,132 +104,4 @@ function AppContent() {
   );
 }
 
-function GoogleDriveInitializer() {
-  // Clerk and Google Drive hooks
-  const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, isLoading: isDriveLoading } = useGoogleDrive();
-  const isOnline = useOnlineStatus();
-
-  useEffect(() => {
-    // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
-    if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
-      // Check if one of the Clerk external accounts is Google
-      // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
-      // Inspect clerkUser.externalAccounts[0].provider to be sure.
-      const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
-        (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
-      );
-
-      if (wasGoogleClerkLogin && !isDriveConnected && isOnline) {
-        console.log(
-          "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Prompting for Drive auth..."
-        );
-        // Automatically initiate the Google Drive connection flow.
-        // Using 'consent' ensures the user sees the Drive scopes being requested.
-        gDriveService.signIn('consent');
-      }
-    }
-  }, [
-    isClerkLoaded,
-    isClerkSignedIn,
-    clerkUser,
-    isDriveConnected,
-    isDriveLoading,
-    isOnline,
-  ]);
-
-  // Prefetch JPDB due cards only after user is signed in if enabled
-  useEffect(() => {
-    if (
-      isClerkLoaded &&
-      isClerkSignedIn &&
-      localStorage.getItem('preferDueCards') === 'true'
-    ) {
-      // Removed automatic prefetching - due cards are now fetched manually only
-    // prefetchDueCards();
-    }
-  }, [isClerkLoaded, isClerkSignedIn]);
-
-  return null; // This component does not render anything
-}
-
-function Content({
-  currentBookId,
-  setCurrentBookId,
-  currentChapter,
-  setCurrentChapter,
-  currentPage,
-  setCurrentPage,
-  setShowLogin,
-}: {
-  currentBookId: string | null; // Was Id<"books">
-  setCurrentBookId: (id: string | null) => void; // Was Id<"books">
-  currentChapter: number;
-  setCurrentChapter: (chapter: number) => void;
-  currentPage: "library" | "vocabulary" | "stats";
-  setCurrentPage: (page: "library" | "vocabulary" | "stats") => void;
-  setShowLogin: (show: boolean) => void;
-}) {
-  const { user, isLoaded } = useUser();
-
-  // Show loading spinner while Clerk is loading
-  if (!isLoaded) {
-    return (
-      <div className="flex-1 flex justify-center items-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col flex-1">
-      <SignedIn>
-        {currentBookId ? (
-          <BookReader
-            bookId={currentBookId}
-            currentChapter={currentChapter}
-            setCurrentChapter={setCurrentChapter}
-            onBack={() => setCurrentBookId(null)}
-          />
-        ) : (
-          <div className="flex flex-col flex-1">
-            <TopActions
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              onShowLogin={() => setShowLogin(true)}
-            />
-            <HeroBanner />
-            <div className="flex-1 overflow-y-auto">
-              {currentPage === "library" ? (
-                <BookLibrary onSelectBook={setCurrentBookId} />
-              ) : currentPage === "vocabulary" ? (
-                <VocabularyPage />
-              ) : (
-                <div className="p-8 text-center">
-                  <h2 className="text-2xl font-bold mb-4">Reading Statistics</h2>
-                  <p className="text-gray-600">Stats page coming soon...</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </SignedIn>
-
-      <SignedOut>
-        <div className="flex flex-col flex-1">
-          <TopActions
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onShowLogin={() => setShowLogin(true)}
-          />
-          <HeroBanner />
-          <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-            <div className="w-full max-w-md mx-auto">
-              <SignInForm />
-            </div>
-          </div>
-        </div>
-      </SignedOut>
-    </div>
-  );
-}
+export default App;

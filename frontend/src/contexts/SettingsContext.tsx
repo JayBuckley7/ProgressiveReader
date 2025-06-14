@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { useStorageService } from "../hooks/useStorageService";
 
 type Theme = "light" | "dark" | "system";
@@ -23,9 +23,10 @@ interface SettingsContextType {
   settings: Settings | null;
   updateSettings: (updates: Partial<Settings>) => void;
   isLoading: boolean;
+  setShowTooltips: (show: boolean) => void;
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const SettingsContext = createContext<SettingsContextType | null>(null);
 
 const defaultSettings: Settings = {
   theme: "system",
@@ -89,20 +90,30 @@ function clearSettingsCookie(): void {
   document.cookie = `${SETTINGS_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
 }
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  // const dbSettings = useQuery(api.settings.get);
-  // const updateSettingsMutation = useMutation(api.settings.update);
-  
-  // Placeholder for settings - replace with Flask API calls for persistence
-  const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
-  const { isAuthenticated, loadSettings, books } = useStorageService();
+// Custom hook to use the settings context
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (!context) {
+    throw new Error("useSettings must be used within a SettingsProvider");
+  }
+  return context;
+};
+
+// Define props for the provider
+interface SettingsProviderProps {
+  children: ReactNode;
+}
+
+// Create the provider component
+export const SettingsProvider = ({ children }: SettingsProviderProps) => {
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
   const loadedFromCloudRef = useRef(false);
 
   // Load settings from localStorage or cookie on initial mount
   useEffect(() => {
     const stored = getSettingsStorage() || getSettingsCookie();
     if (stored) {
-      setCurrentSettings(prev => {
+      setSettings(prev => {
         const updated = { ...prev, ...stored };
         
         // Sync accessibility settings to localStorage for JPDB integration
@@ -129,59 +140,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load settings from Clerk after authentication
-  useEffect(() => {
-    const attemptCloudLoad = async () => {
-      if (!isAuthenticated || loadedFromCloudRef.current) {
-        return;
-      }
-
-      try {
-        const data = await loadSettings();
-        if (data) {
-          setCurrentSettings(prev => {
-            const updated = { ...prev, ...data };
-            setSettingsCookie(updated);
-            setSettingsStorage(updated);
-            return updated;
-          });
-        }
-        loadedFromCloudRef.current = true;
-      } catch (err) {
-        console.error('Failed to load settings:', err);
-      }
-    };
-
-    attemptCloudLoad();
-
-    if (!isAuthenticated) {
-      loadedFromCloudRef.current = false;
-      clearSettingsCookie();
-      clearSettingsStorage();
-    }
-
-    return () => {};
-  }, [isAuthenticated, loadSettings, books.length]);
-
-  // Convert database settings to our Settings interface
-  // const settings: Settings | null = dbSettings ? {
-  //   theme: dbSettings.theme,
-  //   fontSize: dbSettings.fontSize,
-  //   fontFamily: dbSettings.fontFamily,
-  //   ttsSpeed: dbSettings.ttsSpeed,
-  //   jlptEnabled: dbSettings.jlptEnabled,
-  //   autoTranslate: dbSettings.autoTranslate,
-  //   targetLanguage: dbSettings.targetLanguage,
-  //   customCss: 'customCss' in dbSettings ? dbSettings.customCss : undefined,
-  //   showPopupOnHover: 'showPopupOnHover' in dbSettings ? dbSettings.showPopupOnHover : undefined,
-  //   touchscreenSupport: 'touchscreenSupport' in dbSettings ? dbSettings.touchscreenSupport : undefined,
-  //   disableFadeAnimation: 'disableFadeAnimation' in dbSettings ? dbSettings.disableFadeAnimation : undefined,
-  // } : null;
-  const settings = currentSettings; // Use state directly
-
   const updateSettings = (updates: Partial<Settings>) => {
-    console.log("Update settings (TODO - Flask API call):", updates);
-    setCurrentSettings(prev => {
+    console.log("Update settings (local only):", updates);
+    setSettings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
       setSettingsStorage(updated);
@@ -212,41 +173,41 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-    // Apply theme to document
-    useEffect(() => {
-        if (!settings) return;
+  // Apply theme to document
+  useEffect(() => {
+    if (!settings) return;
 
-        const root = document.documentElement;
-        root.classList.remove('user-theme-light', 'user-theme-dark', 'dark');
+    const root = document.documentElement;
+    root.classList.remove('user-theme-light', 'user-theme-dark', 'dark');
 
-        const applySystemPreference = () => {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                root.classList.add('dark');
-            } else {
-                root.classList.remove('dark');
-            }
-        };
+    const applySystemPreference = () => {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
 
-        if (settings.theme === 'light') {
-            root.classList.add('user-theme-light');
-        } else if (settings.theme === 'dark') {
-            root.classList.add('user-theme-dark');
-            root.classList.add('dark');
-        } else {
-            applySystemPreference();
-        }
+    if (settings.theme === 'light') {
+      root.classList.add('user-theme-light');
+    } else if (settings.theme === 'dark') {
+      root.classList.add('user-theme-dark');
+      root.classList.add('dark');
+    } else {
+      applySystemPreference();
+    }
 
-        let mediaQuery: MediaQueryList | null = null;
-        if (settings.theme === 'system') {
-            mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            mediaQuery.addEventListener('change', applySystemPreference);
-        }
+    let mediaQuery: MediaQueryList | null = null;
+    if (settings.theme === 'system') {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', applySystemPreference);
+    }
 
-        return () => {
-            mediaQuery?.removeEventListener('change', applySystemPreference);
-        };
-    }, [settings?.theme]);
+    return () => {
+      mediaQuery?.removeEventListener('change', applySystemPreference);
+    };
+  }, [settings?.theme]);
 
   // Apply font size
   useEffect(() => {
@@ -267,21 +228,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     styleElement.textContent = settings.customCss;
   }, [settings?.customCss]);
 
-  return (
-    <SettingsContext.Provider value={{
-      settings,
-      updateSettings,
-      isLoading: false, // Was: dbSettings === undefined,
-    }}>
-      {children}
-    </SettingsContext.Provider>
-  );
-}
+  const setShowTooltips = (show: boolean) => {
+    // Implementation of setShowTooltips
+  };
 
-export function useSettings() {
-  const context = useContext(SettingsContext);
-  if (context === undefined) {
-    throw new Error('useSettings must be used within a SettingsProvider');
-  }
-  return context;
-}
+  const value = {
+    settings,
+    updateSettings,
+    isLoading: false, // No longer loading from cloud
+    setShowTooltips,
+  };
+
+  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+};
