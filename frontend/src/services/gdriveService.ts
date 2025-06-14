@@ -52,8 +52,20 @@ class GDriveService {
   private appFolderId: string | null = null;
 
   constructor() {
-    this.loadGoogleScripts();
+    if (navigator.onLine) {
+      this.loadGoogleScripts();
+    } else {
+      console.log('[GDriveService] Offline at startup, skipping Google script loading.');
+      // Listen for when we come back online
+      window.addEventListener('online', this.handleOnline, { once: true });
+    }
   }
+
+  private handleOnline = () => {
+    console.log('[GDriveService] Application is now online. Loading Google scripts...');
+    this.loadGoogleScripts();
+    // No need to remove the listener as { once: true } does it automatically
+  };
 
   private async loadGoogleScripts(): Promise<void> {
     return new Promise((resolve, reject) => {
