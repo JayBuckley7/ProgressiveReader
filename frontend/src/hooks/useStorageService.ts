@@ -362,11 +362,7 @@ export function useStorageService() {
   const signOut = async () => {
     // Sign out using Clerk
     if (window.Clerk) {
-      try {
-        await window.Clerk.signOut();
-      } catch (err) {
-        console.warn('Clerk signOut failed (likely offline):', err);
-      }
+      await window.Clerk.signOut();
       setBooks([]); // Clear books when signing out
       lastUserIdRef.current = null;
 
