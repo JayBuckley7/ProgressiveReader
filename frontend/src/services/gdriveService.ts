@@ -615,6 +615,23 @@ class GDriveService {
       });
       
       if (!response.ok) {
+        // If the error is due to an expired token, try refreshing it once
+        if (response.status === 401) {
+          console.warn('[GDriveService] Download failed with 401, attempting token refresh...');
+          const newToken = await this.getAccessToken(true); // Force refresh
+          if (newToken) {
+            console.log('[GDriveService] Token refreshed, retrying download...');
+            const retryResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+              headers: new Headers({ Authorization: `Bearer ${newToken}` }),
+            });
+
+            if (retryResponse.ok) {
+              const blob = await retryResponse.blob();
+              console.log(`[GDriveService] File ${fileId} downloaded successfully on retry.`);
+              return blob;
+            }
+          }
+        }
         const errorBody = await response.text();
         throw new Error(`Download failed: ${response.status} ${response.statusText} - ${errorBody}`);
       }

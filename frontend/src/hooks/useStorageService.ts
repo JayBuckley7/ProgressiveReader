@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
 import { useOnlineStatus } from './useOnlineStatus';
 
+const activeDownloads = new Map<string, Promise<any>>();
+
 /**
  * Determine if two book lists contain the same entries.
  * Order is ignored and only stable fields are compared.
@@ -361,17 +363,13 @@ export function useStorageService() {
           return cachedBlob;
         }
 
-        const message = !isOnline ?
-          "You are offline. This book is not in your cache." :
-          "This book is not in your local cache. Download from cloud?";
-        
         if (!isOnline) {
-          toast.error(message);
+          toast.error("You are offline. This book is not in your cache.");
           return null;
         }
 
-        const shouldDownload = window.confirm(message);
-        if (!shouldDownload) return null;
+        // Inform the user that a download is starting
+        toast.info("Book not in cache. Starting download from cloud...");
 
         const cloudBlob = await storageService.downloadBook(bookId, metadata);
         if (cloudBlob) {

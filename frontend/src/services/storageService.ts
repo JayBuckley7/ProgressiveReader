@@ -448,7 +448,11 @@ class StorageService {
                 }
 
                 if (!gDriveService.isSignedIn()) {
-                    throw new Error('Not signed in to Google Drive');
+                    console.log('Not signed in to Google Drive. Attempting to sign in...');
+                    await gDriveService.signIn('consent'); // Or 'select_account'
+                    if (!gDriveService.isSignedIn()) {
+                        throw new Error('Google Drive sign-in is required to download books.');
+                    }
                 }
 
                 const blob = await gDriveService.downloadFile(metadata.driveFileId);
