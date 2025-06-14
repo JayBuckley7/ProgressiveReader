@@ -371,6 +371,9 @@ export function useStorageService() {
     // Cache the actual book content in IndexedDB using driveCache
     const { cacheFile } = await import('../services/driveCache');
     await cacheFile(meta.id, blob);
+    if (meta.driveFileId && meta.driveFileId !== meta.id) {
+      await cacheFile(meta.driveFileId, blob);
+    }
 
     if (meta.coverImageId) {
       let cover = await getCoverForFile(meta.id);
@@ -471,7 +474,12 @@ export function useStorageService() {
   const signOut = async () => {
     // Sign out using Clerk
     if (window.Clerk) {
-      await window.Clerk.signOut();
+      try {
+        await window.Clerk.signOut();
+      } catch (error) {
+        console.warn('Clerk sign-out failed (possibly offline):', error);
+      }
+
       setBooks([]); // Clear books when signing out
       lastUserIdRef.current = null;
 
