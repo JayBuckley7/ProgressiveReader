@@ -47,6 +47,9 @@ export function useStorageService() {
       const previous = booksRef.current;
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
+      // Always include offline books in silent refresh
+      const offlineBooks = await getOfflineBooksWithCovers();
+
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
         setBooks(currentBooks =>
@@ -56,18 +59,28 @@ export function useStorageService() {
         );
       };
 
-      const userBooks = await storageService.getUserBooks(onCoverReady);
+      let userBooks: BookMetadata[] = [];
+      try {
+        userBooks = await storageService.getUserBooks(onCoverReady);
+      } catch (error) {
+        console.warn('Could not refresh cloud books, keeping offline books:', error);
+      }
 
-      const mergedBooks = userBooks.map(book => {
+      // Merge offline and online books, removing duplicates (prioritize online version)
+      const onlineBookIds = new Set(userBooks.map(b => b.id));
+      const uniqueOfflineBooks = offlineBooks.filter(book => !onlineBookIds.has(book.id));
+      const allBooks = [...userBooks, ...uniqueOfflineBooks];
+
+      const mergedBooks = allBooks.map(book => {
         const cached = coverMap.get(book.id);
         return cached ? { ...book, coverUrl: cached } : book;
       });
 
-      if (areBooksEqual(userBooks, previous)) {
+      if (areBooksEqual(allBooks, previous)) {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       } else {
-        const newIds = new Set(userBooks.map(b => b.id));
+        const newIds = new Set(allBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
         if (removed.length > 0) {
           storageService.cleanupBlobUrls(removed);
@@ -76,7 +89,7 @@ export function useStorageService() {
         booksRef.current = mergedBooks;
       }
 
-      console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
+      console.log(`[useStorageService] Silent refresh complete - ${userBooks.length} cloud books, ${uniqueOfflineBooks.length} offline-only books`);
     } catch (error) {
       console.error('Error silently refreshing books:', error);
       // Don't show toast errors for silent refreshes to avoid interrupting user
@@ -92,7 +105,7 @@ export function useStorageService() {
     setIsLoading(false);
   }, []);
 
-  // Load user books function
+  // Load user books function - now includes offline books
   const loadUserBooks = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
         setBooks([]);
@@ -103,8 +116,10 @@ export function useStorageService() {
     
     try {
       const previous = booksRef.current;
-
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
+
+      // Always load offline books first
+      const offlineBooks = await getOfflineBooksWithCovers();
 
       // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
@@ -118,18 +133,28 @@ export function useStorageService() {
         );
       };
 
-      const userBooks = await storageService.getUserBooks(onCoverReady);
+      let userBooks: BookMetadata[] = [];
+      try {
+        userBooks = await storageService.getUserBooks(onCoverReady);
+      } catch (error) {
+        console.warn('Could not load cloud books, using offline books only:', error);
+      }
 
-      const mergedBooks = userBooks.map(book => {
+      // Merge offline and online books, removing duplicates (prioritize online version)
+      const onlineBookIds = new Set(userBooks.map(b => b.id));
+      const uniqueOfflineBooks = offlineBooks.filter(book => !onlineBookIds.has(book.id));
+      const allBooks = [...userBooks, ...uniqueOfflineBooks];
+
+      const mergedBooks = allBooks.map(book => {
         const cached = coverMap.get(book.id);
         return cached ? { ...book, coverUrl: cached } : book;
       });
 
-      if (areBooksEqual(userBooks, previous)) {
+      if (areBooksEqual(allBooks, previous)) {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       } else {
-        const newIds = new Set(userBooks.map(b => b.id));
+        const newIds = new Set(allBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
         if (removed.length > 0) {
           storageService.cleanupBlobUrls(removed);
@@ -137,12 +162,21 @@ export function useStorageService() {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       }
+
+      console.log(`[useStorageService] Loaded ${userBooks.length} cloud books and ${uniqueOfflineBooks.length} offline-only books`);
     } catch (error) {
       console.error('Error loading books:', error);
       
-      // Since we're not using backend API, just show a generic error
-      toast.error('Failed to load your books');
-      setBooks([]);
+      // Fallback to offline books only
+      try {
+        const offlineBooks = await getOfflineBooksWithCovers();
+        setBooks(offlineBooks);
+        console.log(`[useStorageService] Fallback: loaded ${offlineBooks.length} offline books`);
+      } catch (offlineError) {
+        console.error('Error loading offline books:', offlineError);
+        toast.error('Failed to load your books');
+        setBooks([]);
+      }
     } finally {
       setIsLoading(false);
       isRefreshingRef.current = false;
@@ -235,11 +269,55 @@ export function useStorageService() {
   }, [books]);
 
   const uploadBook = async (file: File, meta: {title: string; fileType: string; cover?: Blob}) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to upload books');
-      return null;
+    // If offline or no user, store locally
+    if (!navigator.onLine || !clerkUser) {
+      try {
+        // Create a local book metadata object
+        const localBookId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const localBookMetadata: BookMetadata = {
+          id: localBookId,
+          title: meta.title,
+          fileType: meta.fileType,
+          uploadedAt: new Date(),
+          userId: clerkUser?.id || 'local',
+          cloudProvider: 'local',
+          totalChapters: 1 // Default, can be updated later
+        };
+
+        // Cache the book content
+        const { cacheFile } = await import('../services/driveCache');
+        await cacheFile(localBookId, file);
+
+        // Cache the cover if provided
+        if (meta.cover) {
+          const { cacheCoverForFile } = await import('../services/driveCache');
+          await cacheCoverForFile(localBookId, meta.cover);
+          localBookMetadata.coverUrl = URL.createObjectURL(meta.cover);
+        }
+
+        // Add to offline books
+        addOfflineBook(localBookMetadata);
+
+        // Refresh the book list
+        if (clerkUser) {
+          await silentRefreshBooks();
+        } else {
+          await loadOfflineBooks();
+        }
+
+        const message = !navigator.onLine ? 
+          'Book uploaded locally (offline mode)' : 
+          'Book uploaded locally';
+        toast.success(message);
+        return localBookMetadata;
+      } catch (error) {
+        console.error('Error uploading book locally:', error);
+        toast.error('Failed to upload book locally');
+        throw error;
+      }
     }
 
+    // Online upload with user signed in
     try {
       const book = await storageService.uploadBook(file, meta, clerkUser);
       await loadUserBooks(); // Refresh the list
@@ -253,14 +331,33 @@ export function useStorageService() {
   };
 
   const downloadBook = async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
+    // First try to get from cache if offline or if signed out
+    const { getCachedFile } = await import('../services/driveCache');
+    const cachedBlob = await getCachedFile(bookId);
+    
+    if (!navigator.onLine && cachedBlob) {
+      console.log('Using cached book content (offline)');
+      return cachedBlob;
+    }
+    
     if (!clerkUser) {
+      if (cachedBlob) {
+        console.log('Using cached book content (signed out)');
+        return cachedBlob;
+      }
       toast.error('Please sign in to download books');
       return null;
     }
 
     try {
-      return await storageService.downloadBook(bookId, metadata);
+      const onlineBlob = await storageService.downloadBook(bookId, metadata);
+      return onlineBlob;
     } catch (error) {
+      console.warn('Online download failed, trying cache:', error);
+      if (cachedBlob) {
+        console.log('Using cached book content (fallback)');
+        return cachedBlob;
+      }
       console.error('Error downloading book:', error);
       toast.error('Failed to download book from cloud storage');
       throw error;
@@ -270,6 +367,13 @@ export function useStorageService() {
   const downloadBookForOffline = async (meta: BookMetadata) => {
     const blob = await downloadBook(meta.id, meta);
     if (!blob) return;
+
+    // Cache the actual book content in IndexedDB using driveCache
+    const { cacheFile } = await import('../services/driveCache');
+    await cacheFile(meta.id, blob);
+    if (meta.driveFileId && meta.driveFileId !== meta.id) {
+      await cacheFile(meta.driveFileId, blob);
+    }
 
     if (meta.coverImageId) {
       let cover = await getCoverForFile(meta.id);
@@ -287,6 +391,14 @@ export function useStorageService() {
       }
     }
     addOfflineBook(meta);
+    
+    // Refresh the book list to show the newly cached book
+    if (clerkUser) {
+      await silentRefreshBooks();
+    } else {
+      await loadOfflineBooks();
+    }
+    
     toast.success('Book cached for offline use');
   };
 
@@ -362,7 +474,12 @@ export function useStorageService() {
   const signOut = async () => {
     // Sign out using Clerk
     if (window.Clerk) {
-      await window.Clerk.signOut();
+      try {
+        await window.Clerk.signOut();
+      } catch (error) {
+        console.warn('Clerk sign-out failed (possibly offline):', error);
+      }
+
       setBooks([]); // Clear books when signing out
       lastUserIdRef.current = null;
 

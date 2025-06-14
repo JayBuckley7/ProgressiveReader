@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { BookMetadata } from '../services/storageService';
+import { useStorageService } from '../hooks/useStorageService';
 
 interface BookCardHoverProps {
   book: BookMetadata;
@@ -12,7 +13,9 @@ export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover 
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { downloadBookForOffline } = useStorageService();
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -151,6 +154,36 @@ export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover 
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           ) : (
             '✕'
+          )}
+        </button>
+
+        {/* Offline Download Button - appears on hover */}
+        <button
+          onClick={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDownloading(true);
+            try {
+              await downloadBookForOffline(book);
+            } finally {
+              setIsDownloading(false);
+            }
+          }}
+          disabled={isDownloading}
+          className={`
+            absolute bottom-2 left-2 z-10
+            bg-blue-600 hover:bg-blue-500 text-white border-none
+            px-2 py-1 rounded-full text-sm cursor-pointer
+            opacity-80 hover:opacity-100 transition-all duration-200
+            ${isHovered ? 'block' : 'hidden'}
+            disabled:opacity-50 disabled:cursor-not-allowed
+          `}
+          title="Save for offline"
+        >
+          {isDownloading ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            '⬇'
           )}
         </button>
       </div>
