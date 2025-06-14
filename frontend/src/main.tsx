@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { SettingsProvider } from './contexts/SettingsContext.tsx';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -16,10 +17,14 @@ async function startApp() {
   
   const AppComponent = isDevelopment ? (
     <React.StrictMode>
-      <App />
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
     </React.StrictMode>
   ) : (
-    <App />
+    <SettingsProvider>
+      <App />
+    </SettingsProvider>
   );
 
   ReactDOM.createRoot(document.getElementById('root')!).render(AppComponent);

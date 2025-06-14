@@ -21,7 +21,7 @@ import { gDriveService } from "./services/gdriveService";
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-export default function App() {
+function App() {
   if (!clerkPubKey) {
     throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in environment variables");
   }
@@ -29,10 +29,14 @@ export default function App() {
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
       <SettingsProvider>
-        <AppContent />
+        <Main />
       </SettingsProvider>
     </ClerkProvider>
   );
+}
+
+function Main() {
+  return <AppContent />;
 }
 
 function AppContent() {
@@ -43,6 +47,31 @@ function AppContent() {
   );
   const [showLogin, setShowLogin] = useState(false);
 
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <main className="flex-1 flex flex-col">
+        <GoogleDriveInitializer />
+        <Content
+          currentBookId={currentBookId}
+          setCurrentBookId={setCurrentBookId}
+          currentChapter={currentChapter}
+          setCurrentChapter={setCurrentChapter}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          setShowLogin={setShowLogin}
+        />
+      </main>
+      <Footer />
+      <DangerZone />
+
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+
+      <Toaster />
+    </div>
+  );
+}
+
+function GoogleDriveInitializer() {
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { isDriveConnected, isLoading: isDriveLoading } = useGoogleDrive();
@@ -88,27 +117,7 @@ function AppContent() {
     }
   }, [isClerkLoaded, isClerkSignedIn]);
 
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-      <main className="flex-1 flex flex-col">
-        <Content
-          currentBookId={currentBookId}
-          setCurrentBookId={setCurrentBookId}
-          currentChapter={currentChapter}
-          setCurrentChapter={setCurrentChapter}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          setShowLogin={setShowLogin}
-        />
-      </main>
-      <Footer />
-      <DangerZone />
-
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
-
-      <Toaster />
-    </div>
-  );
+  return null; // This component does not render anything
 }
 
 function Content({
