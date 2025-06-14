@@ -1,9 +1,7 @@
 const CACHE_NAME = 'pr-v1';
-const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_ASSETS = [
   '/',
-  OFFLINE_URL,
   '/manifest.json',
   '/icons/icon.png',
   '/icons/icon-192x192.png',
@@ -42,7 +40,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(event.request).then((r) => r || caches.match(OFFLINE_URL)))
+        .catch(() => caches.match('/'))
     );
     return;
   }
