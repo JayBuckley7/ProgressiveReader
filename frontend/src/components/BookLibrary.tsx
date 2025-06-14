@@ -13,7 +13,7 @@ interface BookLibraryProps {
 
 function BookLibrary({ onSelectBook }: BookLibraryProps) {
 
-  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks, loadOfflineBooks } = useStorageService();
+  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks, loadOfflineBooks, isLoading } = useStorageService();
   const { isDriveConnected } = useGoogleDrive();
   const isOnline = useOnlineStatus();
 
@@ -236,6 +236,11 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
           >
             Continue Offline
           </button>
+        </div>
+      ) : isLoading ? (
+        <div className="text-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading your library...</p>
         </div>
       ) : !isDriveConnected && books.length === 0 && !offlineMode ? (
         <div className="text-center py-16">
