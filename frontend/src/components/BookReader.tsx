@@ -7,6 +7,7 @@ import { SettingsModal } from "./SettingsModal";
 import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
@@ -75,6 +76,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const updateProgress = async (data: any) => { console.log("Update progress (TODO):", data); };
 
   const { settings } = useSettings();
+  const isOnline = useOnlineStatus();
   
   const [showSettings, setShowSettings] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -353,6 +355,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
    */
   const translateCurrent = async (useCefr: boolean) => {
     if (!currentChapterContent) return;
+
+    const navigatorOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (!isOnline || !navigatorOnline) {
+      toast.error('You appear to be offline. Translation is unavailable.');
+      return;
+    }
+
     setIsTranslating(true);
     const toastId = toast.loading("Translating...", {
       id: "translating",
@@ -1019,6 +1028,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         jpdbHighlighted={jpdbHighlighted}
         onTranslate={() => translateCurrent(lastUseCefr)}
         translating={isTranslating}
+        isOnline={isOnline}
       />
 
       <TtsControlModal
@@ -1046,6 +1056,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
             translateCurrent(useCefr);
           }}
           translating={isTranslating}
+          isOnline={isOnline}
         />
       )}
     </div>

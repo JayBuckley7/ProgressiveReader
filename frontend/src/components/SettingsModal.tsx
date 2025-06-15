@@ -34,10 +34,11 @@ const tabs = [
   { id: "accessibility", label: "Accessibility", icon: "♿" },
 ] as const;
 
-export function SettingsModal({ onClose, onTranslate, translating }: {
+export function SettingsModal({ onClose, onTranslate, translating, isOnline }: {
     onClose: () => void;
     onTranslate: (useCefr: boolean) => void;
     translating: boolean;
+    isOnline: boolean;
 }) {
     const { settings, updateSettings } = useSettings();
     const { saveSettings, loadSettings, isAuthenticated } = useStorageService();
@@ -642,7 +643,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
             <div className="flex flex-row gap-2 sm:gap-3">
               <button
                 onClick={() => onTranslate(false)}
-                disabled={translating}
+                disabled={translating || !isOnline}
                 className="
                   flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
                   bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium 
@@ -665,7 +666,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               </button>
               <button
                 onClick={() => onTranslate(true)}
-                disabled={translating}
+                disabled={translating || !isOnline}
                 className="
                   flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
                   bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium 

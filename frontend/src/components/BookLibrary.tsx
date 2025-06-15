@@ -311,10 +311,11 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
       )}
 
       {showSettings && (
-        <SettingsModal 
-          onClose={() => setShowSettings(false)} 
-          onTranslate={() => {}} 
-          translating={false} 
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onTranslate={() => {}}
+          translating={false}
+          isOnline={isOnline}
         />
       )}
     </div>
