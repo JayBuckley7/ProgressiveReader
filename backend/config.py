@@ -28,3 +28,9 @@ class Config:
         "1",
         "yes",
     )
+    # Optionally include authentication routes
+    REGISTER_AUTH_ROUTES = os.environ.get("REGISTER_AUTH_ROUTES", "True").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
