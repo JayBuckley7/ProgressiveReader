@@ -17,6 +17,7 @@ interface ReaderControlsProps {
   translating: boolean;
   ttsActive: boolean;
   jpdbHighlighted: boolean;
+  isOnline: boolean;
 }
 
 export function ReaderControls({
@@ -33,6 +34,7 @@ export function ReaderControls({
   translating,
   ttsActive,
   jpdbHighlighted,
+  isOnline,
 }: ReaderControlsProps) {
   const [showDrawer, setShowDrawer] = useState(false);
 
@@ -112,7 +114,7 @@ export function ReaderControls({
         {/* Translate button */}
         <button
           onClick={onTranslate}
-          disabled={translating}
+          disabled={translating || !isOnline}
           className={`${bigBtn} disabled:opacity-50`}
           aria-label="Translate current chapter"
           title="Translate current chapter"
