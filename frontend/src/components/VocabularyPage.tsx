@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { getDueCards, forceFetchDueCards, Card as DueCard } from "../services/dueCardsService";
 import { toast } from "sonner";
 import { BookmarkletHelper } from "./BookmarkletHelper";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import { OfflineNotice } from "./OfflineNotice";
 
 interface VocabularyWord {
   _id: string; // Was: Id<"vocabulary">
@@ -23,6 +25,7 @@ export function VocabularyPage() {
 
   const [dueCards, setDueCards] = useState<DueCard[]>([]);
   const [showBookmarkletHelper, setShowBookmarkletHelper] = useState(false);
+  const isOnline = useOnlineStatus();
 
   // const vocabularyQuery = useQuery(api.vocabulary.list, { 
   //   language: selectedLanguage || undefined 
@@ -127,6 +130,7 @@ export function VocabularyPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 dark:text-gray-200">
+      <OfflineNotice />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">📝 Vocabulary</h1>
@@ -165,7 +169,8 @@ export function VocabularyPage() {
         )}
         <button
           onClick={handleFetchDueCards}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          disabled={!isOnline}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
         >
           Fetch Due Cards
         </button>
@@ -210,7 +215,8 @@ export function VocabularyPage() {
 
           <button
             onClick={() => setShowAddForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            disabled={!isOnline}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
           >
             + Add Word
           </button>

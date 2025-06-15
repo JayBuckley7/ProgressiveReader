@@ -7,6 +7,8 @@ import { SettingsModal } from "./SettingsModal";
 import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import { OfflineNotice } from "./OfflineNotice";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
@@ -75,6 +77,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const updateProgress = async (data: any) => { console.log("Update progress (TODO):", data); };
 
   const { settings } = useSettings();
+  const isOnline = useOnlineStatus();
   
   const [showSettings, setShowSettings] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -862,6 +865,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      <OfflineNotice />
       {/* Reader Header */}
       <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -1018,6 +1022,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onToggleHighlight={toggleJpdbHighlight}
         jpdbHighlighted={jpdbHighlighted}
         onTranslate={() => translateCurrent(lastUseCefr)}
+        isOnline={isOnline}
         translating={isTranslating}
       />
 
