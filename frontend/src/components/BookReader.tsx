@@ -9,6 +9,12 @@ import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import { OfflineNotice } from "./OfflineNotice";
+import {
+  getOfflineDataHandle,
+  saveTranslation,
+  loadTranslation,
+  clearTranslations,
+} from "../utils/offlineData";
 
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
@@ -32,7 +38,11 @@ const saveTranslationToStorage = (bookId: string, chapter: number, translatedCon
     targetLanguage: settings?.targetLanguage || "English",
     cefrLevel: localStorage.getItem("cefrLevel") || "3"
   };
-  localStorage.setItem(key, JSON.stringify(translationData));
+  if (getOfflineDataHandle()) {
+    saveTranslation(key, translationData);
+  } else {
+    localStorage.setItem(key, JSON.stringify(translationData));
+  }
   console.log('Translation saved to storage:', key, 'with settings:', {
     targetLanguage: translationData.targetLanguage,
     cefrLevel: translationData.cefrLevel,
@@ -42,6 +52,9 @@ const saveTranslationToStorage = (bookId: string, chapter: number, translatedCon
 
 const loadTranslationFromStorage = (bookId: string, chapter: number) => {
   const key = getTranslationStorageKey(bookId, chapter);
+  if (getOfflineDataHandle()) {
+    return loadTranslation(key);
+  }
   const stored = localStorage.getItem(key);
   if (stored) {
     try {
@@ -57,10 +70,15 @@ const loadTranslationFromStorage = (bookId: string, chapter: number) => {
 };
 
 const clearAllTranslationsForBook = (bookId: string) => {
+  const prefix = `translation_${bookId}_`;
+  if (getOfflineDataHandle()) {
+    clearTranslations(prefix);
+    return;
+  }
   const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith(`translation_${bookId}_`)) {
+    if (key && key.startsWith(prefix)) {
       keysToRemove.push(key);
     }
   }
