@@ -2,6 +2,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
+import { selectOfflineDataFile } from "../utils/offlineData";
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -630,6 +631,18 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 >
                   <span>📁</span>
                   Import from File
+                </button>
+                <button
+                  onClick={async () => {
+                    const handle = await selectOfflineDataFile();
+                    if (handle) {
+                      toast.success('Offline data file selected');
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                >
+                  <span>📂</span>
+                  Offline Data File
                 </button>
               </div>
             </div>
