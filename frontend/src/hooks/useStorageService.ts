@@ -496,6 +496,11 @@ export function useStorageService() {
   };
 
   const signIn = async () => {
+    if (!isOnline) {
+      toast.error('You appear to be offline. Please connect to the internet to sign in.');
+      return;
+    }
+
     // Redirect to Clerk's sign-in page
     if (window.Clerk) {
       window.Clerk.redirectToSignIn();
