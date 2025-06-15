@@ -90,6 +90,13 @@ export async function forceFetchDueCards(): Promise<Card[]> {
 export async function getDueCards(): Promise<Card[]> {
   let cards = getCachedCards();
 
+  const isForcedOffline = localStorage.getItem('forceOffline') === 'true';
+  const isOffline = !navigator.onLine || isForcedOffline;
+
+  if (isOffline) {
+    return cards || [];
+  }
+
   if (!cards) {
     cards = await fetchDueCardsFromAPI();
     if (cards.length > 0) {
@@ -101,6 +108,12 @@ export async function getDueCards(): Promise<Card[]> {
 }
 
 export async function prefetchDueCards(): Promise<void> {
+  const isForcedOffline = localStorage.getItem('forceOffline') === 'true';
+  const isOffline = !navigator.onLine || isForcedOffline;
+  if (isOffline) {
+    return;
+  }
+
   try {
     await getDueCards();
   } catch (err) {
