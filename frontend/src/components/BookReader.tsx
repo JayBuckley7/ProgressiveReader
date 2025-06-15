@@ -356,6 +356,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
    */
   const translateCurrent = async (useCefr: boolean) => {
     if (!currentChapterContent) return;
+    if (!isOnline && !navigator.onLine) {
+      toast.error("You are offline");
+      return;
+    }
     setIsTranslating(true);
     const toastId = toast.loading("Translating...", {
       id: "translating",
