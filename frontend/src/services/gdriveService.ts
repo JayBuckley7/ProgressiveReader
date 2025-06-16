@@ -116,16 +116,7 @@ class GDriveService {
     
     console.log('[GDriveService] Attempting to restore session...');
     
-    // CRITICAL SECURITY CHECK: Only restore Google Drive session if user is authenticated with Clerk
-    const isClerkAuthenticated = this.isClerkUserAuthenticated();
-    if (!isClerkAuthenticated) {
-      console.log('[GDriveService] No authenticated Clerk user found. Clearing any stored Google Drive tokens for security.');
-      this.clearStoredTokens();
-      this.updateSigninStatus(false);
-      return false;
-    }
-    
-    console.log('[GDriveService] Clerk user authenticated. Proceeding with Google Drive session restoration.');
+    console.log('[GDriveService] Attempting to restore Google Drive session...');
     
     try {
       const tokenResponse = await this.fetchAccessTokenFromServer();
@@ -157,23 +148,6 @@ class GDriveService {
     return false;
   }
 
-  private isClerkUserAuthenticated(): boolean {
-    if (typeof window === 'undefined' || !window.Clerk) {
-      return false;
-    }
-    
-    try {
-      // Check if Clerk is loaded and has an authenticated user
-      const clerkUser = window.Clerk.user;
-      const isSignedIn = window.Clerk.session !== null;
-      
-      console.log(`[GDriveService] Clerk auth check: user=${!!clerkUser}, session=${isSignedIn}`);
-      return !!(clerkUser && isSignedIn);
-    } catch (error) {
-      console.error('[GDriveService] Error checking Clerk authentication:', error);
-      return false;
-    }
-  }
 
   private clearStoredTokens(): void {
     console.log('[GDriveService] Clearing all stored Google Drive tokens for security');
@@ -307,13 +281,6 @@ class GDriveService {
       return;
     }
 
-    // SECURITY CHECK: Only allow Google Drive sign-in if user is authenticated with Clerk
-    const isClerkAuthenticated = this.isClerkUserAuthenticated();
-    if (!isClerkAuthenticated) {
-      console.error('[GDriveService] Cannot sign in to Google Drive: No authenticated Clerk user found.');
-      this.clearStoredTokens(); // Clear any lingering tokens for security
-      throw new Error('User must be authenticated with Clerk before connecting Google Drive');
-    }
 
     // If already signed in and token is valid, no need to sign in again
     if (this.isSignedIn()) {
@@ -355,14 +322,6 @@ class GDriveService {
     console.log('[GDriveService] User signed out and all tokens cleared.');
   }
 
-  /**
-   * Called when Clerk user signs out to ensure Google Drive tokens are properly cleared
-   * This prevents token leakage between different user sessions
-   */
-  public onClerkSignOut(): void {
-    console.log('[GDriveService] Clerk user signed out - clearing Google Drive session for security');
-    this.signOut();
-  }
 
   public isSignedIn(): boolean {
     // return !!this.accessToken;

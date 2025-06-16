@@ -13,7 +13,6 @@ import {
 // Declare the existing driveSync functions for TypeScript
 declare global {
     interface Window {
-        Clerk: any;
         JSZip?: any;
         ePub?: (buffer: ArrayBuffer, options?: any) => {
             ready: Promise<void>;
@@ -64,23 +63,7 @@ class StorageService {
     private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
     private async getAuthHeaders(): Promise<HeadersInit> {
-        // Get Clerk session token for API calls
-        if (typeof window !== 'undefined' && window.Clerk) {
-            try {
-                const token = await window.Clerk.session?.getToken();
-                if (token) {
-                    return {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    };
-                }
-            } catch (error) {
-                console.error('Error getting Clerk token:', error);
-            }
-        }
-        return {
-            'Content-Type': 'application/json'
-        };
+        return { 'Content-Type': 'application/json' };
     }
 
     private detectProviderFromClerkUser(clerkUser: any): Provider {

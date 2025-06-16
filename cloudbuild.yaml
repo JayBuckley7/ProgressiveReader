@@ -5,13 +5,9 @@ steps:
     args:
       - "build"
       - "--build-arg"
-      - "VITE_CLERK_PUBLISHABLE_KEY=${_VITE_CLERK_PUBLISHABLE_KEY}"
-      - "--build-arg"
       - "VITE_GDRIVE_CLIENT_ID=${_VITE_GDRIVE_CLIENT_ID}"
       - "--build-arg"
       - "VITE_GAPI_KEY=${_VITE_GAPI_KEY}"
-      - "--build-arg"
-      - "CLERK_SECRET_KEY=${_CLERK_SECRET_KEY}"
       - "-t"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
       - "-t"
