@@ -43,6 +43,14 @@ object JpdbHighlighter {
         var current = mutableListOf<Fragment>()
         var offset = 0
 
+        fun flushParagraph() {
+            if (current.isNotEmpty()) {
+                paragraphs += current.toMutableList()
+                current.clear()
+                offset = 0
+            }
+        }
+
         fun process(node: org.jsoup.nodes.Node) {
             when (node) {
                 is TextNode -> {
@@ -54,15 +62,9 @@ object JpdbHighlighter {
                 }
                 is Element -> when (node.tagName().lowercase()) {
                     "p", "div", "section" -> {
-                        if (current.isNotEmpty()) {
-                            paragraphs += current.toMutableList();
-                            current.clear()
-                        }
+                        flushParagraph()
                         node.childNodes().forEach { process(it) }
-                        if (current.isNotEmpty()) {
-                            paragraphs += current.toMutableList();
-                            current.clear()
-                        }
+                        flushParagraph()
                     }
                     else -> node.childNodes().forEach { process(it) }
                 }
@@ -70,7 +72,7 @@ object JpdbHighlighter {
         }
 
         process(content)
-        if (current.isNotEmpty()) paragraphs += current
+        flushParagraph()
         return paragraphs
     }
 
