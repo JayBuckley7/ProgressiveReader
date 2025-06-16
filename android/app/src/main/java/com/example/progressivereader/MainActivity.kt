@@ -1,63 +1,80 @@
 package com.example.progressivereader
 
+import android.net.Uri
 import android.os.Bundle
-import android.webkit.WebView
-import android.widget.Button
-import android.widget.EditText
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import com.example.progressivereader.network.ChatCompletionRequest
-import com.example.progressivereader.network.ChatMessage
-import com.example.progressivereader.network.OpenAiService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.github.barteksc.pdfviewer.PDFView
+import com.folioreader.FolioReader
 
-class MainActivity : AppCompatActivity() {
+/**
+ * Main entry point for Progressive Reader.
+ *
+ * Opens a file-picker for PDFs or EPUBs and displays the selection:
+ *  – PDFs are rendered with AndroidPdfViewer
+ *  – EPUBs are opened with FolioReader
+ *
+ * Compose‐only; no legacy WebView / translation code remains.
+ */
+class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContent { ReaderScreen() }
+    }
+}
 
-        val apiKeyField = findViewById<EditText>(R.id.et_api_key)
-        val targetLangField = findViewById<EditText>(R.id.et_target_lang)
-        val htmlInputField = findViewById<EditText>(R.id.et_html_input)
-        val button = findViewById<Button>(R.id.btn_translate)
-        val webView = findViewById<WebView>(R.id.webview_result)
+@Composable
+private fun ReaderScreen() {
+    var bookUri by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
 
-        button.setOnClickListener {
-            val apiKey = apiKeyField.text.toString().trim()
-            val targetLang = targetLangField.text.toString().trim()
-            val htmlContent = htmlInputField.text.toString().trim()
-            if (apiKey.isEmpty() || targetLang.isEmpty() || htmlContent.isEmpty()) {
-                return@setOnClickListener
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri -> bookUri = uri }
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Progressive Reader") }) }
+    ) { paddingValues ->
+
+        if (bookUri == null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    onClick = { launcher.launch(arrayOf("application/pdf", "application/epub+zip")) }
+                ) { Text("Select Book") }
             }
-            lifecycleScope.launch {
-                val service = OpenAiService.create(apiKey)
-                val systemPrompt = "You are a helpful translator. You translate the provided HTML content while preserving the HTML structure. ONLY return the translated HTML content, with no introductory text, explanations, or markdown formatting like ```html."
-                val userPrompt = "Translate the following HTML content to $targetLang. Preserve HTML tags.\n\nHTML Content:\n```html\n$htmlContent\n```"
-                val request = ChatCompletionRequest(
-                    model = "gpt-4-turbo",
-                    messages = listOf(
-                        ChatMessage("system", systemPrompt),
-                        ChatMessage("user", userPrompt)
-                    )
+        } else {
+            val uri = bookUri!!
+            if (uri.toString().endsWith(".pdf", ignoreCase = true)) {
+                AndroidView(
+                    factory = { ctx -> PDFView(ctx, null) },
+                    update = { view -> view.fromUri(uri).load() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
                 )
-                try {
-                    val response = withContext(Dispatchers.IO) {
-                        service.chatCompletion(request)
-                    }
-                    val translated = response.choices.firstOrNull()?.message?.content?.trim().orEmpty()
-                    val cleaned = translated
-                        .removePrefix("```html").removePrefix("```")
-                        .removeSuffix("```")
-                    webView.loadDataWithBaseURL(null, cleaned, "text/html", "utf-8", null)
-                } catch (e: Exception) {
-                    webView.loadData(
-                        "<html><body>Error: ${e.localizedMessage}</body></html>",
-                        "text/html",
-                        "utf-8"
-                    )
-                }
+            } else {
+                // FolioReader handles its own activity/fragment lifecycle.
+                LaunchedEffect(uri) { FolioReader.get().openBook(context, uri) }
             }
         }
     }
