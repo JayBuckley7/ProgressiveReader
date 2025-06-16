@@ -20,6 +20,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.github.barteksc.pdfviewer.PDFView
 import com.folioreader.FolioReader
 
+// Utilities for MIME type detection
+import com.example.progressivereader.FileTypeUtils.getMimeType
+import com.example.progressivereader.FileTypeUtils.isEpub
+import com.example.progressivereader.FileTypeUtils.isPdf
+
 /**
  * Main entry point for Progressive Reader.
  *
@@ -64,17 +69,32 @@ private fun ReaderScreen() {
             }
         } else {
             val uri = bookUri!!
-            if (uri.toString().endsWith(".pdf", ignoreCase = true)) {
-                AndroidView(
-                    factory = { ctx -> PDFView(ctx, null) },
-                    update = { view -> view.fromUri(uri).load() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                )
-            } else {
-                // FolioReader handles its own activity/fragment lifecycle.
-                LaunchedEffect(uri) { FolioReader.get().openBook(context, uri) }
+            when {
+                context.isPdf(uri) -> {
+                    AndroidView(
+                        factory = { ctx -> PDFView(ctx, null) },
+                        update = { view -> view.fromUri(uri).load() },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                    )
+                }
+                context.isEpub(uri) -> {
+                    // FolioReader handles its own activity/fragment lifecycle.
+                    LaunchedEffect(uri) { FolioReader.get().openBook(context, uri) }
+                }
+                else -> {
+                    // Fallback: show unsupported MIME type.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Unsupported file type: " + (context.getMimeType(uri) ?: "unknown"))
+                    }
+                }
             }
         }
     }
