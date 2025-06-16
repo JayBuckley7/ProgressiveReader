@@ -21,6 +21,8 @@ android {
         jvmTarget = '17'
     }
 
+    def backendBaseUrl = project.findProperty('BACKEND_BASE_URL') ?: 'https://your-backend.example.com'
+
     defaultConfig {
         applicationId 'com.example.progressivereader'
         minSdk 24
@@ -29,6 +31,7 @@ android {
         versionName '1.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        buildConfigField 'String', 'BACKEND_BASE_URL', "\"${backendBaseUrl}\""
     }
 
     buildTypes {
