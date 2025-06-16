@@ -2,67 +2,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Flask (backend – Windows)",
-      "type": "python",
-      "request": "launch",
-      "module": "flask",
-      "cwd": "${workspaceFolder}/backend",
-      "env": {
-        "FLASK_APP": "run.py",
-        "FLASK_ENV": "development"
-      },
-      "args": ["run", "--debug"],
-      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
-      "justMyCode": false
-    },
-    {
-      "name": "Flask (backend – macOS)",
-      "type": "python",
-      "request": "launch",
-      "module": "flask",
-      "cwd": "${workspaceFolder}/backend",
-      "env": {
-        "FLASK_APP": "run.py",
-        "FLASK_ENV": "development"
-      },
-      "args": ["run", "--debug"],
-      "python": "${workspaceFolder}/.venv/bin/python",
-      "justMyCode": false
-    },
-    {
-      "name": "Vite (frontend)",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "npm run dev -- --host",
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal"
-    },
-    {
       "name": "ngrok tunnel",
       "type": "node-terminal",
       "request": "launch",
       "command": "ngrok http --domain=absolutely-communal-sheepdog.ngrok-free.app 5175",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Full Stack",
-      "configurations": [
-        "Flask (backend – Windows)",
-        "Vite (frontend)",
-        "ngrok tunnel"
-      ],
-      "stopAll": true
     },
     {
-      "name": "Full Stack Mac w/o ngrok",
-      "configurations": [
-        "Flask (backend – macOS)",
-        "Vite (frontend)"
-      ],
-      "stopAll": true
+      "name": "Gradle installDebug",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "./gradlew installDebug",
+      "cwd": "${workspaceFolder}/android",
+      "console": "integratedTerminal"
     }
-  ]
+  ],
+  "compounds": []
 }
