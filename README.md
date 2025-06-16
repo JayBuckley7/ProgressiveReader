@@ -11,9 +11,16 @@
 
    Launch Android Studio and choose `Open an existing project`. Select the `android/` directory from this repository.
 
-2. **Configure API keys**
+2. **Configure API keys and backend URL**
 
-   Set any required API keys in `local.properties` or your build configuration. Refer to the codebase for specific key names.
+   Create a `local.properties` file inside the `android/` directory (if it does not already exist) and define any required API keys.
+   Add a `BASE_URL` entry pointing to your backend service, for example:
+
+   ```
+   BASE_URL=https://your-backend.example.com
+   ```
+
+   This value is exposed to the app as `BuildConfig.BASE_URL`.
 
 3. **Assemble the release build**
 

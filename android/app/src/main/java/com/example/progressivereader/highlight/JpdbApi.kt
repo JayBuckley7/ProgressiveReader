@@ -1,5 +1,6 @@
 package com.example.progressivereader.highlight
 
+import com.example.progressivereader.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -9,7 +10,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
-private const val BASE_URL = "https://your-backend.example.com"
+
 
 /**
  * Basic JPDB API client implemented in Kotlin.
@@ -32,7 +33,7 @@ object JpdbApi {
             }.toString()
 
             val request = Request.Builder()
-                .url("$BASE_URL/api/get_jpdb_data")
+                .url("${BuildConfig.BASE_URL}/api/get_jpdb_data")
                 .post(body.toRequestBody("application/json".toMediaType()))
                 .build()
 

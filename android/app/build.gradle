@@ -3,6 +3,13 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def localProps = new Properties()
+def localPropsFile = rootProject.file("local.properties")
+if (localPropsFile.exists()) {
+    localProps.load(localPropsFile.newDataInputStream())
+}
+def backendUrl = localProps.getProperty('BASE_URL', 'https://your-backend.example.com')
+
 android {
     namespace 'com.example.progressivereader'
     compileSdk 34
@@ -29,6 +36,8 @@ android {
         versionName '1.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+        buildConfigField 'String', 'BASE_URL', '"' + backendUrl + '"'
     }
 
     buildTypes {
