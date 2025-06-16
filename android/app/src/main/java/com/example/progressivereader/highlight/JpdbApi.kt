@@ -5,6 +5,8 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+private const val BASE_URL = "https://your-backend.example.com"
+
 /**
  * Basic JPDB API client implemented in Kotlin.
  * The user must provide a valid API key when calling parseText.
@@ -17,7 +19,7 @@ object JpdbApi {
     fun parseText(textSegments: List<String>, apiKey: String): List<Token> {
         require(apiKey.isNotEmpty()) { "JPDB API key must be provided" }
 
-        val url = URL("/api/get_jpdb_data")
+        val url = URL("$BASE_URL/api/get_jpdb_data")
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
