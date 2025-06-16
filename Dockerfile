@@ -3,12 +3,10 @@ FROM node:20 AS frontend-builder
 WORKDIR /frontend
 
 # Accept build arguments for environment variables
-ARG VITE_CLERK_PUBLISHABLE_KEY
 ARG VITE_GDRIVE_CLIENT_ID
 ARG VITE_GAPI_KEY
 
 # Set environment variables from build args
-ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 ENV VITE_GDRIVE_CLIENT_ID=$VITE_GDRIVE_CLIENT_ID
 ENV VITE_GAPI_KEY=$VITE_GAPI_KEY
 
@@ -23,8 +21,6 @@ RUN npm run build
 # Stage 2: Build Python backend and assemble final image
 FROM python:3.11-slim
 
-# Accept build argument for backend Clerk secret
-ARG CLERK_SECRET_KEY
 
 # Prevent Python from buffering stdout/stderr
 ENV PYTHONUNBUFFERED=1
@@ -52,4 +48,4 @@ EXPOSE 8080
 ENV PORT=8080
 
 # Run the Flask app with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:app"]

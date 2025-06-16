@@ -4,7 +4,6 @@ import { gDriveService } from '../services/gdriveService';
 import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibrary';
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
 import { toast } from 'sonner';
-import { useUser } from '@clerk/clerk-react';
 
 /**
  * Determine if two book lists contain the same entries.
@@ -23,7 +22,8 @@ function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
 }
 
 export function useStorageService() {
-  const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const clerkUser = { id: 'local' } as const;
+  const clerkLoaded = true;
   const [isLoading, setIsLoading] = useState(true);
   const [books, setBooks] = useState<BookMetadata[]>([]);
   const booksRef = useRef<BookMetadata[]>([]);
@@ -184,42 +184,9 @@ export function useStorageService() {
   }, [clerkUser]);
 
   useEffect(() => {
-    // Use Clerk's authentication state instead of Firebase
-    if (clerkLoaded) {
-      setIsLoading(false);
-      if (clerkUser) {
-        // Check if this is a different user to avoid redundant loads
-        const currentUserId = clerkUser.id;
-        if (lastUserIdRef.current !== currentUserId) {
-          console.log('User signed in with Clerk:', clerkUser);
-          lastUserIdRef.current = currentUserId;
-          loadUserBooks();
-        }
-      } else {
-        // User is not signed in - clear everything for security
-        console.log('User not signed in with Clerk - clearing data for security');
-
-        // Clean up blob URLs before clearing books
-        if (books.length > 0) {
-          storageService.cleanupBlobUrls(books);
-        }
-
-        setBooks([]);
-        lastUserIdRef.current = null;
-
-        // SECURITY: Clear Google Drive tokens when no Clerk user
-        // This prevents token leakage if user switches accounts
-        import('../services/gdriveService').then(({ gDriveService }) => {
-          gDriveService.onClerkSignOut();
-        });
-
-        getOfflineBooksWithCovers().then(b => {
-          setBooks(b);
-          setIsLoading(false);
-        });
-      }
-    }
-  }, [clerkUser?.id, clerkLoaded, loadUserBooks]); // Use user ID instead of user object
+    setIsLoading(false);
+    loadUserBooks();
+  }, [loadUserBooks]);
 
   useEffect(() => {
     if (!clerkUser && clerkLoaded) {
@@ -463,40 +430,18 @@ export function useStorageService() {
   };
 
   const signIn = async () => {
-    // Redirect to Clerk's sign-in page
-    if (window.Clerk) {
-      window.Clerk.redirectToSignIn();
-    } else {
-      toast.error('Authentication system not loaded yet');
-    }
+    await gDriveService.signIn('consent');
   };
 
   const signOut = async () => {
-    // Sign out using Clerk
-    if (window.Clerk) {
-      try {
-        await window.Clerk.signOut();
-      } catch (error) {
-        console.warn('Clerk sign-out failed (possibly offline):', error);
-      }
-
-      setBooks([]); // Clear books when signing out
-      lastUserIdRef.current = null;
-
-      // SECURITY: Clear Google Drive tokens when Clerk user signs out
-      // This prevents token leakage between different user sessions
-      const { gDriveService } = await import('../services/gdriveService');
-      gDriveService.onClerkSignOut();
-
-      // Clear persisted settings
-      document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-      localStorage.removeItem('prSettings');
-      localStorage.removeItem('showPopupOnHover');
-      localStorage.removeItem('touchscreenSupport');
-      localStorage.removeItem('disableFadeAnimation');
-    } else {
-      toast.error('Authentication system not loaded yet');
-    }
+    gDriveService.signOut();
+    setBooks([]);
+    lastUserIdRef.current = null;
+    document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    localStorage.removeItem('prSettings');
+    localStorage.removeItem('showPopupOnHover');
+    localStorage.removeItem('touchscreenSupport');
+    localStorage.removeItem('disableFadeAnimation');
   };
 
   const openCloudFolder = async () => {
