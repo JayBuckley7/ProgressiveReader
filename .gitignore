@@ -167,8 +167,6 @@ pr-ghactions-sa-key.json
 # Service account key files
 firebase-adminsdk-credentials.json
 
-# Vite build output
-frontend/dist/
 
 # Local environment overrides
 .env.local
