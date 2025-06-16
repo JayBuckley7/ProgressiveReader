@@ -38,7 +38,7 @@ export const defaultConfig: JpHighlighterConfig = {
     apiKey: '',
     contextWidth: 1,
     forqOnMine: false,
-    showPopupOnHover: true,
+    showPopupOnHover: false,
     // Initialize keybinds to a default "None" state or specific defaults
     showPopupKey: { code: 'ShiftLeft', modifiers: [] }, // Default from settingsModal.js was 'ShiftLeft' string
     addKey: { code: 'None', modifiers: [] },
