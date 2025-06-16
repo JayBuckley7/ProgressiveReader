@@ -116,4 +116,4 @@ def fetch_all_due_cards_with_session(session: requests.Session, offset: int = 0)
         
     except Exception as e:
         logger.error(f"Failed to fetch due cards with session: {e}")
-        raise 
+        raise e
