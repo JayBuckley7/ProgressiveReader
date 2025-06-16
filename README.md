@@ -11,9 +11,9 @@
 
    Launch Android Studio and choose `Open an existing project`. Select the `android/` directory from this repository.
 
-2. **Configure API keys**
+2. **Configure API keys and backend URL**
 
-   Set any required API keys in `local.properties` or your build configuration. Refer to the codebase for specific key names.
+   Set any required API keys in `local.properties` or your build configuration. Specify the JPDB backend with a `BACKEND_BASE_URL` entry, e.g. `BACKEND_BASE_URL=https://my-server.example.com`.
 
 3. **Assemble the release build**
 
