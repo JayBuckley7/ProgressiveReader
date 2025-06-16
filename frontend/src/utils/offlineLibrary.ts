@@ -3,8 +3,17 @@ import type { BookMetadata } from '../services/storageService';
 import { getCoverForFile, getCachedCover, cacheCoverForFile } from '../services/driveCache';
 import { gDriveService } from '../services/gdriveService';
 import { cacheCover } from '../services/driveCache';
+import {
+  getOfflineDataHandle,
+  getOfflineBooksData,
+  saveOfflineBooksData
+} from './offlineData';
 
 export function getOfflineBooks(): BookMetadata[] {
+  const handle = getOfflineDataHandle();
+  if (handle) {
+    return getOfflineBooksData();
+  }
   try {
     const raw = localStorage.getItem(OFFLINE_BOOKS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -14,6 +23,7 @@ export function getOfflineBooks(): BookMetadata[] {
 }
 
 export function addOfflineBook(meta: BookMetadata): void {
+  const handle = getOfflineDataHandle();
   const books = getOfflineBooks();
   if (!books.find(b => b.id === meta.id)) {
     books.push({
@@ -28,13 +38,22 @@ export function addOfflineBook(meta: BookMetadata): void {
       cloudProvider: meta.cloudProvider,
       coverUrl: meta.coverUrl
     } as BookMetadata);
-    localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
+    if (handle) {
+      saveOfflineBooksData(books);
+    } else {
+      localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
+    }
   }
 }
 
 export function removeOfflineBook(id: string): void {
+  const handle = getOfflineDataHandle();
   const books = getOfflineBooks().filter(b => b.id !== id);
-  localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
+  if (handle) {
+    saveOfflineBooksData(books);
+  } else {
+    localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
+  }
 }
 
 export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {

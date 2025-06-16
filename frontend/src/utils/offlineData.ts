@@ -1,10 +1,13 @@
+import type { BookMetadata } from '../services/storageService';
+
 export interface OfflineData {
   translations: Record<string, any>;
   highlights: Record<string, any>;
+  books: BookMetadata[];
 }
 
 let fileHandle: FileSystemFileHandle | null = null;
-let data: OfflineData = { translations: {}, highlights: {} };
+let data: OfflineData = { translations: {}, highlights: {}, books: [] };
 let dirty = false;
 
 export function getOfflineDataHandle(): FileSystemFileHandle | null {
@@ -19,8 +22,9 @@ export async function setOfflineDataHandle(handle: FileSystemFileHandle): Promis
     data = JSON.parse(text) as OfflineData;
     if (!data.translations) data.translations = {};
     if (!data.highlights) data.highlights = {};
+    if (!data.books) data.books = [];
   } catch {
-    data = { translations: {}, highlights: {} };
+    data = { translations: {}, highlights: {}, books: [] };
   }
 }
 
@@ -78,6 +82,16 @@ export function clearHighlightsData(prefix: string): void {
   Object.keys(data.highlights).forEach(k => {
     if (k.startsWith(prefix)) delete data.highlights[k];
   });
+  dirty = true;
+  void persist();
+}
+
+export function getOfflineBooksData(): BookMetadata[] {
+  return data.books || [];
+}
+
+export function saveOfflineBooksData(books: BookMetadata[]): void {
+  data.books = books;
   dirty = true;
   void persist();
 }
