@@ -71,9 +71,12 @@ private fun ReaderScreen() {
             val uri = bookUri!!
             when {
                 context.isPdf(uri) -> {
+                    val pdfView = remember(context) { PDFView(context, null) }
+
+                    LaunchedEffect(uri) { pdfView.fromUri(uri).load() }
+
                     AndroidView(
-                        factory = { ctx -> PDFView(ctx, null) },
-                        update = { view -> view.fromUri(uri).load() },
+                        factory = { pdfView },
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues)
