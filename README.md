@@ -45,3 +45,7 @@
 
    You can also use Android Studio's Run button to deploy directly.
 
+
+## Continuous Integration
+
+GitHub Actions automatically builds the Android release with `./gradlew assembleRelease`. Containerized builds have been removed.
