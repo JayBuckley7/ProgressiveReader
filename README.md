@@ -13,7 +13,14 @@
 
 2. **Configure API keys**
 
-   Set any required API keys in `local.properties` or your build configuration. Refer to the codebase for specific key names.
+   The Android app needs API keys for JPDB and OpenAI. Create or edit `android/local.properties` and add entries like:
+
+   ```properties
+   jpdb.apiKey=YOUR_JPDB_KEY
+   openai.apiKey=YOUR_OPENAI_KEY
+   ```
+
+   Adjust the property names if you've customised the code.
 
 3. **Assemble the release build**
 

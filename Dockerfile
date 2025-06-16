@@ -2,14 +2,6 @@
 FROM node:20 AS frontend-builder
 WORKDIR /frontend
 
-# Accept build arguments for environment variables
-ARG VITE_GDRIVE_CLIENT_ID
-ARG VITE_GAPI_KEY
-
-# Set environment variables from build args
-ENV VITE_GDRIVE_CLIENT_ID=$VITE_GDRIVE_CLIENT_ID
-ENV VITE_GAPI_KEY=$VITE_GAPI_KEY
-
 # Copy package files and install dependencies
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

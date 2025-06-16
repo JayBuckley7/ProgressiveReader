@@ -7,10 +7,7 @@
       "request": "launch",
       "module": "flask",
       "cwd": "${workspaceFolder}/backend",
-      "env": {
-        "FLASK_APP": "run.py",
-        "FLASK_ENV": "development"
-      },
+      "env": {},
       "args": ["run", "--debug"],
       "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "justMyCode": false
@@ -21,10 +18,7 @@
       "request": "launch",
       "module": "flask",
       "cwd": "${workspaceFolder}/backend",
-      "env": {
-        "FLASK_APP": "run.py",
-        "FLASK_ENV": "development"
-      },
+      "env": {},
       "args": ["run", "--debug"],
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": false
