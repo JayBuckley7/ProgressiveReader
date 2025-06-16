@@ -21,6 +21,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
+      - name: Run unit tests
+        working-directory: android
+        run: ./gradlew test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: android/app/build/test-results/**/*.xml
+
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease
