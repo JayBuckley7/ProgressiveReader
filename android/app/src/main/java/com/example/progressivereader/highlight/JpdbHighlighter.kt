@@ -113,6 +113,9 @@ object JpdbHighlighter {
 
                 val wrapperTag = if (token.rubies.isNotEmpty() && !frag.hasRuby) "ruby" else "span"
                 val wrapper = frag.node.wrap("<$wrapperTag class='jpdb-word'></$wrapperTag>").parent()!!
+                if (wrapperTag == "ruby") {
+                    frag.hasRuby = true
+                }
                 wrapper.addClass(token.card.state.joinToString(" "))
                 curOffset = frag.end
                 fragIdx += 1
