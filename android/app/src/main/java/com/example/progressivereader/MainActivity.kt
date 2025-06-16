@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.barteksc.pdfviewer.PDFView
@@ -52,7 +53,7 @@ private fun ReaderScreen() {
     ) { uri -> bookUri = uri }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Progressive Reader") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) }
     ) { paddingValues ->
 
         if (bookUri == null) {
@@ -65,7 +66,7 @@ private fun ReaderScreen() {
             ) {
                 Button(
                     onClick = { launcher.launch(arrayOf("application/pdf", "application/epub+zip")) }
-                ) { Text("Select Book") }
+                ) { Text(stringResource(R.string.select_book)) }
             }
         } else {
             val uri = bookUri!!
@@ -92,7 +93,8 @@ private fun ReaderScreen() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Unsupported file type: " + (context.getMimeType(uri) ?: "unknown"))
+                        val mimeType = context.getMimeType(uri) ?: stringResource(R.string.unknown)
+                        Text(stringResource(R.string.unsupported_file_type, mimeType))
                     }
                 }
             }
