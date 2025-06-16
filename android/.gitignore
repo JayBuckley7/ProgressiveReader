@@ -1,0 +1,10 @@
+# Gradle files
+.gradle/
+/local.properties
+/.idea/
+/build/
+/captures/
+output.json
+
+# macOS
+.DS_Store
