@@ -10,6 +10,8 @@ import Logger from './utils/logger';
 
 let currentHover: [JpdbWord, number, number] | null = null;
 let popupKeyHeld = false; // Add popupKeyHeld state
+let highlightApplied = false; // Track if highlighting has been applied
+let storedContentElement: HTMLElement | null = null; // Element to highlight on demand
 
 // Initialize logger debug state from a global flag if present
 Logger.setDebug((window as any).jpHighlighterDebug === true);
@@ -362,6 +364,11 @@ function globalKeydownListener(event: KeyboardEvent) {
         popupKeyHeld = true;
         Popup.get().disablePointer(); // Disable pointer events on popup while key is held
 
+        if (!highlightApplied && storedContentElement) {
+            highlightApplied = true;
+            highlightContent(storedContentElement);
+        }
+
         // If a word is already hovered, show the popup immediately
         if (currentHover) {
             const [wordElement, x, y] = currentHover;
@@ -415,6 +422,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
     try {
         await waitForCSS();
         let currentConfig = loadConfig(); // Initial config load
+        storedContentElement = contentElement;
         console.log('🏗️ About to call setWordHoverHandlers');
         setWordHoverHandlers(onWordHoverStart, onWordHoverStop);
         console.log('🏗️ setWordHoverHandlers completed');
