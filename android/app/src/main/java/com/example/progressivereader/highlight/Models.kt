@@ -1,6 +1,5 @@
 package com.example.progressivereader.highlight
 
-import org.json.JSONArray
 import org.json.JSONObject
 
 /** Data classes mirroring the structures used in the frontend TypeScript code. */
