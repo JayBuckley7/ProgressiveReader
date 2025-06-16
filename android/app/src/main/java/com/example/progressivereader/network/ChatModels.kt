@@ -1,6 +1,5 @@
 package com.example.progressivereader.network
 
-import com.google.gson.annotations.SerializedName
 
 data class ChatCompletionRequest(
     val model: String,
