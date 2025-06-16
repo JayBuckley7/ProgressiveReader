@@ -25,3 +25,23 @@
 
    The generated APK will be located at `android/app/build/outputs/apk/release/app-release.apk`.
 
+4. **Optional: Build a debug APK**
+
+   For quick testing you can create a debug build instead:
+
+   ```bash
+   ./gradlew assembleDebug
+   ```
+
+   The debug APK will be in `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+5. **Optional: Install to a connected device**
+
+   To automatically install the debug build on a running emulator or device:
+
+   ```bash
+   ./gradlew installDebug
+   ```
+
+   You can also use Android Studio's Run button to deploy directly.
+
