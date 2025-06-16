@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - **Android Studio** (latest stable version recommended)
-- **JDK** (Java Development Kit) compatible with your Android Studio version
+- **JDK 17** (Java Development Kit). The repository includes a `.sdkmanrc` file specifying version `17.0.15-tem`.
 
 ## Building the Android APK
 
