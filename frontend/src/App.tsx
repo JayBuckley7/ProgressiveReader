@@ -15,7 +15,6 @@ import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
 import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
-import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { gDriveService } from "./services/gdriveService";
 
 // Get Clerk publishable key from environment variable
@@ -44,7 +43,6 @@ function AppContent() {
   // Clerk and Google Drive hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { isDriveConnected, isLoading: isDriveLoading } = useGoogleDrive();
-  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
@@ -56,7 +54,7 @@ function AppContent() {
         (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
       );
 
-      if (wasGoogleClerkLogin && !isDriveConnected && isOnline) {
+      if (wasGoogleClerkLogin && !isDriveConnected) {
         console.log(
           "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Prompting for Drive auth..."
         );
@@ -71,7 +69,6 @@ function AppContent() {
     clerkUser,
     isDriveConnected,
     isDriveLoading,
-    isOnline,
   ]);
 
   // Prefetch JPDB due cards only after user is signed in if enabled
