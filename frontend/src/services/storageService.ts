@@ -386,25 +386,19 @@ class StorageService {
         
         const downloadPromise = (async () => {
             try {
-                // If this is a locally cached book (no Drive file ID), read from cache
-                if (metadata.cloudProvider === 'local' || !metadata.driveFileId) {
-                    const cachedLocal = await getCachedFile(bookId);
-                    if (cachedLocal) {
-                        console.log('Retrieved book from local cache');
-                        return cachedLocal;
-                    }
-                    throw new Error('Book not cached for offline use');
+                if (!gDriveService.isSignedIn()) {
+                    throw new Error('Not signed in to Google Drive');
                 }
 
-                // Check IndexedDB cache first (by drive file ID or fallback to book ID)
-                const cached = await getCachedFile(metadata.driveFileId) || await getCachedFile(bookId);
+                if (!metadata.driveFileId) {
+                    throw new Error('Google Drive file ID not found for this book.');
+                }
+
+                // Check IndexedDB cache first
+                const cached = await getCachedFile(metadata.driveFileId);
                 if (cached) {
                     console.log('Retrieved book from cache');
                     return cached;
-                }
-
-                if (!gDriveService.isSignedIn()) {
-                    throw new Error('Not signed in to Google Drive');
                 }
 
                 const blob = await gDriveService.downloadFile(metadata.driveFileId);
@@ -414,9 +408,6 @@ class StorageService {
 
                 // Store in cache for future use
                 await cacheFile(metadata.driveFileId, blob);
-                if (metadata.driveFileId !== bookId) {
-                    await cacheFile(bookId, blob);
-                }
 
                 return blob;
             } catch (error: any) {

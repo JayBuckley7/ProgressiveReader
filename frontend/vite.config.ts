@@ -34,7 +34,6 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: '0.0.0.0', // Bind to all network interfaces
       port: 5175,
       strictPort: true,
       ...(needsProxy && {

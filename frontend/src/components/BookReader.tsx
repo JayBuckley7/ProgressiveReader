@@ -180,11 +180,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, []);
 
-  // Apply JPDB highlighting when user explicitly enables it. Also
-  // re-run when the chapter or translated content changes so that
-  // navigating chapters keeps the highlight state in sync. The
-  // check for `isTranslating` ensures highlighting only happens once
-  // the translation stream has finished.
+  // Apply JPDB highlighting when user explicitly enables it
   useEffect(() => {
     console.log('🔍 JPDB highlighting effect triggered:', {
       hasContentRef: !!contentRef.current,
@@ -192,13 +188,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       hasChapterContent: !!currentChapterContent,
       hasTranslatedContent: !!translatedContent,
       isTranslated,
-      isTranslating,
-      currentChapter
+      isTranslating
     });
 
-    // ONLY run highlighting when the toggle is enabled. The effect will re-run
-    // when chapter content changes so navigating pages automatically re-applies
-    // highlighting, but it skips while translation streaming is in progress.
+    // ONLY run highlighting when user explicitly enables it (jpdbHighlighted becomes true)
+    // Do NOT run on content changes unless highlighting is already enabled
     if (jpdbHighlighted && contentRef.current && !isTranslating) {
       const contentElement = contentRef.current.querySelector('.prose');
       console.log('🔍 Content element found:', !!contentElement);
@@ -260,7 +254,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         console.log('Available elements:', contentRef.current.querySelector('*'));
       }
     }
-  }, [jpdbHighlighted, currentChapter, translatedContent, currentChapterContent, isTranslating]);
+  }, [jpdbHighlighted]); // ONLY depend on jpdbHighlighted state changes
 
   // Restore scroll position from progress
   useEffect(() => {

@@ -23,10 +23,6 @@ export function addOfflineBook(meta: BookMetadata): void {
       driveFileId: meta.driveFileId,
       coverImageId: meta.coverImageId,
       totalChapters: meta.totalChapters,
-      uploadedAt: meta.uploadedAt,
-      userId: meta.userId,
-      cloudProvider: meta.cloudProvider,
-      coverUrl: meta.coverUrl
     } as BookMetadata);
     localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
   }
