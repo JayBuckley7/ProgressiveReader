@@ -22,6 +22,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const requestUrl = event.request.url;
+  if (requestUrl.startsWith('blob:') || requestUrl.startsWith('data:')) {
+    // Let the browser handle blob and data requests without interception
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(OFFLINE_URL))
