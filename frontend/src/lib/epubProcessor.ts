@@ -229,7 +229,16 @@ class EpubProcessor {
     async getChapterHtml(index: number): Promise<string | null> {
         await this.ensureReady();
 
-        const tocItem = this.book.navigation?.toc?.[index];
+        // Determine total chapter count using flattened toc first
+        const flatToc = this.book.navigation?.toc ? this._flattenToc(this.book.navigation.toc) : [];
+        const total   = flatToc.length || this.book.spine?.spineItems?.length || 0;
+
+        if (index < 0 || index >= total) {
+            console.error('EpubProcessor (internal): Chapter index out of bounds:', index);
+            return null;
+        }
+
+        const tocItem = flatToc[index] || this.book.navigation?.toc?.[index];
         if (!tocItem) {
             console.error('EpubProcessor (internal): Invalid chapter index:', index);
             return null;
@@ -263,6 +272,21 @@ class EpubProcessor {
     /* ---- helper: remove <script> and <link rel="stylesheet"> ---- */
     _stripScriptsAndStyles(doc: Document): void {
         doc.querySelectorAll('script, link[rel="stylesheet"]').forEach(el => el.remove());
+    }
+
+    /* ---- helper: flatten toc recursively ---- */
+    _flattenToc(toc: any[]): any[] {
+        const flat: any[] = [];
+        const walk = (items: any[]): void => {
+            for (const item of items) {
+                flat.push(item);
+                if (item.subitems && Array.isArray(item.subitems)) {
+                    walk(item.subitems);
+                }
+            }
+        };
+        walk(toc);
+        return flat;
     }
 
     /* -------- metadata / helper methods -------- */
