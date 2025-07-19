@@ -148,6 +148,17 @@ function loadScript(url: string): Promise<void> {
 /* ------------------------------------------------------------------
  *  Internal EpubProcessor  –  uses epub.js directly
  * ------------------------------------------------------------------ */
+function flattenToc(navItems: any[] = []): any[] {
+    const flat: any[] = [];
+    for (const item of navItems) {
+        flat.push(item);
+        if (item.subitems && item.subitems.length) {
+            flat.push(...flattenToc(item.subitems));
+        }
+    }
+    return flat;
+}
+
 class EpubProcessor {
     book: any | null;
     isReady: boolean;
@@ -229,7 +240,8 @@ class EpubProcessor {
     async getChapterHtml(index: number): Promise<string | null> {
         await this.ensureReady();
 
-        const tocItem = this.book.navigation?.toc?.[index];
+        const toc = flattenToc(this.book.navigation?.toc || []);
+        const tocItem = toc[index];
         if (!tocItem) {
             console.error('EpubProcessor (internal): Invalid chapter index:', index);
             return null;
@@ -266,9 +278,10 @@ class EpubProcessor {
     }
 
     /* -------- metadata / helper methods -------- */
-    async getTotalChapters(): Promise<number> { 
-        await this.ensureReady(); 
-        return this.book.navigation?.toc?.length || 0; 
+    async getTotalChapters(): Promise<number> {
+        await this.ensureReady();
+        const toc = flattenToc(this.book.navigation?.toc || []);
+        return toc.length;
     }
     async getMetadata(): Promise<any> { await this.ensureReady(); return this.book.packaging?.metadata || {}; }
 
@@ -288,7 +301,8 @@ class EpubProcessor {
         await this.ensureReady();
         try {
             if (!this.book.navigation?.toc) return [];
-            return this.book.navigation.toc.map((item: any, index: number) => ({
+            const toc = flattenToc(this.book.navigation.toc);
+            return toc.map((item: any, index: number) => ({
                 index: index,
                 label: item.label.trim(),
                 href: item.href,
