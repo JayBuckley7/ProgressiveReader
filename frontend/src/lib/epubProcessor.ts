@@ -38,8 +38,11 @@ export class EpubProcessorWrapper {
             this.processor = this._createProcessor(bookBinaryContent);
             await this.processor.ensureReady();      // wait for internal init
 
-            this.metadata       = await this.processor.getMetadata();
+        this.metadata       = await this.processor.getMetadata();
             this.totalChapters  = await this.processor.getTotalChapters();
+            if (!this.totalChapters) {
+                console.error('EpubProcessorWrapper: Loaded book has zero chapters after applying fallbacks.');
+            }
             this.isReady        = true;
             return true;
         } catch (err) {
@@ -229,13 +232,21 @@ class EpubProcessor {
     async getChapterHtml(index: number): Promise<string | null> {
         await this.ensureReady();
 
-        const tocItem = this.book.navigation?.toc?.[index];
+        let tocItems: any[] = [];
+        if (this.book.navigation?.toc) {
+            tocItems = this._flattenToc(this.book.navigation.toc);
+        }
+        if (!tocItems.length) {
+            tocItems = this.book.spine?.spineItems || [];
+        }
+        const tocItem = tocItems[index];
         if (!tocItem) {
             console.error('EpubProcessor (internal): Invalid chapter index:', index);
             return null;
         }
-        
-        const spineItem = this.book.spine.get(tocItem.href);
+
+        const href = this._hrefWithoutFragment(tocItem.href);
+        const spineItem = this.book.spine.get(href);
         if (!spineItem) {
             console.error('EpubProcessor (internal): Could not find spine item for href:', tocItem.href);
             return null;
@@ -265,10 +276,32 @@ class EpubProcessor {
         doc.querySelectorAll('script, link[rel="stylesheet"]').forEach(el => el.remove());
     }
 
+    _flattenToc(items: any[]): any[] {
+        let result: any[] = [];
+        for (const item of items || []) {
+            result.push(item);
+            if (item.subitems && item.subitems.length) {
+                result = result.concat(this._flattenToc(item.subitems));
+            }
+        }
+        return result;
+    }
+
+    _hrefWithoutFragment(href: string): string {
+        return typeof href === 'string' ? href.split('#')[0] : href;
+    }
+
     /* -------- metadata / helper methods -------- */
-    async getTotalChapters(): Promise<number> { 
-        await this.ensureReady(); 
-        return this.book.navigation?.toc?.length || 0; 
+    async getTotalChapters(): Promise<number> {
+        await this.ensureReady();
+        let tocItems: any[] = [];
+        if (this.book.navigation?.toc) {
+            tocItems = this._flattenToc(this.book.navigation.toc);
+        }
+        if (!tocItems.length) {
+            return this.book.spine?.spineItems?.length || 0;
+        }
+        return tocItems.length;
     }
     async getMetadata(): Promise<any> { await this.ensureReady(); return this.book.packaging?.metadata || {}; }
 
@@ -287,10 +320,22 @@ class EpubProcessor {
     async getChapterTitles(): Promise<ChapterTitle[]> {
         await this.ensureReady();
         try {
-            if (!this.book.navigation?.toc) return [];
-            return this.book.navigation.toc.map((item: any, index: number) => ({
-                index: index,
-                label: item.label.trim(),
+            let tocItems: any[] = [];
+            if (this.book.navigation?.toc) {
+                tocItems = this._flattenToc(this.book.navigation.toc);
+            }
+
+            if (!tocItems.length && this.book.spine?.spineItems) {
+                return this.book.spine.spineItems.map((item: any, idx: number) => ({
+                    index: idx,
+                    label: item.idref || `Chapter ${idx + 1}`,
+                    href: item.href,
+                }));
+            }
+
+            return tocItems.map((item: any, idx: number) => ({
+                index: idx,
+                label: (item.label || '').trim() || `Chapter ${idx + 1}`,
                 href: item.href,
             }));
         } catch (err) {
