@@ -235,9 +235,13 @@ class EpubProcessor {
             return null;
         }
         
-        const spineItem = this.book.spine.get(tocItem.href);
+        let spineItem = this.book.spine.get(tocItem.href);
         if (!spineItem) {
-            console.error('EpubProcessor (internal): Could not find spine item for href:', tocItem.href);
+            console.warn('EpubProcessor (internal): Spine lookup by href failed, falling back to index for href:', tocItem.href);
+            spineItem = this.book.spine.get(index);
+        }
+        if (!spineItem) {
+            console.error('EpubProcessor (internal): Could not find spine item for href or index:', tocItem.href, index);
             return null;
         }
 
