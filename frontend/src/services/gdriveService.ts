@@ -87,6 +87,7 @@ class GDriveService {
   }
 
   constructor() {
+    this.loadTokensFromStorage(); // ensures isSignedIn() reflects saved token
     this.loadGoogleScripts();
   }
 
