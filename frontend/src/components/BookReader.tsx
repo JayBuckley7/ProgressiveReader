@@ -1048,8 +1048,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       </div>
 
       {/* Reader Controls */}
-      {bookMetadata?.fileType !== 'pdf' && (
-        <ReaderControls
+      <ReaderControls
           currentChapter={chapter}
           totalChapters={bookContent?.totalChapters || 1}
           onPrevChapter={prevChapter}
@@ -1063,8 +1062,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           jpdbHighlighted={jpdbHighlighted}
           onTranslate={() => translateCurrent(lastUseCefr)}
           translating={isTranslating}
-        />
-      )}
+      />
 
       <TtsControlModal
         visible={isSpeaking}
