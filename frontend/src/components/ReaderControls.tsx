@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ContentsDrawer } from "./ContentsDrawer";
 import { api } from "~/utils/api.ts";
 import type { ChapterTitle } from "../types";
@@ -35,6 +35,14 @@ export function ReaderControls({
   jpdbHighlighted,
 }: ReaderControlsProps) {
   const [showDrawer, setShowDrawer] = useState(false);
+
+  const maxLabelLength = useMemo(() => {
+    let max = 8; // minimum width in characters
+    for (const ch of chapterTitles) {
+      if (ch.label && ch.label.length > max) max = ch.label.length;
+    }
+    return max;
+  }, [chapterTitles]);
 
   const { data: bookmarks = [] } =
     api.reading.getBookmarks.useQuery({ bookId });
@@ -76,7 +84,10 @@ export function ReaderControls({
             </svg>
           </button>
 
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 select-none truncate">
+          <span
+            className="text-sm font-medium text-gray-700 dark:text-gray-300 select-none truncate"
+            style={{ width: `${maxLabelLength}ch` }}
+          >
             {chapterTitles?.[currentChapter]?.label || `Chapter ${currentChapter + 1}`}
           </span>
 
