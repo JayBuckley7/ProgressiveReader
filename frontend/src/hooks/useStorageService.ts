@@ -29,6 +29,9 @@ export function useStorageService() {
   const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const SESSION_COOLDOWN = 30_000;
+  const lastSessionToastRef = useRef(0);
+  const isDriveSyncingRef = useRef(false);
 
   useEffect(() => {
     booksRef.current = books;
@@ -100,6 +103,7 @@ export function useStorageService() {
     }
     setIsLoading(true);
     isRefreshingRef.current = true;
+    isDriveSyncingRef.current = true;
     
     try {
       const previous = booksRef.current;
@@ -137,6 +141,7 @@ export function useStorageService() {
         setBooks(mergedBooks);
         booksRef.current = mergedBooks;
       }
+      lastSessionToastRef.current = 0;
     } catch (error) {
       console.error('Error loading books:', error);
       
@@ -146,6 +151,7 @@ export function useStorageService() {
     } finally {
       setIsLoading(false);
       isRefreshingRef.current = false;
+      isDriveSyncingRef.current = false;
     }
   }, [clerkUser]);
 
@@ -365,6 +371,7 @@ export function useStorageService() {
       await window.Clerk.signOut();
       setBooks([]); // Clear books when signing out
       lastUserIdRef.current = null;
+      lastSessionToastRef.current = 0;
 
       // SECURITY: Clear Google Drive tokens when Clerk user signs out
       // This prevents token leakage between different user sessions
@@ -403,6 +410,7 @@ export function useStorageService() {
     }
 
     setIsLoading(true);
+    isDriveSyncingRef.current = true;
     try {
       const onCoverReady = (bookId: string, coverUrl: string) => {
         setBooks((current) =>
@@ -413,11 +421,13 @@ export function useStorageService() {
       const synced = await storageService.syncBooks(clerkUser, onCoverReady);
       setBooks(synced);
       toast.success('Library synced successfully');
+      lastSessionToastRef.current = 0;
     } catch (error) {
       console.error('Error syncing books:', error);
       toast.error('Failed to sync books');
     } finally {
       setIsLoading(false);
+      isDriveSyncingRef.current = false;
     }
   };
 
@@ -449,7 +459,14 @@ export function useStorageService() {
       return settings;
     } catch (error: any) {
       if (error.message === 'UNAUTHORIZED') {
-        toast.error('Session expired, please sign in again');
+        if (Date.now() - lastSessionToastRef.current > SESSION_COOLDOWN) {
+          if (isDriveSyncingRef.current) {
+            toast.info('Drive syncing…');
+          } else {
+            toast.error('Session expired, please sign in again');
+          }
+          lastSessionToastRef.current = Date.now();
+        }
         throw error;
       } else {
         console.error('Error loading settings:', error);
