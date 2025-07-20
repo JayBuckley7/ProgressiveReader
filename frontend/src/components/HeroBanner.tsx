@@ -1,5 +1,7 @@
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import { useEffect, useState } from "react";
 import { useStorageService } from "../hooks/useStorageService";
+import { vocabBank } from "../services/vocabBank";
 
 export function HeroBanner() {
   const { user } = useUser();
@@ -7,9 +9,13 @@ export function HeroBanner() {
   // the current library after Drive sync completes.
   const { books } = useStorageService();
 
-  // Word tracking not implemented yet
-  const vocabulary: any[] = [];
-  const masteredWords = 0;
+  const [stats, setStats] = useState({ saved: 0, mastered: 0 });
+
+  useEffect(() => {
+    vocabBank.load().then(() => {
+      setStats(vocabBank.getStats());
+    });
+  }, []);
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
@@ -28,11 +34,11 @@ export function HeroBanner() {
                 <div className="text-blue-200">Books</div>
               </div>
               <div>
-                <div className="text-3xl font-bold">{vocabulary.length}</div>
+                <div className="text-3xl font-bold">{stats.saved}</div>
                 <div className="text-blue-200">Words Saved</div>
               </div>
               <div>
-                <div className="text-3xl font-bold">{masteredWords}</div>
+                <div className="text-3xl font-bold">{stats.mastered}</div>
                 <div className="text-blue-200">Words Mastered</div>
               </div>
             </div>
