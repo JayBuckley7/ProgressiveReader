@@ -1,7 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+
+export interface PdfViewerHandle {
+  goToPage: (page: number) => void;
+}
 
 interface PdfViewerProps {
   data: ArrayBuffer;
+  onPageCount?: (count: number) => void;
 }
 
 const pdfJsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -23,27 +28,38 @@ function loadScript(url: string): Promise<void> {
   });
 }
 
-export function PdfViewer({ data }: PdfViewerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
+  ({ data, onPageCount }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const pageRefs = useRef<HTMLDivElement[]>([]);
 
-  useEffect(() => {
-    const renderPdf = async () => {
-      if (!containerRef.current) return;
-      containerRef.current.innerHTML = '';
-      if (!(window as any).pdfjsLib) {
-        await loadScript(pdfJsUrl);
-      }
-      if (!(window as any).pdfjsViewer) {
-        await loadScript(pdfViewerUrl);
-      }
-      const pdfjsLib = (window as any).pdfjsLib;
-      if (!pdfjsLib) return;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-      const loadingTask = pdfjsLib.getDocument({ data });
-      const pdf = await loadingTask.promise;
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
+    useImperativeHandle(ref, () => ({
+      goToPage(page: number) {
+        const el = pageRefs.current[page - 1];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+    }));
+
+    useEffect(() => {
+      const renderPdf = async () => {
+        if (!containerRef.current) return;
+        containerRef.current.innerHTML = '';
+        pageRefs.current = [];
+        if (!(window as any).pdfjsLib) {
+          await loadScript(pdfJsUrl);
+        }
+        if (!(window as any).pdfjsViewer) {
+          await loadScript(pdfViewerUrl);
+        }
+        const pdfjsLib = (window as any).pdfjsLib;
+        if (!pdfjsLib) return;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+        const loadingTask = pdfjsLib.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        onPageCount?.(pdf.numPages);
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 });
 
         const pageContainer = document.createElement('div');
         pageContainer.className = 'pdf-page relative mb-4';
@@ -65,14 +81,16 @@ export function PdfViewer({ data }: PdfViewerProps) {
         textLayerDiv.style.height = `${viewport.height}px`;
         pageContainer.appendChild(textLayerDiv);
 
-        const textContent = await page.getTextContent();
-        pdfjsLib.renderTextLayer({ textContent, container: textLayerDiv, viewport, textDivs: [] });
+          const textContent = await page.getTextContent();
+          pdfjsLib.renderTextLayer({ textContent, container: textLayerDiv, viewport, textDivs: [] });
 
-        containerRef.current!.appendChild(pageContainer);
-      }
-    };
-    renderPdf();
-  }, [data]);
+          containerRef.current!.appendChild(pageContainer);
+          pageRefs.current.push(pageContainer);
+        }
+      };
+      renderPdf();
+    }, [data]);
 
-  return <div ref={containerRef} className="pdf-viewer space-y-4"></div>;
-}
+    return <div ref={containerRef} className="pdf-viewer space-y-4"></div>;
+  }
+);
