@@ -1,15 +1,16 @@
 import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
 // import { SignOutButton } from "./SignOutButton"; // REMOVED - using Clerk's
 import { useState } from "react";
-import { DriveButton } from "../gdrive/DriveButton";
 
 interface TopActionsProps {
   currentPage: "library" | "vocabulary" | "stats";
-  onPageChange: (page: "library" | "vocabulary" | "stats") => void;
   onShowLogin: () => void;
 }
 
-export function TopActions({ currentPage, onPageChange, onShowLogin }: TopActionsProps) {
+import { useNavigate } from "react-router-dom";
+
+export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
+  const navigate = useNavigate();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   return (
@@ -18,7 +19,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
         {/* Mobile Layout */}
         <div className="flex justify-between items-center sm:hidden">
           <button
-            onClick={() => onPageChange("library")}
+            onClick={() => navigate("/")}
             className="flex items-center"
           >
             <img src="/icon.png" alt="App icon" className="w-5 h-5 mr-1.5" />
@@ -42,7 +43,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
           <div className="sm:hidden mt-2 py-2 space-y-1">
             <SignedIn>
               <button
-                onClick={() => { onPageChange("library"); setShowMobileMenu(false); }}
+                onClick={() => { navigate("/"); setShowMobileMenu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
                   currentPage === "library" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
@@ -50,7 +51,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 📚 Library
               </button>
               <button
-                onClick={() => { onPageChange("vocabulary"); setShowMobileMenu(false); }}
+                onClick={() => { navigate("/vocabulary"); setShowMobileMenu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
                   currentPage === "vocabulary" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
@@ -58,7 +59,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                 📝 Vocabulary
               </button>
               <button
-                onClick={() => { onPageChange("stats"); setShowMobileMenu(false); }}
+                onClick={() => { navigate("/stats"); setShowMobileMenu(false); }}
                 className={`w-full text-left px-3 py-2 rounded text-sm ${
                   currentPage === "stats" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
@@ -84,7 +85,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
         <div className="hidden sm:flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => onPageChange("library")}
+              onClick={() => navigate("/")}
               aria-label="Go to library"
               className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors flex items-center"
             >
@@ -98,7 +99,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
             <SignedIn>
               <nav className="flex items-center space-x-1">
                 <button
-                  onClick={() => onPageChange("library")}
+                  onClick={() => navigate("/")}
                   aria-label="Library page"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === "library"
@@ -109,7 +110,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                   📚 Library
                 </button>
                 <button
-                  onClick={() => onPageChange("vocabulary")}
+                  onClick={() => navigate("/vocabulary")}
                   aria-label="Vocabulary page"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === "vocabulary"
@@ -120,7 +121,7 @@ export function TopActions({ currentPage, onPageChange, onShowLogin }: TopAction
                   📝 Vocabulary
                 </button>
                 <button
-                  onClick={() => onPageChange("stats")}
+                  onClick={() => navigate("/stats")}
                   aria-label="Statistics page"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === "stats"

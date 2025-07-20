@@ -6,11 +6,22 @@ import { useStorageService } from "../hooks/useStorageService";
 import { useGoogleDrive } from "../hooks/useGoogleDrive";
 import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
 
+import { useNavigate } from "react-router-dom";
+
 interface BookLibraryProps {
-  onSelectBook: (bookId: string) => void;
+  onSelectBook?: (bookId: string) => void;
 }
 
-function BookLibrary({ onSelectBook }: BookLibraryProps) {
+function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
+  const navigate = useNavigate();
+
+  const handleSelectBook = (id: string) => {
+    if (onSelectBook) {
+      onSelectBook(id);
+    } else {
+      navigate(`/book/${id}`);
+    }
+  };
 
   const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
   const { isDriveConnected } = useGoogleDrive();
@@ -229,7 +240,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps) {
             <BookCardHover
               key={book.id}
               book={book}
-              onSelectBook={onSelectBook}
+              onSelectBook={handleSelectBook}
               onDeleteBook={deleteBook}
               onUpdateCover={updateBookCover}
             />

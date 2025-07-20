@@ -1,9 +1,15 @@
 import { useState, useEffect } from "react";
-import { prefetchDueCards } from "./services/dueCardsService";
 import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import {
+  Routes,
+  Route,
+  useParams,
+  Outlet,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 
 import { SignInForm } from "./components/SignInForm";
-import { SignOutButton } from "./components/SignOutButton"; // This might be unused now, or used inside TopActions
 import { Toaster } from "sonner";
 import BookLibrary from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
@@ -33,11 +39,6 @@ export default function App() {
 }
 
 function AppContent() {
-  const [currentBookId, setCurrentBookId] = useState<string | null>(null); // Was Id<"books">
-  const [currentChapter, setCurrentChapter] = useState(0);
-  const [currentPage, setCurrentPage] = useState<"library" | "vocabulary" | "stats">(
-    "library"
-  );
   const [showLogin, setShowLogin] = useState(false);
 
   // Clerk and Google Drive hooks
@@ -86,105 +87,72 @@ function AppContent() {
   return (
     <SettingsProvider>
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-        <main className="flex-1 flex flex-col">
-          <Content
-            currentBookId={currentBookId}
-            setCurrentBookId={setCurrentBookId}
-            currentChapter={currentChapter}
-            setCurrentChapter={setCurrentChapter}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            setShowLogin={setShowLogin}
-          />
-        </main>
+        <SignedIn>
+          <Routes>
+            <Route path="/" element={<MainLayout setShowLogin={setShowLogin} />}> 
+              <Route index element={<BookLibrary />} />
+              <Route path="vocabulary" element={<VocabularyPage />} />
+              <Route path="stats" element={<StatsPlaceholder />} />
+            </Route>
+            <Route path="book/:bookId" element={<BookReaderRoute />} />
+          </Routes>
+        </SignedIn>
+        <SignedOut>
+          <SignedOutLayout setShowLogin={setShowLogin} />
+        </SignedOut>
         <Footer />
         <DangerZone />
-
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
-
         <Toaster />
       </div>
     </SettingsProvider>
   );
 }
 
-function Content({
-  currentBookId,
-  setCurrentBookId,
-  currentChapter,
-  setCurrentChapter,
-  currentPage,
-  setCurrentPage,
-  setShowLogin,
-}: {
-  currentBookId: string | null; // Was Id<"books">
-  setCurrentBookId: (id: string | null) => void; // Was Id<"books">
-  currentChapter: number;
-  setCurrentChapter: (chapter: number) => void;
-  currentPage: "library" | "vocabulary" | "stats";
-  setCurrentPage: (page: "library" | "vocabulary" | "stats") => void;
-  setShowLogin: (show: boolean) => void;
-}) {
-  const { user, isLoaded } = useUser();
-
-  // Show loading spinner while Clerk is loading
-  if (!isLoaded) {
-    return (
-      <div className="flex-1 flex justify-center items-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+function MainLayout({ setShowLogin }: { setShowLogin: (v: boolean) => void }) {
+  const location = useLocation();
+  const currentPage = location.pathname.startsWith('/vocabulary')
+    ? 'vocabulary'
+    : location.pathname.startsWith('/stats')
+    ? 'stats'
+    : 'library';
 
   return (
     <div className="flex flex-col flex-1">
-      <SignedIn>
-        {currentBookId ? (
-          <BookReader
-            bookId={currentBookId}
-            currentChapter={currentChapter}
-            setCurrentChapter={setCurrentChapter}
-            onBack={() => setCurrentBookId(null)}
-          />
-        ) : (
-          <div className="flex flex-col flex-1">
-            <TopActions
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              onShowLogin={() => setShowLogin(true)}
-            />
-            <HeroBanner />
-            <div className="flex-1 overflow-y-auto">
-              {currentPage === "library" ? (
-                <BookLibrary onSelectBook={setCurrentBookId} />
-              ) : currentPage === "vocabulary" ? (
-                <VocabularyPage />
-              ) : (
-                <div className="p-8 text-center">
-                  <h2 className="text-2xl font-bold mb-4">Reading Statistics</h2>
-                  <p className="text-gray-600">Stats page coming soon...</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </SignedIn>
+      <TopActions currentPage={currentPage} onShowLogin={() => setShowLogin(true)} />
+      <HeroBanner />
+      <div className="flex-1 overflow-y-auto">
+        <Outlet />
+      </div>
+    </div>
+  );
+}
 
-      <SignedOut>
-        <div className="flex flex-col flex-1">
-          <TopActions
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onShowLogin={() => setShowLogin(true)}
-          />
-          <HeroBanner />
-          <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-            <div className="w-full max-w-md mx-auto">
-              <SignInForm />
-            </div>
-          </div>
+function SignedOutLayout({ setShowLogin }: { setShowLogin: (v: boolean) => void }) {
+  return (
+    <div className="flex flex-col flex-1">
+      <TopActions currentPage="library" onShowLogin={() => setShowLogin(true)} />
+      <HeroBanner />
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-md mx-auto">
+          <SignInForm />
         </div>
-      </SignedOut>
+      </div>
+    </div>
+  );
+}
+
+function BookReaderRoute() {
+  const { bookId } = useParams<{ bookId: string }>();
+  if (!bookId) return null;
+  return <BookReader bookId={bookId} />;
+}
+
+function StatsPlaceholder() {
+  return (
+    <div className="p-8 text-center">
+      <h2 className="text-2xl font-bold mb-4">Reading Statistics</h2>
+      <p className="text-gray-600">Stats page coming soon...</p>
     </div>
   );
 }

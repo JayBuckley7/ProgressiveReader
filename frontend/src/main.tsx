@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 
@@ -14,12 +15,16 @@ async function startApp() {
   // Only use StrictMode in development to avoid excessive loading in production
   const isDevelopment = import.meta.env.MODE === 'development';
   
-  const AppComponent = isDevelopment ? (
-    <React.StrictMode>
+  const app = (
+    <BrowserRouter>
       <App />
-    </React.StrictMode>
+    </BrowserRouter>
+  );
+
+  const AppComponent = isDevelopment ? (
+    <React.StrictMode>{app}</React.StrictMode>
   ) : (
-    <App />
+    app
   );
 
   ReactDOM.createRoot(document.getElementById('root')!).render(AppComponent);
