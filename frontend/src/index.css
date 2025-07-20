@@ -263,3 +263,30 @@ html {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+/* PDF viewer text layer styles */
+.pdf-page {
+  position: relative;
+}
+
+.pdf-page canvas {
+  display: block;
+}
+
+.pdf-page .textLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  color: transparent;
+  transform-origin: 0 0;
+}
+
+.pdf-page .textLayer span {
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0 0;
+  line-height: 1;
+  cursor: text;
+}

@@ -1165,6 +1165,163 @@ class GDriveService {
       return false;
     }
   }
+
+  /**
+   * Save vocabulary data to vocab.json in the app folder
+   */
+  public async saveVocab(words: any[]): Promise<boolean> {
+    const currentAppFolderId = await this.getAppFolderId();
+    const token = await this.getAccessToken();
+    if (!token || !currentAppFolderId) {
+      console.warn('[GDriveService] Cannot save vocabulary: Not signed in, token invalid, or no folder ID.');
+      return false;
+    }
+
+    try {
+      const response = await this.gapi.client.drive.files.list({
+        q: `'${currentAppFolderId}' in parents and name='vocab.json' and trashed=false`,
+        fields: 'files(id, name)',
+        pageSize: 1,
+      });
+
+      const files = response.result.files || [];
+      const data = { words, lastUpdated: new Date().toISOString(), version: '1.0' };
+
+      if (files.length > 0) {
+        const fileId = files[0].id;
+        return await this.updateVocabFile(fileId, data);
+      } else {
+        const newId = await this.createVocabFile(data);
+        return !!newId;
+      }
+    } catch (error) {
+      console.error('[GDriveService] Error saving vocabulary:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load vocabulary data from vocab.json
+   */
+  public async loadVocab(): Promise<any[] | null> {
+    const currentAppFolderId = await this.getAppFolderId();
+    const token = await this.getAccessToken();
+    if (!token || !currentAppFolderId) {
+      console.warn('[GDriveService] Cannot load vocabulary: Not signed in, token invalid, or no folder ID.');
+      return null;
+    }
+
+    try {
+      const response = await this.gapi.client.drive.files.list({
+        q: `'${currentAppFolderId}' in parents and name='vocab.json' and trashed=false`,
+        fields: 'files(id, name)',
+        pageSize: 1,
+      });
+
+      const files = response.result.files || [];
+      if (files.length > 0) {
+        const fileId = files[0].id;
+        const currentToken = await this.getAccessToken();
+        if (!currentToken) throw new Error('Failed to get valid access token for vocab download.');
+
+        const fetchResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+          headers: new Headers({ Authorization: `Bearer ${currentToken}` }),
+        });
+
+        if (!fetchResponse.ok) {
+          throw new Error(`Failed to download vocabulary: ${fetchResponse.status} ${fetchResponse.statusText}`);
+        }
+
+        const text = await fetchResponse.text();
+        try {
+          const content = JSON.parse(text);
+          return Array.isArray(content.words) ? content.words : [];
+        } catch (e) {
+          console.warn('[GDriveService] Invalid JSON in vocab file');
+          return [];
+        }
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error('[GDriveService] Error loading vocabulary:', error);
+      return null;
+    }
+  }
+
+  private async createVocabFile(data: any): Promise<string | null> {
+    const currentAppFolderId = await this.getAppFolderId();
+    const token = await this.getAccessToken();
+    if (!token || !currentAppFolderId) {
+      return null;
+    }
+
+    const metadata = {
+      name: 'vocab.json',
+      mimeType: 'application/json',
+      parents: [currentAppFolderId],
+    };
+
+    const jsonContent = JSON.stringify(data, null, 2);
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', new Blob([jsonContent], { type: 'application/json' }));
+
+    try {
+      const currentToken = await this.getAccessToken();
+      if (!currentToken) throw new Error('Failed to get valid access token for vocab creation.');
+
+      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: new Headers({ Authorization: `Bearer ${currentToken}` }),
+        body: form,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Vocab file creation failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      const result = await response.json();
+      console.log('[GDriveService] Vocab file created successfully:', result.id);
+      return result.id;
+    } catch (error) {
+      console.error('[GDriveService] Error creating vocab file:', error);
+      return null;
+    }
+  }
+
+  private async updateVocabFile(fileId: string, data: any): Promise<boolean> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      console.warn('[GDriveService] Cannot update vocab file: No valid token');
+      return false;
+    }
+
+    const jsonContent = JSON.stringify(data, null, 2);
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: new Headers({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
+        body: jsonContent,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Vocab file update failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      console.log('[GDriveService] Vocab file updated successfully');
+      return true;
+    } catch (error) {
+      console.error('[GDriveService] Error updating vocab file:', error);
+      return false;
+    }
+  }
 }
 
 // Export a singleton instance
