@@ -307,9 +307,11 @@ class EpubProcessor {
     }
 
     /* -------- metadata / helper methods -------- */
-    async getTotalChapters(): Promise<number> { 
-        await this.ensureReady(); 
-        return this.book.navigation?.toc?.length || 0; 
+    async getTotalChapters(): Promise<number> {
+        await this.ensureReady();
+        if (!this.book.navigation?.toc) return 0;
+        const flat = this._flattenToc(this.book.navigation.toc);
+        return flat.length;
     }
     async getMetadata(): Promise<any> { await this.ensureReady(); return this.book.packaging?.metadata || {}; }
 
@@ -329,7 +331,8 @@ class EpubProcessor {
         await this.ensureReady();
         try {
             if (!this.book.navigation?.toc) return [];
-            return this.book.navigation.toc.map((item: any, index: number) => ({
+            const flat = this._flattenToc(this.book.navigation.toc);
+            return flat.map((item: any, index: number) => ({
                 index: index,
                 label: item.label.trim(),
                 href: item.href,
