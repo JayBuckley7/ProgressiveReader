@@ -1,9 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
+import { PdfViewer } from "./PdfViewer";
+import { useStorageService } from "../hooks/useStorageService";
+import { storageService } from "../services/storageService";
 import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
@@ -70,6 +73,9 @@ const clearAllTranslationsForBook = (bookId: string) => {
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   const navigate = useNavigate();
+  const { books } = useStorageService();
+  const bookMetadata = useMemo(() => books.find(b => b.id === bookId), [books, bookId]);
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const handleBack = () => {
@@ -86,6 +92,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   });
 
   const chapter = currentChapter ?? localChapter;
+
+  useEffect(() => {
+    if (bookMetadata && bookMetadata.fileType === "pdf") {
+      (async () => {
+        const blob = await storageService.downloadBook(bookId, bookMetadata);
+        if (blob) {
+          const arrayBuffer = await blob.arrayBuffer();
+          setPdfData(arrayBuffer);
+        }
+      })();
+    }
+  }, [bookId, bookMetadata]);
   const updateChapter = setCurrentChapter ?? ((ch: number) => {
     setLocalChapter(ch);
     searchParams.set('ch', String(ch));
@@ -988,7 +1006,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           fontFamily: settings?.fontFamily || 'Inter',
         }}
       >
-        {isTranslated ? (
+        {bookMetadata?.fileType === 'pdf' ? (
+          pdfData ? (
+            <PdfViewer data={pdfData} />
+          ) : (
+            <div className="py-8 text-center">Loading PDF...</div>
+          )
+        ) : isTranslated ? (
           <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
             <div
               className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
@@ -1024,21 +1048,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       </div>
 
       {/* Reader Controls */}
-      <ReaderControls
-        currentChapter={chapter}
-        totalChapters={bookContent?.totalChapters || 1}
-        onPrevChapter={prevChapter}
-        onNextChapter={nextChapter}
-        bookId={bookId}
-        chapterTitles={bookContent?.chapterTitles || []}
-        onSelectChapter={updateChapter}
-        onToggleTts={toggleTts}
-        ttsActive={isSpeaking}
-        onToggleHighlight={toggleJpdbHighlight}
-        jpdbHighlighted={jpdbHighlighted}
-        onTranslate={() => translateCurrent(lastUseCefr)}
-        translating={isTranslating}
-      />
+      {bookMetadata?.fileType !== 'pdf' && (
+        <ReaderControls
+          currentChapter={chapter}
+          totalChapters={bookContent?.totalChapters || 1}
+          onPrevChapter={prevChapter}
+          onNextChapter={nextChapter}
+          bookId={bookId}
+          chapterTitles={bookContent?.chapterTitles || []}
+          onSelectChapter={updateChapter}
+          onToggleTts={toggleTts}
+          ttsActive={isSpeaking}
+          onToggleHighlight={toggleJpdbHighlight}
+          jpdbHighlighted={jpdbHighlighted}
+          onTranslate={() => translateCurrent(lastUseCefr)}
+          translating={isTranslating}
+        />
+      )}
 
       <TtsControlModal
         visible={isSpeaking}
