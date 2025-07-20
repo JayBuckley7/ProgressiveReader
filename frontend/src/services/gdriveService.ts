@@ -25,6 +25,9 @@ const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 export const BOOK_FILE_EXTENSIONS = ['epub', 'pdf', 'mobi', 'docx', 'txt'];
 
+const LS_TOKEN_KEY = 'gdriveAccessToken';
+const LS_EXPIRY_KEY = 'gdriveAccessTokenExpiry';
+
 interface GoogleUser {
   email: string;
   name: string;
@@ -50,6 +53,38 @@ class GDriveService {
   private userProfile: GoogleUser | null = null;
   private listeners: Array<(isSignedIn: boolean) => void> = [];
   private appFolderId: string | null = null;
+
+  private loadTokensFromStorage(): boolean {
+    if (typeof window === 'undefined') return false;
+    const storedToken = localStorage.getItem(LS_TOKEN_KEY);
+    const storedExpiry = localStorage.getItem(LS_EXPIRY_KEY);
+    if (storedToken && storedExpiry) {
+      const expiry = parseInt(storedExpiry, 10);
+      if (!isNaN(expiry) && Date.now() < expiry) {
+        this.accessToken = storedToken;
+        this.accessTokenExpiry = expiry;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken({ access_token: storedToken });
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private saveTokensToStorage(): void {
+    if (typeof window === 'undefined') return;
+    if (this.accessToken && this.accessTokenExpiry) {
+      localStorage.setItem(LS_TOKEN_KEY, this.accessToken);
+      localStorage.setItem(LS_EXPIRY_KEY, this.accessTokenExpiry.toString());
+    }
+  }
+
+  private clearTokensFromStorage(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(LS_TOKEN_KEY);
+    localStorage.removeItem(LS_EXPIRY_KEY);
+  }
 
   constructor() {
     this.loadGoogleScripts();
@@ -126,7 +161,14 @@ class GDriveService {
     }
     
     console.log('[GDriveService] Clerk user authenticated. Proceeding with Google Drive session restoration.');
-    
+
+    if (this.loadTokensFromStorage()) {
+      console.log('[GDriveService] Restored token from localStorage');
+      await this.fetchUserProfile();
+      this.updateSigninStatus(true);
+      return true;
+    }
+
     try {
       const tokenResponse = await this.fetchAccessTokenFromServer();
       if (tokenResponse && tokenResponse.access_token) {
@@ -181,7 +223,8 @@ class GDriveService {
     this.accessTokenExpiry = null;
     this.userProfile = null;
     this.appFolderId = null;
-    
+    this.clearTokensFromStorage();
+
     // Clear GAPI client token if available
     if (this.gapi && this.gapi.client) {
       this.gapi.client.setToken(null);
@@ -276,7 +319,9 @@ class GDriveService {
     } else {
         console.warn('[GDriveService] GAPI client not available to set token immediately.');
     }
-    
+
+    this.saveTokensToStorage();
+
 
     // Store token details if needed (e.g., expiry for proactive refresh)
 
