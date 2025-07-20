@@ -96,3 +96,25 @@ export async function cacheCoverForFile(fileId: string, blob: Blob): Promise<voi
         req.onerror = () => reject(req.error);
     });
 }
+
+export async function removeCachedCover(id: string): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(COVER_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(COVER_STORE_NAME);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}
+
+export async function removeCoverForFile(fileId: string): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(COVER_BY_FILE_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(COVER_BY_FILE_STORE_NAME);
+        const req = store.delete(fileId);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}

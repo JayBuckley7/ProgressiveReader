@@ -6,7 +6,9 @@ import {
     getCachedCover,
     cacheCover,
     getCoverForFile,
-    cacheCoverForFile
+    cacheCoverForFile,
+    removeCachedCover,
+    removeCoverForFile
 } from './driveCache';
 
 
@@ -702,6 +704,12 @@ class StorageService {
             }
 
             console.log('✅ Book metadata updated with new cover');
+
+            // Purge cached cover for this book so UI fetches the new one
+            await removeCoverForFile(bookId);
+            if (currentCoverImageId && currentCoverImageId !== coverImageId) {
+                await removeCachedCover(currentCoverImageId);
+            }
 
             // Delete old cover image if it exists (do this after successful update)
             if (currentCoverImageId && currentCoverImageId !== coverImageId) {
