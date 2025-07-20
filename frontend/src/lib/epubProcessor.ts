@@ -288,6 +288,7 @@ class EpubProcessor {
     /* ---- helper: remove <script> and <link rel="stylesheet"> ---- */
     _stripScriptsAndStyles(doc: Document): void {
         doc.querySelectorAll('script, link[rel="stylesheet"]').forEach(el => el.remove());
+        doc.querySelectorAll('style').forEach(el => el.remove());
     }
 
     /* ---- helper: flatten toc recursively ---- */
