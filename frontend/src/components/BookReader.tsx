@@ -8,11 +8,13 @@ import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
 
+import { useNavigate, useSearchParams } from "react-router-dom";
+
 interface BookReaderProps {
   bookId: string; // Was: Id<"books">
-  currentChapter: number;
-  setCurrentChapter: (chapter: number) => void;
-  onBack: () => void;
+  currentChapter?: number;
+  setCurrentChapter?: (chapter: number) => void;
+  onBack?: () => void;
 }
 
 // Helper functions for translation storage
@@ -67,8 +69,31 @@ const clearAllTranslationsForBook = (bookId: string) => {
 };
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const [localChapter, setLocalChapter] = useState(() => {
+    const fromQuery = parseInt(searchParams.get('ch') || '0', 10);
+    return currentChapter ?? fromQuery;
+  });
+
+  const chapter = currentChapter ?? localChapter;
+  const updateChapter = setCurrentChapter ?? ((ch: number) => {
+    setLocalChapter(ch);
+    searchParams.set('ch', String(ch));
+    setSearchParams(searchParams, { replace: true });
+  });
+
   // Use the new useBookContent hook instead of placeholder data
-  const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, currentChapter);
+  const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, chapter);
 
   // TODO: Progress tracking - replace with real API calls
   const progress = { currentChapter: 0, currentPosition: 0 };
@@ -100,15 +125,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     const updateProgressDebounced = setTimeout(() => {
       // updateProgress({
       //   bookId,
-      //   currentChapter,
+      //   chapter,
       //   currentPosition: scrollPosition,
       // });
       // TODO: Call Flask API to update progress
-      console.log("Debounced update progress (TODO):", { bookId, currentChapter, scrollPosition });
+      console.log("Debounced update progress (TODO):", { bookId, chapter, scrollPosition });
     }, 1000);
 
     return () => clearTimeout(updateProgressDebounced);
-  }, [bookId, currentChapter, scrollPosition, /* updateProgress */]); // Removed updateProgress from dependencies for now
+  }, [bookId, chapter, scrollPosition]);
 
   // Clear translated content when chapter changes, but check for autoload first
   useEffect(() => {
@@ -118,7 +143,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setTranslatedContent(null);
       setIsAutoloaded(false);
     }
-  }, [currentChapter]);
+  }, [chapter]);
 
   // Autoload translations when chapter changes if setting is enabled (one-time per chapter load)
   useEffect(() => {
@@ -128,7 +153,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     // Only autoload on initial chapter load, not when user has already interacted with translations
     if (autoloadEnabled && cachingEnabled && currentChapterContent && !isTranslating && !isTranslated) {
       console.log('Checking for stored translation for autoload...');
-      const storedTranslation = loadTranslationFromStorage(bookId, currentChapter);
+      const storedTranslation = loadTranslationFromStorage(bookId, chapter);
       
       if (storedTranslation) {
         // Check if stored translation is still valid (same settings)
@@ -145,18 +170,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         });
         
         if (isValid) {
-          console.log('✅ Autoloading stored translation for chapter', currentChapter);
+          console.log('✅ Autoloading stored translation for chapter', chapter);
           setTranslatedContent(storedTranslation.content);
           setIsTranslated(true);
           setIsAutoloaded(true);
         } else {
           console.log('❌ Stored translation is outdated, removing from storage');
-          const key = getTranslationStorageKey(bookId, currentChapter);
+          const key = getTranslationStorageKey(bookId, chapter);
           localStorage.removeItem(key);
         }
       }
     }
-  }, [currentChapter, currentChapterContent, bookId, settings?.targetLanguage]);
+  }, [chapter, currentChapterContent, bookId, settings?.targetLanguage]);
 
   // Handle scroll tracking
   useEffect(() => {
@@ -238,7 +263,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               if (settings?.cacheTranslations !== false && isTranslated && translatedContent) {
                 const html = contentRef.current?.innerHTML;
                 if (html) {
-                  saveTranslationToStorage(bookId, currentChapter, html, lastUseCefr, settings);
+                  saveTranslationToStorage(bookId, chapter, html, lastUseCefr, settings);
                 }
               }
             } else {
@@ -258,10 +283,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   // Restore scroll position from progress
   useEffect(() => {
-    if (progress && contentRef.current && currentChapter === progress.currentChapter) {
+    if (progress && contentRef.current && chapter === progress.currentChapter) {
       contentRef.current.scrollTop = progress.currentPosition;
     }
-  }, [progress, currentChapter]);
+  }, [progress, chapter]);
 
   // Swipe controls implementation
   useEffect(() => {
@@ -339,7 +364,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       contentEl.removeEventListener('pointermove', handlePointerMove);
       contentEl.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [bookContent, currentChapter]);
+  }, [bookContent, chapter]);
 
   /**
    * Translate the current chapter using the backend API.
@@ -429,7 +454,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               setTranslatedContent(finalWrapped);
               setIsTranslated(true);
               setIsAutoloaded(false);
-              saveTranslationToStorage(bookId, currentChapter, finalWrapped, useCefr, settings);
+              saveTranslationToStorage(bookId, chapter, finalWrapped, useCefr, settings);
             }
           }
         }
@@ -797,22 +822,22 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   }
 
   const nextChapter = () => {
-    if (bookContent && currentChapter < bookContent.totalChapters - 1) {
+    if (bookContent && chapter < bookContent.totalChapters - 1) {
       console.log('Moving to next chapter, clearing any translated content');
       setIsTranslated(false);
       setTranslatedContent(null);
       setIsAutoloaded(false);
-      setCurrentChapter(currentChapter + 1);
+      updateChapter(chapter + 1);
     }
   };
 
   const prevChapter = () => {
-    if (currentChapter > 0) {
+    if (chapter > 0) {
       console.log('Moving to previous chapter, clearing any translated content');
       setIsTranslated(false);
       setTranslatedContent(null);
       setIsAutoloaded(false);
-      setCurrentChapter(currentChapter - 1);
+      updateChapter(chapter - 1);
     }
   };
 
@@ -860,7 +885,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           <button
-          onClick={onBack}
+          onClick={handleBack}
           className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           aria-label="Back to Library"
           title="Back to Library"
@@ -876,7 +901,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               {bookContent?.title}
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              {bookContent?.chapterTitles?.[currentChapter]?.label || `Chapter ${currentChapter + 1}`} of {bookContent?.totalChapters}
+              {bookContent?.chapterTitles?.[chapter]?.label || `Chapter ${chapter + 1}`} of {bookContent?.totalChapters}
               <span className="ml-2 space-x-2">
                 {isTranslated && (
                   <>
@@ -900,7 +925,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
                   </>
                 )}
                 {!isTranslated && (() => {
-                  const storedTranslation = settings?.cacheTranslations !== false ? loadTranslationFromStorage(bookId, currentChapter) : null;
+                  const storedTranslation = settings?.cacheTranslations !== false ? loadTranslationFromStorage(bookId, chapter) : null;
                   const currentTargetLanguage = settings?.targetLanguage || "English";
                   const currentCefrLevel = localStorage.getItem("cefrLevel") || "3";
                   const hasValidTranslation = storedTranslation && 
@@ -983,7 +1008,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
                   Error loading book: {error}
                 </div>
                 <button
-                  onClick={onBack}
+                  onClick={handleBack}
                   className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
                 >
                   Back to Library
@@ -1000,13 +1025,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
       {/* Reader Controls */}
       <ReaderControls
-        currentChapter={currentChapter}
+        currentChapter={chapter}
         totalChapters={bookContent?.totalChapters || 1}
         onPrevChapter={prevChapter}
         onNextChapter={nextChapter}
         bookId={bookId}
         chapterTitles={bookContent?.chapterTitles || []}
-        onSelectChapter={setCurrentChapter}
+        onSelectChapter={updateChapter}
         onToggleTts={toggleTts}
         ttsActive={isSpeaking}
         onToggleHighlight={toggleJpdbHighlight}
