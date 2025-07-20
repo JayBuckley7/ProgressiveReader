@@ -154,6 +154,9 @@ class StorageService {
                         } catch (error) {
                             console.warn('⚠️ Failed to extract cover from EPUB:', error);
                         }
+                    } else if (!coverBlob && meta.fileType === 'pdf') {
+                        const extracted = await this.extractCoverFromPdf(file);
+                        if (extracted) coverBlob = extracted;
                     }
 
                     // Upload the book file
@@ -294,6 +297,40 @@ class StorageService {
     }
 
     /**
+     * Extract cover image from a PDF file using pdf.js
+     */
+    private async extractCoverFromPdf(file: File): Promise<Blob | null> {
+        try {
+            await this.loadPdfJs();
+            const pdfjsLib = (window as any).pdfjsLib;
+            if (!pdfjsLib) {
+                throw new Error('pdf.js library failed to load');
+            }
+
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            if (pdf.numPages < 1) {
+                return null;
+            }
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: context, viewport }).promise;
+
+            return await new Promise<Blob | null>((resolve) => {
+                canvas.toBlob((blob) => resolve(blob), 'image/jpeg');
+            });
+        } catch (error) {
+            console.error('Error extracting cover from PDF:', error);
+            return null;
+        }
+    }
+
+    /**
      * Dynamically load epub.js library and its dependencies
      */
     private async loadEpubJs(): Promise<void> {
@@ -309,6 +346,21 @@ class StorageService {
                 .then(() => resolve())
                 .catch(reject);
         });
+    }
+
+    /**
+     * Dynamically load pdf.js library
+     */
+    private async loadPdfJs(): Promise<void> {
+        if ((window as any).pdfjsLib) {
+            return;
+        }
+        await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        const pdfjsLib = (window as any).pdfjsLib;
+        if (!pdfjsLib) {
+            throw new Error('pdf.js failed to load');
+        }
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
     /**
