@@ -1,14 +1,16 @@
 import { useState, useRef } from 'react';
-import { BookMetadata } from '../services/storageService';
+import { BookMetadata, FolderMetadata } from '../services/storageService';
 
 interface BookCardHoverProps {
   book: BookMetadata;
+  folders: FolderMetadata[];
   onSelectBook: (bookId: string) => void;
   onDeleteBook: (bookId: string) => Promise<void>;
   onUpdateCover: (bookId: string, coverFile: File) => Promise<string | undefined>;
+  onAssignFolder: (bookId: string, folderId: string | null) => void;
 }
 
-export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardHoverProps) {
+export function BookCardHover({ book, folders, onSelectBook, onDeleteBook, onUpdateCover, onAssignFolder }: BookCardHoverProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
@@ -131,6 +133,16 @@ export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover 
           <div className="text-xs text-gray-400 mt-1">
             {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}
           </div>
+          <select
+            className="mt-2 text-xs w-full border rounded p-1"
+            value={book.folderId || ''}
+            onChange={(e) => onAssignFolder(book.id as string, e.target.value || null)}
+          >
+            <option value="">No folder</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Delete Button - appears on hover */}
