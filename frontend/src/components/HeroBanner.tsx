@@ -1,12 +1,15 @@
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import { useStorageService } from "../hooks/useStorageService";
 
 export function HeroBanner() {
-  const { user } = useUser(); // Get user from Clerk instead
-  
-  // Placeholder data for now - will need to connect to Flask API
-  const books = []; // Placeholder
-  const vocabulary = []; // Placeholder
-  const masteredWords = 0; // Placeholder
+  const { user } = useUser();
+  // Pull the user's library from the storage service so counts reflect
+  // the current library after Drive sync completes.
+  const { books } = useStorageService();
+
+  // Word tracking not implemented yet
+  const vocabulary: any[] = [];
+  const masteredWords = 0;
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
