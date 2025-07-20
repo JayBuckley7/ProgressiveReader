@@ -212,6 +212,18 @@ class EpubProcessor {
         this.book = this.epubJsLib(epubDataBuffer, { replacements: 'blobUrl' });
         await this.book.ready;
 
+        // If no navigation table of contents exists, create a synthetic one
+        const hasToc = Array.isArray(this.book.navigation?.toc) && this.book.navigation.toc.length > 0;
+        if (!hasToc && Array.isArray(this.book.spine?.spineItems)) {
+            const syntheticToc: { label: string; href: string }[] = [];
+            for (const item of this.book.spine.spineItems) {
+                if (item.linear && item.linear === 'no') continue;
+                syntheticToc.push({ label: item.idref, href: item.href });
+            }
+            if (!this.book.navigation) this.book.navigation = { toc: syntheticToc };
+            else this.book.navigation.toc = syntheticToc;
+        }
+
         if (!this.book.spine?.spineItems?.length) {
             throw new Error('EPUB parsing failed – empty spine.');
         }
@@ -276,6 +288,7 @@ class EpubProcessor {
     /* ---- helper: remove <script> and <link rel="stylesheet"> ---- */
     _stripScriptsAndStyles(doc: Document): void {
         doc.querySelectorAll('script, link[rel="stylesheet"]').forEach(el => el.remove());
+        doc.querySelectorAll('style').forEach(el => el.remove());
     }
 
     /* ---- helper: flatten toc recursively ---- */
