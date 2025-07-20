@@ -158,8 +158,21 @@ class TextProcessor {
         pageBreak = true;
       }
 
-      const textNodes = Array.from(p.getElementsByTagName('w:t')).map(t => t.textContent);
-      const text = textNodes.join('');
+      const textParts: string[] = [];
+      const walker = doc.createTreeWalker(p, NodeFilter.SHOW_ELEMENT, null);
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Element;
+        if (node.tagName === 'w:t') {
+          textParts.push(node.textContent || '');
+        } else if (node.tagName === 'w:br') {
+          if (node.getAttribute('w:type') === 'page') {
+            pageBreak = true;
+          } else {
+            textParts.push('\n');
+          }
+        }
+      }
+      const text = textParts.join('');
       if (!text.trim()) continue;
 
       const style: any = {};
@@ -275,7 +288,8 @@ class TextProcessor {
         if (p.style.marginBottom) styles.push(`margin-bottom:${p.style.marginBottom}`);
       }
       const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
-      html += `<p${styleAttr}>${esc(p.text)}</p>`;
+      const textWithBreaks = esc(p.text).replace(/\n/g, '<br/>');
+      html += `<p${styleAttr}>${textWithBreaks}</p>`;
     }
     return html;
   }
