@@ -43,6 +43,7 @@ export interface BookMetadata {
     icloudFileId?: string;
     coverImageId?: string;
     coverUrl?: string;
+    folderId?: string;
     totalChapters?: number;
     uploadedAt: Date;
     // Metadata only
@@ -56,6 +57,11 @@ export interface ReadingProgress {
     currentChapter: number;
     currentPosition: number;
     lastUpdated: Date;
+}
+
+export interface FolderMetadata {
+    id: string;
+    name: string;
 }
 
 type Provider = 'google' | 'apple' | 'microsoft' | 'email';
@@ -112,7 +118,7 @@ class StorageService {
      * Upload book to user's cloud storage - NEVER to our servers
      * Only metadata pointers are stored in our backend
      */
-    async uploadBook(file: File, meta: {title: string; fileType: string; cover?: Blob}, clerkUser?: any): Promise<BookMetadata> {
+    async uploadBook(file: File, meta: {title: string; fileType: string; cover?: Blob; folderId?: string}, clerkUser?: any): Promise<BookMetadata> {
         console.log('Uploading book to user\'s cloud storage. Privacy-first: no content stored in our backend.');
         
         const provider = this.detectProviderFromClerkUser(clerkUser);
@@ -195,7 +201,8 @@ class StorageService {
                         fileName: file.name,
                         fileType: meta.fileType,
                         coverImageId: coverImageId,
-                        uploadedAt: new Date().toISOString()
+                        uploadedAt: new Date().toISOString(),
+                        folderId: meta.folderId
                     });
 
                     if (!metadataSuccess) {
@@ -210,6 +217,7 @@ class StorageService {
                         coverImageId: coverImageId,
                         coverUrl: coverImageId ? `https://drive.google.com/thumbnail?id=${coverImageId}&sz=w400-h600` : undefined,
                         uploadedAt: new Date(),
+                        folderId: meta.folderId,
                         userId: 'current-user',
                         cloudProvider: 'google'
                     };
@@ -561,6 +569,7 @@ class StorageService {
                     coverImageId: coverImageId,
                     coverUrl: undefined, // Will be set asynchronously
                     uploadedAt: bookMetadata.uploadedAt ? new Date(bookMetadata.uploadedAt) : new Date(driveFile.modifiedTime || Date.now()),
+                    folderId: bookMetadata.folderId,
                     userId: 'current-user', // We don't store user ID since we're privacy-first
                     cloudProvider: 'google' as const
                 };
@@ -839,6 +848,51 @@ class StorageService {
             default:
                 throw new Error(`Cannot open folder for provider: ${provider}. Cloud storage not configured.`);
         }
+    }
+
+    /**
+     * Retrieve list of folders from metadata
+     */
+    async getFolders(): Promise<FolderMetadata[]> {
+        const metadataInfo = await gDriveService.getMetadataFile();
+        if (!metadataInfo) return [];
+        const folderEntries = metadataInfo.data.folders || {};
+        return Object.entries(folderEntries).map(([id, data]: [string, any]) => ({
+            id,
+            name: data.name || 'Unnamed'
+        }));
+    }
+
+    /**
+     * Create a new folder entry in metadata
+     */
+    async createFolder(name: string): Promise<FolderMetadata | null> {
+        const metadataInfo = await gDriveService.getMetadataFile();
+        if (!metadataInfo) return null;
+        const { fileId, data } = metadataInfo;
+        data.folders = data.folders || {};
+        const id = crypto.randomUUID();
+        data.folders[id] = { name };
+        const success = await gDriveService.updateMetadataFile(fileId, data);
+        return success ? { id, name } : null;
+    }
+
+    /**
+     * Assign a book to a folder (or remove if folderId null)
+     */
+    async assignBookToFolder(bookId: string, folderId: string | null): Promise<void> {
+        const metadataInfo = await gDriveService.getMetadataFile();
+        if (!metadataInfo) return;
+        const { fileId, data } = metadataInfo;
+        data.books = data.books || {};
+        if (!data.books[bookId]) return;
+        if (folderId) {
+            data.books[bookId].folderId = folderId;
+        } else {
+            delete data.books[bookId].folderId;
+        }
+        await gDriveService.updateMetadataFile(fileId, data);
+        this.clearBookListCache();
     }
 
     async getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
