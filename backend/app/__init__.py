@@ -1,7 +1,7 @@
 """Flask application factory that registers blueprints and routes."""
 import os
 import logging
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, redirect, url_for, request
 from flask_cors import CORS
 from config import Config
 from .models import db
@@ -71,6 +71,14 @@ def create_app(config_class=Config) -> Flask:
             return send_from_directory(app.static_folder, path)
         else:
             return send_from_directory(app.static_folder, "index.html")
+
+    @app.errorhandler(404)
+    def redirect_404(e):
+        """Redirect unknown routes to the homepage for the SPA."""
+        # Avoid redirect loops for API or static requests
+        if request.path.startswith("/api"):
+            return e, 404
+        return redirect(url_for("main.index"))
 
     # --- Health Check Endpoint ---
     @app.route('/health')
