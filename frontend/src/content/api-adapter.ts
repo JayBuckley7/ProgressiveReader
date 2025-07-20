@@ -2,6 +2,7 @@ import { Token, Card, CardState } from '../types';
 import { showError, Canceled } from '../utils/util';
 import { reverseIndex } from './parse';
 import { Keybind } from '../types';
+import { vocabBank } from '../services/vocabBank';
 
 // Configuration interface
 export interface JpHighlighterConfig {
@@ -245,7 +246,10 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
         if (tokens.length > 0) {
             console.log('Sample token:', JSON.stringify(tokens[0]));
         }
-                
+
+        // Update vocabulary bank
+        vocabBank.updateFromTokens(tokens);
+
         return tokens;
     } catch (error) {
         console.error('Error in parseText:', error);
@@ -283,6 +287,9 @@ export async function mineWord(card: Card, forq: boolean, sentence?: string): Pr
         }
         
         const result = await response.json();
+        if (result.success) {
+            vocabBank.markSaved(card);
+        }
         return result.success;
     } catch (error) {
         showError(error instanceof Error ? error : String(error));
@@ -320,12 +327,15 @@ export async function updateWordState(card: Card, flag: 'blacklist' | 'never-for
         }
         
         const result = await response.json();
-        
+
         // Update the UI if successful
         if (result.success && result.newState) {
             updateUIForCard(card, result.newState);
+            if (flag === 'never-forget' && state) {
+                vocabBank.markMastered(card);
+            }
         }
-        
+
         return result.success;
     } catch (error) {
         showError(error instanceof Error ? error : String(error));

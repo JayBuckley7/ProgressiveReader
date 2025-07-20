@@ -1008,6 +1008,20 @@ class StorageService {
             return null;
         }
     }
+
+    /**
+     * Save vocabulary list to cloud storage
+     */
+    async saveVocabulary(words: any[]): Promise<void> {
+        await gDriveService.saveVocab(words);
+    }
+
+    /**
+     * Load vocabulary list from cloud storage
+     */
+    async loadVocabulary(): Promise<any[] | null> {
+        return await gDriveService.loadVocab();
+    }
 }
 
 export const storageService = new StorageService();
