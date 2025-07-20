@@ -23,7 +23,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     }
   };
 
-  const { books, folders, createFolder, assignBookToFolder, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
+  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
   const { isDriveConnected } = useGoogleDrive();
 
   // All book handling is delegated to the storage service.
@@ -31,8 +31,6 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const [showFolders, setShowFolders] = useState(() => localStorage.getItem('prShowFolders') !== 'false');
-  const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,19 +82,6 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
       setUploadProgress(0);
     }
   };
-
-  const handleAddFolder = async () => {
-    const name = prompt('Folder name?');
-    if (name) await createFolder(name);
-  };
-
-  const toggleFolders = () => {
-    const next = !showFolders;
-    setShowFolders(next);
-    localStorage.setItem('prShowFolders', String(next));
-  };
-
-  const displayedBooks = activeFolder ? books.filter(b => b.folderId === activeFolder) : books;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -168,22 +153,6 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                 Add Book
               </>
             )}
-          </button>
-          <button
-            onClick={handleAddFolder}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Folder
-          </button>
-          <button
-            onClick={toggleFolders}
-            className="px-2 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            title="Toggle folder view"
-          >
-            {showFolders ? '📂' : '📁'}
           </button>
           <button
             onClick={() => setShowSettings(true)}
@@ -266,29 +235,17 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           </button>
         </div>
       ) : (
-        <>
-          {showFolders && folders.length > 0 && (
-            <div className="flex gap-2 mb-4">
-              <button className={`px-2 py-1 rounded ${activeFolder === null ? 'bg-blue-600 text-white' : 'bg-gray-200'}`} onClick={() => setActiveFolder(null)}>All</button>
-              {folders.map(f => (
-                <button key={f.id} className={`px-2 py-1 rounded ${activeFolder === f.id ? 'bg-blue-600 text-white' : 'bg-gray-200'}`} onClick={() => setActiveFolder(f.id)}>{f.name}</button>
-              ))}
-            </div>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {displayedBooks.map((book) => (
-              <BookCardHover
-                key={book.id}
-                book={book}
-                folders={folders}
-                onSelectBook={handleSelectBook}
-                onDeleteBook={deleteBook}
-                onUpdateCover={updateBookCover}
-                onAssignFolder={assignBookToFolder}
-              />
-            ))}
-          </div>
-        </>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {books.map((book) => (
+            <BookCardHover
+              key={book.id}
+              book={book}
+              onSelectBook={handleSelectBook}
+              onDeleteBook={deleteBook}
+              onUpdateCover={updateBookCover}
+            />
+          ))}
+        </div>
       )}
 
       {showSettings && (

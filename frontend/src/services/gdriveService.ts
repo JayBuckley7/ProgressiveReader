@@ -833,13 +833,12 @@ class GDriveService {
   /**
    * Add book metadata entry
    */
-  public async addBookMetadata(bookFileId: string, bookData: {
-    title: string;
-    fileName: string;
-    fileType: string;
-    coverImageId?: string;
+  public async addBookMetadata(bookFileId: string, bookData: { 
+    title: string; 
+    fileName: string; 
+    fileType: string; 
+    coverImageId?: string; 
     uploadedAt: string;
-    folderId?: string;
   }): Promise<boolean> {
     const metadataInfo = await this.getMetadataFile();
     if (!metadataInfo) {
@@ -851,8 +850,8 @@ class GDriveService {
     data.books = data.books || {};
     data.covers = data.covers || {};
 
-    const { coverImageId, folderId, ...bookEntry } = bookData;
-    data.books[bookFileId] = { ...bookEntry, ...(folderId ? { folderId } : {}) };
+    const { coverImageId, ...bookEntry } = bookData;
+    data.books[bookFileId] = bookEntry;
     if (coverImageId) {
       data.covers[bookFileId] = coverImageId;
     }
