@@ -447,10 +447,15 @@ export function useStorageService() {
     try {
       const settings = await storageService.loadSettings();
       return settings;
-    } catch (error) {
-      console.error('Error loading settings:', error);
-      // Don't show error toast for settings loading failure - just use defaults
-      return null;
+    } catch (error: any) {
+      if (error.message === 'UNAUTHORIZED') {
+        toast.error('Session expired, please sign in again');
+        throw error;
+      } else {
+        console.error('Error loading settings:', error);
+        // Don't show error toast for generic settings loading failure - just use defaults
+        return null;
+      }
     }
   };
 

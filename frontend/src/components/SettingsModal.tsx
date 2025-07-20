@@ -205,15 +205,17 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     setIsCloudLoading(true);
     try {
       const cloudSettings = await loadSettings();
-      if (cloudSettings) {
+      if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
         toast.success('Settings loaded from cloud storage successfully!');
       } else {
         toast.info('No settings found in cloud storage');
       }
-    } catch (error) {
-      console.error('Cloud load error:', error);
-      toast.error('Failed to load settings from cloud storage');
+    } catch (error: any) {
+      if (error.message !== 'UNAUTHORIZED') {
+        console.error('Cloud load error:', error);
+        toast.error('Failed to load settings from cloud storage');
+      }
     } finally {
       setIsCloudLoading(false);
     }
