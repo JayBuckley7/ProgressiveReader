@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { storageService, BookMetadata, ReadingProgress, FolderMetadata } from '../services/storageService';
+import { storageService, BookMetadata, ReadingProgress } from '../services/storageService';
 import { gDriveService } from '../services/gdriveService';
 import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibrary';
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
@@ -26,7 +26,6 @@ export function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [books, setBooks] = useState<BookMetadata[]>([]);
-  const [folders, setFolders] = useState<FolderMetadata[]>([]);
   const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
@@ -61,8 +60,6 @@ export function useStorageService() {
       };
 
       const userBooks = await storageService.getUserBooks(onCoverReady);
-      const userFolders = await storageService.getFolders();
-      setFolders(userFolders);
 
       const mergedBooks = userBooks.map(book => {
         const cached = coverMap.get(book.id);
@@ -95,7 +92,6 @@ export function useStorageService() {
     setIsLoading(true);
     const offline = await getOfflineBooksWithCovers();
     setBooks(offline);
-    setFolders([]);
     setIsLoading(false);
   }, []);
 
@@ -181,7 +177,6 @@ export function useStorageService() {
         }
 
         setBooks([]);
-        setFolders([]);
         lastUserIdRef.current = null;
 
         // SECURITY: Clear Google Drive tokens when no Clerk user
@@ -375,7 +370,6 @@ export function useStorageService() {
     if (window.Clerk) {
       await window.Clerk.signOut();
       setBooks([]); // Clear books when signing out
-      setFolders([]);
       lastUserIdRef.current = null;
       lastSessionToastRef.current = 0;
 
@@ -437,33 +431,6 @@ export function useStorageService() {
     }
   };
 
-  const createFolder = async (name: string) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to create folders');
-      return null;
-    }
-    try {
-      const folder = await storageService.createFolder(name);
-      if (folder) setFolders((f) => [...f, folder]);
-      return folder;
-    } catch (error) {
-      console.error('Error creating folder:', error);
-      toast.error('Failed to create folder');
-      return null;
-    }
-  };
-
-  const assignBookToFolder = async (bookId: string, folderId: string | null) => {
-    if (!clerkUser) return;
-    try {
-      await storageService.assignBookToFolder(bookId, folderId);
-      setBooks((current) => current.map(b => b.id === bookId ? { ...b, folderId: folderId || undefined } : b));
-    } catch (error) {
-      console.error('Error assigning folder:', error);
-      toast.error('Failed to change folder');
-    }
-  };
-
   const saveSettings = async (settings: any) => {
     if (!clerkUser) {
       toast.error('Please sign in to save settings');
@@ -511,7 +478,6 @@ export function useStorageService() {
 
   return {
     books,
-    folders,
     isLoading,
     isAuthenticated: !!clerkUser && clerkLoaded,
     signIn,
@@ -524,8 +490,6 @@ export function useStorageService() {
     saveReadingProgress,
     openCloudFolder,
     syncBooks,
-    createFolder,
-    assignBookToFolder,
     downloadBookForOffline,
     saveSettings,
     loadSettings
