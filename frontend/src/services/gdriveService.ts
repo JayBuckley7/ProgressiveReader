@@ -268,29 +268,58 @@ class GDriveService {
   }
 
   private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
-    try {
-      // Get authentication headers for the API call
-      const authHeaders = await this.getAuthHeaders();
-      console.log('[GDriveService] Headers being sent to /drive/token:', authHeaders);
-      
-      const response = await fetch('/drive/token', {
-        method: 'POST',
-        headers: authHeaders,
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[GDriveService] Error fetching access token from server:', errorText);
-        console.error('[GDriveService] Response status:', response.status);
-        console.error('[GDriveService] Response headers:', response.headers);
-        return null;
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[GDriveService] Attempt ${attempt}/${maxRetries} to fetch access token from server...`);
+        
+        // Get authentication headers for the API call
+        const authHeaders = await this.getAuthHeaders();
+        console.log('[GDriveService] Headers being sent to /drive/token:', authHeaders);
+        
+        const response = await fetch('/drive/token', {
+          method: 'POST',
+          headers: authHeaders,
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[GDriveService] Attempt ${attempt} failed - Error fetching access token from server:`, errorText);
+          console.error('[GDriveService] Response status:', response.status);
+          console.error('[GDriveService] Response headers:', response.headers);
+          
+          // If it's an auth error and we have more retries, wait a bit and try again
+          if (response.status === 401 && attempt < maxRetries) {
+            console.log(`[GDriveService] Auth error on attempt ${attempt}, waiting 1 second before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            lastError = new Error(`Authentication failed: ${errorText}`);
+            continue;
+          }
+          
+          lastError = new Error(`HTTP ${response.status}: ${errorText}`);
+          return null;
+        }
+        
+        const tokenData: TokenData = await response.json();
+        console.log('[GDriveService] Access token fetched from server successfully:', tokenData);
+        return tokenData;
+        
+      } catch (error) {
+        console.error(`[GDriveService] Attempt ${attempt} failed with exception:`, error);
+        lastError = error;
+        
+        // If we have more retries, wait a bit and try again
+        if (attempt < maxRetries) {
+          console.log(`[GDriveService] Waiting 1 second before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-      const tokenData: TokenData = await response.json();
-      console.log('[GDriveService] Access token fetched from server:', tokenData);
-      return tokenData;
-    } catch (error) {
-      console.error('[GDriveService] Exception while fetching access token from server:', error);
-      return null;
     }
+    
+    console.error('[GDriveService] All attempts to fetch access token failed. Last error:', lastError);
+    return null;
   }
 
   // Helper method to get auth headers
@@ -299,14 +328,25 @@ class GDriveService {
     if (typeof window !== 'undefined' && window.Clerk) {
       try {
         console.log('[GDriveService] Attempting to get Clerk session token...');
+        
+        // Check if Clerk is fully loaded
+        if (!window.Clerk.session) {
+          console.log('[GDriveService] Clerk session not available yet, waiting...');
+          // Wait a bit for Clerk to initialize
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
         const token = await window.Clerk.session?.getToken();
         console.log('[GDriveService] Clerk token result:', token ? 'Token received' : 'No token');
+        
         if (token) {
           console.log('[GDriveService] Returning auth headers with token');
           return {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           };
+        } else {
+          console.log('[GDriveService] No token available from Clerk session');
         }
       } catch (error) {
         console.error('[GDriveService] Error getting Clerk token:', error);
