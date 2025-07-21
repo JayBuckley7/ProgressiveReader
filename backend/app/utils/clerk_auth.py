@@ -11,13 +11,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Initialize Clerk client
-clerk_secret_key = os.getenv("CLERK_SECRET_KEY")
+clerk_secret_key = os.getenv('CLERK_SECRET_KEY')
 if not clerk_secret_key:
-    logger.error("CLERK_SECRET_KEY not found in environment variables")
-    raise RuntimeError(
-        "CLERK_SECRET_KEY is required for authentication middleware"
-    )
-clerk = Clerk(bearer_auth=clerk_secret_key)
+    logger.warning("CLERK_SECRET_KEY not found in environment variables")
+    clerk = None
+else:
+    clerk = Clerk(bearer_auth=clerk_secret_key)
 
 
 def verify_session_token(token):
