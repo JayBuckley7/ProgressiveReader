@@ -732,6 +732,7 @@ class StorageService {
                     return coverUrl;
                 } else {
                     console.warn(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
+
                 }
             }
             

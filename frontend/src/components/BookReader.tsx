@@ -191,6 +191,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
   const [pdfPageCount, setPdfPageCount] = useState(0);
   const [pdfCurrentPage, setPdfCurrentPage] = useState(initialPdfPage);
+
   
   const [showSettings, setShowSettings] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -956,6 +957,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           'pdf'
         );
       }
+
     }
   };
 
