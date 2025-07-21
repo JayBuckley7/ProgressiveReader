@@ -174,7 +174,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     }
   };
 
-  // Cloud save functionality
+  // Manual cloud save functionality (force save current state)
   const handleCloudSave = async () => {
     if (!isAuthenticated) {
       toast.error('Please sign in to save settings to cloud storage');
@@ -186,16 +186,19 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       const settingsToSave = createSettingsObject();
       const success = await saveSettings(settingsToSave);
       if (success) {
-        toast.success('Settings saved to cloud storage successfully!');
+        toast.success('Settings manually saved to Google Drive successfully!');
+      } else {
+        toast.error('Failed to save settings to Google Drive');
       }
     } catch (error) {
       console.error('Cloud save error:', error);
+      toast.error('Error saving settings to Google Drive');
     } finally {
       setIsCloudLoading(false);
     }
   };
 
-  // Cloud load functionality
+  // Manual cloud load functionality (overwrite current settings)
   const handleCloudLoad = async () => {
     if (!isAuthenticated) {
       toast.error('Please sign in to load settings from cloud storage');
@@ -207,14 +210,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       const cloudSettings = await loadSettings();
       if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
-        toast.success('Settings loaded from cloud storage successfully!');
+        toast.success('Settings loaded from Google Drive successfully!');
       } else {
-        toast.info('No settings found in cloud storage');
+        toast.info('No settings.json file found in Google Drive');
       }
     } catch (error: any) {
       if (error.message !== 'UNAUTHORIZED') {
         console.error('Cloud load error:', error);
-        toast.error('Failed to load settings from cloud storage');
+        toast.error('Failed to load settings from Google Drive');
       }
     } finally {
       setIsCloudLoading(false);
@@ -524,6 +527,20 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
               </div>
 
+              {/* Auto-save Info */}
+              {isAuthenticated && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-blue-600 dark:text-blue-400">🔄</span>
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Cloud Sync Active</span>
+                  </div>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Settings automatically load from Google Drive when you sign in and save when changed.
+                    Manual buttons below can force sync if needed.
+                  </p>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-3">
                 {/* Cloud Storage Buttons */}
                 {isAuthenticated && (
@@ -541,7 +558,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       ) : (
                         <>
                           <span>☁️</span>
-                          Save to Cloud
+                          Force Save Now
                         </>
                       )}
                     </button>
@@ -558,7 +575,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       ) : (
                         <>
                           <span>📥</span>
-                          Load from Cloud
+                          Reload from Cloud
                         </>
                       )}
                     </button>

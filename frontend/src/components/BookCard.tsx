@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useStorageService } from '../hooks/useStorageService';
 import { BookReader } from "./BookReader";
 import { BookMetadata, ReadingProgress } from '../services/storageService';
@@ -43,12 +43,44 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
     getReadingProgress(book.id).then(setProgress);
   }, [book.id, getReadingProgress]);
   
-  const progressPercentage = progress && book.totalPages 
-    ? Math.round((progress.currentPage / progress.totalPages) * 100)
-    : 0;
+  const progressPercentage = useMemo(() => {
+    if (!progress) return 0;
+    
+    // For PDFs, use page-based progress
+    if (progress.fileType === 'pdf' && progress.totalPages && progress.currentPage) {
+      return Math.round((progress.currentPage / progress.totalPages) * 100);
+    }
+    
+    // For other books, use chapter-based progress
+    if (book.totalChapters && progress.currentChapter !== undefined) {
+      return Math.round(((progress.currentChapter + 1) / book.totalChapters) * 100);
+    }
+    
+    // Fallback: if we have any progress, show some indication
+    if (progress.currentChapter > 0 || progress.currentPage > 0) {
+      return 10; // Show at least some progress
+    }
+    
+    return 0;
+  }, [progress, book.totalChapters, book.totalPages]);
 
-  const handleOpenBook = () => {
-    if (book.fileId) {
+  const handleOpenBook = (resumeFromProgress = false) => {
+    if (onSelectBook) {
+      // If using external navigation, pass the book ID
+      if (resumeFromProgress && progress) {
+        // Add chapter/page info to URL for resumption
+        const baseUrl = `/book/${book.id}`;
+        if (progress.fileType === 'pdf' && progress.currentPage) {
+          window.location.href = `${baseUrl}?page=${progress.currentPage}`;
+        } else if (progress.currentChapter !== undefined) {
+          window.location.href = `${baseUrl}?ch=${progress.currentChapter}`;
+        } else {
+          onSelectBook(book.id);
+        }
+      } else {
+        onSelectBook(book.id);
+      }
+    } else if (book.fileId) {
       setShowReader(true);
     } else {
       console.log("No file available for:", book.title);
@@ -105,7 +137,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   };
 
   const handleCardClick = () => {
-    onSelectBook?.(book.id as string);
+    handleOpenBook(false);
   };
 
   if (showReader) {
@@ -176,6 +208,46 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
           <div className="text-xs text-gray-400 mt-1">
             {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}
           </div>
+          
+          {/* Reading Progress Bar */}
+          {progressPercentage > 0 && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <span>Progress</span>
+                <span>{progressPercentage}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                <div 
+                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${progressPercentage}%` }}
+                ></div>
+              </div>
+                             {progress && (
+                 <div className="flex items-center justify-between mt-1">
+                   <div className="text-xs text-gray-400">
+                     {progress.fileType === 'pdf' && progress.currentPage && progress.totalPages ? (
+                       `Page ${progress.currentPage} of ${progress.totalPages}`
+                     ) : progress.currentChapter !== undefined ? (
+                       `Chapter ${progress.currentChapter + 1}${book.totalChapters ? ` of ${book.totalChapters}` : ''}`
+                     ) : (
+                       'In progress'
+                     )}
+                   </div>
+                   <button
+                     onClick={(e) => {
+                       e.preventDefault();
+                       e.stopPropagation();
+                       handleOpenBook(true);
+                     }}
+                     className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors"
+                     title="Resume reading from where you left off"
+                   >
+                     Resume
+                   </button>
+                 </div>
+               )}
+            </div>
+          )}
         </div>
 
         {/* Delete Button - appears on hover */}

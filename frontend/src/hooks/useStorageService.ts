@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { storageService, BookMetadata, ReadingProgress } from '../services/storageService';
+import { storageService, BookMetadata, ReadingProgress, Folder } from '../services/storageService';
 import { gDriveService } from '../services/gdriveService';
 import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibrary';
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
@@ -26,6 +26,7 @@ export function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [books, setBooks] = useState<BookMetadata[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
@@ -48,10 +49,9 @@ export function useStorageService() {
       console.log('[useStorageService] Silently refreshing books...');
 
       const previous = booksRef.current;
-      const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh) - URL: ${coverUrl.substring(0, 50)}...`);
+        console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
         setBooks(currentBooks => {
           const updatedBooks = currentBooks.map(book =>
             book.id === bookId ? { ...book, coverUrl } : book
@@ -63,22 +63,18 @@ export function useStorageService() {
 
       const userBooks = await storageService.getUserBooks(onCoverReady);
 
-      const mergedBooks = userBooks.map(book => {
-        const cached = coverMap.get(book.id);
-        return cached ? { ...book, coverUrl: cached } : book;
-      });
-
+      // No need to merge covers manually - storageService handles persistent URLs
       if (areBooksEqual(userBooks, previous)) {
-        setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        setBooks(userBooks);
+        booksRef.current = userBooks;
       } else {
         const newIds = new Set(userBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
         if (removed.length > 0) {
           storageService.cleanupBlobUrls(removed);
         }
-        setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        setBooks(userBooks);
+        booksRef.current = userBooks;
       }
 
       console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
@@ -110,11 +106,9 @@ export function useStorageService() {
     try {
       const previous = booksRef.current;
 
-      const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
-
       // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        console.log(`[useStorageService] Cover ready for book ${bookId} - URL: ${coverUrl.substring(0, 50)}...`);
+        console.log(`[useStorageService] Cover ready for book ${bookId}`);
         setBooks(currentBooks => {
           const updatedBooks = currentBooks.map(book =>
             book.id === bookId
@@ -126,25 +120,27 @@ export function useStorageService() {
         });
       };
 
-      const userBooks = await storageService.getUserBooks(onCoverReady);
+      const [userBooks, userFolders] = await Promise.all([
+        storageService.getUserBooks(onCoverReady),
+        storageService.getFolders(clerkUser)
+      ]);
 
-      const mergedBooks = userBooks.map(book => {
-        const cached = coverMap.get(book.id);
-        return cached ? { ...book, coverUrl: cached } : book;
-      });
+      // No need to merge covers manually - storageService handles persistent URLs
 
       if (areBooksEqual(userBooks, previous)) {
-        setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        setBooks(userBooks);
+        booksRef.current = userBooks;
       } else {
         const newIds = new Set(userBooks.map(b => b.id));
         const removed = previous.filter(b => !newIds.has(b.id));
         if (removed.length > 0) {
           storageService.cleanupBlobUrls(removed);
         }
-        setBooks(mergedBooks);
-        booksRef.current = mergedBooks;
+        setBooks(userBooks);
+        booksRef.current = userBooks;
       }
+
+      setFolders(userFolders);
       lastSessionToastRef.current = 0;
     } catch (error) {
       console.error('Error loading books:', error);
@@ -339,8 +335,6 @@ export function useStorageService() {
   };
 
   const getReadingProgress = async (bookId: string): Promise<ReadingProgress | null> => {
-    if (!clerkUser) return null;
-    
     try {
       return await storageService.getReadingProgress(bookId);
     } catch (error) {
@@ -350,13 +344,25 @@ export function useStorageService() {
   };
 
   const saveReadingProgress = async (progress: ReadingProgress) => {
-    if (!clerkUser) return;
-    
     try {
       await storageService.saveReadingProgress(progress);
     } catch (error) {
       console.error('Error saving reading progress:', error);
-      toast.error('Failed to save reading progress');
+    }
+  };
+
+  const saveBookProgress = async (
+    bookId: string, 
+    currentChapter: number, 
+    currentPosition: number = 0, 
+    currentPage?: number,
+    totalPages?: number,
+    fileType?: string
+  ): Promise<void> => {
+    try {
+      await storageService.saveBookProgress(bookId, currentChapter, currentPosition, currentPage, totalPages, fileType);
+    } catch (error) {
+      console.error('Error saving book progress:', error);
     }
   };
 
@@ -440,17 +446,20 @@ export function useStorageService() {
 
   const saveSettings = async (settings: any) => {
     if (!clerkUser) {
-      toast.error('Please sign in to save settings');
+      console.warn('Cannot save settings: User not authenticated');
       return false;
     }
 
     try {
-      await storageService.saveSettings(settings);
-      toast.success('Settings saved');
-      return true;
+      const success = await storageService.saveSettings(settings);
+      if (success) {
+        console.log('Settings saved to cloud successfully');
+      } else {
+        console.warn('Failed to save settings to cloud');
+      }
+      return success;
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error('Failed to save settings');
       return false;
     }
   };
@@ -483,8 +492,82 @@ export function useStorageService() {
     }
   };
 
+  // Folder management methods
+  const createFolder = async (name: string, parentId?: string) => {
+    if (!clerkUser) {
+      toast.error('Please sign in to create folders');
+      return;
+    }
+
+    try {
+      const newFolder = await storageService.createFolder(name, parentId, clerkUser);
+      setFolders(current => [...current, newFolder]);
+      toast.success(`Folder "${name}" created successfully`);
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      toast.error('Failed to create folder');
+    }
+  };
+
+  const updateFolder = async (folderId: string, updates: { name?: string; parentId?: string }) => {
+    if (!clerkUser) {
+      toast.error('Please sign in to update folders');
+      return;
+    }
+
+    try {
+      const updatedFolder = await storageService.updateFolder(folderId, updates, clerkUser);
+      setFolders(current => 
+        current.map(folder => 
+          folder.id === folderId ? updatedFolder : folder
+        )
+      );
+      toast.success('Folder updated successfully');
+    } catch (error) {
+      console.error('Error updating folder:', error);
+      toast.error('Failed to update folder');
+    }
+  };
+
+  const deleteFolder = async (folderId: string) => {
+    if (!clerkUser) {
+      toast.error('Please sign in to delete folders');
+      return;
+    }
+
+    try {
+      await storageService.deleteFolder(folderId, clerkUser);
+      setFolders(current => current.filter(folder => folder.id !== folderId));
+      toast.success('Folder deleted successfully');
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  const moveBookToFolder = async (bookId: string, folderId: string | null) => {
+    if (!clerkUser) {
+      toast.error('Please sign in to move books');
+      return;
+    }
+
+    try {
+      await storageService.moveBookToFolder(bookId, folderId, clerkUser);
+      setBooks(current => 
+        current.map(book => 
+          book.id === bookId ? { ...book, folderId } : book
+        )
+      );
+      toast.success('Book moved successfully');
+    } catch (error) {
+      console.error('Error moving book:', error);
+      toast.error('Failed to move book');
+    }
+  };
+
   return {
     books,
+    folders,
     isLoading,
     isAuthenticated: !!clerkUser && clerkLoaded,
     signIn,
@@ -495,10 +578,15 @@ export function useStorageService() {
     updateBookCover,
     getReadingProgress,
     saveReadingProgress,
+    saveBookProgress,
     openCloudFolder,
     syncBooks,
     downloadBookForOffline,
     saveSettings,
-    loadSettings
+    loadSettings,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    moveBookToFolder
   };
 }

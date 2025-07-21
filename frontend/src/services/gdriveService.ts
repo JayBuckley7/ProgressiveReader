@@ -51,6 +51,7 @@ class GDriveService {
   private userProfile: GoogleUser | null = null;
   private listeners: Array<(isSignedIn: boolean) => void> = [];
   private appFolderId: string | null = null;
+  private tokenRefreshTimer: NodeJS.Timeout | null = null;
 
   private loadTokensFromStorage(): boolean {
     if (typeof window === 'undefined') return false;
@@ -87,6 +88,7 @@ class GDriveService {
   constructor() {
     this.loadTokensFromStorage(); // ensures isSignedIn() reflects saved token
     this.loadGoogleScripts();
+    this.startTokenRefreshTimer(); // Start proactive token refresh
   }
 
   private async loadGoogleScripts(): Promise<void> {
@@ -246,6 +248,104 @@ class GDriveService {
     });
   }
 
+  /**
+   * Attempt to refresh the access token silently using the existing session
+   */
+  private async attemptSilentTokenRefresh(): Promise<boolean> {
+    if (!this.tokenClient) {
+      console.warn('[GDriveService] Token client not available for silent refresh');
+      return false;
+    }
+
+    // For Google's OAuth2, we need to check if there's an active session
+    // and try to get a new token without user interaction
+    return new Promise((resolve) => {
+      try {
+        // Store the original callback
+        const originalCallback = this.tokenClient.callback;
+        let responseReceived = false;
+        
+        // Set up a timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          if (!responseReceived) {
+            console.log('[GDriveService] Silent token refresh timed out');
+            this.tokenClient.callback = originalCallback;
+            resolve(false);
+          }
+        }, 10000); // 10 second timeout
+
+        this.tokenClient.callback = (tokenResponse: any) => {
+          responseReceived = true;
+          clearTimeout(timeout);
+          
+          // Restore original callback
+          this.tokenClient.callback = originalCallback;
+          
+          if (tokenResponse.error) {
+            console.log('[GDriveService] Silent token refresh failed:', tokenResponse.error);
+            resolve(false);
+          } else {
+            console.log('[GDriveService] Silent token refresh successful!');
+            this.handleTokenResponse(tokenResponse, false);
+            resolve(true);
+          }
+        };
+
+        // Try to request a new token silently
+        // The empty prompt should attempt to use existing session cookies
+        this.tokenClient.requestAccessToken({ 
+          prompt: '',
+          hint: this.userProfile?.email || '' // Use hint if we have user email
+        });
+        
+      } catch (error) {
+        console.error('[GDriveService] Error during silent token refresh:', error);
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Start a timer that proactively refreshes tokens before they expire
+   */
+  private startTokenRefreshTimer(): void {
+    this.stopTokenRefreshTimer(); // Clear any existing timer
+    
+    const checkInterval = 5 * 60 * 1000; // Check every 5 minutes
+    
+    this.tokenRefreshTimer = setInterval(async () => {
+      if (this.isSignedIn() && this.accessTokenExpiry) {
+        const timeUntilExpiry = this.accessTokenExpiry - Date.now();
+        const refreshThreshold = 10 * 60 * 1000; // Refresh when 10 minutes left
+        
+        if (timeUntilExpiry < refreshThreshold && timeUntilExpiry > 0) {
+          console.log('[GDriveService] 🔄 Proactively refreshing token (expires in', Math.round(timeUntilExpiry / 60000), 'minutes)');
+          
+          try {
+            const refreshed = await this.attemptSilentTokenRefresh();
+            if (refreshed) {
+              console.log('[GDriveService] ✅ Proactive token refresh successful');
+            } else {
+              console.log('[GDriveService] ⚠️ Proactive token refresh failed');
+            }
+          } catch (error) {
+            console.warn('[GDriveService] Error during proactive token refresh:', error);
+          }
+        }
+      }
+    }, checkInterval);
+  }
+
+  /**
+   * Stop the token refresh timer
+   */
+  private stopTokenRefreshTimer(): void {
+    if (this.tokenRefreshTimer) {
+      clearInterval(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = null;
+    }
+  }
+
   private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
     const maxRetries = 3;
     let lastError: any = null;
@@ -376,6 +476,10 @@ class GDriveService {
     await this.fetchUserProfile();
     this.updateSigninStatus(true);
     console.log('[GDriveService] Sign-in status updated to true.');
+    
+    // Restart the token refresh timer with the new token
+    this.startTokenRefreshTimer();
+    
     await this.findOrCreateAppFolder(); // Ensure app folder exists after sign-in
   }
   
@@ -433,6 +537,9 @@ class GDriveService {
   public signOut() {
     console.log('[GDriveService] Signing out and clearing all tokens...');
     
+    // Stop the token refresh timer
+    this.stopTokenRefreshTimer();
+    
     if (this.accessToken && this.google?.accounts?.oauth2) {
       try {
         this.google.accounts.oauth2.revoke(this.accessToken, () => {
@@ -458,39 +565,91 @@ class GDriveService {
   }
 
   public isSignedIn(): boolean {
-    // return !!this.accessToken;
     const hasToken = !!this.accessToken;
     const hasExpiry = !!this.accessTokenExpiry;
     const isNotExpired = this.accessTokenExpiry ? Date.now() < this.accessTokenExpiry : false;
     
     console.log(`[GDriveService] isSignedIn check: hasToken=${hasToken}, hasExpiry=${hasExpiry}, isNotExpired=${isNotExpired}`);
     if (hasToken && hasExpiry) {
-      console.log(`[GDriveService] Token expires at: ${new Date(this.accessTokenExpiry).toISOString()}, current time: ${new Date().toISOString()}`);
+      const minutesUntilExpiry = Math.round((this.accessTokenExpiry - Date.now()) / 60000);
+      console.log(`[GDriveService] Token expires in ${minutesUntilExpiry} minutes`);
+      
+      // Warn if token expires soon
+      if (minutesUntilExpiry <= 5 && minutesUntilExpiry > 0) {
+        console.warn(`[GDriveService] ⚠️ Token expires in ${minutesUntilExpiry} minutes - consider refreshing`);
+      }
     }
     
     return hasToken && hasExpiry && isNotExpired;
   }
 
+  /**
+   * Check if the token is about to expire and needs refresh
+   */
+  public isTokenNearExpiry(): boolean {
+    if (!this.accessTokenExpiry) return false;
+    const timeUntilExpiry = this.accessTokenExpiry - Date.now();
+    return timeUntilExpiry < (10 * 60 * 1000); // Less than 10 minutes
+  }
+
+  /**
+   * Manually refresh the access token
+   * This can be called by the UI when users experience auth issues
+   */
+  public async refreshToken(): Promise<boolean> {
+    console.log('[GDriveService] Manual token refresh requested');
+    
+    try {
+      const refreshed = await this.attemptSilentTokenRefresh();
+      if (refreshed) {
+        console.log('[GDriveService] ✅ Manual token refresh successful');
+        return true;
+      }
+    } catch (error) {
+      console.error('[GDriveService] Manual token refresh failed:', error);
+    }
+    
+    // If silent refresh fails, the user will need to sign in again
+    console.log('[GDriveService] ❌ Manual token refresh failed - user needs to sign in again');
+    this.clearStoredTokens();
+    this.updateSigninStatus(false);
+    return false;
+  }
+
   public async getAccessToken(): Promise<string | null> {
-    if (this.accessToken && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) { // 5 min buffer
+    // Check if current token is still valid (with 5 minute buffer)
+    if (this.accessToken && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) {
       return this.accessToken;
     }
 
-    // Access token is missing, expired, or nearing expiry. Request a new one from the server
+    console.log('[GDriveService] Access token expired or missing, attempting refresh...');
+
+    // Try silent refresh first
     try {
-      const tokenData = await this.fetchAccessTokenFromServer();
-      if (tokenData && tokenData.access_token) {
-        this.accessToken = tokenData.access_token;
-        this.accessTokenExpiry = Date.now() + (tokenData.expires_in * 1000);
-        if (this.gapi && this.gapi.client) {
-          this.gapi.client.setToken({ access_token: this.accessToken });
-        }
-        this.updateSigninStatus(true);
+      const refreshed = await this.attemptSilentTokenRefresh();
+      if (refreshed && this.accessToken) {
+        console.log('[GDriveService] ✅ Token silently refreshed');
         return this.accessToken;
       }
     } catch (error) {
-      console.error('[GDriveService] Failed to fetch access token from server:', error);
+      console.warn('[GDriveService] Silent token refresh failed:', error);
     }
+
+    // If silent refresh fails, try server-side refresh (if available)
+    try {
+      const tokenData = await this.fetchAccessTokenFromServer();
+      if (tokenData && tokenData.access_token) {
+        this.handleTokenResponse(tokenData, false);
+        return this.accessToken;
+      }
+    } catch (error) {
+      console.warn('[GDriveService] Server-side token refresh failed:', error);
+    }
+
+    // All refresh attempts failed
+    console.log('[GDriveService] ❌ All token refresh attempts failed. User will need to sign in again.');
+    this.clearStoredTokens();
+    this.updateSigninStatus(false);
     return null;
   }
   
@@ -783,7 +942,7 @@ class GDriveService {
       } else {
         // No metadata file exists, create one
         console.log('[GDriveService] No metadata.json found, creating new one');
-        const initialData = { books: {} };
+        const initialData = { books: {}, folders: {} };
         const newFileId = await this.createMetadataFile(initialData);
         if (newFileId) {
           return { fileId: newFileId, data: initialData };
@@ -886,6 +1045,7 @@ class GDriveService {
     fileType: string; 
     coverImageId?: string; 
     uploadedAt: string;
+    folderId?: string;
   }): Promise<boolean> {
     const metadataInfo = await this.getMetadataFile();
     if (!metadataInfo) {
@@ -924,6 +1084,107 @@ class GDriveService {
     delete data.covers[bookFileId];
 
     return await this.updateMetadataFile(fileId, data);
+  }
+
+  /**
+   * Add folder metadata to metadata.json
+   */
+  public async addFolderMetadata(folderId: string, folderData: { 
+    name: string; 
+    parentId?: string; 
+    createdAt: string;
+  }): Promise<boolean> {
+    console.log(`[GDriveService] Adding folder metadata for folder: ${folderId}`);
+    
+    try {
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        console.warn('[GDriveService] No metadata file found, cannot add folder metadata');
+        return false;
+      }
+
+      const { fileId: metadataFileId, data: metadata } = metadataInfo;
+      const folderEntries = metadata.folders || {};
+
+      folderEntries[folderId] = {
+        ...folderData,
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log(`[GDriveService] Added folder metadata for folder: ${folderId}`);
+      return await this.updateMetadataFile(metadataFileId, metadata);
+    } catch (error) {
+      console.error('[GDriveService] Error adding folder metadata:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove folder metadata from metadata.json
+   */
+  public async removeFolderMetadata(folderId: string): Promise<boolean> {
+    console.log(`[GDriveService] Removing folder metadata for folder: ${folderId}`);
+    
+    try {
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        console.warn('[GDriveService] No metadata file found, cannot remove folder metadata');
+        return false;
+      }
+
+      const { fileId: metadataFileId, data: metadata } = metadataInfo;
+      const folderEntries = metadata.folders || {};
+
+      if (folderEntries[folderId]) {
+        delete folderEntries[folderId];
+        console.log(`[GDriveService] Removed folder metadata for folder: ${folderId}`);
+        return await this.updateMetadataFile(metadataFileId, metadata);
+      } else {
+        console.warn(`[GDriveService] Folder metadata not found for folder: ${folderId}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[GDriveService] Error removing folder metadata:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update folder metadata in metadata.json
+   */
+  public async updateFolderMetadata(folderId: string, updates: { 
+    name?: string; 
+    parentId?: string; 
+  }): Promise<boolean> {
+    console.log(`[GDriveService] Updating folder metadata for folder: ${folderId}`);
+    
+    try {
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        console.warn('[GDriveService] No metadata file found, cannot update folder metadata');
+        return false;
+      }
+
+      const { fileId: metadataFileId, data: metadata } = metadataInfo;
+      const folderEntries = metadata.folders || {};
+
+      if (folderEntries[folderId]) {
+        folderEntries[folderId] = {
+          ...folderEntries[folderId],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+
+        console.log(`[GDriveService] Updated folder metadata for folder: ${folderId}`);
+        return await this.updateMetadataFile(metadataFileId, metadata);
+      } else {
+        console.warn(`[GDriveService] Folder metadata not found for folder: ${folderId}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('[GDriveService] Error updating folder metadata:', error);
+      return false;
+    }
   }
 
   /**
@@ -1367,6 +1628,235 @@ class GDriveService {
     } catch (error) {
       console.error('[GDriveService] Error updating vocab file:', error);
       return false;
+    }
+  }
+
+  // Folder management methods
+  async createFolder(name: string, parentId?: string): Promise<any> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      throw new Error('Not signed in');
+    }
+
+    try {
+      // Create metadata-only folder - NO actual Google Drive folder created
+      const folderId = `folder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        throw new Error('Could not access metadata file');
+      }
+
+      const { fileId, data } = metadataInfo;
+      
+      // Ensure folders object exists
+      if (!data.folders) {
+        data.folders = {};
+      }
+
+      // Add folder to metadata only
+      data.folders[folderId] = {
+        name: name,
+        parentId: parentId || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save the updated metadata
+      const success = await this.updateMetadataFile(fileId, data);
+      if (!success) {
+        throw new Error('Failed to update metadata file');
+      }
+
+      console.log('[GDriveService] Virtual folder created successfully (metadata only):', folderId);
+      
+      return {
+        id: folderId,
+        name: name,
+        parentId: parentId || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('[GDriveService] Error creating virtual folder:', error);
+      throw error;
+    }
+  }
+
+  async updateFolder(folderId: string, updates: { name?: string; parentId?: string }): Promise<any> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      throw new Error('Not signed in');
+    }
+
+    try {
+      // Update metadata-only folder - NO actual Google Drive folder updated
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        throw new Error('Could not access metadata file');
+      }
+
+      const { fileId, data } = metadataInfo;
+      
+      // Ensure folders object exists
+      if (!data.folders) {
+        data.folders = {};
+      }
+
+      // Check if folder exists
+      if (!data.folders[folderId]) {
+        throw new Error(`Folder ${folderId} not found in metadata`);
+      }
+
+      // Update folder in metadata only
+      data.folders[folderId] = {
+        ...data.folders[folderId],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save the updated metadata
+      const success = await this.updateMetadataFile(fileId, data);
+      if (!success) {
+        throw new Error('Failed to update metadata file');
+      }
+
+      console.log('[GDriveService] Virtual folder updated successfully (metadata only):', folderId);
+      
+      return data.folders[folderId];
+    } catch (error) {
+      console.error('[GDriveService] Error updating virtual folder:', error);
+      throw error;
+    }
+  }
+
+  async deleteFolder(folderId: string): Promise<void> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      throw new Error('Not signed in');
+    }
+
+    try {
+      // Delete metadata-only folder - NO actual Google Drive folder deleted
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        throw new Error('Could not access metadata file');
+      }
+
+      const { fileId, data } = metadataInfo;
+      
+      // Ensure folders object exists
+      if (!data.folders) {
+        data.folders = {};
+      }
+
+      // Check if folder exists
+      if (!data.folders[folderId]) {
+        console.warn(`[GDriveService] Folder ${folderId} not found in metadata, nothing to delete`);
+        return;
+      }
+
+      // Remove folder from metadata
+      delete data.folders[folderId];
+
+      // Also remove folder assignment from any books that were in this folder
+      if (data.books) {
+        Object.keys(data.books).forEach(bookId => {
+          if (data.books[bookId].folderId === folderId) {
+            data.books[bookId].folderId = null;
+          }
+        });
+      }
+
+      // Save the updated metadata
+      const success = await this.updateMetadataFile(fileId, data);
+      if (!success) {
+        throw new Error('Failed to update metadata file');
+      }
+
+      console.log('[GDriveService] Virtual folder deleted successfully (metadata only):', folderId);
+    } catch (error) {
+      console.error('[GDriveService] Error deleting virtual folder:', error);
+      throw error;
+    }
+  }
+
+  async getFolders(): Promise<any[]> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      return [];
+    }
+
+    try {
+      // Get folders from metadata file only - no actual Google Drive folders
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        console.log('[GDriveService] No metadata file found, returning empty folders list');
+        return [];
+      }
+
+      const folderMetadata = metadataInfo.data.folders || {};
+      
+      // Convert metadata folders to folder objects
+      return Object.entries(folderMetadata).map(([folderId, folderData]: [string, any]) => ({
+        id: folderId,
+        name: folderData.name,
+        parentId: folderData.parentId,
+        createdAt: new Date(folderData.createdAt),
+        updatedAt: new Date(folderData.updatedAt),
+        userId: 'current-user'
+      }));
+    } catch (error) {
+      console.error('[GDriveService] Error getting virtual folders:', error);
+      return [];
+    }
+  }
+
+  async moveBookToFolder(bookId: string, folderId: string | null): Promise<void> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      throw new Error('Not signed in');
+    }
+
+    try {
+      // Only update metadata - DO NOT move the actual file in Google Drive
+      // This is purely a UI/organizational feature, not a physical file move
+      
+      const metadataInfo = await this.getMetadataFile();
+      if (!metadataInfo) {
+        throw new Error('Could not access metadata file');
+      }
+
+      const { fileId, data } = metadataInfo;
+      
+      // Ensure the books object exists
+      if (!data.books) {
+        data.books = {};
+      }
+
+      // Update the book's folder assignment in metadata only
+      if (data.books[bookId]) {
+        data.books[bookId].folderId = folderId;
+        console.log(`[GDriveService] Updated book ${bookId} folder assignment to: ${folderId || 'none'}`);
+      } else {
+        // If book doesn't exist in metadata, add it with the folder assignment
+        data.books[bookId] = {
+          folderId: folderId,
+          // Add other required fields if needed
+        };
+        console.log(`[GDriveService] Added book ${bookId} to metadata with folder: ${folderId || 'none'}`);
+      }
+
+      // Save the updated metadata
+      const success = await this.updateMetadataFile(fileId, data);
+      if (success) {
+        console.log('[GDriveService] Book folder assignment updated successfully (metadata only)');
+      } else {
+        throw new Error('Failed to update metadata file');
+      }
+    } catch (error) {
+      console.error('[GDriveService] Error updating book folder assignment:', error);
+      throw error;
     }
   }
 }

@@ -1,17 +1,29 @@
 import { useState, useRef } from 'react';
-import { BookMetadata } from '../services/storageService';
+import { BookMetadata, Folder } from '../types';
 
 interface BookCardHoverProps {
   book: BookMetadata;
   onSelectBook: (bookId: string) => void;
   onDeleteBook: (bookId: string) => Promise<void>;
   onUpdateCover: (bookId: string, coverFile: File) => Promise<string | undefined>;
+  onMoveToFolder?: (bookId: string, folderId: string | null) => void;
+  availableFolders?: Folder[];
+  currentFolderId?: string | null;
 }
 
-export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardHoverProps) {
+export function BookCardHover({ 
+  book, 
+  onSelectBook, 
+  onDeleteBook, 
+  onUpdateCover, 
+  onMoveToFolder,
+  availableFolders = [],
+  currentFolderId
+}: BookCardHoverProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
+  const [showFolderMenu, setShowFolderMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
@@ -65,6 +77,20 @@ export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover 
 
   const handleCardClick = () => {
     onSelectBook(book.id as string);
+  };
+
+  const handleMoveToFolder = (folderId: string | null) => {
+    console.log('handleMoveToFolder called with:', folderId, 'onMoveToFolder exists:', !!onMoveToFolder);
+    if (onMoveToFolder) {
+      onMoveToFolder(book.id, folderId);
+    }
+    setShowFolderMenu(false);
+  };
+
+  const getCurrentFolderName = () => {
+    if (!currentFolderId) return 'No folder';
+    const folder = availableFolders.find(f => f.id === currentFolderId);
+    return folder ? folder.name : 'Unknown folder';
   };
 
   return (
@@ -153,6 +179,72 @@ export function BookCardHover({ book, onSelectBook, onDeleteBook, onUpdateCover 
             '✕'
           )}
         </button>
+
+        {/* Folder button - appears on hover */}
+        {onMoveToFolder && (
+          <div className="absolute top-2 left-2 z-50">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowFolderMenu(!showFolderMenu);
+              }}
+              className={`
+                bg-blue-500 hover:bg-blue-600 text-white border-none
+                px-2 py-1 rounded-full text-sm cursor-pointer
+                opacity-80 hover:opacity-100 transition-all duration-200
+                ${isHovered ? 'block' : 'hidden'}
+              `}
+              title={`Move "${book.title}" to folder`}
+            >
+              📁
+            </button>
+
+          {/* Folder Menu Dropdown */}
+          {showFolderMenu && (
+            <div className="absolute top-8 left-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg min-w-48">
+              <div className="p-2 border-b border-gray-200 dark:border-gray-600">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Current: {getCurrentFolderName()}</div>
+              </div>
+              <div className="py-1">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleMoveToFolder(null);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    !currentFolderId ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  📂 No folder
+                </button>
+                {availableFolders.length > 0 ? (
+                  availableFolders.map((folder) => (
+                    <button
+                      key={folder.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleMoveToFolder(folder.id);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                        currentFolderId === folder.id ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      📁 {folder.name}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                    No folders available
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          </div>
+        )}
       </div>
     </div>
   );

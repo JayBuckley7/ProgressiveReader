@@ -1,6 +1,9 @@
 import { useState, useRef } from "react";
 import { SettingsModal } from "./SettingsModal";
 import { BookCardHover } from "./BookCardHover";
+import { FolderManager } from "./FolderManager";
+import { FolderView } from "./FolderView";
+import { TokenStatusWarning } from "./TokenStatusWarning";
 import { toast } from "sonner";
 import { useStorageService } from "../hooks/useStorageService";
 import { useGoogleDrive } from "../hooks/useGoogleDrive";
@@ -23,7 +26,21 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     }
   };
 
-  const { books, isAuthenticated, signIn, uploadBook, deleteBook, updateBookCover, openCloudFolder, syncBooks } = useStorageService();
+  const { 
+    books, 
+    folders,
+    isAuthenticated, 
+    signIn, 
+    uploadBook, 
+    deleteBook, 
+    updateBookCover, 
+    openCloudFolder, 
+    syncBooks,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    moveBookToFolder
+  } = useStorageService();
   const { isDriveConnected } = useGoogleDrive();
 
   // All book handling is delegated to the storage service.
@@ -31,6 +48,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFolderManager, setShowFolderManager] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +126,15 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M5 15a9 9 0 0014-3m0-4a9 9 0 00-14-3" />
                 </svg>
               </button>
+              <button
+                onClick={() => setShowFolderManager(true)}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Manage folders"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+              </button>
             </>
           )}
         </div>
@@ -165,6 +192,9 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           </button>
         </div>
       </div>
+
+      {/* Token Status Warning */}
+      <TokenStatusWarning />
 
       {isUploading && (
         <div className="mb-6">
@@ -235,17 +265,14 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {books.map((book) => (
-            <BookCardHover
-              key={book.id}
-              book={book}
-              onSelectBook={handleSelectBook}
-              onDeleteBook={deleteBook}
-              onUpdateCover={updateBookCover}
-            />
-          ))}
-        </div>
+        <FolderView
+          books={books}
+          folders={folders}
+          onSelectBook={handleSelectBook}
+          onDeleteBook={deleteBook}
+          onUpdateCover={updateBookCover}
+          onMoveBookToFolder={moveBookToFolder}
+        />
       )}
 
       {showSettings && (
@@ -253,6 +280,16 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           onClose={() => setShowSettings(false)} 
           onTranslate={() => {}} 
           translating={false} 
+        />
+      )}
+
+      {showFolderManager && (
+        <FolderManager
+          folders={folders}
+          onCreateFolder={createFolder}
+          onUpdateFolder={updateFolder}
+          onDeleteFolder={deleteFolder}
+          onClose={() => setShowFolderManager(false)}
         />
       )}
     </div>
