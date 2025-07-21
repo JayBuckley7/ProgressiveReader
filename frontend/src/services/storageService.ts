@@ -569,12 +569,28 @@ class StorageService {
 
                 // Start async cover download if cover exists
                 if (coverImageId && driveFileIds.has(coverImageId) && onCoverReady) {
+                    console.log(`[Cover Debug] Initiating cover download for book: ${bookMetadata.title} (ID: ${bookFileId}, CoverID: ${coverImageId})`);
                     const coverTask = this.downloadCoverAsync(bookFileId, coverImageId, bookMetadata.title, onCoverReady);
                     coverDownloadTasks.push(coverTask);
+                } else {
+                    if (!coverImageId) {
+                        console.log(`[Cover Debug] No cover image ID for book: ${bookMetadata.title}`);
+                    } else if (!driveFileIds.has(coverImageId)) {
+                        console.log(`[Cover Debug] Cover image ID not found in drive files for book: ${bookMetadata.title} (CoverID: ${coverImageId})`);
+                    } else if (!onCoverReady) {
+                        console.log(`[Cover Debug] No onCoverReady callback provided for book: ${bookMetadata.title}`);
+                    }
                 }
             }
 
             console.log(`Processed ${books.length} books from metadata (covers downloading in background)`);
+            
+            // Log summary of books with/without covers
+            const booksWithCovers = books.filter(book => book.coverImageId);
+            const booksWithoutCovers = books.filter(book => !book.coverImageId);
+            console.log(`[Cover Summary] Books with covers: ${booksWithCovers.length}/${books.length}`);
+            console.log(`[Cover Summary] Books with covers:`, booksWithCovers.map(b => b.title));
+            console.log(`[Cover Summary] Books without covers:`, booksWithoutCovers.map(b => b.title));
             
             // Cache the book list to prevent redundant API calls
             this.bookListCache = {
@@ -603,45 +619,64 @@ class StorageService {
         onCoverReady: (bookId: string, coverUrl: string) => void
     ): Promise<void> {
         try {
-            console.log(`[Async] Downloading cover image for book: ${bookTitle}`);
+            console.log(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId}, CoverID: ${coverImageId})`);
+            
+            // Check file-level cache first
             let coverBlob = await getCoverForFile(bookId);
-            if (!coverBlob) {
+            if (coverBlob) {
+                console.log(`[Cover Debug] Found cover in file cache for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
+            } else {
+                console.log(`[Cover Debug] No cover found in file cache for ${bookTitle}, checking cover cache...`);
+                
+                // Check cover-level cache
                 coverBlob = await getCachedCover(coverImageId);
                 if (coverBlob) {
+                    console.log(`[Cover Debug] Found cover in cover cache for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
                     await cacheCoverForFile(bookId, coverBlob);
+                    console.log(`[Cover Debug] Cached cover for file ${bookId}`);
                 }
             }
+            
+            // If still no blob, download from Google Drive
             if (!coverBlob) {
+                console.log(`[Cover Debug] No cached cover found for ${bookTitle}, downloading from Google Drive...`);
                 coverBlob = await gDriveService.downloadFile(coverImageId);
                 if (coverBlob) {
+                    console.log(`[Cover Debug] Downloaded cover from Google Drive for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
                     await cacheCover(coverImageId, coverBlob);
                     await cacheCoverForFile(bookId, coverBlob);
+                    console.log(`[Cover Debug] Cached downloaded cover for ${bookTitle}`);
+                } else {
+                    console.warn(`[Cover Debug] Failed to download cover from Google Drive for ${bookTitle} - no blob returned`);
                 }
             }
             
             if (coverBlob) {
                 // Debug: Log blob details
-                console.log(`[Async] Cover blob details - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
+                console.log(`[Cover Debug] Processing cover blob for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
                 
                 // Test if the blob is a valid image
+                console.log(`[Cover Debug] Validating image for ${bookTitle}...`);
                 const isValidImage = await this.testBlobImage(coverBlob);
+                console.log(`[Cover Debug] Image validation result for ${bookTitle}: ${isValidImage}`);
                 
                 // Validate that we have a valid image blob
                 if (coverBlob.size > 0 && isValidImage) {
                     // Create a blob URL for the cover image
                     const coverUrl = URL.createObjectURL(coverBlob);
-                    console.log(`✅ [Async] Cover image ready for: ${bookTitle}`);
+                    console.log(`✅ [Cover Debug] Cover image ready for: ${bookTitle} - URL created: ${coverUrl.substring(0, 50)}...`);
                     
                     // Notify the UI that the cover is ready
                     onCoverReady(bookId, coverUrl);
+                    console.log(`[Cover Debug] Cover ready callback triggered for ${bookTitle}`);
                 } else {
-                    console.warn(`⚠️ [Async] Invalid cover image blob for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}, Valid: ${isValidImage}`);
+                    console.warn(`⚠️ [Cover Debug] Invalid cover image blob for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}, Valid: ${isValidImage}`);
                 }
             } else {
-                console.warn(`⚠️ [Async] No blob returned for cover image of ${bookTitle}`);
+                console.warn(`⚠️ [Cover Debug] No blob returned for cover image of ${bookTitle} - CoverID: ${coverImageId}`);
             }
         } catch (error) {
-            console.warn(`⚠️ [Async] Failed to download cover for book ${bookTitle}:`, error);
+            console.warn(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle} (ID: ${bookId}, CoverID: ${coverImageId}):`, error);
         }
     }
 

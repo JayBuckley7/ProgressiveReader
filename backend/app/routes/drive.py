@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, Response, current_app
+from flask import Blueprint, request, jsonify, Response
 from ..utils.clerk_auth import require_auth
 from ..utils.clerk_auth import get_user_id
 from clerk_backend_api import Clerk
@@ -93,7 +93,12 @@ def download_file(file_id):
     token = get_google_access_token(user_id)
     if not token:
         return jsonify({'error': 'No Google token'}), 400
-    r = requests.get(f'{GDRIVE_BASE}/files/{file_id}', headers={'Authorization': f'Bearer {token}'}, params={'alt': 'media'}, stream=True)
+    r = requests.get(
+        f'{GDRIVE_BASE}/files/{file_id}',
+        headers={'Authorization': f'Bearer {token}'},
+        params={'alt': 'media'},
+        stream=True,
+    )
     if not r.ok:
         return jsonify({'error': r.text}), r.status_code
     return Response(r.content, headers={'Content-Type': r.headers.get('Content-Type', 'application/octet-stream')})

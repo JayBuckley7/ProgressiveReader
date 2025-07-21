@@ -31,6 +31,14 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   const { getReadingProgress, downloadBookForOffline } = useStorageService();
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
 
+  // Add logging for cover URL changes
+  useEffect(() => {
+    console.log(`[BookCard Debug] Book "${book.title}" (ID: ${book.id}) - coverUrl: ${book.coverUrl ? 'Present' : 'Missing'}`);
+    if (book.coverUrl) {
+      console.log(`[BookCard Debug] Cover URL for "${book.title}": ${book.coverUrl.substring(0, 50)}...`);
+    }
+  }, [book.coverUrl, book.title, book.id]);
+
   useEffect(() => {
     getReadingProgress(book.id).then(setProgress);
   }, [book.id, getReadingProgress]);

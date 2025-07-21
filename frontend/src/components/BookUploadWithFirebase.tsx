@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useStorageService } from '../hooks/useStorageService';
 import { toast } from 'sonner';
 
-interface BookUploadWithFirebaseProps {
+interface BookUploadProps {
   onUploadComplete?: () => void;
 }
 
-export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFirebaseProps) {
+export function BookUpload({ onUploadComplete }: BookUploadProps) {
   const { user, isAuthenticated, signIn, uploadBook } = useStorageService();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -32,7 +32,7 @@ export function BookUploadWithFirebase({ onUploadComplete }: BookUploadWithFireb
 
     setIsUploading(true);
     try {
-      // Upload to Google Drive via Firebase storage service
+      // Upload to Google Drive via storage service
       const bookMetadata = await uploadBook(selectedFile);
       
       if (bookMetadata) {

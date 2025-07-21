@@ -1,6 +1,6 @@
 """Authentication routes for Clerk integration"""
-from flask import Blueprint, jsonify, request, g
-from ..utils.clerk_auth import optional_auth, get_user_id, get_user_email, get_current_user
+from flask import Blueprint, jsonify, g
+from ..utils.clerk_auth import optional_auth, get_user_email
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,14 +39,18 @@ def get_session():
     """Get current session information"""
     if not g.user:
         return jsonify({'error': 'Not authenticated'}), 401
-    
+
     return jsonify({
         'userId': g.user.id,
         'email': get_user_email(),
         'firstName': g.user.first_name,
         'lastName': g.user.last_name,
         'username': g.user.username,
-        'createdAt': g.user.created_at.isoformat() if hasattr(g.user.created_at, 'isoformat') else str(g.user.created_at)
+        'createdAt': (
+            g.user.created_at.isoformat()
+            if hasattr(g.user.created_at, 'isoformat')
+            else str(g.user.created_at)
+        )
     })
 
 
@@ -67,4 +71,3 @@ def logout():
     return jsonify({
         'message': 'Logout is handled by Clerk. Please use the frontend logout button.'
     }), 200
-

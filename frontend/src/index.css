@@ -223,7 +223,7 @@ html {
 
 /* Touch and swipe styles */
 .touch-pan-y {
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Prevent text selection during swipe */

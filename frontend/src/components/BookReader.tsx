@@ -4,7 +4,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
 import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
-import { PdfViewer } from "./PdfViewer";
+import { PdfViewer, PdfViewerHandle } from "./PdfViewer";
 import { useStorageService } from "../hooks/useStorageService";
 import { storageService } from "../services/storageService";
 import { useBookContent } from "../hooks/useBookContent";
@@ -118,6 +118,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const updateProgress = async (data: any) => { console.log("Update progress (TODO):", data); };
 
   const { settings } = useSettings();
+
+  // PDF page navigation state
+  const pdfViewerRef = useRef<PdfViewerHandle>(null);
+  const [pdfPageCount, setPdfPageCount] = useState(0);
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
   
   const [showSettings, setShowSettings] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -859,6 +864,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   };
 
+  // PDF page navigation handlers
+  const nextPdfPage = () => {
+    if (pdfPageCount && pdfCurrentPage < pdfPageCount) {
+      const newPage = pdfCurrentPage + 1;
+      setPdfCurrentPage(newPage);
+      pdfViewerRef.current?.goToPage(newPage);
+    }
+  };
+
+  const prevPdfPage = () => {
+    if (pdfCurrentPage > 1) {
+      const newPage = pdfCurrentPage - 1;
+      setPdfCurrentPage(newPage);
+      pdfViewerRef.current?.goToPage(newPage);
+    }
+  };
+
 
   const clearTranslation = () => {
     if (isTranslated) {
@@ -1008,7 +1030,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       >
         {bookMetadata?.fileType === 'pdf' ? (
           pdfData ? (
-            <PdfViewer data={pdfData} />
+            <PdfViewer
+              ref={pdfViewerRef}
+              data={pdfData}
+              onPageCount={setPdfPageCount}
+            />
           ) : (
             <div className="py-8 text-center">Loading PDF...</div>
           )
@@ -1049,13 +1075,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
       {/* Reader Controls */}
       <ReaderControls
-          currentChapter={chapter}
-          totalChapters={bookContent?.totalChapters || 1}
-          onPrevChapter={prevChapter}
-          onNextChapter={nextChapter}
+          currentChapter={bookMetadata?.fileType === 'pdf' ? pdfCurrentPage - 1 : chapter}
+          totalChapters={bookMetadata?.fileType === 'pdf' ? pdfPageCount : bookContent?.totalChapters || 1}
+          onPrevChapter={bookMetadata?.fileType === 'pdf' ? prevPdfPage : prevChapter}
+          onNextChapter={bookMetadata?.fileType === 'pdf' ? nextPdfPage : nextChapter}
           bookId={bookId}
-          chapterTitles={bookContent?.chapterTitles || []}
-          onSelectChapter={updateChapter}
+          chapterTitles={bookMetadata?.fileType === 'pdf' ?
+            Array.from({ length: pdfPageCount }, (_, i) => ({ index: i, label: `Page ${i + 1}` })) :
+            bookContent?.chapterTitles || []}
+          onSelectChapter={bookMetadata?.fileType === 'pdf' ? (idx => {
+            setPdfCurrentPage(idx + 1);
+            pdfViewerRef.current?.goToPage(idx + 1);
+          }) : updateChapter}
           onToggleTts={toggleTts}
           ttsActive={isSpeaking}
           onToggleHighlight={toggleJpdbHighlight}

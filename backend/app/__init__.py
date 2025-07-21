@@ -1,7 +1,7 @@
 """Flask application factory that registers blueprints and routes."""
 import os
 import logging
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, redirect, url_for, request
 from flask_cors import CORS
 from config import Config
 from .models import db
@@ -72,6 +72,14 @@ def create_app(config_class=Config) -> Flask:
         else:
             return send_from_directory(app.static_folder, "index.html")
 
+    @app.errorhandler(404)
+    def redirect_404(e):
+        """Redirect unknown routes to the homepage for the SPA."""
+        # Avoid redirect loops for API or static requests
+        if request.path.startswith("/api"):
+            return e, 404
+        return redirect(url_for("main.index"))
+
     # --- Health Check Endpoint ---
     @app.route('/health')
     def health_check():
@@ -84,7 +92,6 @@ def create_app(config_class=Config) -> Flask:
         from .routes import main  # Main UI blueprint
         from .routes import reader  # Reader blueprint
         from .routes import api  # API blueprint
-        from .routes import metadata  # Firestore metadata endpoints
         from .routes import settings  # User settings endpoints
         from .routes import auth  # Authentication routes
         from .routes import drive  # Google Drive proxy routes
@@ -93,7 +100,6 @@ def create_app(config_class=Config) -> Flask:
         app.register_blueprint(main.main_bp)
         app.register_blueprint(reader.reader_bp)
         app.register_blueprint(api.api_bp)
-        app.register_blueprint(metadata.metadata_bp)
         app.register_blueprint(settings.settings_bp)
         app.register_blueprint(auth.auth_bp)
         app.register_blueprint(drive.drive_bp)

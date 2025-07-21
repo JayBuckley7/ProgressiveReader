@@ -5,9 +5,7 @@
 
 // Access your client ID from environment variables
 const GDRIVE_CLIENT_ID = import.meta.env.VITE_GDRIVE_CLIENT_ID;
-console.log('[GDriveService] VITE_GDRIVE_CLIENT_ID:', GDRIVE_CLIENT_ID);
 const API_KEY = import.meta.env.VITE_GAPI_KEY; // If using GAPI for discovery
-console.log('[GDriveService] VITE_GAPI_KEY:', API_KEY);
 
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const BASE_SCOPES = [
@@ -94,7 +92,6 @@ class GDriveService {
   private async loadGoogleScripts(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.gapi && this.google) {
-        console.log('[GDriveService] Google scripts already loaded.');
         // Try to restore session even if scripts were already loaded
         this.tryRestoreSession();
         resolve();
@@ -104,13 +101,10 @@ class GDriveService {
       const gapiScript = document.createElement('script');
       gapiScript.src = 'https://apis.google.com/js/api.js';
       gapiScript.onload = () => {
-        console.log('[GDriveService] GAPI script loaded.');
         this.gapi = (window as any).gapi;
 
         this.gapi.load('client', () => {
-          console.log('[GDriveService] GAPI client loaded.');
           this.initGapiClient().then(() => {
-            console.log('[GDriveService] GAPI client initialized.');
             // Check if we already have both scripts loaded
             if (this.google) {
               this.tryRestoreSession();
@@ -125,12 +119,10 @@ class GDriveService {
       const gisScript = document.createElement('script');
       gisScript.src = 'https://accounts.google.com/gsi/client';
       gisScript.onload = () => {
-        console.log('[GDriveService] GIS script loaded.');
         this.google = (window as any).google;
 
         try {
           this.initTokenClient();
-          console.log('[GDriveService] GIS Token Client initialized.');
           // Check if we already have both scripts loaded
           if (this.gapi) {
             this.tryRestoreSession();
@@ -150,21 +142,15 @@ class GDriveService {
     // Wait a bit for everything to be fully initialized
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    console.log('[GDriveService] Attempting to restore session...');
-    
     // CRITICAL SECURITY CHECK: Only restore Google Drive session if user is authenticated with Clerk
     const isClerkAuthenticated = this.isClerkUserAuthenticated();
     if (!isClerkAuthenticated) {
-      console.log('[GDriveService] No authenticated Clerk user found. Clearing any stored Google Drive tokens for security.');
       this.clearStoredTokens();
       this.updateSigninStatus(false);
       return false;
     }
-    
-    console.log('[GDriveService] Clerk user authenticated. Proceeding with Google Drive session restoration.');
 
     if (this.loadTokensFromStorage()) {
-      console.log('[GDriveService] Restored token from localStorage');
       await this.fetchUserProfile();
       this.updateSigninStatus(true);
       return true;
@@ -182,14 +168,10 @@ class GDriveService {
 
     // If no refresh token or refresh failed, try silent sign-in
     if (this.tokenClient) {
-      console.log('[GDriveService] Attempting silent sign-in on page load...');
       try {
         const silentSuccess = await this.attemptSilentSignIn();
         if (silentSuccess) {
-          console.log('[GDriveService] ✅ Session restored via silent sign-in');
           return true;
-        } else {
-          console.log('[GDriveService] Silent sign-in failed - user will need to sign in manually');
         }
       } catch (error) {
         console.error('[GDriveService] Silent sign-in attempt failed:', error);
@@ -219,7 +201,6 @@ class GDriveService {
   }
 
   private clearStoredTokens(): void {
-    console.log('[GDriveService] Clearing all stored Google Drive tokens for security');
     this.accessToken = null;
     this.accessTokenExpiry = null;
     this.userProfile = null;
@@ -233,9 +214,7 @@ class GDriveService {
   }
 
   private async attemptSilentSignIn(): Promise<boolean> {
-    console.log('[GDriveService] Attempting silent token request...');
     if (!this.tokenClient) {
-      console.log('[GDriveService] Token client not available for silent sign-in');
       return false;
     }
 
@@ -268,24 +247,92 @@ class GDriveService {
   }
 
   private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
-    try {
-      const response = await fetch('/drive/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        console.error('[GDriveService] Error fetching access token from server:', await response.text());
-        return null;
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Get authentication headers for the API call
+        const authHeaders = await this.getAuthHeaders();
+        
+        const response = await fetch('/drive/token', {
+          method: 'POST',
+          headers: authHeaders,
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[GDriveService] Attempt ${attempt} failed - Error fetching access token from server:`, errorText);
+          console.error('[GDriveService] Response status:', response.status);
+          console.error('[GDriveService] Response headers:', response.headers);
+          
+          // If it's an auth error and we have more retries, wait a bit and try again
+          if (response.status === 401 && attempt < maxRetries) {
+            console.log(`[GDriveService] Auth error on attempt ${attempt}, waiting 1 second before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            lastError = new Error(`Authentication failed: ${errorText}`);
+            continue;
+          }
+          
+          lastError = new Error(`HTTP ${response.status}: ${errorText}`);
+          return null;
+        }
+        
+        const tokenData: TokenData = await response.json();
+        return tokenData;
+        
+      } catch (error) {
+        console.error(`[GDriveService] Attempt ${attempt} failed with exception:`, error);
+        lastError = error;
+        
+        // If we have more retries, wait a bit and try again
+        if (attempt < maxRetries) {
+          console.log(`[GDriveService] Waiting 1 second before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-      const tokenData: TokenData = await response.json();
-      console.log('[GDriveService] Access token fetched from server:', tokenData);
-      return tokenData;
-    } catch (error) {
-      console.error('[GDriveService] Exception while fetching access token from server:', error);
-      return null;
     }
+    
+    console.error('[GDriveService] All attempts to fetch access token failed. Last error:', lastError);
+    return null;
+  }
+
+  // Helper method to get auth headers
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    // Get Clerk session token for API calls
+    if (typeof window !== 'undefined' && window.Clerk) {
+      try {
+        console.log('[GDriveService] Attempting to get Clerk session token...');
+        
+        // Check if Clerk is fully loaded
+        if (!window.Clerk.session) {
+          console.log('[GDriveService] Clerk session not available yet, waiting...');
+          // Wait a bit for Clerk to initialize
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        const token = await window.Clerk.session?.getToken();
+        console.log('[GDriveService] Clerk token result:', token ? 'Token received' : 'No token');
+        
+        if (token) {
+          console.log('[GDriveService] Returning auth headers with token');
+          return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          };
+        } else {
+          console.log('[GDriveService] No token available from Clerk session');
+        }
+      } catch (error) {
+        console.error('[GDriveService] Error getting Clerk token:', error);
+      }
+    } else {
+      console.log('[GDriveService] Clerk not available in window object');
+    }
+    console.log('[GDriveService] Returning headers without auth token');
+    return {
+      'Content-Type': 'application/json'
+    };
   }
 
   private async handleTokenResponse(tokenResponse: any, storeRefreshToken: boolean = true) {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { getAuthHeaders } from "../utils/auth";
 
 // Simple fetch-based API client
 export interface Bookmark {
@@ -65,7 +66,10 @@ export const api = {
     getBookmarks: {
       useQuery: ({ bookId }: { bookId: string }) => {
         const fetchBookmarks = useCallback(async () => {
-          const res = await fetch(`/api/bookmarks?bookId=${encodeURIComponent(bookId)}`);
+          const headers = await getAuthHeaders();
+          const res = await fetch(`/api/bookmarks?bookId=${encodeURIComponent(bookId)}`, {
+            headers,
+          });
           if (!res.ok) throw new Error('Failed to load bookmarks');
           return res.json();
         }, [bookId]);
@@ -85,9 +89,10 @@ export const api = {
             position: number;
             note?: string;
           }) => {
+            const headers = await getAuthHeaders();
             const res = await fetch('/api/bookmarks', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify(variables),
             });
             if (!res.ok) throw new Error('Failed to add bookmark');

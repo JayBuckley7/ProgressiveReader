@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ContentsDrawer } from "./ContentsDrawer";
 import { api } from "~/utils/api.ts";
 import type { ChapterTitle } from "../types";
@@ -44,10 +44,20 @@ export function ReaderControls({
     return max;
   }, [chapterTitles]);
 
-  const { data: bookmarks = [] } =
+  const { data: fetchedBookmarks = [] } =
     api.reading.getBookmarks.useQuery({ bookId });
 
-  const addBookmarkMutation = api.reading.addBookmark.useMutation();
+  const [bookmarks, setBookmarks] = useState<typeof fetchedBookmarks>([]);
+
+  useEffect(() => {
+    setBookmarks(fetchedBookmarks);
+  }, [fetchedBookmarks]);
+
+  const addBookmarkMutation = api.reading.addBookmark.useMutation({
+    onSuccess: (newBookmark) => {
+      setBookmarks((prev) => [...prev, newBookmark]);
+    },
+  });
 
   const handleAddBookmark = async () => {
     const note = prompt("Add a note for this bookmark (optional):");
