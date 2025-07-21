@@ -1,18 +1,13 @@
 """Blueprint providing translation and content API routes."""
-from flask import Blueprint, request, jsonify, session, current_app, Response, send_file
+from flask import Blueprint, request, jsonify, session, current_app, Response
 from openai import OpenAI
 import requests
 import re
 import json
-from ..utils.clerk_auth import require_auth, optional_auth, get_user_id, get_user_email
+from ..utils.clerk_auth import require_auth, optional_auth
 from ..models import db, Bookmark
 from flask import g
-from ..utils.file_utils import allowed_file
-import uuid
 import logging
-from datetime import datetime
-import os
-from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +34,7 @@ def translate_content():
 
     api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY')
     if not api_key_to_use: return jsonify({"error": "OpenAI API key not configured..."}), 400
-    
+
     # Ensure system_prompt is defined or moved to config if it's complex
     system_prompt = (
         "You are a helpful translator. You translate the provided HTML content "
@@ -69,13 +64,13 @@ def translate_content():
 
     try:
         client = OpenAI(api_key=api_key_to_use)
-        
+
         if stream:
             # Handle streaming response
             def generate():
                 buffer = ""
                 last_chunk = "" # Store the complete translated text to save to cache at the end
-                
+
                 # Create a streaming request to OpenAI
                 completion = client.chat.completions.create(
                     model=model,
@@ -85,48 +80,48 @@ def translate_content():
                     ],
                     stream=True,
                 )
-                
+
                 # Send SSE format for streaming events
                 yield "data: {\"status\": \"started\"}\n\n"
-                
+
                 for chunk in completion:
                     content = chunk.choices[0].delta.content
-                    
+
                     # Some chunks might not have content
                     if content is not None:
                         buffer += content
                         last_chunk += content
-                        
+
                         # Clean any markdown code blocks on the fly
                         while "```html" in buffer:
                             buffer = buffer.replace("```html", "", 1)
                         while "```" in buffer:
                             buffer = buffer.replace("```", "", 1)
-                        
+
                         # Send the accumulated buffer
                         yield f"data: {json.dumps({'content': buffer})}\n\n"
                         buffer = ""  # Clear buffer after sending
-                
+
                 # Ensure the final chunk is sent (if any remains in buffer)
                 if buffer:
                     yield f"data: {json.dumps({'content': buffer})}\n\n"
-                
+
                 # Send complete translated text for caching
                 clean_translated_text = last_chunk
-                if clean_translated_text.startswith("```html"): 
+                if clean_translated_text.startswith("```html"):
                     clean_translated_text = clean_translated_text[7:].strip()
-                elif clean_translated_text.startswith("```"): 
+                elif clean_translated_text.startswith("```"):
                     clean_translated_text = clean_translated_text[3:].strip()
-                if clean_translated_text.endswith("```"): 
+                if clean_translated_text.endswith("```"):
                     clean_translated_text = clean_translated_text[:-3].strip()
-                
+
                 yield (
                     "data: "
                     f"{json.dumps({'complete': True, 'translated_text': clean_translated_text})}"
                     "\n\n"
                 )
                 yield "data: [DONE]\n\n"
-                
+
             # Return the generator as a streaming response
             return Response(generate(), mimetype='text/event-stream')
         else:
@@ -143,23 +138,23 @@ def translate_content():
             if translated_text.startswith("```html"): translated_text = translated_text[7:].strip()
             elif translated_text.startswith("```"): translated_text = translated_text[3:].strip()
             if translated_text.endswith("```"): translated_text = translated_text[:-3].strip()
-            
+
             current_app.logger.info(
                 f"Translation successful. First 100 chars: {translated_text[:100]}..."
             )
             return jsonify({"translated_text": translated_text})
 
     except Exception as e:
-        current_app.logger.error(f"Error calling OpenAI API: {e}", exc_info=True) 
+        current_app.logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
         return jsonify({"error": f"Error during translation: {e}"}), 500
 
 @api_bp.route('/delete_cached_translation', methods=['POST'])
 def delete_cached_translation_route():
     """Acknowledge removal of cached translation on the client."""
     data = request.get_json()
-    item_index = data.get('item_index') 
-    if item_index is None: 
-        return jsonify({'success': False, 'error': 'Missing item_index'}), 400 
+    item_index = data.get('item_index')
+    if item_index is None:
+        return jsonify({'success': False, 'error': 'Missing item_index'}), 400
     current_app.logger.info(
         (
             "Received signal to acknowledge deletion of cached translation for "
@@ -177,7 +172,7 @@ def toggle_jlpt():
             'success': False,
             'error': 'Invalid payload. "enabled" boolean is required.'
         }), 400
-    
+
     is_enabled = data['enabled']
     session['jlpt_highlighting_enabled'] = is_enabled
     current_app.logger.info(f"JLPT highlighting set to: {is_enabled}")
@@ -212,7 +207,7 @@ def get_jpdb_data():
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
 
-    text_segments_raw = data.get('text_segments') 
+    text_segments_raw = data.get('text_segments')
     api_key = data.get('jpdb_api_key')
 
     if not text_segments_raw or not isinstance(text_segments_raw, list):
@@ -229,18 +224,18 @@ def get_jpdb_data():
     all_clean_segments = []
     for segment_text in text_segments_raw:
         normalized_segment = re.sub(r'\s+', ' ', segment_text).strip()
-        if normalized_segment: 
+        if normalized_segment:
             all_clean_segments.append(normalized_segment)
-    
+
     if not all_clean_segments:
-        current_app.logger.info("No non-empty segments to process for JPDB.") 
+        current_app.logger.info("No non-empty segments to process for JPDB.")
         return jsonify([])
 
-    MAX_BYTES_PER_API_BATCH = current_app.config['MAX_BYTES_PER_API_BATCH'] 
-    MAX_SEGMENTS_PER_API_BATCH = current_app.config['MAX_SEGMENTS_PER_API_BATCH'] 
-    TOKEN_FIELDS = current_app.config['JPDB_TOKEN_FIELDS'] 
-    VOCAB_FIELDS = current_app.config['JPDB_VOCAB_FIELDS'] 
-    jpdb_api_url = current_app.config['JPDB_API_URL'] 
+    MAX_BYTES_PER_API_BATCH = current_app.config['MAX_BYTES_PER_API_BATCH']
+    MAX_SEGMENTS_PER_API_BATCH = current_app.config['MAX_SEGMENTS_PER_API_BATCH']
+    TOKEN_FIELDS = current_app.config['JPDB_TOKEN_FIELDS']
+    VOCAB_FIELDS = current_app.config['JPDB_VOCAB_FIELDS']
+    jpdb_api_url = current_app.config['JPDB_API_URL']
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json',
@@ -248,15 +243,15 @@ def get_jpdb_data():
     }
 
     all_processed_tokens_globally_offset = []
-    current_segment_list_start_index = 0 
-    global_offset_processed_across_batches = 0 
+    current_segment_list_start_index = 0
+    global_offset_processed_across_batches = 0
 
     while current_segment_list_start_index < len(all_clean_segments):
         segments_for_this_batch = []
-        bytes_in_this_batch = 0 
+        bytes_in_this_batch = 0
         global_offset_at_start_of_this_api_call = global_offset_processed_across_batches
         temp_next_segment_start_index = current_segment_list_start_index
-        
+
         current_app.logger.debug(
             "Starting new batch creation. "
             f"current_segment_list_start_index: {current_segment_list_start_index}, "
@@ -314,7 +309,7 @@ def get_jpdb_data():
                     f"{bytes_in_this_batch + segment_byte_length}/"
                     f"{MAX_BYTES_PER_API_BATCH}. Breaking to process current batch."
                 )
-                break 
+                break
         current_segment_list_start_index = temp_next_segment_start_index
 
         if not segments_for_this_batch:
@@ -335,15 +330,15 @@ def get_jpdb_data():
             'token_fields': TOKEN_FIELDS,
             'vocabulary_fields': VOCAB_FIELDS,
         }
-        
+
         # --- Start Enhanced Logging ---
         current_app.logger.debug(f"Sending payload to JPDB: {payload}")
         # --- End Enhanced Logging ---
-        
+
         response_from_jpdb = None
         try:
             response_from_jpdb = requests.post(jpdb_api_url, headers=headers, json=payload)
-            
+
             # --- Start Enhanced Logging ---
             current_app.logger.info(f"JPDB API response status: {response_from_jpdb.status_code}")
             response_text = response_from_jpdb.text # Get text before trying to parse JSON
@@ -353,15 +348,15 @@ def get_jpdb_data():
             # --- End Enhanced Logging ---
 
             response_from_jpdb.raise_for_status() # Check for HTTP errors after logging status
-            
+
             jpdb_data = response_from_jpdb.json() # Now parse JSON
-            
+
             # --- Start Enhanced Logging ---
             current_app.logger.debug(
                 f"JPDB API parsed JSON data (sample): {str(jpdb_data)[:500]}..."
             )
             # --- End Enhanced Logging ---
-            
+
             jpdb_vocab_list = jpdb_data.get('vocabulary', [])
             vocab_map = []
             for v_entry in jpdb_vocab_list:
@@ -374,7 +369,7 @@ def get_jpdb_data():
                         'state': ['error-vocab-format'],
                     })
                     continue
-                
+
                 # Map fields based on order defined in VOCAB_FIELDS
                 entry_data = {
                     'vid': v_entry[VOCAB_FIELDS.index('vid')],
@@ -389,7 +384,7 @@ def get_jpdb_data():
                     'state': v_entry[VOCAB_FIELDS.index('card_state')] or ['not-in-deck'],
                     'pitchAccent': v_entry[VOCAB_FIELDS.index('pitch_accent')] or []
                 }
-                
+
                 # Construct meanings list
                 entry_data['meanings'] = []
                 if entry_data['meaningsChunks'] and entry_data['meaningsPartOfSpeech']:
@@ -399,11 +394,11 @@ def get_jpdb_data():
                                 'glosses': glosses,
                                 'partOfSpeech': entry_data['meaningsPartOfSpeech'][i]
                             })
-                
+
                 # Remove intermediate keys
                 del entry_data['meaningsChunks']
                 del entry_data['meaningsPartOfSpeech']
-                
+
                 vocab_map.append(entry_data)
 
             tokens_data_from_api = jpdb_data.get('tokens', [])
@@ -423,7 +418,7 @@ def get_jpdb_data():
                             f"Skipping malformed token: {raw_token}"
                         )
                         continue
-                    
+
                     vocab_idx = raw_token[TOKEN_FIELDS.index('vocabulary_index')]
                     position_in_segment = raw_token[TOKEN_FIELDS.index('position')]
                     length = raw_token[TOKEN_FIELDS.index('length')]
@@ -436,7 +431,7 @@ def get_jpdb_data():
                             f"Skipping token with invalid numeric fields: {raw_token}"
                         )
                         continue
-                    
+
                     card_data = {}
                     try:
                         if vocab_idx < 0:
@@ -453,7 +448,7 @@ def get_jpdb_data():
                         )
                         card_data = {'state': ['error-vocab-map-access']}
                         continue
-                    
+
                     # Process rubies
                     rubies = []
                     if furigana_data and isinstance(furigana_data, list):
@@ -476,7 +471,7 @@ def get_jpdb_data():
                                         'end': ruby_seg_start + ruby_seg_length,
                                     })
                                     current_offset_in_token_surface += ruby_seg_length
-                    
+
                     token_start_global = (
                         global_offset_at_start_of_this_api_call
                         + character_offset_within_this_api_batch
@@ -498,7 +493,7 @@ def get_jpdb_data():
             )
 
         except requests.exceptions.HTTPError as http_err:
-            error_detail = "Unknown error" 
+            error_detail = "Unknown error"
             status_code = 500
             if response_from_jpdb is not None:
                 status_code = response_from_jpdb.status_code
@@ -518,7 +513,7 @@ def get_jpdb_data():
                 "status_code": status_code,
                 "partial_results": all_processed_tokens_globally_offset,
             }), status_code
-        except requests.exceptions.RequestException as req_err: 
+        except requests.exceptions.RequestException as req_err:
             current_app.logger.error(
                 f"JPDB Request failed: {req_err}", exc_info=True
             )
@@ -526,7 +521,7 @@ def get_jpdb_data():
                 "error": str(req_err),
                 "partial_results": all_processed_tokens_globally_offset,
             }), 500
-        except Exception as e: 
+        except Exception as e:
             current_app.logger.error(
                 f"JPDB Unexpected error: {str(e)}", exc_info=True
             )
@@ -534,11 +529,11 @@ def get_jpdb_data():
                 "error": f"Unexpected error: {str(e)}",
                 "partial_results": all_processed_tokens_globally_offset,
             }), 500
-            
+
     current_app.logger.info(
         f"JPDB data processed. Total tokens: {len(all_processed_tokens_globally_offset)}"
     )
-    return jsonify(all_processed_tokens_globally_offset) 
+    return jsonify(all_processed_tokens_globally_offset)
 
 @api_bp.route('/mine_jpdb_word', methods=['POST'])
 def mine_jpdb_word():
@@ -549,11 +544,8 @@ def mine_jpdb_word():
 
     vid = data.get('vid')
     sid = data.get('sid')
-    forq = data.get('forq', False)
-    sentence = data.get('sentence')
     jpdb_api_key = data.get('jpdb_api_key')
     mining_deck_id = data.get('mining_deck_id')
-    forq_deck_id = data.get('forq_deck_id')
 
     if not jpdb_api_key:
         return jsonify({"error": "Missing JPDB API key"}), 400
@@ -563,7 +555,7 @@ def mine_jpdb_word():
     # Here you would implement the JPDB mining API call
     # For now, we'll just return a success response
     current_app.logger.info(f"Mining word vid={vid}, sid={sid} to deck {mining_deck_id}")
-    
+
     return jsonify({"success": True})
 
 @api_bp.route('/update_jpdb_word_state', methods=['POST'])
@@ -591,10 +583,10 @@ def update_jpdb_word_state():
     # Here you would implement the JPDB state update API call
     # For now, we'll just return a success response
     current_app.logger.info(f"Updating word vid={vid}, sid={sid}, flag={flag}, state={state}")
-    
+
     # Return a mock new state for the word
     new_state = ['known'] if state else ['new']
-    
+
     return jsonify({"success": True, "newState": new_state})
 
 @api_bp.route('/review_jpdb_card', methods=['POST'])

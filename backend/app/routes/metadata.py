@@ -4,6 +4,9 @@ from flask import Blueprint, request, jsonify
 from ..utils.clerk_auth import require_auth, get_user_id
 from google.cloud import firestore
 
+# Initialize Firestore client
+fs_db = firestore.Client()
+
 metadata_bp = Blueprint("metadata", __name__, url_prefix="/metadata")
 
 

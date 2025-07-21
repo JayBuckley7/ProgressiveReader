@@ -1,7 +1,6 @@
 """Blueprint routes for main pages and index handling."""
-from flask import Blueprint, render_template, session, request, redirect, url_for, current_app, jsonify
+from flask import Blueprint, render_template, request, current_app, jsonify
 import os
-import uuid
 
 # Use a more descriptive name like 'main_bp' or similar
 main_bp = Blueprint('main', __name__)
@@ -19,16 +18,30 @@ def upload_file():
     file = request.files['file']
     if file.filename == '':
         return jsonify({'success': False, 'message': 'No selected file'}), 400
-    
+
     if file and file.filename.lower().endswith(('.epub', '.txt', '.docx', '.pdf', '.mobi')):
         # No longer saving the file to the server.
         # The client will handle storage in IndexedDB.
         # This endpoint now exists purely to maintain familiar upload terminology
         # No actual file storage happens here - everything is client-side
-        current_app.logger.info(f"MOCK UPLOAD in main.py: Client sent '{file.filename}' - directing to client processing")
-        return jsonify({'success': True, 'message': 'File ready for client-side processing.'})
+        current_app.logger.info(
+            f"MOCK UPLOAD in main.py: Client sent '{file.filename}' - directing to client processing"
+        )
+        return jsonify({
+            'success': True,
+            'message': 'File ready for client-side processing.'
+        })
     else:
-        return jsonify({'success': False, 'message': 'Invalid file type, please upload an EPUB, PDF, MOBI, DOCX, or TXT file.'}), 400
+        return (
+            jsonify({
+                'success': False,
+                'message': (
+                    'Invalid file type, please upload an EPUB, PDF, MOBI, DOCX, '
+                    'or TXT file.'
+                )
+            }),
+            400,
+        )
 
 @main_bp.route('/delete/<filename>', methods=['POST'])
 def delete_book(filename):
@@ -44,7 +57,7 @@ def demo():
         demo_book_files = [f for f in os.listdir(demo_books_dir) if f.endswith('.epub')]
         current_app.logger.info(f"Found demo books: {demo_book_files}")
 
-    return render_template('demo.html', is_demo=True, demo_books=demo_book_files, openai_key_configured=True) 
+    return render_template('demo.html', is_demo=True, demo_books=demo_book_files, openai_key_configured=True)
 @main_bp.route('/tos')
 def tos():
     """Render the Terms of Service page."""
