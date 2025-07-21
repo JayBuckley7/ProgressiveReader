@@ -31,7 +31,10 @@ def reader(book_id: str, item_index: int = None):
     Serve the minimal reader shell; the browser does all EPUB work.
     """
     current_app.logger.debug(
-        "Reader view for book %s (URL index: %s, actual start determined by client or this URL index)", book_id, item_index
+        "Reader view for book %s (URL index: %s, actual start determined "
+        "by client or this URL index)",
+        book_id,
+        item_index,
     )
 
     # Redirect to index 0 if no specific item index was provided.  The unit
@@ -62,13 +65,11 @@ def reader_demo(book_id: str, item_index: int = None):
 
     return render_template(
         "reader.html",
-        book_id          = book_id,
-        current_index    = template_current_index, # Use the explicitly set None or the integer value
-        is_demo          = True,        # -- new flag
-        model_name       = "demo",
-        show_jlpt_filter = False,
-        jlpt_enabled     = False,
-        openai_key_configured = False,
+        book_id=book_id,
+        current_index=template_current_index,  # Use the explicitly set None or the integer value
+        is_demo=True,  # -- new flag
+        model_name="demo",
+        show_jlpt_filter=False,
+        jlpt_enabled=False,
+        openai_key_configured=False,
     )
-
-
