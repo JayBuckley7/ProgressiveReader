@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useStorageService } from "../hooks/useStorageService";
+import { toast } from "sonner";
 
 type Theme = "light" | "dark" | "system";
 
@@ -93,8 +94,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   
   // Placeholder for settings - replace with Flask API calls for persistence
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
-  const { isAuthenticated, loadSettings, books } = useStorageService();
+  const { isAuthenticated, loadSettings, saveSettings, books } = useStorageService();
   const loadedFromCloudRef = useRef(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load settings from localStorage or cookie on initial mount
   useEffect(() => {
@@ -125,27 +127,47 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load settings from Clerk after authentication
+  // Auto-load settings from Google Drive when authenticated and connected
   useEffect(() => {
     const attemptCloudLoad = async () => {
       if (!isAuthenticated || loadedFromCloudRef.current) {
         return;
       }
 
-      try {
-        const data = await loadSettings();
-        if (data) {
-          setCurrentSettings(prev => {
-            const updated = { ...prev, ...data };
-            setSettingsCookie(updated);
-            setSettingsStorage(updated);
-            return updated;
-          });
+      // Add a small delay to ensure Google Drive connection is ready
+      setTimeout(async () => {
+        try {
+          console.log('🔄 Auto-loading settings from Google Drive...');
+          const data = await loadSettings();
+          if (data && Object.keys(data).length > 0) {
+            console.log('✅ Settings auto-loaded from Google Drive successfully');
+            toast.success('Settings synced from Google Drive', {
+              description: 'Your preferences have been loaded automatically',
+              duration: 3000
+            });
+            setCurrentSettings(prev => {
+              const updated = { ...prev, ...data };
+              setSettingsCookie(updated);
+              setSettingsStorage(updated);
+              
+              // Sync accessibility settings to localStorage for JPDB integration
+              localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
+              localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
+              localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
+              localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
+              console.log('🔔 Auto-synced all accessibility settings to localStorage');
+              
+              return updated;
+            });
+          } else {
+            console.log('ℹ️ No settings.json found in Google Drive - using local settings');
+          }
+          loadedFromCloudRef.current = true;
+        } catch (err) {
+          console.error('❌ Failed to auto-load settings from Google Drive:', err);
+          loadedFromCloudRef.current = true; // Mark as attempted to avoid infinite retries
         }
-        loadedFromCloudRef.current = true;
-      } catch (err) {
-        console.error('Failed to load settings:', err);
-      }
+      }, 1500); // 1.5 second delay to ensure Google Drive is ready
     };
 
     attemptCloudLoad();
@@ -158,6 +180,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     return () => {};
   }, [isAuthenticated, loadSettings, books.length]);
+
+  // Cleanup auto-save timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Convert database settings to our Settings interface
   // const settings: Settings | null = dbSettings ? {
@@ -176,7 +207,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const settings = currentSettings; // Use state directly
 
   const updateSettings = (updates: Partial<Settings>) => {
-    console.log("Update settings (TODO - Flask API call):", updates);
+    console.log("Updating settings:", updates);
     setCurrentSettings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
@@ -197,6 +228,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
       if ('cacheTranslations' in updates) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
+      }
+
+      // Auto-save to cloud with debouncing
+      if (isAuthenticated && loadedFromCloudRef.current) {
+        // Clear any existing timeout
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+        }
+        
+        // Set a new timeout to save after 2 seconds of no changes
+        autoSaveTimeoutRef.current = setTimeout(async () => {
+          try {
+            console.log('🔄 Auto-saving settings to cloud...');
+            const success = await saveSettings(updated);
+            if (success) {
+              console.log('✅ Settings auto-saved to cloud successfully');
+            } else {
+              console.warn('⚠️ Auto-save to cloud failed');
+            }
+          } catch (error) {
+            console.error('❌ Error auto-saving settings:', error);
+          }
+        }, 2000);
       }
       
       return updated;

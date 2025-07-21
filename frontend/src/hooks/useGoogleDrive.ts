@@ -26,6 +26,8 @@ interface UseGoogleDriveReturn {
   driveFiles: GoogleDriveFile[];
   isLoading: boolean;
   error: Error | null;
+  isTokenNearExpiry: boolean;
+  isRefreshing: boolean;
   fetchDriveFiles: (folderId?: string) => Promise<void>;
   uploadToDrive: (
     fileName: string,
@@ -36,9 +38,10 @@ interface UseGoogleDriveReturn {
   downloadFromDrive: (fileId: string) => Promise<Blob | null>;
   deleteFromDrive: (fileId: string) => Promise<boolean>;
   getAppFolderId: () => Promise<string | null>;
+  refreshToken: () => Promise<boolean>;
 }
 
-export const useGoogleDrive = (): UseGoogleDriveReturn => {
+export function useGoogleDrive(): UseGoogleDriveReturn {
   const [isDriveConnected, setIsDriveConnected] = useState<boolean>(
     gDriveService.isSignedIn()
   );
@@ -46,6 +49,8 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
   const [driveFiles, setDriveFiles] = useState<GoogleDriveFile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false); // For async operations like fetching files
   const [error, setError] = useState<Error | null>(null);
+  const [isTokenNearExpiry, setIsTokenNearExpiry] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   useEffect(() => {
     const unsubscribe = gDriveService.listenToSigninStatus(async (status) => {
@@ -53,17 +58,30 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
       if (status) {
         const profile = await gDriveService.getUserProfile();
         setDriveUser(profile);
+        setIsTokenNearExpiry(gDriveService.isTokenNearExpiry());
       } else {
         setDriveUser(null);
+        setIsTokenNearExpiry(false);
       }
     });
 
     // Initialize current state
     if (gDriveService.isSignedIn()) {
       gDriveService.getUserProfile().then(setDriveUser);
+      setIsTokenNearExpiry(gDriveService.isTokenNearExpiry());
     }
 
-    return unsubscribe;
+    // Check token expiry status periodically
+    const tokenCheckInterval = setInterval(() => {
+      if (gDriveService.isSignedIn()) {
+        setIsTokenNearExpiry(gDriveService.isTokenNearExpiry());
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      unsubscribe();
+      clearInterval(tokenCheckInterval);
+    };
   }, []);
 
   const fetchDriveFiles = useCallback(async (folderId?: string) => {
@@ -188,16 +206,37 @@ export const useGoogleDrive = (): UseGoogleDriveReturn => {
     }
   }, [isDriveConnected]);
 
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    setIsRefreshing(true);
+    try {
+      const success = await gDriveService.refreshToken();
+      if (success) {
+        setIsTokenNearExpiry(false);
+        setError(null);
+      }
+      return success;
+    } catch (e: any) {
+      console.error('[useGoogleDrive] Error refreshing token:', e);
+      setError(e);
+      return false;
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   return {
     isDriveConnected,
     driveUser,
     driveFiles,
     isLoading,
     error,
+    isTokenNearExpiry,
+    isRefreshing,
     fetchDriveFiles,
     uploadToDrive,
     downloadFromDrive,
     deleteFromDrive,
     getAppFolderId,
+    refreshToken,
   };
-};
+}

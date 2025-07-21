@@ -71,5 +71,38 @@ export interface ChapterTitle {
     href: string;
 }
 
+export interface Folder {
+  id: string;
+  name: string;
+  parentId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+}
+
+export interface BookMetadata {
+  id: string;
+  title: string;
+  fileType: string;
+  // Cloud storage pointers - NO CONTENT
+  driveFileId?: string;
+  onedriveFileId?: string;
+  icloudFileId?: string;
+  coverImageId?: string;
+  coverUrl?: string;
+  totalChapters?: number;
+  uploadedAt: Date;
+  // Metadata only
+  userId: string;
+  cloudProvider: 'google' | 'onedrive' | 'icloud' | 'local';
+  // Folder organization
+  folderId?: string;
+}
+
+export interface LibraryStructure {
+  folders: Folder[];
+  books: BookMetadata[];
+}
+
 // Required to make this a module
 export {}; 

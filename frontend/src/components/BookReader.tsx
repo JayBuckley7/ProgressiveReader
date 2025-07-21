@@ -73,7 +73,7 @@ const clearAllTranslationsForBook = (bookId: string) => {
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   const navigate = useNavigate();
-  const { books } = useStorageService();
+  const { books, getReadingProgress, saveBookProgress } = useStorageService();
   const bookMetadata = useMemo(() => books.find(b => b.id === bookId), [books, bookId]);
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -91,7 +91,56 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return currentChapter ?? fromQuery;
   });
 
+  const [progressLoaded, setProgressLoaded] = useState(false);
+  
+  // Handle initial PDF page from URL
+  const initialPdfPage = useMemo(() => {
+    const pageFromQuery = parseInt(searchParams.get('page') || '1', 10);
+    return Math.max(1, pageFromQuery);
+  }, [searchParams]);
+
   const chapter = currentChapter ?? localChapter;
+
+  // Load reading progress when book opens
+  useEffect(() => {
+    if (!progressLoaded && bookMetadata) {
+      (async () => {
+        try {
+          const progress = await getReadingProgress(bookId);
+          if (progress) {
+            console.log('📖 Restoring reading progress:', progress);
+            
+            if (bookMetadata.fileType === 'pdf' && progress.currentPage) {
+              // For PDFs, restore the page (only if not set via URL)
+              if (!searchParams.get('page')) {
+                setPdfCurrentPage(progress.currentPage);
+              }
+            } else if (progress.currentChapter !== undefined) {
+              // For EPUB/text books, restore the chapter (only if not set via URL or prop)
+              if (!currentChapter && !searchParams.get('ch')) {
+                setLocalChapter(progress.currentChapter);
+                searchParams.set('ch', String(progress.currentChapter));
+                setSearchParams(searchParams, { replace: true });
+              }
+            }
+            
+            // Restore scroll position if available
+            if (progress.currentPosition) {
+              setTimeout(() => {
+                if (contentRef.current) {
+                  contentRef.current.scrollTop = progress.currentPosition;
+                }
+              }, 500); // Delay to ensure content is loaded
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load reading progress:', error);
+        } finally {
+          setProgressLoaded(true);
+        }
+      })();
+    }
+  }, [bookId, bookMetadata, progressLoaded, currentChapter, getReadingProgress, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (bookMetadata && bookMetadata.fileType === "pdf") {
@@ -100,14 +149,33 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         if (blob) {
           const arrayBuffer = await blob.arrayBuffer();
           setPdfData(arrayBuffer);
+          
+          // Navigate to the correct PDF page after data loads
+          setTimeout(() => {
+            if (pdfViewerRef.current) {
+              pdfViewerRef.current.goToPage(pdfCurrentPage);
+            }
+          }, 100);
         }
       })();
     }
-  }, [bookId, bookMetadata]);
+  }, [bookId, bookMetadata, progressLoaded, getReadingProgress]);
   const updateChapter = setCurrentChapter ?? ((ch: number) => {
     setLocalChapter(ch);
     searchParams.set('ch', String(ch));
     setSearchParams(searchParams, { replace: true });
+    
+    // Save progress when chapter changes
+    if (bookMetadata && progressLoaded) {
+      saveBookProgress(
+        bookId, 
+        ch, 
+        0, // Reset scroll position for new chapter
+        undefined, 
+        undefined,
+        bookMetadata.fileType
+      );
+    }
   });
 
   // Use the new useBookContent hook instead of placeholder data
@@ -122,7 +190,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // PDF page navigation state
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
   const [pdfPageCount, setPdfPageCount] = useState(0);
-  const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(initialPdfPage);
   
   const [showSettings, setShowSettings] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -146,17 +214,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Update reading progress
   useEffect(() => {
     const updateProgressDebounced = setTimeout(() => {
-      // updateProgress({
-      //   bookId,
-      //   chapter,
-      //   currentPosition: scrollPosition,
-      // });
-      // TODO: Call Flask API to update progress
-      console.log("Debounced update progress (TODO):", { bookId, chapter, scrollPosition });
-    }, 1000);
+      if (bookMetadata && progressLoaded) {
+        // Save scroll position progress for EPUB/text books
+        if (bookMetadata.fileType !== 'pdf') {
+          saveBookProgress(
+            bookId,
+            chapter,
+            scrollPosition,
+            undefined,
+            undefined,
+            bookMetadata.fileType
+          );
+        }
+      }
+    }, 2000); // Debounce for 2 seconds to avoid too frequent saves
 
     return () => clearTimeout(updateProgressDebounced);
-  }, [bookId, chapter, scrollPosition]);
+  }, [bookId, chapter, scrollPosition, bookMetadata, progressLoaded, saveBookProgress]);
 
   // Clear translated content when chapter changes, but check for autoload first
   useEffect(() => {
@@ -870,6 +944,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       const newPage = pdfCurrentPage + 1;
       setPdfCurrentPage(newPage);
       pdfViewerRef.current?.goToPage(newPage);
+      
+      // Save progress when PDF page changes
+      if (bookMetadata && progressLoaded) {
+        saveBookProgress(
+          bookId, 
+          newPage - 1, // Use 0-based chapter for consistency
+          0, 
+          newPage,
+          pdfPageCount,
+          'pdf'
+        );
+      }
     }
   };
 
@@ -878,6 +964,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       const newPage = pdfCurrentPage - 1;
       setPdfCurrentPage(newPage);
       pdfViewerRef.current?.goToPage(newPage);
+      
+      // Save progress when PDF page changes
+      if (bookMetadata && progressLoaded) {
+        saveBookProgress(
+          bookId, 
+          newPage - 1, // Use 0-based chapter for consistency
+          0, 
+          newPage,
+          pdfPageCount,
+          'pdf'
+        );
+      }
     }
   };
 

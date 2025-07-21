@@ -48,6 +48,22 @@ export interface BookMetadata {
     // Metadata only
     userId: string;
     cloudProvider: 'google' | 'onedrive' | 'icloud' | 'local';
+    // Folder organization
+    folderId?: string;
+}
+
+export interface Folder {
+    id: string;
+    name: string;
+    parentId?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: string;
+}
+
+export interface LibraryStructure {
+    folders: Folder[];
+    books: BookMetadata[];
 }
 
 export interface ReadingProgress {
@@ -55,15 +71,24 @@ export interface ReadingProgress {
     userId: string;
     currentChapter: number;
     currentPosition: number;
+    currentPage?: number; // For PDF files
+    totalPages?: number; // For PDFs
     lastUpdated: Date;
+    fileType?: string; // Track whether it's pdf, epub, etc.
 }
 
 type Provider = 'google' | 'apple' | 'microsoft' | 'email';
 
 class StorageService {
-    // Cache for book metadata to prevent redundant API calls
+    // Cache for book metadata to prevent redundant API calls - increased duration
     private bookListCache: { data: BookMetadata[], timestamp: number } | null = null;
-    private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes instead of 5
+
+    // Cache for blob URLs to prevent recreating them
+    private coverUrlCache = new Map<string, string>();
+    
+    // Track active cover downloads to prevent duplicates
+    private activeCoverDownloads = new Map<string, Promise<string | null>>();
 
     private async getAuthHeaders(): Promise<HeadersInit> {
         // Get Clerk session token for API calls
@@ -211,7 +236,8 @@ class StorageService {
                         coverUrl: coverImageId ? `https://drive.google.com/thumbnail?id=${coverImageId}&sz=w400-h600` : undefined,
                         uploadedAt: new Date(),
                         userId: 'current-user',
-                        cloudProvider: 'google'
+                        cloudProvider: 'google',
+                        folderId: undefined // New books start without a folder
                     };
 
                                 console.log('✅ Book uploaded to user\'s cloud storage successfully. Privacy-first: no metadata stored in our backend.');
@@ -494,19 +520,26 @@ class StorageService {
             if (this.bookListCache && (now - this.bookListCache.timestamp < this.CACHE_DURATION)) {
                 console.log('getUserBooks: Using cached book list to prevent redundant API calls');
                 
-                // Still trigger cover downloads if callback provided
-                if (onCoverReady) {
-                    this.bookListCache.data.forEach(book => {
-                        if (book.coverUrl) {
-                            onCoverReady(book.id, book.coverUrl);
-                        } else if (book.coverImageId) {
-                            // Start async cover download for uncached covers
-                            this.downloadCoverAsync(book.id, book.coverImageId, book.title, onCoverReady);
-                        }
-                    });
-                }
+                // Update books with current cached cover URLs and trigger callbacks
+                const updatedBooks = this.bookListCache.data.map(book => {
+                    const cachedCoverUrl = this.getCachedCoverUrl(book.id);
+                    const updatedBook = cachedCoverUrl ? { ...book, coverUrl: cachedCoverUrl } : book;
+                    
+                    // Trigger callback for books with covers
+                    if (onCoverReady && updatedBook.coverUrl) {
+                        onCoverReady(book.id, updatedBook.coverUrl);
+                    } else if (onCoverReady && !updatedBook.coverUrl && book.coverImageId) {
+                        // Start async download for books without cached covers
+                        this.downloadCoverAsync(book.id, book.coverImageId, book.title, onCoverReady);
+                    }
+                    
+                    return updatedBook;
+                });
                 
-                return this.bookListCache.data;
+                // Update the cache with current cover URLs
+                this.bookListCache.data = updatedBooks;
+                
+                return updatedBooks;
             }
 
             // Get metadata.json file which contains book-to-cover mappings
@@ -552,26 +585,34 @@ class StorageService {
                 const bookMetadata = bookData as any;
                 const coverImageId = coverEntries[bookFileId];
                 
-                // Create book metadata immediately without cover
+                // Create book metadata, using cached cover URL if available
+                const cachedCoverUrl = this.getCachedCoverUrl(bookFileId);
                 const book: BookMetadata = {
                     id: bookFileId,
                     title: bookMetadata.title || driveFile.name.replace(/\.[^/.]+$/, ''), // fallback to filename without extension
                     fileType: bookMetadata.fileType || driveFile.name.split('.').pop()?.toLowerCase() || 'unknown',
                     driveFileId: bookFileId,
                     coverImageId: coverImageId,
-                    coverUrl: undefined, // Will be set asynchronously
+                    coverUrl: cachedCoverUrl, // Use cached URL if available
                     uploadedAt: bookMetadata.uploadedAt ? new Date(bookMetadata.uploadedAt) : new Date(driveFile.modifiedTime || Date.now()),
                     userId: 'current-user', // We don't store user ID since we're privacy-first
-                    cloudProvider: 'google' as const
+                    cloudProvider: 'google' as const,
+                    folderId: bookMetadata.folderId || undefined
                 };
 
                 books.push(book);
 
-                // Start async cover download if cover exists
+                // Start async cover download only if we don't have a cached cover and callback is provided
                 if (coverImageId && driveFileIds.has(coverImageId) && onCoverReady) {
-                    console.log(`[Cover Debug] Initiating cover download for book: ${bookMetadata.title} (ID: ${bookFileId}, CoverID: ${coverImageId})`);
-                    const coverTask = this.downloadCoverAsync(bookFileId, coverImageId, bookMetadata.title, onCoverReady);
-                    coverDownloadTasks.push(coverTask);
+                    if (!cachedCoverUrl) {
+                        console.log(`[Cover Debug] Initiating cover download for book: ${bookMetadata.title} (ID: ${bookFileId})`);
+                        const coverTask = this.downloadCoverAsync(bookFileId, coverImageId, bookMetadata.title, onCoverReady);
+                        coverDownloadTasks.push(coverTask);
+                    } else {
+                        console.log(`[Cover Debug] Using cached cover for book: ${bookMetadata.title}`);
+                        // Immediately call the callback with the cached URL
+                        onCoverReady(bookFileId, cachedCoverUrl);
+                    }
                 } else {
                     if (!coverImageId) {
                         console.log(`[Cover Debug] No cover image ID for book: ${bookMetadata.title}`);
@@ -610,7 +651,99 @@ class StorageService {
     }
 
     /**
-     * Download a single cover image asynchronously
+     * Get or create a persistent cover URL for a book
+     * This method checks cache first and reuses blob URLs when possible
+     */
+    private async getPersistentCoverUrl(bookId: string, coverImageId: string): Promise<string | null> {
+        // Check if we already have a cached URL for this book
+        const cachedUrl = this.coverUrlCache.get(bookId);
+        if (cachedUrl) {
+            // Verify the URL is still valid by trying to create an image
+            try {
+                const isValid = await this.testBlobUrl(cachedUrl);
+                if (isValid) {
+                    console.log(`[Cover Cache] Using cached URL for book ${bookId}`);
+                    return cachedUrl;
+                } else {
+                    // URL is invalid, remove from cache
+                    this.coverUrlCache.delete(bookId);
+                    URL.revokeObjectURL(cachedUrl);
+                }
+            } catch {
+                // URL test failed, remove from cache
+                this.coverUrlCache.delete(bookId);
+                URL.revokeObjectURL(cachedUrl);
+            }
+        }
+
+        // Check if download is already in progress
+        if (this.activeCoverDownloads.has(bookId)) {
+            console.log(`[Cover Cache] Download in progress for book ${bookId}, waiting...`);
+            return this.activeCoverDownloads.get(bookId)!;
+        }
+
+        // Start new download
+        const downloadPromise = this.downloadAndCacheCover(bookId, coverImageId);
+        this.activeCoverDownloads.set(bookId, downloadPromise);
+        
+        try {
+            const result = await downloadPromise;
+            return result;
+        } finally {
+            this.activeCoverDownloads.delete(bookId);
+        }
+    }
+
+    /**
+     * Download and cache a cover, returning a persistent blob URL
+     */
+    private async downloadAndCacheCover(bookId: string, coverImageId: string): Promise<string | null> {
+        try {
+            // Check file-level cache first
+            let coverBlob = await getCoverForFile(bookId);
+            if (coverBlob) {
+                console.log(`[Cover Cache] Found cover in file cache for book ${bookId}`);
+            } else {
+                // Check cover-level cache
+                coverBlob = await getCachedCover(coverImageId);
+                if (coverBlob) {
+                    console.log(`[Cover Cache] Found cover in cover cache for book ${bookId}`);
+                    await cacheCoverForFile(bookId, coverBlob);
+                } else {
+                    // Download from Google Drive
+                    console.log(`[Cover Cache] Downloading cover from Google Drive for book ${bookId}`);
+                    coverBlob = await gDriveService.downloadFile(coverImageId);
+                    if (coverBlob) {
+                        await cacheCover(coverImageId, coverBlob);
+                        await cacheCoverForFile(bookId, coverBlob);
+                        console.log(`[Cover Cache] Downloaded and cached cover for book ${bookId}`);
+                    }
+                }
+            }
+            
+            if (coverBlob && coverBlob.size > 0) {
+                // Validate the image
+                const isValidImage = await this.testBlobImage(coverBlob);
+                if (isValidImage) {
+                    // Create persistent blob URL
+                    const coverUrl = URL.createObjectURL(coverBlob);
+                    this.coverUrlCache.set(bookId, coverUrl);
+                    console.log(`✅ [Cover Cache] Created persistent URL for book ${bookId}`);
+                    return coverUrl;
+                } else {
+                    console.warn(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn(`⚠️ [Cover Cache] Failed to get cover for book ${bookId}:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Download a single cover image asynchronously with improved caching
      */
     private async downloadCoverAsync(
         bookId: string, 
@@ -619,64 +752,17 @@ class StorageService {
         onCoverReady: (bookId: string, coverUrl: string) => void
     ): Promise<void> {
         try {
-            console.log(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId}, CoverID: ${coverImageId})`);
+            console.log(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId})`);
             
-            // Check file-level cache first
-            let coverBlob = await getCoverForFile(bookId);
-            if (coverBlob) {
-                console.log(`[Cover Debug] Found cover in file cache for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
+            const coverUrl = await this.getPersistentCoverUrl(bookId, coverImageId);
+            if (coverUrl) {
+                console.log(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
+                onCoverReady(bookId, coverUrl);
             } else {
-                console.log(`[Cover Debug] No cover found in file cache for ${bookTitle}, checking cover cache...`);
-                
-                // Check cover-level cache
-                coverBlob = await getCachedCover(coverImageId);
-                if (coverBlob) {
-                    console.log(`[Cover Debug] Found cover in cover cache for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
-                    await cacheCoverForFile(bookId, coverBlob);
-                    console.log(`[Cover Debug] Cached cover for file ${bookId}`);
-                }
-            }
-            
-            // If still no blob, download from Google Drive
-            if (!coverBlob) {
-                console.log(`[Cover Debug] No cached cover found for ${bookTitle}, downloading from Google Drive...`);
-                coverBlob = await gDriveService.downloadFile(coverImageId);
-                if (coverBlob) {
-                    console.log(`[Cover Debug] Downloaded cover from Google Drive for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
-                    await cacheCover(coverImageId, coverBlob);
-                    await cacheCoverForFile(bookId, coverBlob);
-                    console.log(`[Cover Debug] Cached downloaded cover for ${bookTitle}`);
-                } else {
-                    console.warn(`[Cover Debug] Failed to download cover from Google Drive for ${bookTitle} - no blob returned`);
-                }
-            }
-            
-            if (coverBlob) {
-                // Debug: Log blob details
-                console.log(`[Cover Debug] Processing cover blob for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}`);
-                
-                // Test if the blob is a valid image
-                console.log(`[Cover Debug] Validating image for ${bookTitle}...`);
-                const isValidImage = await this.testBlobImage(coverBlob);
-                console.log(`[Cover Debug] Image validation result for ${bookTitle}: ${isValidImage}`);
-                
-                // Validate that we have a valid image blob
-                if (coverBlob.size > 0 && isValidImage) {
-                    // Create a blob URL for the cover image
-                    const coverUrl = URL.createObjectURL(coverBlob);
-                    console.log(`✅ [Cover Debug] Cover image ready for: ${bookTitle} - URL created: ${coverUrl.substring(0, 50)}...`);
-                    
-                    // Notify the UI that the cover is ready
-                    onCoverReady(bookId, coverUrl);
-                    console.log(`[Cover Debug] Cover ready callback triggered for ${bookTitle}`);
-                } else {
-                    console.warn(`⚠️ [Cover Debug] Invalid cover image blob for ${bookTitle} - Size: ${coverBlob.size}, Type: ${coverBlob.type}, Valid: ${isValidImage}`);
-                }
-            } else {
-                console.warn(`⚠️ [Cover Debug] No blob returned for cover image of ${bookTitle} - CoverID: ${coverImageId}`);
+                console.warn(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
             }
         } catch (error) {
-            console.warn(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle} (ID: ${bookId}, CoverID: ${coverImageId}):`, error);
+            console.warn(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
         }
     }
 
@@ -798,6 +884,16 @@ class StorageService {
                 await removeCachedCover(currentCoverImageId);
             }
 
+            // Clear the cover URL cache for this book to force re-download
+            const oldCoverUrl = this.coverUrlCache.get(bookId);
+            if (oldCoverUrl) {
+                URL.revokeObjectURL(oldCoverUrl);
+                this.coverUrlCache.delete(bookId);
+            }
+
+            // Clear book list cache since cover has changed
+            this.clearBookListCache();
+
             // Delete old cover image if it exists (do this after successful update)
             if (currentCoverImageId && currentCoverImageId !== coverImageId) {
                 const deleteSuccess = await gDriveService.deleteFile(currentCoverImageId);
@@ -879,48 +975,88 @@ class StorageService {
     async getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
         console.log('Getting reading progress for book:', bookId);
         try {
-            const headers = await this.getAuthHeaders();
-            const response = await fetch(`/api/progress/${bookId}`, {
-                method: 'GET',
-                headers
-            });
-
-            if (!response.ok) {
-                if (response.status === 404) {
-                    return null; // No progress found
+            // First try local storage for immediate access
+            const localKey = `reading_progress_${bookId}`;
+            const localProgress = localStorage.getItem(localKey);
+            
+            if (localProgress) {
+                try {
+                    const parsed = JSON.parse(localProgress);
+                    return {
+                        ...parsed,
+                        lastUpdated: new Date(parsed.lastUpdated)
+                    };
+                } catch (error) {
+                    console.warn('Failed to parse local reading progress:', error);
+                    localStorage.removeItem(localKey);
                 }
-                throw new Error(`Failed to fetch progress: ${response.status} ${response.statusText}`);
             }
 
-            const progress = await response.json();
-            if (!progress) return null;
+            // Fallback to cloud storage if connected
+            if (gDriveService.isSignedIn()) {
+                try {
+                    const metadataInfo = await gDriveService.getMetadataFile();
+                    if (metadataInfo?.data?.progress?.[bookId]) {
+                        const cloudProgress = metadataInfo.data.progress[bookId];
+                        const progress: ReadingProgress = {
+                            ...cloudProgress,
+                            lastUpdated: new Date(cloudProgress.lastUpdated)
+                        };
+                        
+                        // Cache to local storage for faster access
+                        localStorage.setItem(localKey, JSON.stringify(progress));
+                        return progress;
+                    }
+                } catch (error) {
+                    console.warn('Failed to get progress from cloud metadata:', error);
+                }
+            }
 
-            return {
-                ...progress,
-                lastUpdated: new Date(progress.lastUpdated)
-            };
+            return null;
         } catch (error) {
             console.error('Error fetching reading progress:', error);
-            throw error;
+            return null;
         }
     }
 
     async saveReadingProgress(progress: ReadingProgress): Promise<void> {
         console.log('Saving reading progress:', progress);
         try {
-            const headers = await this.getAuthHeaders();
-            const response = await fetch('/api/progress', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    bookId: progress.bookId,
-                    currentChapter: progress.currentChapter,
-                    currentPosition: progress.currentPosition
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to save progress: ${response.status} ${response.statusText}`);
+            // Always save to local storage first for immediate access
+            const localKey = `reading_progress_${progress.bookId}`;
+            const progressToStore = {
+                ...progress,
+                lastUpdated: new Date().toISOString()
+            };
+            localStorage.setItem(localKey, JSON.stringify(progressToStore));
+            
+            // Also save to cloud metadata if connected
+            if (gDriveService.isSignedIn()) {
+                try {
+                    const metadataInfo = await gDriveService.getMetadataFile();
+                    if (metadataInfo) {
+                        const { fileId, data } = metadataInfo;
+                        
+                        // Initialize progress section if it doesn't exist
+                        if (!data.progress) {
+                            data.progress = {};
+                        }
+                        
+                        // Update progress for this book
+                        data.progress[progress.bookId] = progressToStore;
+                        
+                        // Save back to cloud
+                        const success = await gDriveService.updateMetadataFile(fileId, data);
+                        if (success) {
+                            console.log('Reading progress synced to cloud successfully');
+                        } else {
+                            console.warn('Failed to sync progress to cloud, but local save succeeded');
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to sync progress to cloud metadata:', error);
+                    // Don't throw - local storage save succeeded
+                }
             }
 
             console.log('Reading progress saved successfully');
@@ -928,6 +1064,31 @@ class StorageService {
             console.error('Error saving reading progress:', error);
             throw error;
         }
+    }
+
+    /**
+     * Convenient method to save reading progress for a book
+     */
+    async saveBookProgress(
+        bookId: string, 
+        currentChapter: number, 
+        currentPosition: number = 0, 
+        currentPage?: number,
+        totalPages?: number,
+        fileType?: string
+    ): Promise<void> {
+        const progress: ReadingProgress = {
+            bookId,
+            userId: 'current-user', // We don't track user IDs in this privacy-first app
+            currentChapter,
+            currentPosition,
+            currentPage,
+            totalPages,
+            fileType,
+            lastUpdated: new Date()
+        };
+        
+        return this.saveReadingProgress(progress);
     }
 
     // Legacy methods for compatibility - these now do nothing since we use Clerk
@@ -948,19 +1109,60 @@ class StorageService {
 
     /**
      * Clean up blob URLs to prevent memory leaks
-     * Call this when book list is refreshed or component unmounts
+     * Only clean up URLs that are no longer in use
      */
     cleanupBlobUrls(books: BookMetadata[]): void {
-        books.forEach(book => {
-            if (book.coverUrl && book.coverUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(book.coverUrl);
+        // Get the set of book IDs that are still in use
+        const activeBookIds = new Set(books.map(b => b.id));
+        
+        // Clean up cached URLs for books that are no longer in the list
+        for (const [bookId, coverUrl] of this.coverUrlCache.entries()) {
+            if (!activeBookIds.has(bookId)) {
+                URL.revokeObjectURL(coverUrl);
+                this.coverUrlCache.delete(bookId);
+                console.log(`[Cover Cache] Cleaned up unused cover URL for book ${bookId}`);
             }
-        });
+        }
+    }
+
+    /**
+     * Get a cover URL for a book if it's already cached
+     */
+    getCachedCoverUrl(bookId: string): string | null {
+        return this.coverUrlCache.get(bookId) || null;
     }
 
     // Clear book list cache when books are modified
     private clearBookListCache(): void {
         this.bookListCache = null;
+    }
+
+    /**
+     * Test if a blob URL is still valid and points to an image
+     */
+    private async testBlobUrl(url: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const img = new Image();
+
+            const timeoutId = setTimeout(() => {
+                console.warn('⏰ Blob URL validation timeout');
+                resolve(false);
+            }, 3000);
+
+            img.onload = () => {
+                clearTimeout(timeoutId);
+                console.log(`✅ Blob URL is valid: ${img.width}x${img.height}`);
+                resolve(true);
+            };
+
+            img.onerror = () => {
+                clearTimeout(timeoutId);
+                console.warn('❌ Blob URL is not valid or not an image');
+                resolve(false);
+            };
+
+            img.src = url;
+        });
     }
 
     /**
@@ -997,49 +1199,53 @@ class StorageService {
     }
 
     /**
-     * Save user settings to cloud storage
-     * Uses the same provider detection as openCloudFolder for consistency
+     * Save user settings to Google Drive settings.json file
      */
-    async saveSettings(settings: any): Promise<void> {
-        console.log('Saving settings via backend API...');
+    async saveSettings(settings: any): Promise<boolean> {
+        console.log('Saving settings to Google Drive settings.json...');
 
-        const headers = await this.getAuthHeaders();
-        const response = await fetch('/settings', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(settings)
-        });
+        try {
+            if (!gDriveService.isSignedIn()) {
+                console.warn('Cannot save settings: Google Drive not connected');
+                return false;
+            }
 
-        if (!response.ok) {
-            throw new Error(`Failed to save settings: ${response.status} ${response.statusText}`);
+            const success = await gDriveService.saveSettings(settings);
+            if (success) {
+                console.log('✅ Settings saved to Google Drive successfully');
+                return true;
+            } else {
+                console.warn('⚠️ Failed to save settings to Google Drive');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error saving settings to Google Drive:', error);
+            return false;
         }
     }
 
     /**
-     * Load user settings from cloud storage
-     * Returns null if no settings found or user not connected
+     * Load user settings from Google Drive settings.json file
      */
     async loadSettings(): Promise<any | null> {
-        console.log('Loading settings via backend API...');
-
-        const headers = await this.getAuthHeaders();
-        const response = await fetch('/settings', {
-            method: 'GET',
-            headers
-        });
-
-        if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                throw new Error('UNAUTHORIZED');
-            }
-            return null;
-        }
+        console.log('Loading settings from Google Drive settings.json...');
 
         try {
-            const settings = await response.json();
-            return settings || null;
+            if (!gDriveService.isSignedIn()) {
+                console.warn('Cannot load settings: Google Drive not connected');
+                return null;
+            }
+
+            const settings = await gDriveService.loadSettings();
+            if (settings) {
+                console.log('✅ Settings loaded from Google Drive successfully');
+                return settings;
+            } else {
+                console.log('ℹ️ No settings found in Google Drive');
+                return null;
+            }
         } catch (error) {
-            console.error('Failed to parse settings JSON:', error);
+            console.error('Error loading settings from Google Drive:', error);
             return null;
         }
     }
@@ -1056,6 +1262,84 @@ class StorageService {
      */
     async loadVocabulary(): Promise<any[] | null> {
         return await gDriveService.loadVocab();
+    }
+
+    // Folder management methods
+    async createFolder(name: string, parentId?: string, clerkUser?: any): Promise<Folder> {
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+        
+        switch (provider) {
+            case 'google':
+                return await gDriveService.createFolder(name, parentId);
+            case 'microsoft':
+                throw new Error('OneDrive folder creation not yet implemented');
+            case 'apple':
+                throw new Error('iCloud folder creation not yet implemented');
+            default:
+                throw new Error('No cloud provider configured for folder creation');
+        }
+    }
+
+    async updateFolder(folderId: string, updates: { name?: string; parentId?: string }, clerkUser?: any): Promise<Folder> {
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+        
+        switch (provider) {
+            case 'google':
+                return await gDriveService.updateFolder(folderId, updates);
+            case 'microsoft':
+                throw new Error('OneDrive folder update not yet implemented');
+            case 'apple':
+                throw new Error('iCloud folder update not yet implemented');
+            default:
+                throw new Error('No cloud provider configured for folder update');
+        }
+    }
+
+    async deleteFolder(folderId: string, clerkUser?: any): Promise<void> {
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+        
+        switch (provider) {
+            case 'google':
+                await gDriveService.deleteFolder(folderId);
+                break;
+            case 'microsoft':
+                throw new Error('OneDrive folder deletion not yet implemented');
+            case 'apple':
+                throw new Error('iCloud folder deletion not yet implemented');
+            default:
+                throw new Error('No cloud provider configured for folder deletion');
+        }
+    }
+
+    async getFolders(clerkUser?: any): Promise<Folder[]> {
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+        
+        switch (provider) {
+            case 'google':
+                return await gDriveService.getFolders();
+            case 'microsoft':
+                throw new Error('OneDrive folder retrieval not yet implemented');
+            case 'apple':
+                throw new Error('iCloud folder retrieval not yet implemented');
+            default:
+                return [];
+        }
+    }
+
+    async moveBookToFolder(bookId: string, folderId: string | null, clerkUser?: any): Promise<void> {
+        const provider = this.detectProviderFromClerkUser(clerkUser);
+        
+        switch (provider) {
+            case 'google':
+                await gDriveService.moveBookToFolder(bookId, folderId);
+                break;
+            case 'microsoft':
+                throw new Error('OneDrive book moving not yet implemented');
+            case 'apple':
+                throw new Error('iCloud book moving not yet implemented');
+            default:
+                throw new Error('No cloud provider configured for book moving');
+        }
     }
 }
 
