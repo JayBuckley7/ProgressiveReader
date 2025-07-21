@@ -271,13 +271,17 @@ class GDriveService {
     try {
       // Get authentication headers for the API call
       const authHeaders = await this.getAuthHeaders();
+      console.log('[GDriveService] Headers being sent to /drive/token:', authHeaders);
       
       const response = await fetch('/drive/token', {
         method: 'POST',
         headers: authHeaders,
       });
       if (!response.ok) {
-        console.error('[GDriveService] Error fetching access token from server:', await response.text());
+        const errorText = await response.text();
+        console.error('[GDriveService] Error fetching access token from server:', errorText);
+        console.error('[GDriveService] Response status:', response.status);
+        console.error('[GDriveService] Response headers:', response.headers);
         return null;
       }
       const tokenData: TokenData = await response.json();
@@ -294,8 +298,11 @@ class GDriveService {
     // Get Clerk session token for API calls
     if (typeof window !== 'undefined' && window.Clerk) {
       try {
+        console.log('[GDriveService] Attempting to get Clerk session token...');
         const token = await window.Clerk.session?.getToken();
+        console.log('[GDriveService] Clerk token result:', token ? 'Token received' : 'No token');
         if (token) {
+          console.log('[GDriveService] Returning auth headers with token');
           return {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -304,7 +311,10 @@ class GDriveService {
       } catch (error) {
         console.error('[GDriveService] Error getting Clerk token:', error);
       }
+    } else {
+      console.log('[GDriveService] Clerk not available in window object');
     }
+    console.log('[GDriveService] Returning headers without auth token');
     return {
       'Content-Type': 'application/json'
     };
