@@ -51,12 +51,14 @@ export function useStorageService() {
       const coverMap = new Map(previous.map(b => [b.id, b.coverUrl]));
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
-        setBooks(currentBooks =>
-          currentBooks.map(book =>
+        console.log(`[useStorageService] Cover ready for book ${bookId} (silent refresh) - URL: ${coverUrl.substring(0, 50)}...`);
+        setBooks(currentBooks => {
+          const updatedBooks = currentBooks.map(book =>
             book.id === bookId ? { ...book, coverUrl } : book
-          )
-        );
+          );
+          console.log(`[useStorageService] Updated books state for cover ${bookId} (silent refresh) - Total books: ${updatedBooks.length}`);
+          return updatedBooks;
+        });
       };
 
       const userBooks = await storageService.getUserBooks(onCoverReady);
@@ -112,14 +114,16 @@ export function useStorageService() {
 
       // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        console.log(`[useStorageService] Cover ready for book ${bookId}`);
-        setBooks(currentBooks =>
-          currentBooks.map(book =>
+        console.log(`[useStorageService] Cover ready for book ${bookId} - URL: ${coverUrl.substring(0, 50)}...`);
+        setBooks(currentBooks => {
+          const updatedBooks = currentBooks.map(book =>
             book.id === bookId
               ? { ...book, coverUrl }
               : book
-          )
-        );
+          );
+          console.log(`[useStorageService] Updated books state for cover ${bookId} - Total books: ${updatedBooks.length}`);
+          return updatedBooks;
+        });
       };
 
       const userBooks = await storageService.getUserBooks(onCoverReady);
@@ -413,9 +417,12 @@ export function useStorageService() {
     isDriveSyncingRef.current = true;
     try {
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        setBooks((current) =>
-          current.map((b) => (b.id === bookId ? { ...b, coverUrl } : b))
-        );
+        console.log(`[useStorageService] Cover ready for book ${bookId} (sync) - URL: ${coverUrl.substring(0, 50)}...`);
+        setBooks((current) => {
+          const updatedBooks = current.map((b) => (b.id === bookId ? { ...b, coverUrl } : b));
+          console.log(`[useStorageService] Updated books state for cover ${bookId} (sync) - Total books: ${updatedBooks.length}`);
+          return updatedBooks;
+        });
       };
 
       const synced = await storageService.syncBooks(clerkUser, onCoverReady);

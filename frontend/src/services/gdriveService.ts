@@ -5,9 +5,7 @@
 
 // Access your client ID from environment variables
 const GDRIVE_CLIENT_ID = import.meta.env.VITE_GDRIVE_CLIENT_ID;
-console.log('[GDriveService] VITE_GDRIVE_CLIENT_ID:', GDRIVE_CLIENT_ID);
 const API_KEY = import.meta.env.VITE_GAPI_KEY; // If using GAPI for discovery
-console.log('[GDriveService] VITE_GAPI_KEY:', API_KEY);
 
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const BASE_SCOPES = [
@@ -94,7 +92,6 @@ class GDriveService {
   private async loadGoogleScripts(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.gapi && this.google) {
-        console.log('[GDriveService] Google scripts already loaded.');
         // Try to restore session even if scripts were already loaded
         this.tryRestoreSession();
         resolve();
@@ -104,13 +101,10 @@ class GDriveService {
       const gapiScript = document.createElement('script');
       gapiScript.src = 'https://apis.google.com/js/api.js';
       gapiScript.onload = () => {
-        console.log('[GDriveService] GAPI script loaded.');
         this.gapi = (window as any).gapi;
 
         this.gapi.load('client', () => {
-          console.log('[GDriveService] GAPI client loaded.');
           this.initGapiClient().then(() => {
-            console.log('[GDriveService] GAPI client initialized.');
             // Check if we already have both scripts loaded
             if (this.google) {
               this.tryRestoreSession();
@@ -125,12 +119,10 @@ class GDriveService {
       const gisScript = document.createElement('script');
       gisScript.src = 'https://accounts.google.com/gsi/client';
       gisScript.onload = () => {
-        console.log('[GDriveService] GIS script loaded.');
         this.google = (window as any).google;
 
         try {
           this.initTokenClient();
-          console.log('[GDriveService] GIS Token Client initialized.');
           // Check if we already have both scripts loaded
           if (this.gapi) {
             this.tryRestoreSession();
@@ -150,21 +142,15 @@ class GDriveService {
     // Wait a bit for everything to be fully initialized
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    console.log('[GDriveService] Attempting to restore session...');
-    
     // CRITICAL SECURITY CHECK: Only restore Google Drive session if user is authenticated with Clerk
     const isClerkAuthenticated = this.isClerkUserAuthenticated();
     if (!isClerkAuthenticated) {
-      console.log('[GDriveService] No authenticated Clerk user found. Clearing any stored Google Drive tokens for security.');
       this.clearStoredTokens();
       this.updateSigninStatus(false);
       return false;
     }
-    
-    console.log('[GDriveService] Clerk user authenticated. Proceeding with Google Drive session restoration.');
 
     if (this.loadTokensFromStorage()) {
-      console.log('[GDriveService] Restored token from localStorage');
       await this.fetchUserProfile();
       this.updateSigninStatus(true);
       return true;
@@ -182,14 +168,10 @@ class GDriveService {
 
     // If no refresh token or refresh failed, try silent sign-in
     if (this.tokenClient) {
-      console.log('[GDriveService] Attempting silent sign-in on page load...');
       try {
         const silentSuccess = await this.attemptSilentSignIn();
         if (silentSuccess) {
-          console.log('[GDriveService] ✅ Session restored via silent sign-in');
           return true;
-        } else {
-          console.log('[GDriveService] Silent sign-in failed - user will need to sign in manually');
         }
       } catch (error) {
         console.error('[GDriveService] Silent sign-in attempt failed:', error);
@@ -219,7 +201,6 @@ class GDriveService {
   }
 
   private clearStoredTokens(): void {
-    console.log('[GDriveService] Clearing all stored Google Drive tokens for security');
     this.accessToken = null;
     this.accessTokenExpiry = null;
     this.userProfile = null;
@@ -233,9 +214,7 @@ class GDriveService {
   }
 
   private async attemptSilentSignIn(): Promise<boolean> {
-    console.log('[GDriveService] Attempting silent token request...');
     if (!this.tokenClient) {
-      console.log('[GDriveService] Token client not available for silent sign-in');
       return false;
     }
 
@@ -273,11 +252,8 @@ class GDriveService {
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[GDriveService] Attempt ${attempt}/${maxRetries} to fetch access token from server...`);
-        
         // Get authentication headers for the API call
         const authHeaders = await this.getAuthHeaders();
-        console.log('[GDriveService] Headers being sent to /drive/token:', authHeaders);
         
         const response = await fetch('/drive/token', {
           method: 'POST',
@@ -303,7 +279,6 @@ class GDriveService {
         }
         
         const tokenData: TokenData = await response.json();
-        console.log('[GDriveService] Access token fetched from server successfully:', tokenData);
         return tokenData;
         
       } catch (error) {
