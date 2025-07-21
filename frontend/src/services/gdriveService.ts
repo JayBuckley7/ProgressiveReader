@@ -269,11 +269,12 @@ class GDriveService {
 
   private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
     try {
+      // Get authentication headers for the API call
+      const authHeaders = await this.getAuthHeaders();
+      
       const response = await fetch('/drive/token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
       });
       if (!response.ok) {
         console.error('[GDriveService] Error fetching access token from server:', await response.text());
@@ -286,6 +287,27 @@ class GDriveService {
       console.error('[GDriveService] Exception while fetching access token from server:', error);
       return null;
     }
+  }
+
+  // Helper method to get auth headers
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    // Get Clerk session token for API calls
+    if (typeof window !== 'undefined' && window.Clerk) {
+      try {
+        const token = await window.Clerk.session?.getToken();
+        if (token) {
+          return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          };
+        }
+      } catch (error) {
+        console.error('[GDriveService] Error getting Clerk token:', error);
+      }
+    }
+    return {
+      'Content-Type': 'application/json'
+    };
   }
 
   private async handleTokenResponse(tokenResponse: any, storeRefreshToken: boolean = true) {
