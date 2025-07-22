@@ -200,6 +200,35 @@ def due_cards():
 
     return jsonify(cards)
 
+@api_bp.route('/list-user-decks', methods=['POST'])
+@require_auth
+def list_user_decks():
+    """List the user's JPDB decks with id, name, and word count."""
+    data = request.get_json(silent=True) or {}
+    username = data.get('username')
+    password = data.get('password')
+    cookie = data.get('cookie') or request.headers.get('Cookie')
+
+    if not (username or password or cookie):
+        return jsonify({'error': 'JPDB authentication required'}), 401
+
+    try:
+        # Import the helper function from jpdb_due module
+        from app.utils.jpdb_due import fetch_user_decks
+
+        decks = fetch_user_decks(username=username,
+                               password=password,
+                               cookie_string=cookie)
+
+        if decks is None:
+            return jsonify({'error': 'Failed to fetch decks from JPDB'}), 400
+
+        return jsonify(decks)
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching user decks: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @api_bp.route('/get_jpdb_data', methods=['POST'])
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments."""

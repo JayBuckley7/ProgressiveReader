@@ -641,31 +641,73 @@ class GDriveService {
    * This uses Clerk's stored Google OAuth token which is more reliable
    */
   private async getTokenFromClerkBackend(): Promise<{access_token: string, expires_in: number} | null> {
+    console.log('[🔗 CLERK TOKEN] ==========================================');
+    console.log('[🔗 CLERK TOKEN] Starting Clerk backend token request...');
+    
     try {
       // Get Clerk session token for API authentication
+      console.log('[🔗 CLERK TOKEN] 🔍 Getting Clerk session token...');
+      console.log('[🔗 CLERK TOKEN] Window.Clerk available:', !!window.Clerk);
+      console.log('[🔗 CLERK TOKEN] Window.Clerk.session available:', !!window.Clerk?.session);
+      
       const clerkSessionToken = await window.Clerk?.session?.getToken();
       if (!clerkSessionToken) {
-        console.warn('[🔐 GOOGLE DRIVE AUTH] No Clerk session token available');
+        console.warn('[🔗 CLERK TOKEN] ❌ No Clerk session token available');
+        console.log('[🔗 CLERK TOKEN] ==========================================');
         return null;
       }
+      
+      console.log('[🔗 CLERK TOKEN] ✅ Got Clerk session token (length:', clerkSessionToken.length, ')');
 
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.error('[🔗 CLERK TOKEN] ❌ Request timeout after 15 seconds');
+        controller.abort();
+      }, 15000); // 15 second timeout
+
+      console.log('[🔗 CLERK TOKEN] 🚀 Sending POST request to /drive/token...');
+      const startTime = Date.now();
+      
       const response = await fetch('/drive/token', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${clerkSessionToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
+      console.log('[🔗 CLERK TOKEN] ✅ Received response in', responseTime, 'ms:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.warn('[🔐 GOOGLE DRIVE AUTH] Backend token request failed:', response.status, errorText);
+        console.error('[🔗 CLERK TOKEN] ❌ Backend token request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        console.log('[🔗 CLERK TOKEN] ==========================================');
         return null;
       }
 
+      console.log('[🔗 CLERK TOKEN] 📄 Parsing JSON response...');
       const tokenData = await response.json();
+      
       if (tokenData.access_token && tokenData.expires_in) {
-        console.log('[🔐 GOOGLE DRIVE AUTH] ✅ Retrieved token from Clerk backend');
+        console.log('[🔗 CLERK TOKEN] ✅ Successfully retrieved token data:', {
+          hasAccessToken: !!tokenData.access_token,
+          tokenStart: tokenData.access_token.substring(0, 20) + '...',
+          expiresIn: tokenData.expires_in
+        });
+        console.log('[🔗 CLERK TOKEN] ✅ Retrieved token from Clerk backend');
+        console.log('[🔗 CLERK TOKEN] ==========================================');
         return tokenData;
       } else {
         console.warn('[🔐 GOOGLE DRIVE AUTH] Invalid token response from backend:', tokenData);

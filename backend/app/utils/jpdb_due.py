@@ -124,6 +124,103 @@ def fetch_all_due_cards(username: Optional[str] = None, password: Optional[str] 
     return all_cards
 
 
+def fetch_user_decks(username: Optional[str] = None, password: Optional[str] = None, cookie_string: Optional[str] = None) -> Optional[List[dict]]:
+    """
+    Fetch the user's JPDB decks with id, name, and word count.
+    
+    Returns:
+        List of dicts with keys: 'id', 'name', 'word_count'
+        None if authentication fails
+    """
+    logger.info("Fetching user decks from JPDB")
+    
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    })
+
+    if not authenticate_session(session, username=username, password=password, cookie_string=cookie_string):
+        logger.error("Authentication failed. Cannot fetch decks.")
+        return None
+
+    try:
+        # Navigate to decks page
+        decks_url = f"{BASE_URL}/decks"
+        response = session.get(decks_url)
+        response.raise_for_status()
+        
+        # Check if redirected to login (auth failed)
+        if LOGIN_URL in response.url:
+            logger.error("Redirected to login, authentication may have failed")
+            return None
+            
+        soup = BeautifulSoup(response.text, "html.parser")
+        decks = []
+        
+        # Parse deck information from the decks page
+        # JPDB deck listings typically show deck name and card counts
+        deck_elements = soup.find_all("div", class_="deck") or soup.find_all("a", href=lambda x: x and "/deck" in x)
+        
+        for deck_elem in deck_elements:
+            try:
+                # Extract deck ID from href (e.g., "/deck?id=123")
+                deck_link = deck_elem.get("href") or deck_elem.find("a", href=True)
+                if isinstance(deck_link, str):
+                    deck_href = deck_link
+                else:
+                    deck_href = deck_link.get("href") if deck_link else ""
+                
+                if not deck_href or "deck" not in deck_href:
+                    continue
+                
+                # Parse deck ID from URL parameter
+                deck_id = None
+                if "id=" in deck_href:
+                    try:
+                        deck_id = deck_href.split("id=")[1].split("&")[0]
+                    except (IndexError, ValueError):
+                        continue
+                
+                # Extract deck name
+                deck_name = deck_elem.get_text(strip=True)
+                if deck_elem.find("a"):
+                    deck_name = deck_elem.find("a").get_text(strip=True)
+                
+                # Try to find word count in nearby elements
+                word_count = 0
+                count_elem = deck_elem.find(text=lambda x: x and "cards" in x.lower())
+                if count_elem:
+                    try:
+                        # Extract number from text like "1,234 cards"
+                        import re
+                        count_match = re.search(r'(\d+(?:,\d+)*)', count_elem)
+                        if count_match:
+                            word_count = int(count_match.group(1).replace(',', ''))
+                    except (ValueError, AttributeError):
+                        pass
+                
+                if deck_id and deck_name:
+                    decks.append({
+                        'id': deck_id,
+                        'name': deck_name,
+                        'word_count': word_count
+                    })
+                    
+            except Exception as e:
+                logger.warning(f"Error parsing deck element: {e}")
+                continue
+        
+        logger.info(f"Found {len(decks)} decks")
+        return decks
+        
+    except requests.RequestException as e:
+        logger.error(f"Error fetching decks page: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error fetching decks: {e}")
+        return None
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     env_username = os.getenv("JPDB_USERNAME")

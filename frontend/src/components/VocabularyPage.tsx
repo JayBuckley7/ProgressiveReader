@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getDueCards, forceFetchDueCards, Card as DueCard } from "../services/dueCardsService";
 import { toast } from "sonner";
 import { BookmarkletHelper } from "./BookmarkletHelper";
+import { DeckSelector } from "./DeckSelector";
 
 interface VocabularyWord {
   _id: string; // Was: Id<"vocabulary">
@@ -23,6 +24,7 @@ export function VocabularyPage() {
 
   const [dueCards, setDueCards] = useState<DueCard[]>([]);
   const [showBookmarkletHelper, setShowBookmarkletHelper] = useState(false);
+  const [selectedDeckId, setSelectedDeckId] = useState<string>("");
 
   // const vocabularyQuery = useQuery(api.vocabulary.list, { 
   //   language: selectedLanguage || undefined 
@@ -169,6 +171,21 @@ export function VocabularyPage() {
         >
           Fetch Due Cards
         </button>
+      </div>
+
+      {/* JPDB Deck Selector Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-8">
+        <h2 className="text-xl font-bold mb-4">📚 Vocabulary Decks</h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          Select a JPDB deck to view and manage your vocabulary cards.
+        </p>
+        <DeckSelector 
+          selectedDeckId={selectedDeckId}
+          onDeckSelect={(deck) => {
+            setSelectedDeckId(deck.id);
+            console.log('Selected deck:', deck);
+          }}
+        />
       </div>
 
       {/* Controls */}
