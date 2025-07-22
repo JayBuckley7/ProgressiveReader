@@ -212,6 +212,108 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     isSwiping: false
   });
 
+  // Handle internal EPUB links (like TOC navigation)
+  useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl || !bookContent || bookMetadata?.fileType === 'pdf') return;
+
+    const handleLinkClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (!link || !link.href) return;
+      
+      console.log('🔗 Link clicked:', link.href, 'text:', link.textContent);
+      
+      // Check if this is an internal EPUB link
+      const href = link.getAttribute('href') || '';
+      const isInternalLink = href.startsWith('#') || 
+                           href.endsWith('.xhtml') || 
+                           href.endsWith('.html') ||
+                           href.includes('.xhtml#') ||
+                           href.includes('.html#');
+      
+      if (!isInternalLink) {
+        console.log('🔗 External link, allowing default behavior');
+        return; // Let external links work normally
+      }
+      
+      console.log('🔗 Internal EPUB link detected, preventing default and finding target chapter');
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Try to find the target chapter
+      let targetChapter = -1;
+      
+      // Method 1: Look for chapter by href in chapterTitles
+      if (bookContent.chapterTitles) {
+        const chapterMatch = bookContent.chapterTitles.find(ch => {
+          const chapterHref = ch.href || '';
+          // Compare the base file name
+          const linkBase = href.split('#')[0].split('/').pop() || '';
+          const chapterBase = chapterHref.split('#')[0].split('/').pop() || '';
+          return linkBase && chapterBase && linkBase === chapterBase;
+        });
+        
+        if (chapterMatch) {
+          targetChapter = chapterMatch.index;
+          console.log('🔗 Found target chapter by href match:', targetChapter, chapterMatch.title);
+        }
+      }
+      
+      // Method 2: Try to parse chapter number from href
+      if (targetChapter === -1) {
+        const chapterMatch = href.match(/chapter[_-]?(\d+)/i) || 
+                           href.match(/ch[_-]?(\d+)/i) ||
+                           href.match(/(\d+)\.x?html/i);
+        if (chapterMatch) {
+          const chapterNum = parseInt(chapterMatch[1], 10);
+          if (chapterNum >= 1 && chapterNum <= bookContent.totalChapters) {
+            targetChapter = chapterNum - 1; // Convert to 0-based index
+            console.log('🔗 Found target chapter by number parsing:', targetChapter);
+          }
+        }
+      }
+      
+      // Method 3: Look for anchor in current or nearby chapters
+      if (targetChapter === -1 && href.startsWith('#')) {
+        const anchorId = href.substring(1);
+        console.log('🔗 Looking for anchor:', anchorId, 'in nearby chapters');
+        
+        // Check current chapter first
+        const currentContent = contentEl.innerHTML;
+        if (currentContent.includes(`id="${anchorId}"`)) {
+          console.log('🔗 Anchor found in current chapter, scrolling to element');
+          const anchorEl = contentEl.querySelector(`#${anchorId}`);
+          if (anchorEl) {
+            anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+          }
+        }
+        
+        // TODO: Search other chapters if needed (more complex implementation)
+        console.log('🔗 Anchor not found in current chapter');
+      }
+      
+      // Navigate to the target chapter if found
+      if (targetChapter >= 0 && targetChapter < bookContent.totalChapters) {
+        console.log('🔗 ✅ Navigating to chapter:', targetChapter);
+        updateChapter(targetChapter);
+      } else {
+        console.log('🔗 ❌ Could not find target chapter for link:', href);
+        // Show a helpful message to the user
+        alert(`Unable to navigate to: ${link.textContent || href}\n\nThis link could not be mapped to a chapter in the current book structure.`);
+      }
+    };
+
+    // Add click event listener to the content area
+    contentEl.addEventListener('click', handleLinkClick);
+    
+    return () => {
+      contentEl.removeEventListener('click', handleLinkClick);
+    };
+  }, [bookContent, bookMetadata?.fileType, updateChapter]);
+
   // Update reading progress
   useEffect(() => {
     const updateProgressDebounced = setTimeout(() => {
