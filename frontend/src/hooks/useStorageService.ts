@@ -230,7 +230,7 @@ export function useStorageService() {
         setTimeout(() => {
           setIsDriveBookLoading(true);
           silentRefreshBooks();
-        }, 100);
+        }, 200);
       }
     });
 

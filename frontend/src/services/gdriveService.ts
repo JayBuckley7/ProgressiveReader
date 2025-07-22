@@ -418,8 +418,8 @@ class GDriveService {
           
           // If it's an auth error and we have more retries, wait a bit and try again
           if (response.status === 401 && attempt < maxRetries) {
-            console.log(`[GDriveService] Auth error on attempt ${attempt}, waiting 1 second before retry...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log(`[GDriveService] Auth error on attempt ${attempt}, waiting 2 seconds before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             lastError = new Error(`Authentication failed: ${errorText}`);
             continue;
           }
@@ -437,13 +437,14 @@ class GDriveService {
         
         // If we have more retries, wait a bit and try again
         if (attempt < maxRetries) {
-          console.log(`[GDriveService] Waiting 1 second before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const waitTime = error.message?.includes('Clerk') || error.message?.includes('token') ? 2000 : 1000;
+          console.log(`[GDriveService] Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
     }
     
-    console.error('[GDriveService] All attempts to fetch access token failed. Last error:', lastError);
+    console.error('[GDriveService] ❌ All token refresh attempts failed. User will need to sign in again.');
     return null;
   }
 
@@ -454,11 +455,19 @@ class GDriveService {
       try {
         console.log('[GDriveService] Attempting to get Clerk session token...');
         
-        // Check if Clerk is fully loaded
-        if (!window.Clerk.session) {
-          console.log('[GDriveService] Clerk session not available yet, waiting...');
-          // Wait a bit for Clerk to initialize
+        // Check if Clerk is fully loaded and wait if needed
+        let attempts = 0;
+        const maxAttempts = 10; // Wait up to 5 seconds
+        
+        while (!window.Clerk.session && attempts < maxAttempts) {
+          console.log(`[GDriveService] Clerk session not available yet, waiting... (attempt ${attempts + 1}/${maxAttempts})`);
           await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+        
+        if (!window.Clerk.session) {
+          console.error('[GDriveService] Clerk session still not available after waiting');
+          throw new Error('Clerk session not available');
         }
         
         const token = await window.Clerk.session?.getToken();
@@ -472,17 +481,16 @@ class GDriveService {
           };
         } else {
           console.log('[GDriveService] No token available from Clerk session');
+          throw new Error('No Clerk token available');
         }
       } catch (error) {
         console.error('[GDriveService] Error getting Clerk token:', error);
+        throw error; // Re-throw to let caller handle it
       }
     } else {
       console.log('[GDriveService] Clerk not available in window object');
+      throw new Error('Clerk not available');
     }
-    console.log('[GDriveService] Returning headers without auth token');
-    return {
-      'Content-Type': 'application/json'
-    };
   }
 
   private async handleTokenResponse(tokenResponse: any, storeRefreshToken: boolean = true) {
