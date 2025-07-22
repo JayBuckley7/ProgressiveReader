@@ -249,7 +249,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             <GoogleDriveConnectButton />
           </div>
         </div>
-      ) : isDriveBookLoading && books.length === 0 ? (
+      ) : (isDriveBookLoading || isLoading) && books.length === 0 && isDriveConnected ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
