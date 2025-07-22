@@ -1,6 +1,7 @@
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { useAppData } from "../contexts/AppDataContext";
+import { authManager } from "../services/authManager";
 import { vocabBank } from "../services/vocabBank";
 
 export function HeroBanner() {
@@ -14,9 +15,18 @@ export function HeroBanner() {
   useEffect(() => {
     // Only load vocabulary if user is authenticated with Clerk
     if (isLoaded && isSignedIn) {
-      vocabBank.load().then(() => {
-        setStats(vocabBank.getStats());
+      // Wait for the centralized auth manager to confirm authentication
+      // instead of immediately calling vocabBank.load()
+      const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
+        if (isAuthenticated) {
+          vocabBank.load().then(() => {
+            setStats(vocabBank.getStats());
+          });
+          unsubscribe(); // Only load once
+        }
       });
+      
+      return unsubscribe;
     }
   }, [isLoaded, isSignedIn]);
 

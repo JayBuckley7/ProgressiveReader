@@ -63,6 +63,8 @@ class GDriveService {
   private profileCacheDuration = 5000; // Cache profile for 5 seconds
   private cachedAppFolderId: { folderId: string | null; timestamp: number } | null = null;
   private folderCacheDuration = 30000; // Cache folder ID for 30 seconds
+  private cachedClerkAuth: { result: boolean; timestamp: number } | null = null;
+  private clerkAuthCacheDuration = 2000; // Cache Clerk auth checks for 2 seconds
 
   private loadTokensFromStorage(): boolean {
     if (typeof window === 'undefined') return false;
@@ -208,16 +210,6 @@ class GDriveService {
       }
     }
 
-    try {
-      const tokenResponse = await this.fetchAccessTokenFromServer();
-      if (tokenResponse && tokenResponse.access_token) {
-        this.handleTokenResponse(tokenResponse, false);
-        return true;
-      }
-    } catch (error) {
-      console.error('[GDriveService] Failed to fetch access token from server:', error);
-    }
-
     // If no refresh token or refresh failed, try silent sign-in
     if (this.tokenClient) {
       try {
@@ -235,7 +227,13 @@ class GDriveService {
   }
 
   private isClerkUserAuthenticated(): boolean {
+    // Check cache first to prevent excessive logging and calls
+    if (this.cachedClerkAuth && Date.now() - this.cachedClerkAuth.timestamp < this.clerkAuthCacheDuration) {
+      return this.cachedClerkAuth.result;
+    }
+
     if (typeof window === 'undefined' || !window.Clerk) {
+      this.cachedClerkAuth = { result: false, timestamp: Date.now() };
       return false;
     }
     
@@ -244,10 +242,18 @@ class GDriveService {
       const clerkUser = window.Clerk.user;
       const isSignedIn = window.Clerk.session !== null;
       
-      console.log(`[GDriveService] Clerk auth check: user=${!!clerkUser}, session=${isSignedIn}`);
-      return !!(clerkUser && isSignedIn);
+      const result = !!(clerkUser && isSignedIn);
+      
+      // Only log when the auth status changes, not on every check
+      if (!this.cachedClerkAuth || this.cachedClerkAuth.result !== result) {
+        console.log(`[GDriveService] Clerk auth status changed: user=${!!clerkUser}, session=${isSignedIn}`);
+      }
+      
+      this.cachedClerkAuth = { result, timestamp: Date.now() };
+      return result;
     } catch (error) {
       console.error('[GDriveService] Error checking Clerk authentication:', error);
+      this.cachedClerkAuth = { result: false, timestamp: Date.now() };
       return false;
     }
   }
@@ -298,6 +304,8 @@ class GDriveService {
     });
   }
 
+  private silentRefreshInProgress = false;
+
   /**
    * Attempt to refresh the access token silently using the existing session
    */
@@ -307,52 +315,64 @@ class GDriveService {
       return false;
     }
 
-    // For Google's OAuth2, we need to check if there's an active session
-    // and try to get a new token without user interaction
-    return new Promise((resolve) => {
-      try {
-        // Store the original callback
-        const originalCallback = this.tokenClient.callback;
-        let responseReceived = false;
-        
-        // Set up a timeout to prevent hanging
-        const timeout = setTimeout(() => {
-          if (!responseReceived) {
-            console.log('[GDriveService] Silent token refresh timed out');
+    // Prevent multiple simultaneous silent refresh attempts
+    if (this.silentRefreshInProgress) {
+      console.log('[GDriveService] Silent refresh already in progress, skipping duplicate');
+      return false;
+    }
+
+    this.silentRefreshInProgress = true;
+
+    try {
+      // For Google's OAuth2, we need to check if there's an active session
+      // and try to get a new token without user interaction
+      return await new Promise((resolve) => {
+        try {
+          // Store the original callback
+          const originalCallback = this.tokenClient.callback;
+          let responseReceived = false;
+          
+          // Set up a timeout to prevent hanging
+          const timeout = setTimeout(() => {
+            if (!responseReceived) {
+              console.log('[GDriveService] Silent token refresh timed out');
+              this.tokenClient.callback = originalCallback;
+              resolve(false);
+            }
+          }, 3000); // 3 second timeout (reduced from 5)
+
+          this.tokenClient.callback = (tokenResponse: any) => {
+            responseReceived = true;
+            clearTimeout(timeout);
+            
+            // Restore original callback
             this.tokenClient.callback = originalCallback;
-            resolve(false);
-          }
-        }, 10000); // 10 second timeout
+            
+            if (tokenResponse.error) {
+              console.log('[GDriveService] Silent token refresh failed:', tokenResponse.error);
+              resolve(false);
+            } else {
+              console.log('[GDriveService] Silent token refresh successful!');
+              this.handleTokenResponse(tokenResponse, false);
+              resolve(true);
+            }
+          };
 
-        this.tokenClient.callback = (tokenResponse: any) => {
-          responseReceived = true;
-          clearTimeout(timeout);
+          // Try to request a new token silently
+          // The empty prompt should attempt to use existing session cookies
+          this.tokenClient.requestAccessToken({ 
+            prompt: '',
+            hint: this.userProfile?.email || '' // Use hint if we have user email
+          });
           
-          // Restore original callback
-          this.tokenClient.callback = originalCallback;
-          
-          if (tokenResponse.error) {
-            console.log('[GDriveService] Silent token refresh failed:', tokenResponse.error);
-            resolve(false);
-          } else {
-            console.log('[GDriveService] Silent token refresh successful!');
-            this.handleTokenResponse(tokenResponse, false);
-            resolve(true);
-          }
-        };
-
-        // Try to request a new token silently
-        // The empty prompt should attempt to use existing session cookies
-        this.tokenClient.requestAccessToken({ 
-          prompt: '',
-          hint: this.userProfile?.email || '' // Use hint if we have user email
-        });
-        
-      } catch (error) {
-        console.error('[GDriveService] Error during silent token refresh:', error);
-        resolve(false);
-      }
-    });
+        } catch (error) {
+          console.error('[GDriveService] Error during silent token refresh:', error);
+          resolve(false);
+        }
+      });
+    } finally {
+      this.silentRefreshInProgress = false;
+    }
   }
 
   /**
@@ -396,102 +416,7 @@ class GDriveService {
     }
   }
 
-  private async fetchAccessTokenFromServer(): Promise<TokenData | null> {
-    const maxRetries = 3;
-    let lastError: any = null;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // Get authentication headers for the API call
-        const authHeaders = await this.getAuthHeaders();
-        
-        const response = await fetch('/drive/token', {
-          method: 'POST',
-          headers: authHeaders,
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[GDriveService] Attempt ${attempt} failed - Error fetching access token from server:`, errorText);
-          console.error('[GDriveService] Response status:', response.status);
-          console.error('[GDriveService] Response headers:', response.headers);
-          
-          // If it's an auth error and we have more retries, wait a bit and try again
-          if (response.status === 401 && attempt < maxRetries) {
-            console.log(`[GDriveService] Auth error on attempt ${attempt}, waiting 2 seconds before retry...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            lastError = new Error(`Authentication failed: ${errorText}`);
-            continue;
-          }
-          
-          lastError = new Error(`HTTP ${response.status}: ${errorText}`);
-          return null;
-        }
-        
-        const tokenData: TokenData = await response.json();
-        return tokenData;
-        
-      } catch (error) {
-        console.error(`[GDriveService] Attempt ${attempt} failed with exception:`, error);
-        lastError = error;
-        
-        // If we have more retries, wait a bit and try again
-        if (attempt < maxRetries) {
-          const waitTime = error.message?.includes('Clerk') || error.message?.includes('token') ? 2000 : 1000;
-          console.log(`[GDriveService] Waiting ${waitTime}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
-      }
-    }
-    
-    console.error('[GDriveService] ❌ All token refresh attempts failed. User will need to sign in again.');
-    return null;
-  }
 
-  // Helper method to get auth headers
-  private async getAuthHeaders(): Promise<HeadersInit> {
-    // Get Clerk session token for API calls
-    if (typeof window !== 'undefined' && window.Clerk) {
-      try {
-        console.log('[GDriveService] Attempting to get Clerk session token...');
-        
-        // Check if Clerk is fully loaded and wait if needed
-        let attempts = 0;
-        const maxAttempts = 10; // Wait up to 5 seconds
-        
-        while (!window.Clerk.session && attempts < maxAttempts) {
-          console.log(`[GDriveService] Clerk session not available yet, waiting... (attempt ${attempts + 1}/${maxAttempts})`);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          attempts++;
-        }
-        
-        if (!window.Clerk.session) {
-          console.error('[GDriveService] Clerk session still not available after waiting');
-          throw new Error('Clerk session not available');
-        }
-        
-        const token = await window.Clerk.session?.getToken();
-        console.log('[GDriveService] Clerk token result:', token ? 'Token received' : 'No token');
-        
-        if (token) {
-          console.log('[GDriveService] Returning auth headers with token');
-          return {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          };
-        } else {
-          console.log('[GDriveService] No token available from Clerk session');
-          throw new Error('No Clerk token available');
-        }
-      } catch (error) {
-        console.error('[GDriveService] Error getting Clerk token:', error);
-        throw error; // Re-throw to let caller handle it
-      }
-    } else {
-      console.log('[GDriveService] Clerk not available in window object');
-      throw new Error('Clerk not available');
-    }
-  }
 
   private async handleTokenResponse(tokenResponse: any, storeRefreshToken: boolean = true) {
     if (tokenResponse.error) {
@@ -612,9 +537,17 @@ class GDriveService {
     };
   }
   
+  private isSigningIn = false;
+
   public async signIn(prompt: 'select_account' | 'consent' | '' = ''): Promise<void> {
     if (!this.tokenClient) {
       console.error('[GDriveService] Token client not initialized. Cannot sign in.');
+      return;
+    }
+
+    // Prevent multiple simultaneous sign-in attempts
+    if (this.isSigningIn) {
+      console.log('[GDriveService] Sign-in already in progress, skipping duplicate request');
       return;
     }
 
@@ -632,20 +565,29 @@ class GDriveService {
       return;
     }
 
-    // First try silent sign-in if no specific prompt is requested
-    if (!prompt) {
-      const silentSuccess = await this.attemptSilentSignIn();
-      if (silentSuccess) {
-        return; // Successfully signed in silently
-      }
-      console.log('[GDriveService] Silent sign-in failed, prompting user...');
-    }
+    this.isSigningIn = true;
 
-    // Fall back to user prompt
-    console.log(`[GDriveService] Requesting token with prompt: '${prompt}'`);
-    this.tokenClient.requestAccessToken({
-      prompt: prompt || 'consent' // Use consent if no prompt specified
-    });
+    try {
+      // First try silent sign-in if no specific prompt is requested
+      if (!prompt) {
+        const silentSuccess = await this.attemptSilentSignIn();
+        if (silentSuccess) {
+          return; // Successfully signed in silently
+        }
+        console.log('[GDriveService] Silent sign-in failed, prompting user...');
+      }
+
+      // Fall back to user prompt
+      console.log(`[GDriveService] Requesting token with prompt: '${prompt}'`);
+      this.tokenClient.requestAccessToken({
+        prompt: prompt || 'consent' // Use consent if no prompt specified
+      });
+    } finally {
+      // Reset the flag after a delay to allow for token response
+      setTimeout(() => {
+        this.isSigningIn = false;
+      }, 3000);
+    }
   }
 
   public signOut() {
@@ -819,17 +761,6 @@ class GDriveService {
       }
     } catch (error) {
       console.warn('[GDriveService] Silent token refresh failed:', error);
-    }
-
-    // If silent refresh fails, try server-side refresh (if available)
-    try {
-      const tokenData = await this.fetchAccessTokenFromServer();
-      if (tokenData && tokenData.access_token) {
-        this.handleTokenResponse(tokenData, false);
-        return this.accessToken;
-      }
-    } catch (error) {
-      console.warn('[GDriveService] Server-side token refresh failed:', error);
     }
 
     // All refresh attempts failed
@@ -2085,6 +2016,7 @@ class GDriveService {
   async getFolders(): Promise<any[]> {
     const token = await this.getAccessToken();
     if (!token) {
+      console.log('[GDriveService] getFolders: No valid token, returning empty folders');
       return [];
     }
 
@@ -2096,10 +2028,13 @@ class GDriveService {
         return [];
       }
 
+      console.log('[GDriveService] Metadata loaded for folders, checking folders object...');
       const folderMetadata = metadataInfo.data.folders || {};
+      console.log('[GDriveService] Folder metadata found:', Object.keys(folderMetadata).length, 'folders');
+      console.log('[GDriveService] Raw folder metadata:', folderMetadata);
       
       // Convert metadata folders to folder objects
-      return Object.entries(folderMetadata).map(([folderId, folderData]: [string, any]) => ({
+      const folders = Object.entries(folderMetadata).map(([folderId, folderData]: [string, any]) => ({
         id: folderId,
         name: folderData.name,
         parentId: folderData.parentId,
@@ -2107,6 +2042,9 @@ class GDriveService {
         updatedAt: new Date(folderData.updatedAt),
         userId: 'current-user'
       }));
+      
+      console.log('[GDriveService] Converted folders:', folders);
+      return folders;
     } catch (error) {
       console.error('[GDriveService] Error getting virtual folders:', error);
       return [];

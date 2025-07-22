@@ -1,5 +1,6 @@
 
 import { gDriveService, BOOK_FILE_EXTENSIONS } from './gdriveService';
+import { authManager } from './authManager';
 import {
     getCachedFile,
     cacheFile,
@@ -145,22 +146,10 @@ class StorageService {
         switch (provider) {
             case 'google':
                 try {
-                    // Check connection
-                    if (!gDriveService.isSignedIn()) {
-                        console.log('Google Drive not connected. Attempting to connect...');
-                        await new Promise<void>((resolve, reject) => {
-                            const checkSignedIn = () => {
-                                if (gDriveService.isSignedIn()) {
-                                    console.log('✅ Google Drive connected successfully');
-                                    resolve();
-                                } else {
-                                    setTimeout(checkSignedIn, 1000);
-                                }
-                            };
-                            gDriveService.signIn().then(() => {
-                                checkSignedIn();
-                            }).catch(reject);
-                        });
+                    // Check connection using centralized auth manager
+                    const isAuthenticated = await authManager.ensureAuthenticated();
+                    if (!isAuthenticated) {
+                        throw new Error('Failed to authenticate with Google Drive');
                     }
 
                     // Extract cover image from EPUB if file type is epub and no cover provided
@@ -944,8 +933,9 @@ class StorageService {
 
         switch (provider) {
             case 'google':
-                if (!gDriveService.isSignedIn()) {
-                    throw new Error('Google Drive not connected. Please connect first.');
+                const isAuthenticated = await authManager.ensureAuthenticated();
+                if (!isAuthenticated) {
+                    throw new Error('Google Drive authentication failed. Please connect first.');
                 }
                 await gDriveService.syncMetadataWithDrive();
                 return await this.getUserBooks(onCoverReady);
@@ -1266,8 +1256,9 @@ class StorageService {
                 return null;
             }
 
-            if (!gDriveService.isSignedIn()) {
-                console.warn('Cannot load settings: Google Drive not connected');
+            const isAuthenticated = await authManager.ensureAuthenticated();
+            if (!isAuthenticated) {
+                console.warn('Cannot load settings: Google Drive authentication failed');
                 return null;
             }
 
@@ -1289,6 +1280,13 @@ class StorageService {
      * Save vocabulary list to cloud storage
      */
     async saveVocabulary(words: any[]): Promise<void> {
+        // Use centralized auth manager to ensure authentication
+        const isAuthenticated = await authManager.ensureAuthenticated();
+        if (!isAuthenticated) {
+            console.log('saveVocabulary: Authentication failed, cannot save vocabulary');
+            return;
+        }
+
         await gDriveService.saveVocab(words);
     }
 
@@ -1296,17 +1294,10 @@ class StorageService {
      * Load vocabulary list from cloud storage
      */
     async loadVocabulary(): Promise<any[] | null> {
-        // CRITICAL: Check Clerk authentication first
-        if (typeof window !== 'undefined' && window.Clerk) {
-            const clerkUser = window.Clerk.user;
-            const isClerkSignedIn = window.Clerk.session !== null;
-            
-            if (!clerkUser || !isClerkSignedIn) {
-                console.log('loadVocabulary: Clerk user not authenticated, skipping Google Drive access');
-                return null;
-            }
-        } else {
-            console.log('loadVocabulary: Clerk not available, skipping Google Drive access');
+        // Use centralized auth manager to ensure authentication
+        const isAuthenticated = await authManager.ensureAuthenticated();
+        if (!isAuthenticated) {
+            console.log('loadVocabulary: Authentication failed, cannot load vocabulary');
             return null;
         }
 
@@ -1361,22 +1352,29 @@ class StorageService {
     }
 
     async getFolders(clerkUser?: any): Promise<Folder[]> {
+        console.log('📁 [StorageService] getFolders called with clerkUser:', !!clerkUser);
+        
         // CRITICAL: Check Clerk authentication first
         if (!clerkUser) {
-            console.log('getFolders: No Clerk user provided, returning empty folders');
+            console.log('📁 [StorageService] getFolders: No Clerk user provided, returning empty folders');
             return [];
         }
 
         const provider = this.detectProviderFromClerkUser(clerkUser);
+        console.log('📁 [StorageService] Detected provider:', provider);
         
         switch (provider) {
             case 'google':
-                return await gDriveService.getFolders();
+                console.log('📁 [StorageService] Calling gDriveService.getFolders()...');
+                const folders = await gDriveService.getFolders();
+                console.log('📁 [StorageService] gDriveService.getFolders() returned:', folders.length, 'folders');
+                return folders;
             case 'microsoft':
                 throw new Error('OneDrive folder retrieval not yet implemented');
             case 'apple':
                 throw new Error('iCloud folder retrieval not yet implemented');
             default:
+                console.log('📁 [StorageService] Unknown provider, returning empty folders');
                 return [];
         }
     }

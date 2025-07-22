@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { storageService, BookMetadata, ReadingProgress, Folder } from '../services/storageService';
 import { gDriveService } from '../services/gdriveService';
+import { authManager } from '../services/authManager';
 import { addOfflineBook, getOfflineBooksWithCovers } from '../utils/offlineLibrary';
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '../services/driveCache';
 import { toast } from 'sonner';
@@ -100,27 +101,39 @@ export function useStorageService() {
     setIsLoading(false);
   }, []);
 
-  // Load user books function
-  const loadUserBooks = useCallback(async () => {
+  // Simple function: authenticate first, then load everything
+  const connectToGoogleDriveAndLoad = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
-        setBooks([]);
-        return;
+      console.log('[useStorageService] Cannot connect: no Clerk user or already loading');
+      return false;
     }
+    
+    console.log('[useStorageService] 🔐 User requested Google Drive connection - starting auth sequence...');
     setIsLoading(true);
+    setIsDriveBookLoading(true);
     isRefreshingRef.current = true;
     isDriveSyncingRef.current = true;
     
     try {
+      // Step 1: Authenticate FIRST
+      console.log('[useStorageService] Step 1: Authenticating with Google Drive...');
+      const isAuthenticated = await authManager.ensureAuthenticated();
+      if (!isAuthenticated) {
+        console.log('[useStorageService] ❌ Authentication failed');
+        toast.error('Failed to connect to Google Drive');
+        return false;
+      }
+      console.log('[useStorageService] ✅ Google Drive authenticated successfully');
+
+      // Step 2: Load data AFTER authentication
+      console.log('[useStorageService] Step 2: Loading your books and folders...');
       const previous = booksRef.current;
 
-      // Callback to update individual book covers as they become ready
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId}`);
         setBooks(currentBooks => {
           const updatedBooks = currentBooks.map(book =>
-            book.id === bookId
-              ? { ...book, coverUrl }
-              : book
+            book.id === bookId ? { ...book, coverUrl } : book
           );
           console.log(`[useStorageService] Updated books state for cover ${bookId} - Total books: ${updatedBooks.length}`);
           return updatedBooks;
@@ -132,8 +145,8 @@ export function useStorageService() {
         storageService.getFolders(clerkUser)
       ]);
 
-      // No need to merge covers manually - storageService handles persistent URLs
-
+      console.log(`[useStorageService] ✅ Loaded ${userBooks.length} books and ${userFolders.length} folders`);
+      
       if (areBooksEqual(userBooks, previous)) {
         setBooks(userBooks);
         booksRef.current = userBooks;
@@ -148,22 +161,28 @@ export function useStorageService() {
       }
 
       setFolders(userFolders);
-      lastSessionToastRef.current = 0;
+      toast.success('Google Drive connected and library loaded!');
+      return true;
     } catch (error) {
-      console.error('Error loading books:', error);
-      
-      // Since we're not using backend API, just show a generic error
-      toast.error('Failed to load your books');
+      console.error('[useStorageService] ❌ Error during Google Drive connection:', error);
+      toast.error('Failed to load your Google Drive library');
       setBooks([]);
+      return false;
     } finally {
       setIsLoading(false);
+      setIsDriveBookLoading(false);
       isRefreshingRef.current = false;
       isDriveSyncingRef.current = false;
     }
   }, [clerkUser]);
 
+  // Legacy function that calls the new one
+  const loadUserBooks = useCallback(async () => {
+    return await connectToGoogleDriveAndLoad();
+  }, [connectToGoogleDriveAndLoad]);
+
   useEffect(() => {
-    // Use Clerk's authentication state instead of Firebase
+    // DON'T try to authenticate immediately - wait for user to actually need Google Drive
     if (clerkLoaded) {
       setIsLoading(false);
       if (clerkUser) {
@@ -172,7 +191,10 @@ export function useStorageService() {
         if (lastUserIdRef.current !== currentUserId) {
           console.log('User signed in with Clerk:', clerkUser);
           lastUserIdRef.current = currentUserId;
-          loadUserBooks();
+          
+          // SIMPLE: Just set up the auth listener, don't authenticate yet
+          // Let the user trigger authentication when they actually need it
+          console.log('[useStorageService] Clerk ready, setting up auth listener but NOT auto-authenticating');
         }
       } else {
         // User is not signed in - clear everything for security
@@ -188,9 +210,7 @@ export function useStorageService() {
 
         // SECURITY: Clear Google Drive tokens when no Clerk user
         // This prevents token leakage if user switches accounts
-        import('../services/gdriveService').then(({ gDriveService }) => {
-          gDriveService.onClerkSignOut();
-        });
+        authManager.signOut();
 
         getOfflineBooksWithCovers().then(b => {
           setBooks(b);
@@ -206,40 +226,23 @@ export function useStorageService() {
     }
   }, [clerkUser, clerkLoaded, loadOfflineBooks]);
 
-  // Listen for Google Drive sign-in status changes and auto-refresh books
-  // OPTIMIZATION: Prevent redundant listener setup and unnecessary book refreshes
+  // Listen for authentication state changes but DON'T auto-load data
   useEffect(() => {
     if (!clerkUser) return;
 
-    console.log('[useStorageService] Setting up Google Drive sign-in listener...');
+    console.log('[useStorageService] Setting up auth listener (manual mode - no auto-loading)...');
 
-    // Listen for Google Drive connection status changes
-    const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
-      console.log(`[useStorageService] Google Drive sign-in status changed: ${isSignedIn}`);
-
-      if (isSignedIn) {
-        // ALWAYS refresh books when Google Drive connects
-        // This ensures books load even if the initial load failed due to no Drive connection
-        console.log('[useStorageService] Google Drive connected - refreshing book list...');
-        
-        // Reset any stuck refresh flags in case previous load failed
-        isRefreshingRef.current = false;
-        isDriveSyncingRef.current = false;
-        
-        // Add small delay to allow Google Drive service state to stabilize
-        setTimeout(() => {
-          setIsDriveBookLoading(true);
-          silentRefreshBooks();
-        }, 200);
-      }
+    const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
+      console.log(`[useStorageService] Auth state changed: ${isAuthenticated}`);
+      // Just log the state change, don't auto-load anything
+      // The user will manually trigger connectToGoogleDriveAndLoad when they want to
     });
 
-    // Cleanup listener on component unmount or user change
     return () => {
-      console.log('[useStorageService] Cleaning up Google Drive sign-in listener');
+      console.log('[useStorageService] Cleaning up auth listener');
       unsubscribe();
     };
-  }, [clerkUser?.id]); // Remove silentRefreshBooks dependency to prevent recreation
+  }, [clerkUser?.id]);
 
   // Cleanup blob URLs when component unmounts
   useEffect(() => {
@@ -476,8 +479,10 @@ export function useStorageService() {
   };
 
   const loadSettings = async (): Promise<any | null> => {
-    if (!clerkUser) {
-      console.log('User not signed in, cannot load cloud settings');
+    // Use centralized auth manager instead of direct Clerk check
+    const isAuthenticated = await authManager.ensureAuthenticated();
+    if (!isAuthenticated) {
+      console.log('Authentication failed, cannot load cloud settings');
       return null;
     }
 
@@ -596,6 +601,7 @@ export function useStorageService() {
     downloadBookForOffline,
     saveSettings,
     loadSettings,
+    connectToGoogleDriveAndLoad, // NEW: Manual connection function 
     createFolder,
     updateFolder,
     deleteFolder,

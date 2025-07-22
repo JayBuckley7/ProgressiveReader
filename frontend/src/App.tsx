@@ -55,32 +55,33 @@ function AppContent() {
     }
   }, [isClerkLoaded]);
 
-  useEffect(() => {
-    // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
-    if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
-      // Check if one of the Clerk external accounts is Google
-      // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
-      // Inspect clerkUser.externalAccounts[0].provider to be sure.
-      const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
-        (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
-      );
+  // Disable automatic Google Drive connection from AppContent
+  // Let useStorageService handle authentication to avoid competing flows
+  // useEffect(() => {
+  //   // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
+  //   if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
+  //     // Check if one of the Clerk external accounts is Google
+  //     // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
+  //     // Inspect clerkUser.externalAccounts[0].provider to be sure.
+  //     const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
+  //       (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
+  //     );
 
-      if (wasGoogleClerkLogin && !isDriveConnected) {
-        console.log(
-          "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Prompting for Drive auth..."
-        );
-        // Automatically initiate the Google Drive connection flow.
-        // Using 'consent' ensures the user sees the Drive scopes being requested.
-        gDriveService.signIn('consent');
-      }
-    }
-  }, [
-    isClerkLoaded,
-    isClerkSignedIn,
-    clerkUser,
-    isDriveConnected,
-    isDriveLoading,
-  ]);
+  //     if (wasGoogleClerkLogin && !isDriveConnected) {
+  //       console.log(
+  //         "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Waiting for automatic connection..."
+  //       );
+  //       // Try silent sign-in first, only prompt if that fails
+  //       gDriveService.signIn('');
+  //     }
+  //   }
+  // }, [
+  //   isClerkLoaded,
+  //   isClerkSignedIn,
+  //   clerkUser,
+  //   isDriveConnected,
+  //   isDriveLoading,
+  // ]);
 
   // Prefetch JPDB due cards only after user is signed in if enabled
   useEffect(() => {

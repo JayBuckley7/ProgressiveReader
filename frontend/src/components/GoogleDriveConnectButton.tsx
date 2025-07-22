@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppData } from '../contexts/AppDataContext';
-import { gDriveService } from '../services/gdriveService';
+import { authManager } from '../services/authManager';
 
 export const GoogleDriveConnectButton: React.FC = () => {
   const {
@@ -12,13 +12,17 @@ export const GoogleDriveConnectButton: React.FC = () => {
     getAppFolderId
   } = useAppData();
 
-  const handleConnect = () => {
-    // You can prompt for 'select_account' or 'consent' if needed
-    gDriveService.signIn('consent');
+  const handleConnect = async () => {
+    // Use centralized auth manager instead of direct gDriveService call
+    try {
+      await authManager.ensureAuthenticated();
+    } catch (error) {
+      console.error('Failed to connect to Google Drive:', error);
+    }
   };
 
-  const handleDisconnect = () => {
-    gDriveService.signOut();
+  const handleDisconnect = async () => {
+    await authManager.signOut();
   };
 
   const handleFetchFiles = async () => {

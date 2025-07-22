@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useAppData } from "./AppDataContext";
+import { authManager } from "../services/authManager";
+import { storageService } from "../services/storageService";
 import { toast } from "sonner";
 
 type Theme = "light" | "dark" | "system";
@@ -129,25 +131,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Auto-load settings from Google Drive when authenticated and connected
+  // Listen to centralized auth manager for settings loading
   useEffect(() => {
-    const attemptCloudLoad = async () => {
-      if (!isAuthenticated || loadedFromCloudRef.current || isLoadingFromCloud) {
-        return;
-      }
-
-      // Clear any existing timeout to debounce rapid calls
-      if (cloudLoadTimeoutRef.current) {
-        clearTimeout(cloudLoadTimeoutRef.current);
-      }
-
-      setIsLoadingFromCloud(true);
-      
-      // Add a small delay to ensure Google Drive connection is ready and debounce rapid calls
-      cloudLoadTimeoutRef.current = setTimeout(async () => {
+    // Listen for authentication state changes through auth manager
+    const unsubscribe = authManager.onAuthStateChange(async (isAuthenticated) => {
+      if (isAuthenticated && !loadedFromCloudRef.current && !isLoadingFromCloud) {
+        setIsLoadingFromCloud(true);
         try {
-          console.log('🔄 Auto-loading settings from Google Drive...');
-          const data = await loadSettings();
+          console.log('🔄 Auto-loading settings from Google Drive after authentication...');
+          // Don't call authManager.ensureAuthenticated() again since we're already in auth callback
+          const data = await storageService.loadSettings();
           if (data && Object.keys(data).length > 0) {
             console.log('✅ Settings auto-loaded from Google Drive successfully');
             toast.success('Settings synced from Google Drive', {
@@ -187,33 +180,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           loadedFromCloudRef.current = true; // Mark as attempted to avoid infinite retries
         } finally {
           setIsLoadingFromCloud(false);
-          cloudLoadTimeoutRef.current = null;
         }
-      }, 1500); // 1.5 second delay to ensure Google Drive is ready
-    };
-
-    attemptCloudLoad();
-
-    if (!isAuthenticated) {
-      loadedFromCloudRef.current = false;
-      setIsLoadingFromCloud(false);
-      // Clear any pending cloud load timeout
-      if (cloudLoadTimeoutRef.current) {
-        clearTimeout(cloudLoadTimeoutRef.current);
-        cloudLoadTimeoutRef.current = null;
+      } else if (!isAuthenticated) {
+        loadedFromCloudRef.current = false;
+        setIsLoadingFromCloud(false);
+        clearSettingsCookie();
+        clearSettingsStorage();
       }
-      clearSettingsCookie();
-      clearSettingsStorage();
-    }
+    });
 
-    return () => {
-      // Cleanup timeout on unmount or dependency change
-      if (cloudLoadTimeoutRef.current) {
-        clearTimeout(cloudLoadTimeoutRef.current);
-        cloudLoadTimeoutRef.current = null;
-      }
-    };
-  }, [isAuthenticated]);
+    return unsubscribe;
+  }, []);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

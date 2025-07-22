@@ -23,6 +23,7 @@ type AppDataContextType = {
   saveBookProgress: (...args: any[]) => Promise<void>;
   saveSettings: (settings: any) => Promise<boolean>;
   loadSettings: () => Promise<any>;
+  connectToGoogleDriveAndLoad: () => Promise<boolean>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   downloadBookForOffline: (bookId: string) => Promise<void>;
@@ -70,6 +71,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     saveBookProgress: storageData.saveBookProgress,
     saveSettings: storageData.saveSettings,
     loadSettings: storageData.loadSettings,
+    connectToGoogleDriveAndLoad: storageData.connectToGoogleDriveAndLoad,
     signIn: storageData.signIn,
     signOut: storageData.signOut,
     downloadBookForOffline: storageData.downloadBookForOffline,

@@ -80,6 +80,32 @@ export function FolderView({
       }
     });
 
+    // FALLBACK: If we have books with folder IDs but no folder metadata, create virtual folders
+    if (folders.length === 0 && books.some(book => book.folderId)) {
+      console.warn('[FolderView] 🚨 FALLBACK: Books have folder IDs but no folder metadata found');
+      // Group books by their folder IDs and create virtual folders
+      const folderGroups = books.reduce((acc, book) => {
+        if (book.folderId) {
+          if (!acc[book.folderId]) {
+            acc[book.folderId] = [];
+          }
+          acc[book.folderId].push(book);
+        }
+        return acc;
+      }, {} as Record<string, typeof books>);
+
+      // Create sections for each folder group
+      Object.entries(folderGroups).forEach(([folderId, folderBooks], index) => {
+        sections.push({
+          title: `📁 Folder ${index + 1}`,
+          books: folderBooks,
+          id: folderId,
+          isEmpty: false,
+          icon: '📁'
+        });
+      });
+    }
+
     return (
       <div className="space-y-6">
         {sections.map((shelf) => {
