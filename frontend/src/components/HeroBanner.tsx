@@ -17,12 +17,13 @@ export function HeroBanner() {
     if (isLoaded && isSignedIn) {
       // Wait for the centralized auth manager to confirm authentication
       // instead of immediately calling vocabBank.load()
+      let hasLoaded = false;
       const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
-        if (isAuthenticated) {
+        if (isAuthenticated && !hasLoaded) {
+          hasLoaded = true;
           vocabBank.load().then(() => {
             setStats(vocabBank.getStats());
           });
-          unsubscribe(); // Only load once
         }
       });
       

@@ -290,3 +290,59 @@ html {
   line-height: 1;
   cursor: text;
 }
+
+/* Clerk Dark Mode Enhancements */
+@media (prefers-color-scheme: dark) {
+  .cl-card {
+    @apply bg-gray-800 border-gray-700 !important;
+  }
+  
+  .cl-headerTitle {
+    @apply text-white !important;
+  }
+  
+  .cl-headerSubtitle {
+    @apply text-gray-300 !important;
+  }
+  
+  .cl-formFieldLabel {
+    @apply text-gray-300 !important;
+  }
+  
+  .cl-formFieldInput {
+    @apply bg-gray-700 border-gray-600 text-white !important;
+  }
+  
+  .cl-formFieldInput::placeholder {
+    @apply text-gray-400 !important;
+  }
+  
+  .cl-socialButtonsIconButton {
+    @apply bg-gray-800 border-gray-600 hover:bg-gray-700 !important;
+  }
+  
+  .cl-dividerLine {
+    @apply bg-gray-600 !important;
+  }
+  
+  .cl-dividerText {
+    @apply text-gray-400 !important;
+  }
+  
+  .cl-footerActionText {
+    @apply text-gray-400 !important;
+  }
+  
+  .cl-footerActionLink {
+    @apply text-blue-400 hover:text-blue-300 !important;
+  }
+  
+  .cl-formButtonPrimary {
+    @apply bg-blue-500 hover:bg-blue-600 !important;
+  }
+  
+  /* Override any conflicting styles in modal context */
+  .cl-rootBox .cl-card {
+    @apply shadow-none border-0 bg-transparent !important;
+  }
+}

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 interface TopActionsProps {
   currentPage: "library" | "vocabulary" | "stats";
-  onShowLogin: () => void;
+  onShowLogin?: () => void;
 }
 
 import { useNavigate } from "react-router-dom";
@@ -71,12 +71,14 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
               </div>
             </SignedIn>
             <SignedOut>
-              <button
-                onClick={onShowLogin}
-                className="w-full text-left px-3 py-2 bg-blue-600 text-white rounded text-sm"
-              >
-                📧 Sign in
-              </button>
+              {onShowLogin && (
+                <button
+                  onClick={() => { onShowLogin(); setShowMobileMenu(false); }}
+                  className="w-full text-left px-3 py-2 bg-blue-600 text-white rounded text-sm"
+                >
+                  📧 Sign in
+                </button>
+              )}
             </SignedOut>
           </div>
         )}
@@ -136,15 +138,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
             </SignedIn>
             
             <SignedOut>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={onShowLogin}
-                  aria-label="Sign in"
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
-                  📧 Sign in
-                </button>
-              </div>
+              {/* No sign-in button in desktop nav - users can see the main form below */}
             </SignedOut>
           </div>
         </div>

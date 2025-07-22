@@ -36,7 +36,34 @@ export default function App() {
       publishableKey={clerkPubKey}
       appearance={{
         variables: {
-          colorPrimary: "#3b82f6"
+          colorPrimary: "#3b82f6",
+          colorDanger: "#ef4444",
+          colorSuccess: "#10b981",
+          colorWarning: "#f59e0b",
+          colorNeutral: "#6b7280",
+          colorText: "#1f2937",
+          colorTextSecondary: "#6b7280",
+          colorTextOnPrimaryBackground: "#ffffff",
+          colorBackground: "#ffffff",
+          colorInputBackground: "#ffffff",
+          colorInputText: "#1f2937",
+          borderRadius: "0.5rem",
+          fontFamily: "system-ui, -apple-system, sans-serif"
+        },
+        elements: {
+          card: "shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded-lg",
+          headerTitle: "text-gray-900 dark:text-white text-xl font-semibold",
+          headerSubtitle: "text-gray-600 dark:text-gray-300 text-sm",
+          formFieldLabel: "text-gray-700 dark:text-gray-300 text-sm font-medium",
+          formFieldInput: "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400",
+          formButtonPrimary: "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium transition-colors",
+          socialButtonsIconButton: "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors",
+          dividerLine: "bg-gray-200 dark:bg-gray-600",
+          dividerText: "text-gray-500 dark:text-gray-400 text-sm",
+          footerActionText: "text-gray-600 dark:text-gray-400 text-sm",
+          footerActionLink: "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium",
+          main: "space-y-4",
+          formFieldRow: "space-y-1"
         }
       }}
       // Enable session token persistence across page refreshes
@@ -53,8 +80,6 @@ export default function App() {
 }
 
 function AppContent() {
-  const [showLogin, setShowLogin] = useState(false);
-
   // Clerk hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { isDriveConnected, isDriveLoading } = useAppData();
@@ -112,7 +137,7 @@ function AppContent() {
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
         <SignedIn>
           <Routes>
-            <Route path="/" element={<MainLayout setShowLogin={setShowLogin} />}> 
+            <Route path="/" element={<MainLayout />}> 
               <Route index element={<BookLibrary />} />
               <Route path="vocabulary" element={<VocabularyPage />} />
               <Route path="stats" element={<StatsPlaceholder />} />
@@ -121,18 +146,17 @@ function AppContent() {
           </Routes>
         </SignedIn>
         <SignedOut>
-          <SignedOutLayout setShowLogin={setShowLogin} />
+          <SignedOutLayout />
         </SignedOut>
         <Footer />
         <DangerZone />
-        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
         <Toaster />
       </div>
     </SettingsProvider>
   );
 }
 
-function MainLayout({ setShowLogin }: { setShowLogin: (v: boolean) => void }) {
+function MainLayout() {
   const location = useLocation();
   const currentPage = location.pathname.startsWith('/vocabulary')
     ? 'vocabulary'
@@ -142,7 +166,7 @@ function MainLayout({ setShowLogin }: { setShowLogin: (v: boolean) => void }) {
 
   return (
     <div className="flex flex-col flex-1">
-      <TopActions currentPage={currentPage} onShowLogin={() => setShowLogin(true)} />
+      <TopActions currentPage={currentPage} />
       <HeroBanner />
       <div className="flex-1 overflow-y-auto">
         <Outlet />
@@ -151,12 +175,22 @@ function MainLayout({ setShowLogin }: { setShowLogin: (v: boolean) => void }) {
   );
 }
 
-function SignedOutLayout({ setShowLogin }: { setShowLogin: (v: boolean) => void }) {
+function SignedOutLayout() {
+  const scrollToSignIn = () => {
+    const signInSection = document.getElementById('sign-in-section');
+    if (signInSection) {
+      signInSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1">
-      <TopActions currentPage="library" onShowLogin={() => setShowLogin(true)} />
+      <TopActions currentPage="library" onShowLogin={scrollToSignIn} />
       <HeroBanner />
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+      <div id="sign-in-section" className="flex-1 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-md mx-auto">
           <SignInForm />
         </div>
