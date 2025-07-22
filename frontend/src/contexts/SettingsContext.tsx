@@ -94,9 +94,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   
   // Placeholder for settings - replace with Flask API calls for persistence
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
+  const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
   const { isAuthenticated, loadSettings, saveSettings, books } = useStorageService();
   const loadedFromCloudRef = useRef(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cloudLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load settings from localStorage or cookie on initial mount
   useEffect(() => {
@@ -130,12 +132,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Auto-load settings from Google Drive when authenticated and connected
   useEffect(() => {
     const attemptCloudLoad = async () => {
-      if (!isAuthenticated || loadedFromCloudRef.current) {
+      if (!isAuthenticated || loadedFromCloudRef.current || isLoadingFromCloud) {
         return;
       }
 
-      // Add a small delay to ensure Google Drive connection is ready
-      setTimeout(async () => {
+      // Clear any existing timeout to debounce rapid calls
+      if (cloudLoadTimeoutRef.current) {
+        clearTimeout(cloudLoadTimeoutRef.current);
+      }
+
+      setIsLoadingFromCloud(true);
+      
+      // Add a small delay to ensure Google Drive connection is ready and debounce rapid calls
+      cloudLoadTimeoutRef.current = setTimeout(async () => {
         try {
           console.log('🔄 Auto-loading settings from Google Drive...');
           const data = await loadSettings();
@@ -166,6 +175,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         } catch (err) {
           console.error('❌ Failed to auto-load settings from Google Drive:', err);
           loadedFromCloudRef.current = true; // Mark as attempted to avoid infinite retries
+        } finally {
+          setIsLoadingFromCloud(false);
+          cloudLoadTimeoutRef.current = null;
         }
       }, 1500); // 1.5 second delay to ensure Google Drive is ready
     };
@@ -174,18 +186,33 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated) {
       loadedFromCloudRef.current = false;
+      setIsLoadingFromCloud(false);
+      // Clear any pending cloud load timeout
+      if (cloudLoadTimeoutRef.current) {
+        clearTimeout(cloudLoadTimeoutRef.current);
+        cloudLoadTimeoutRef.current = null;
+      }
       clearSettingsCookie();
       clearSettingsStorage();
     }
 
-    return () => {};
-  }, [isAuthenticated, loadSettings, books.length]);
+    return () => {
+      // Cleanup timeout on unmount or dependency change
+      if (cloudLoadTimeoutRef.current) {
+        clearTimeout(cloudLoadTimeoutRef.current);
+        cloudLoadTimeoutRef.current = null;
+      }
+    };
+  }, [isAuthenticated]);
 
-  // Cleanup auto-save timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
+      }
+      if (cloudLoadTimeoutRef.current) {
+        clearTimeout(cloudLoadTimeoutRef.current);
       }
     };
   }, []);
