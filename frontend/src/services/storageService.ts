@@ -509,6 +509,20 @@ class StorageService {
         console.log('getUserBooks: Fetching book list from user\'s Google Drive...');
         
         try {
+            // CRITICAL: Check Clerk authentication first before accessing Google Drive
+            if (typeof window !== 'undefined' && window.Clerk) {
+                const clerkUser = window.Clerk.user;
+                const isClerkSignedIn = window.Clerk.session !== null;
+                
+                if (!clerkUser || !isClerkSignedIn) {
+                    console.log('getUserBooks: Clerk user not authenticated, skipping Google Drive access');
+                    return [];
+                }
+            } else {
+                console.log('getUserBooks: Clerk not available, skipping Google Drive access');
+                return [];
+            }
+
             // Check if user is signed in to Google Drive
             if (!gDriveService.isSignedIn()) {
                 console.log('User not signed in to Google Drive');
@@ -920,6 +934,12 @@ class StorageService {
     async syncBooks(clerkUser?: any, onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
         console.log('Syncing books with cloud storage...');
 
+        // CRITICAL: Check Clerk authentication first
+        if (!clerkUser) {
+            console.log('syncBooks: No Clerk user provided, skipping sync');
+            return [];
+        }
+
         const provider = this.detectProviderFromClerkUser(clerkUser);
 
         switch (provider) {
@@ -1232,6 +1252,20 @@ class StorageService {
         console.log('Loading settings from Google Drive settings.json...');
 
         try {
+            // CRITICAL: Check Clerk authentication first
+            if (typeof window !== 'undefined' && window.Clerk) {
+                const clerkUser = window.Clerk.user;
+                const isClerkSignedIn = window.Clerk.session !== null;
+                
+                if (!clerkUser || !isClerkSignedIn) {
+                    console.log('loadSettings: Clerk user not authenticated, skipping Google Drive access');
+                    return null;
+                }
+            } else {
+                console.log('loadSettings: Clerk not available, skipping Google Drive access');
+                return null;
+            }
+
             if (!gDriveService.isSignedIn()) {
                 console.warn('Cannot load settings: Google Drive not connected');
                 return null;
@@ -1262,6 +1296,20 @@ class StorageService {
      * Load vocabulary list from cloud storage
      */
     async loadVocabulary(): Promise<any[] | null> {
+        // CRITICAL: Check Clerk authentication first
+        if (typeof window !== 'undefined' && window.Clerk) {
+            const clerkUser = window.Clerk.user;
+            const isClerkSignedIn = window.Clerk.session !== null;
+            
+            if (!clerkUser || !isClerkSignedIn) {
+                console.log('loadVocabulary: Clerk user not authenticated, skipping Google Drive access');
+                return null;
+            }
+        } else {
+            console.log('loadVocabulary: Clerk not available, skipping Google Drive access');
+            return null;
+        }
+
         return await gDriveService.loadVocab();
     }
 
@@ -1313,6 +1361,12 @@ class StorageService {
     }
 
     async getFolders(clerkUser?: any): Promise<Folder[]> {
+        // CRITICAL: Check Clerk authentication first
+        if (!clerkUser) {
+            console.log('getFolders: No Clerk user provided, returning empty folders');
+            return [];
+        }
+
         const provider = this.detectProviderFromClerkUser(clerkUser);
         
         switch (provider) {

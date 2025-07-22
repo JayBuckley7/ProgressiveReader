@@ -5,7 +5,7 @@ import { ReaderControls } from "./ReaderControls";
 import { TtsControlModal } from "./TtsControlModal";
 import { SettingsModal } from "./SettingsModal";
 import { PdfViewer, PdfViewerHandle } from "./PdfViewer";
-import { useStorageService } from "../hooks/useStorageService";
+import { useAppData } from "../contexts/AppDataContext";
 import { storageService } from "../services/storageService";
 import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
@@ -73,7 +73,7 @@ const clearAllTranslationsForBook = (bookId: string) => {
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   const navigate = useNavigate();
-  const { books, getReadingProgress, saveBookProgress } = useStorageService();
+  const { books, getReadingProgress, saveBookProgress } = useAppData();
   const bookMetadata = useMemo(() => books.find(b => b.id === bookId), [books, bookId]);
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();

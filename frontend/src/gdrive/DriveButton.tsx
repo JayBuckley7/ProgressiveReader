@@ -1,20 +1,29 @@
 import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { gDriveService } from '../services/gdriveService';
 
 /**
  * Button UI for connecting to Google Drive and triggering sync.
  */
 export function DriveButton() {
+  const { isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(gDriveService.isSignedIn());
+  const [connected, setConnected] = useState(false);
   const [profile, setProfile] = useState<any | null>(null);
 
   useEffect(() => {
+    // Only check Google Drive status if Clerk user is authenticated
+    if (!isClerkLoaded || !isClerkSignedIn) {
+      setConnected(false);
+      setProfile(null);
+      return;
+    }
+
     setConnected(gDriveService.isSignedIn());
     if (gDriveService.isSignedIn()) {
       gDriveService.getUserProfile().then(setProfile);
     }
-  }, []);
+  }, [isClerkLoaded, isClerkSignedIn]);
 
   const handleConnect = async () => {
     if (connected) {

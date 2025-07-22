@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { driveApiService } from '../services/driveApiService';
 import { gDriveService } from '../services/gdriveService';
 
@@ -20,7 +21,7 @@ interface GoogleUserProfile {
   sub: string;
 }
 
-interface UseGoogleDriveReturn {
+export interface UseGoogleDriveReturn {
   isDriveConnected: boolean;
   driveUser: GoogleUserProfile | null;
   driveFiles: GoogleDriveFile[];
@@ -42,9 +43,8 @@ interface UseGoogleDriveReturn {
 }
 
 export function useGoogleDrive(): UseGoogleDriveReturn {
-  const [isDriveConnected, setIsDriveConnected] = useState<boolean>(
-    gDriveService.isSignedIn()
-  );
+  const { isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
+  const [isDriveConnected, setIsDriveConnected] = useState<boolean>(false);
   const [driveUser, setDriveUser] = useState<GoogleUserProfile | null>(null);
   const [driveFiles, setDriveFiles] = useState<GoogleDriveFile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false); // For async operations like fetching files
@@ -53,6 +53,15 @@ export function useGoogleDrive(): UseGoogleDriveReturn {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   useEffect(() => {
+    // Only initialize Google Drive service if user is authenticated with Clerk
+    if (!isClerkLoaded || !isClerkSignedIn) {
+      // Clear state when not authenticated
+      setIsDriveConnected(false);
+      setDriveUser(null);
+      setIsTokenNearExpiry(false);
+      return;
+    }
+
     const unsubscribe = gDriveService.listenToSigninStatus(async (status) => {
       setIsDriveConnected(status);
       if (status) {
@@ -65,10 +74,11 @@ export function useGoogleDrive(): UseGoogleDriveReturn {
       }
     });
 
-    // Initialize current state
+    // Initialize current state only if Clerk user is authenticated
     if (gDriveService.isSignedIn()) {
       gDriveService.getUserProfile().then(setDriveUser);
       setIsTokenNearExpiry(gDriveService.isTokenNearExpiry());
+      setIsDriveConnected(true);
     }
 
     // Check token expiry status periodically
@@ -82,7 +92,7 @@ export function useGoogleDrive(): UseGoogleDriveReturn {
       unsubscribe();
       clearInterval(tokenCheckInterval);
     };
-  }, []);
+  }, [isClerkLoaded, isClerkSignedIn]);
 
   const fetchDriveFiles = useCallback(async (folderId?: string) => {
     if (!isDriveConnected) {

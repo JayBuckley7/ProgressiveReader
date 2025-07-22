@@ -20,7 +20,7 @@ import { DangerZone } from "./components/DangerZone";
 import { Footer } from "./components/Footer";
 import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
-import { useGoogleDrive } from "./hooks/useGoogleDrive"; // Import the hook
+import { AppDataProvider, useAppData } from "./contexts/AppDataContext";
 import { gDriveService } from "./services/gdriveService";
 
 // Get Clerk publishable key from environment variable
@@ -33,7 +33,9 @@ export default function App() {
 
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
-      <AppContent />
+      <AppDataProvider>
+        <AppContent />
+      </AppDataProvider>
     </ClerkProvider>
   );
 }
@@ -41,9 +43,9 @@ export default function App() {
 function AppContent() {
   const [showLogin, setShowLogin] = useState(false);
 
-  // Clerk and Google Drive hooks
+  // Clerk hooks
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, isLoading: isDriveLoading } = useGoogleDrive();
+  const { isDriveConnected, isDriveLoading } = useAppData();
 
   // Check for corrupted Google Drive tokens on app startup
   useEffect(() => {

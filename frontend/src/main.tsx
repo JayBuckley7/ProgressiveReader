@@ -12,20 +12,14 @@ if (!PUBLISHABLE_KEY) {
 
 async function startApp() {
 
-  // Only use StrictMode in development to avoid excessive loading in production
-  const isDevelopment = import.meta.env.MODE === 'development';
-  
+  // StrictMode disabled to prevent double/triple firing of effects during development
   const app = (
     <BrowserRouter>
       <App />
     </BrowserRouter>
   );
 
-  const AppComponent = isDevelopment ? (
-    <React.StrictMode>{app}</React.StrictMode>
-  ) : (
-    app
-  );
+  const AppComponent = app;
 
   ReactDOM.createRoot(document.getElementById('root')!).render(AppComponent);
 }

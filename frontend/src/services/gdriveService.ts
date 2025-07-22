@@ -52,6 +52,17 @@ class GDriveService {
   private listeners: Array<(isSignedIn: boolean) => void> = [];
   private appFolderId: string | null = null;
   private tokenRefreshTimer: NodeJS.Timeout | null = null;
+  
+  // Add debouncing and deduplication
+  private statusUpdateTimeout: NodeJS.Timeout | null = null;
+  private lastStatusSent: boolean | null = null;
+  private pendingAPICalls: Map<string, Promise<any>> = new Map();
+  private lastSigninCheck: { result: boolean; timestamp: number } | null = null;
+  private signinCheckCacheDuration = 1000; // Cache signin checks for 1 second
+  private cachedUserProfile: { profile: GoogleUser | null; timestamp: number } | null = null;
+  private profileCacheDuration = 5000; // Cache profile for 5 seconds
+  private cachedAppFolderId: { folderId: string | null; timestamp: number } | null = null;
+  private folderCacheDuration = 30000; // Cache folder ID for 30 seconds
 
   private loadTokensFromStorage(): boolean {
     if (typeof window === 'undefined') return false;
@@ -86,9 +97,25 @@ class GDriveService {
   }
 
   constructor() {
-    this.loadTokensFromStorage(); // ensures isSignedIn() reflects saved token
+    // Only load tokens and initialize if Clerk user is authenticated
+    this.conditionalInitialize();
     this.loadGoogleScripts();
-    this.startTokenRefreshTimer(); // Start proactive token refresh
+  }
+
+  /**
+   * Only initialize Google Drive service if Clerk user is authenticated
+   */
+  private conditionalInitialize(): void {
+    // Delay initialization to allow Clerk to load
+    setTimeout(() => {
+      if (this.isClerkUserAuthenticated()) {
+        this.loadTokensFromStorage(); // ensures isSignedIn() reflects saved token
+        this.startTokenRefreshTimer(); // Start proactive token refresh
+      } else {
+        // Clear any existing tokens if no Clerk user
+        this.clearStoredTokens();
+      }
+    }, 100);
   }
 
   /**
@@ -537,7 +564,33 @@ class GDriveService {
   }
   
   private updateSigninStatus(isSignedIn: boolean) {
-    this.listeners.forEach(callback => callback(isSignedIn));
+    // Only send update if status actually changed
+    if (this.lastStatusSent === isSignedIn) {
+      console.log(`[GDriveService] Skipping duplicate status update: ${isSignedIn}`);
+      return;
+    }
+    
+    // Debounce status updates to prevent excessive calls
+    if (this.statusUpdateTimeout) {
+      clearTimeout(this.statusUpdateTimeout);
+    }
+    
+    this.statusUpdateTimeout = setTimeout(() => {
+      // Double-check the status hasn't changed during the timeout
+      if (this.lastStatusSent === isSignedIn) {
+        return;
+      }
+      
+      console.log(`[GDriveService] Broadcasting sign-in status change to ${this.listeners.length} listeners: ${isSignedIn}`);
+      this.lastStatusSent = isSignedIn;
+      this.listeners.forEach(callback => {
+        try {
+          callback(isSignedIn);
+        } catch (error) {
+          console.error('[GDriveService] Error in listener callback:', error);
+        }
+      });
+    }, 100); // Slightly longer delay to batch more updates
   }
 
   public listenToSigninStatus(callback: (isSignedIn: boolean) => void): () => void {
@@ -618,6 +671,23 @@ class GDriveService {
   }
 
   public isSignedIn(): boolean {
+    // Check cache first to prevent repeated expensive checks
+    if (this.lastSigninCheck && Date.now() - this.lastSigninCheck.timestamp < this.signinCheckCacheDuration) {
+      return this.lastSigninCheck.result;
+    }
+
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      // Clear any tokens if Clerk user is not authenticated
+      if (this.accessToken || this.accessTokenExpiry) {
+        console.log('[GDriveService] Clerk user not authenticated, clearing Google Drive tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      this.lastSigninCheck = { result: false, timestamp: Date.now() };
+      return false;
+    }
+
     const hasToken = !!this.accessToken;
     const hasExpiry = !!this.accessTokenExpiry;
     const isNotExpired = this.accessTokenExpiry ? Date.now() < this.accessTokenExpiry : false;
@@ -633,6 +703,7 @@ class GDriveService {
         console.warn(`[GDriveService] ⚠️ Detected corrupted token expiry (${minutesUntilExpiry} minutes), clearing tokens`);
         this.clearStoredTokens();
         this.updateSigninStatus(false);
+        this.lastSigninCheck = { result: false, timestamp: Date.now() };
         return false;
       }
       
@@ -642,7 +713,9 @@ class GDriveService {
       }
     }
     
-    return hasToken && hasExpiry && isNotExpired;
+    const result = hasToken && hasExpiry && isNotExpired;
+    this.lastSigninCheck = { result, timestamp: Date.now() };
+    return result;
   }
 
   /**
@@ -715,6 +788,13 @@ class GDriveService {
   }
 
   public async getAccessToken(): Promise<string | null> {
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Cannot get access token: Clerk user not authenticated');
+      this.clearStoredTokens();
+      return null;
+    }
+
     // Check if current token is still valid (with 5 minute buffer)
     if (this.accessToken && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) {
       return this.accessToken;
@@ -752,19 +832,45 @@ class GDriveService {
   }
   
   public async getUserProfile(): Promise<GoogleUser | null> {
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Cannot get user profile: Clerk user not authenticated');
+      return null;
+    }
+
+    // Return cached profile if available
     if (this.userProfile) return this.userProfile;
-    const token = await this.getAccessToken(); // Ensures token is fresh
-    if (!token) return null;
-    // if (!this.accessToken) return null; // old way
-    await this.fetchUserProfile(); // fetchUserProfile uses this.accessToken internally
-    return this.userProfile;
+    
+    // Deduplicate concurrent profile requests
+    const cacheKey = 'getUserProfile';
+    if (this.pendingAPICalls.has(cacheKey)) {
+      console.log('[GDriveService] Profile request already in progress, waiting...');
+      return this.pendingAPICalls.get(cacheKey);
+    }
+    
+    const profilePromise = (async () => {
+      try {
+        const token = await this.getAccessToken(); // Ensures token is fresh
+        if (!token) return null;
+        await this.fetchUserProfile(); // fetchUserProfile uses this.accessToken internally
+        return this.userProfile;
+      } finally {
+        this.pendingAPICalls.delete(cacheKey);
+      }
+    })();
+    
+    this.pendingAPICalls.set(cacheKey, profilePromise);
+    return profilePromise;
   }
 
   private async fetchUserProfile() {
-    // if (!this.accessToken) { // accessToken might be fetched by getAccessToken() just before this
-    //   console.warn('[GDriveService] Cannot fetch user profile, no access token.');
-    //   return;
-    // }
+    // Check cache first
+    if (this.cachedUserProfile && (Date.now() - this.cachedUserProfile.timestamp < this.profileCacheDuration)) {
+      this.userProfile = this.cachedUserProfile.profile;
+      console.log('[GDriveService] Using cached user profile');
+      return;
+    }
+
     const currentToken = this.accessToken; // Use the token active at the start of this attempt
     if (!currentToken) {
       console.warn('[GDriveService] Cannot fetch user profile, no access token after getAccessToken attempt.');
@@ -787,26 +893,49 @@ class GDriveService {
         picture: profile.picture,
         sub: profile.sub,
       };
+      // Cache the result
+      this.cachedUserProfile = {
+        profile: this.userProfile,
+        timestamp: Date.now()
+      };
+      
       console.log('[GDriveService] User profile fetched:', this.userProfile);
     } catch (error) {
       console.error('[GDriveService] Error fetching user profile:', error);
       // If profile fetch fails, it might indicate an issue with the token
       // Consider revoking token or prompting re-auth depending on error
       // For now, just nullify and potentially sign out.
-      this.userProfile = null; 
+      this.userProfile = null;
+      this.cachedUserProfile = { profile: null, timestamp: Date.now() };
       // this.signOut(); // Or a more nuanced error handling
     }
   }
 
   public async getAppFolderId(): Promise<string | null> {
     if (this.appFolderId) return this.appFolderId;
-    // if (!this.isSignedIn() || !this.gapi || !this.gapi.client || !this.gapi.client.drive) { //isSignedIn now checks expiry
-    const token = await this.getAccessToken();
-    if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-        console.warn('[GDriveService] Cannot get app folder ID: not signed in, token invalid, or GAPI Drive client not ready.');
-        return null;
+    
+    // Deduplicate concurrent folder ID requests
+    const cacheKey = 'getAppFolderId';
+    if (this.pendingAPICalls.has(cacheKey)) {
+      console.log('[GDriveService] App folder ID request already in progress, waiting...');
+      return this.pendingAPICalls.get(cacheKey);
     }
-    return this.findOrCreateAppFolder();
+    
+    const folderPromise = (async () => {
+      try {
+        const token = await this.getAccessToken();
+        if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
+          console.warn('[GDriveService] Cannot get app folder ID: not signed in, token invalid, or GAPI Drive client not ready.');
+          return null;
+        }
+        return this.findOrCreateAppFolder();
+      } finally {
+        this.pendingAPICalls.delete(cacheKey);
+      }
+    })();
+    
+    this.pendingAPICalls.set(cacheKey, folderPromise);
+    return folderPromise;
   }
 
   private async findOrCreateAppFolder(): Promise<string | null> {
@@ -828,6 +957,13 @@ class GDriveService {
       if (files && files.length > 0) {
         console.log(`[GDriveService] Found app folder '${FOLDER_NAME}' with ID: ${files[0].id}`);
         this.appFolderId = files[0].id;
+        
+        // Cache the result
+        this.cachedAppFolderId = {
+          folderId: this.appFolderId,
+          timestamp: Date.now()
+        };
+        
         return this.appFolderId;
       } else {
         // Create the folder if it doesn't exist
@@ -842,6 +978,13 @@ class GDriveService {
         });
         console.log(`[GDriveService] Created app folder '${FOLDER_NAME}' with ID: ${createResponse.result.id}`);
         this.appFolderId = createResponse.result.id;
+        
+        // Cache the result
+        this.cachedAppFolderId = {
+          folderId: this.appFolderId,
+          timestamp: Date.now()
+        };
+        
         return this.appFolderId;
       }
     } catch (error: any) {
@@ -1608,6 +1751,12 @@ class GDriveService {
    * Save vocabulary data to vocab.json in the app folder
    */
   public async saveVocab(words: any[]): Promise<boolean> {
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Cannot save vocabulary: Clerk user not authenticated');
+      return false;
+    }
+
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
@@ -1642,6 +1791,12 @@ class GDriveService {
    * Load vocabulary data from vocab.json
    */
   public async loadVocab(): Promise<any[] | null> {
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Cannot load vocabulary: Clerk user not authenticated');
+      return null;
+    }
+
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
@@ -2004,6 +2159,13 @@ class GDriveService {
    */
   public async checkAndClearCorruptedTokens(): Promise<void> {
     console.log('[GDriveService] Checking for corrupted tokens...');
+    
+    // CRITICAL: Only check tokens if Clerk user is authenticated
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] No Clerk user authenticated, clearing any existing tokens');
+      this.clearStoredTokens();
+      return;
+    }
     
     // Check if we have tokens but they're corrupted
     if (this.accessToken && this.accessTokenExpiry) {

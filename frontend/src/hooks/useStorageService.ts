@@ -25,6 +25,7 @@ function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
 export function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
+  const [isDriveBookLoading, setIsDriveBookLoading] = useState(false);
   const [books, setBooks] = useState<BookMetadata[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const booksRef = useRef<BookMetadata[]>([]);
@@ -78,11 +79,17 @@ export function useStorageService() {
       }
 
       console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
+      
+      // Show success feedback only
+      if (userBooks.length > 0) {
+        toast.success(`✅ Loaded ${userBooks.length} book${userBooks.length === 1 ? '' : 's'} from Google Drive`);
+      }
     } catch (error) {
       console.error('Error silently refreshing books:', error);
-      // Don't show toast errors for silent refreshes to avoid interrupting user
+      toast.error('Failed to load books from Google Drive');
     } finally {
       isRefreshingRef.current = false;
+      setIsDriveBookLoading(false);
     }
   }, [clerkUser]);
 
@@ -206,20 +213,24 @@ export function useStorageService() {
 
     console.log('[useStorageService] Setting up Google Drive sign-in listener...');
 
-    // Track if we've already loaded books to prevent unnecessary refreshes
-    let hasLoadedBooks = books.length > 0;
-
     // Listen for Google Drive connection status changes
     const unsubscribe = gDriveService.listenToSigninStatus((isSignedIn) => {
       console.log(`[useStorageService] Google Drive sign-in status changed: ${isSignedIn}`);
 
-      if (isSignedIn && !hasLoadedBooks) {
-        // Only refresh books if we haven't loaded them yet
+      if (isSignedIn) {
+        // ALWAYS refresh books when Google Drive connects
+        // This ensures books load even if the initial load failed due to no Drive connection
         console.log('[useStorageService] Google Drive connected - refreshing book list...');
-        hasLoadedBooks = true;
-        silentRefreshBooks();
-      } else if (isSignedIn && hasLoadedBooks) {
-        console.log('[useStorageService] Google Drive connected but books already loaded, skipping refresh');
+        
+        // Reset any stuck refresh flags in case previous load failed
+        isRefreshingRef.current = false;
+        isDriveSyncingRef.current = false;
+        
+        // Add small delay to allow Google Drive service state to stabilize
+        setTimeout(() => {
+          setIsDriveBookLoading(true);
+          silentRefreshBooks();
+        }, 100);
       }
     });
 
@@ -569,6 +580,7 @@ export function useStorageService() {
     books,
     folders,
     isLoading,
+    isDriveBookLoading,
     isAuthenticated: !!clerkUser && clerkLoaded,
     signIn,
     signOut,

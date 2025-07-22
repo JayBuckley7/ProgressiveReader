@@ -1,9 +1,9 @@
 import React from 'react';
-import { useGoogleDrive } from '../hooks/useGoogleDrive';
+import { useAppData } from '../contexts/AppDataContext';
 import { toast } from 'sonner';
 
 export function TokenStatusWarning() {
-  const { isDriveConnected, isTokenNearExpiry, isRefreshing, refreshToken } = useGoogleDrive();
+  const { isDriveConnected, isTokenNearExpiry, isRefreshing, refreshToken } = useAppData();
 
   // Don't show anything if not connected or token is fine
   if (!isDriveConnected || !isTokenNearExpiry) {

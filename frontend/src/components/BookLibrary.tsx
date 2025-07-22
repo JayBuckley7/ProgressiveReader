@@ -5,8 +5,7 @@ import { FolderManager } from "./FolderManager";
 import { FolderView } from "./FolderView";
 import { TokenStatusWarning } from "./TokenStatusWarning";
 import { toast } from "sonner";
-import { useStorageService } from "../hooks/useStorageService";
-import { useGoogleDrive } from "../hooks/useGoogleDrive";
+import { useAppData } from "../contexts/AppDataContext";
 import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
 
 import { useNavigate } from "react-router-dom";
@@ -39,9 +38,11 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     createFolder,
     updateFolder,
     deleteFolder,
-    moveBookToFolder
-  } = useStorageService();
-  const { isDriveConnected } = useGoogleDrive();
+    moveBookToFolder,
+    isDriveConnected,
+    isLoading,
+    isDriveBookLoading
+  } = useAppData();
 
   // All book handling is delegated to the storage service.
 
@@ -118,7 +119,10 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                 </svg>
               </button>
               <button
-                onClick={syncBooks}
+                onClick={() => {
+                  console.log('sync library button clicked');
+                  syncBooks();
+                }}
                 className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 title="Sync library"
               >
@@ -243,6 +247,19 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           </p>
           <div className="flex justify-center">
             <GoogleDriveConnectButton />
+          </div>
+        </div>
+      ) : isDriveBookLoading && books.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">📚</div>
+          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            Loading your books...
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            We're fetching your library from Google Drive
+          </p>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </div>
       ) : books.length === 0 ? (

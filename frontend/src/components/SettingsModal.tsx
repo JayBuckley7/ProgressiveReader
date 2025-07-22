@@ -1,7 +1,7 @@
 import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useStorageService } from "../hooks/useStorageService";
+import { useAppData } from "../contexts/AppDataContext";
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -40,7 +40,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     translating: boolean;
 }) {
     const { settings, updateSettings } = useSettings();
-    const { saveSettings, loadSettings, isAuthenticated } = useStorageService();
+    const { saveSettings, loadSettings, isAuthenticated } = useAppData();
     const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
     const [isCloudLoading, setIsCloudLoading] = useState(false);
 
@@ -184,6 +184,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     setIsCloudLoading(true);
     try {
       const settingsToSave = createSettingsObject();
+      console.log('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
       const success = await saveSettings(settingsToSave);
       if (success) {
         toast.success('Settings manually saved to Google Drive successfully!');
@@ -208,6 +209,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     setIsCloudLoading(true);
     try {
       const cloudSettings = await loadSettings();
+      console.log('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
       if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
         toast.success('Settings loaded from Google Drive successfully!');

@@ -1,21 +1,24 @@
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
-import { useStorageService } from "../hooks/useStorageService";
+import { useAppData } from "../contexts/AppDataContext";
 import { vocabBank } from "../services/vocabBank";
 
 export function HeroBanner() {
-  const { user } = useUser();
+  const { user, isSignedIn, isLoaded } = useUser();
   // Pull the user's library from the storage service so counts reflect
   // the current library after Drive sync completes.
-  const { books } = useStorageService();
+  const { books } = useAppData();
 
   const [stats, setStats] = useState({ saved: 0, mastered: 0 });
 
   useEffect(() => {
-    vocabBank.load().then(() => {
-      setStats(vocabBank.getStats());
-    });
-  }, []);
+    // Only load vocabulary if user is authenticated with Clerk
+    if (isLoaded && isSignedIn) {
+      vocabBank.load().then(() => {
+        setStats(vocabBank.getStats());
+      });
+    }
+  }, [isLoaded, isSignedIn]);
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">

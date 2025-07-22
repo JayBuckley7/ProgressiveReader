@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useStorageService } from '../hooks/useStorageService';
+import { useAppData } from '../contexts/AppDataContext';
 import { BookReader } from "./BookReader";
 import { BookMetadata, ReadingProgress } from '../services/storageService';
 
@@ -28,7 +28,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { getReadingProgress, downloadBookForOffline } = useStorageService();
+  const { getReadingProgress, downloadBookForOffline } = useAppData();
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
 
   // Add logging for cover URL changes

@@ -1,8 +1,8 @@
 "use client";
-import { useStorageService } from "../hooks/useStorageService";
+import { useAppData } from "../contexts/AppDataContext";
 
 export function SignOutButton() {
-  const { isAuthenticated, signOut } = useStorageService();
+  const { isAuthenticated, signOut } = useAppData();
 
   if (!isAuthenticated) {
     return null;

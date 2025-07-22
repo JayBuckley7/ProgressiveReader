@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStorageService } from '../hooks/useStorageService';
+import { useAppData } from '../contexts/AppDataContext';
 import { toast } from 'sonner';
 
 interface BookUploadProps {
@@ -7,7 +7,7 @@ interface BookUploadProps {
 }
 
 export function BookUpload({ onUploadComplete }: BookUploadProps) {
-  const { user, isAuthenticated, signIn, uploadBook } = useStorageService();
+  const { isAuthenticated, signIn, uploadBook } = useAppData();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 

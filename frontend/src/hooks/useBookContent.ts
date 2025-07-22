@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { BookMetadata, storageService } from '~/services/storageService.ts';
-import { useStorageService } from '~/hooks/useStorageService.ts';
+import { useAppData } from '../contexts/AppDataContext';
 import { EpubProcessorWrapper } from '~/lib/epubProcessor.ts';
 import { TextProcessorWrapper } from '~/lib/textProcessor.ts';
 
@@ -21,7 +21,7 @@ interface UseBookContentReturn {
 }
 
 export function useBookContent(bookId: string, currentChapter: number = 0): UseBookContentReturn {
-  const { books } = useStorageService();
+  const { books } = useAppData();
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [currentChapterContent, setCurrentChapterContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);

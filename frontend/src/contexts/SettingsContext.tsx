@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useStorageService } from "../hooks/useStorageService";
+import { useAppData } from "./AppDataContext";
 import { toast } from "sonner";
 
 type Theme = "light" | "dark" | "system";
@@ -95,7 +95,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Placeholder for settings - replace with Flask API calls for persistence
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
-  const { isAuthenticated, loadSettings, saveSettings, books } = useStorageService();
+  const { isAuthenticated, loadSettings, saveSettings, books } = useAppData();
   const loadedFromCloudRef = useRef(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cloudLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -155,7 +155,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               duration: 3000
             });
             setCurrentSettings(prev => {
-              const updated = { ...prev, ...data };
+              // Map comprehensive settings format back to basic Settings interface
+              const basicSettingsUpdates: Partial<Settings> = {};
+              
+              if (data.userTheme !== undefined) basicSettingsUpdates.theme = data.userTheme;
+              if (data.fontSize !== undefined) basicSettingsUpdates.fontSize = parseInt(data.fontSize) || prev.fontSize;
+              if (data.target_language !== undefined) basicSettingsUpdates.targetLanguage = data.target_language;
+              if (data.showPopupOnHover !== undefined) basicSettingsUpdates.showPopupOnHover = data.showPopupOnHover;
+              if (data.touchscreenSupport !== undefined) basicSettingsUpdates.touchscreenSupport = data.touchscreenSupport;
+              if (data.disableFadeAnimation !== undefined) basicSettingsUpdates.disableFadeAnimation = data.disableFadeAnimation;
+              
+              const updated = { ...prev, ...basicSettingsUpdates };
               setSettingsCookie(updated);
               setSettingsStorage(updated);
               
@@ -268,9 +278,30 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         autoSaveTimeoutRef.current = setTimeout(async () => {
           try {
             console.log('🔄 Auto-saving settings to cloud...');
-            const success = await saveSettings(updated);
+            
+            // First, load existing comprehensive settings to preserve API keys and other fields
+            const existingSettings = await loadSettings();
+            console.log('🔍 [SettingsContext] Existing settings loaded for merge:', existingSettings);
+            
+            // Merge the basic settings with existing comprehensive settings
+            const settingsToSave = {
+              ...existingSettings, // Preserve existing comprehensive settings
+              // Map basic settings to the expected comprehensive format
+              userTheme: updated.theme,
+              fontSize: String(updated.fontSize),
+              target_language: updated.targetLanguage,
+              showPopupOnHover: updated.showPopupOnHover,
+              touchscreenSupport: updated.touchscreenSupport,
+              disableFadeAnimation: updated.disableFadeAnimation,
+              // Add timestamp and version
+              lastUpdated: new Date().toISOString(),
+              version: '1.0'
+            };
+            
+            console.log('🔍 [SettingsContext] Auto-saving merged settings:', settingsToSave);
+            const success = await saveSettings(settingsToSave);
             if (success) {
-              console.log('✅ Settings auto-saved to cloud successfully');
+              console.log('✅ Settings auto-saved to cloud successfully (comprehensive format preserved)');
             } else {
               console.warn('⚠️ Auto-save to cloud failed');
             }

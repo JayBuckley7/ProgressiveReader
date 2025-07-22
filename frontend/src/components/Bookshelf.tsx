@@ -1,8 +1,8 @@
-import { useStorageService } from "../hooks/useStorageService";
+import { useAppData } from "../contexts/AppDataContext";
 import { BookCard } from "./BookCard";
 
 export function Bookshelf() {
-  const { books } = useStorageService();
+  const { books } = useAppData();
 
   if (books.length === 0) {
     return (
