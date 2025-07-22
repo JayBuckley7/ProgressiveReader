@@ -131,11 +131,11 @@ export function useStorageService() {
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
         console.log(`[useStorageService] Cover ready for book ${bookId}`);
+        // Use a ref to batch cover updates and reduce re-renders
         setBooks(currentBooks => {
           const updatedBooks = currentBooks.map(book =>
             book.id === bookId ? { ...book, coverUrl } : book
           );
-          console.log(`[useStorageService] Updated books state for cover ${bookId} - Total books: ${updatedBooks.length}`);
           return updatedBooks;
         });
       };
@@ -161,6 +161,10 @@ export function useStorageService() {
       }
 
       setFolders(userFolders);
+      
+      // Remember that user successfully connected
+      localStorage.setItem('wasGoogleDriveConnected', 'true');
+      
       toast.success('Google Drive connected and library loaded!');
       return true;
     } catch (error) {
@@ -183,6 +187,7 @@ export function useStorageService() {
 
   useEffect(() => {
     // DON'T try to authenticate immediately - wait for user to actually need Google Drive
+    console.log(`[useStorageService] Clerk status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
     if (clerkLoaded) {
       setIsLoading(false);
       if (clerkUser) {
@@ -192,9 +197,17 @@ export function useStorageService() {
           console.log('User signed in with Clerk:', clerkUser);
           lastUserIdRef.current = currentUserId;
           
-          // SIMPLE: Just set up the auth listener, don't authenticate yet
-          // Let the user trigger authentication when they actually need it
-          console.log('[useStorageService] Clerk ready, setting up auth listener but NOT auto-authenticating');
+          // Check if user was previously connected to Google Drive
+          // If so, auto-reconnect after a small delay to ensure Clerk is fully ready
+          const wasConnectedBefore = localStorage.getItem('wasGoogleDriveConnected') === 'true';
+          if (wasConnectedBefore) {
+            console.log('[useStorageService] User was connected before, auto-reconnecting after delay...');
+            setTimeout(() => {
+              connectToGoogleDriveAndLoad();
+            }, 1000); // 1 second delay to ensure Clerk is fully ready
+          } else {
+            console.log('[useStorageService] New user, waiting for manual connection trigger');
+          }
         }
       } else {
         // User is not signed in - clear everything for security
@@ -210,6 +223,7 @@ export function useStorageService() {
 
         // SECURITY: Clear Google Drive tokens when no Clerk user
         // This prevents token leakage if user switches accounts
+        localStorage.removeItem('wasGoogleDriveConnected');
         authManager.signOut();
 
         getOfflineBooksWithCovers().then(b => {

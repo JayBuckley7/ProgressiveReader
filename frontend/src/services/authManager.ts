@@ -47,6 +47,9 @@ class AuthManager {
 
   private async performAuthentication(): Promise<boolean> {
     try {
+      // Clear any cached auth state in gdriveService to ensure fresh check
+      gDriveService.clearAuthCache();
+      
       // Check if Clerk user is authenticated first
       if (typeof window !== 'undefined' && window.Clerk) {
         const clerkUser = window.Clerk.user;

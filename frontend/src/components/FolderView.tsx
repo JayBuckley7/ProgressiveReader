@@ -49,10 +49,7 @@ export function FolderView({
     // Create sections for each folder + uncategorized books
     const sections = [];
     
-    // Debug: Log book data to check folder assignments
-    console.log('Books:', books.map(b => ({ id: b.id, title: b.title, folderId: b.folderId })));
-    console.log('Folders:', folders.map(f => ({ id: f.id, name: f.name })));
-    console.log('BooksByFolder:', booksByFolder);
+    // Debug logs removed to prevent spam on every render
     
     // Uncategorized books (no folder) - only show if there are books
     const uncategorizedBooks = books.filter(book => !book.folderId);

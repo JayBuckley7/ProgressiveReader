@@ -32,7 +32,19 @@ export default function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
+    <ClerkProvider 
+      publishableKey={clerkPubKey}
+      appearance={{
+        variables: {
+          colorPrimary: "#3b82f6"
+        }
+      }}
+      // Enable session token persistence across page refreshes
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+    >
       <AppDataProvider>
         <AppContent />
       </AppDataProvider>

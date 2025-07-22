@@ -2100,6 +2100,15 @@ class GDriveService {
   }
 
   /**
+   * Clear cached authentication state - useful when we know auth status might have changed
+   */
+  public clearAuthCache(): void {
+    console.log('[GDriveService] Clearing cached auth state');
+    this.cachedClerkAuth = null;
+    this.lastSigninCheck = null;
+  }
+
+  /**
    * Public method to check for and clear corrupted tokens
    * This should be called by the application on startup or when auth issues are detected
    */
