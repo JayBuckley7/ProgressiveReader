@@ -8,14 +8,8 @@ const GDRIVE_CLIENT_ID = import.meta.env.VITE_GDRIVE_CLIENT_ID;
 const API_KEY = import.meta.env.VITE_GAPI_KEY; // If using GAPI for discovery
 
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-const BASE_SCOPES = [
-  'openid',
-  'email',
-  'profile',
-  'https://www.googleapis.com/auth/drive.file', // Per-file access (preferred)
-  // 'https://www.googleapis.com/auth/drive.appdata', // AppData folder access
-  // 'https://www.googleapis.com/auth/drive', // Full drive access (use with caution)
-].join(' ');
+// Scopes are now managed by Clerk - no need to define them here
+// Clerk provides: drive.file, drive.appdata, email, profile, openid
 
 
 const FOLDER_NAME = 'ProgReader'; // Or your app's specific folder name
@@ -23,8 +17,7 @@ const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 export const BOOK_FILE_EXTENSIONS = ['epub', 'pdf', 'mobi', 'docx', 'txt'];
 
-const LS_TOKEN_KEY = 'gdriveAccessToken';
-const LS_EXPIRY_KEY = 'gdriveAccessTokenExpiry';
+// No longer storing tokens in localStorage - using Clerk backend tokens
 
 interface GoogleUser {
   email: string;
@@ -33,25 +26,15 @@ interface GoogleUser {
   sub: string; // Subject ID
 }
 
-interface TokenData {
-  access_token: string;
-  expires_in: number;
-  scope: string;
-  token_type: string;
-  id_token?: string; // For OpenID
-  refresh_token?: string; // Added for offline access
-}
+// No longer needed - tokens come from Clerk backend, not client-side OAuth
 
 class GDriveService {
-  private gapi: any = null; // Reference to the gapi client
-  private google: any = null; // Reference to the google.accounts.oauth2
-  private tokenClient: any = null; // Google Identity Services token client
-  private accessToken: string | null = null;
-  private accessTokenExpiry: number | null = null; // To store expiry time
+  private gapi: any = null; // Reference to the gapi client (for Drive API calls only)
+  private accessToken: string | null = null; // Cached token from Clerk backend
+  private accessTokenExpiry: number | null = null; // Cached token expiry
   private userProfile: GoogleUser | null = null;
   private listeners: Array<(isSignedIn: boolean) => void> = [];
   private appFolderId: string | null = null;
-  private tokenRefreshTimer: NodeJS.Timeout | null = null;
   
   // Add debouncing and deduplication
   private statusUpdateTimeout: NodeJS.Timeout | null = null;
@@ -66,58 +49,139 @@ class GDriveService {
   private cachedClerkAuth: { result: boolean; timestamp: number } | null = null;
   private clerkAuthCacheDuration = 2000; // Cache Clerk auth checks for 2 seconds
 
-  private loadTokensFromStorage(): boolean {
-    if (typeof window === 'undefined') return false;
-    const storedToken = localStorage.getItem(LS_TOKEN_KEY);
-    const storedExpiry = localStorage.getItem(LS_EXPIRY_KEY);
-    if (storedToken && storedExpiry) {
-      const expiry = parseInt(storedExpiry, 10);
-      if (!isNaN(expiry) && Date.now() < expiry) {
-        this.accessToken = storedToken;
-        this.accessTokenExpiry = expiry;
-        if (this.gapi && this.gapi.client) {
-          this.gapi.client.setToken({ access_token: storedToken });
-        }
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private saveTokensToStorage(): void {
-    if (typeof window === 'undefined') return;
-    if (this.accessToken && this.accessTokenExpiry) {
-      localStorage.setItem(LS_TOKEN_KEY, this.accessToken);
-      localStorage.setItem(LS_EXPIRY_KEY, this.accessTokenExpiry.toString());
-    }
-  }
-
-  private clearTokensFromStorage(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(LS_TOKEN_KEY);
-    localStorage.removeItem(LS_EXPIRY_KEY);
-  }
+  // No longer needed - tokens come from Clerk backend, not localStorage
 
   constructor() {
-    // Only load tokens and initialize if Clerk user is authenticated
-    this.conditionalInitialize();
-    this.loadGoogleScripts();
+    console.log('[🔐 GOOGLE DRIVE AUTH] Service created - using Clerk backend for Google Drive tokens');
+    console.log('[🔐 GOOGLE DRIVE AUTH] No client-side OAuth needed - all tokens managed by Clerk');
+  }
+
+
+
+  /**
+   * Initialize Google Drive API client (GAPI only, no OAuth)
+   * This should only be called AFTER Clerk is authenticated
+   */
+  public async safeInitialize(): Promise<void> {
+    console.log('[🚀 INIT] ==========================================');
+    console.log('[🚀 INIT] safeInitialize() called - Initializing Google Drive API client with Clerk authentication');
+    
+    // Verify Clerk authentication before proceeding
+    if (!this.isClerkUserAuthenticated()) {
+      console.error('[🚀 INIT] ❌ Cannot initialize: Clerk user not authenticated');
+      throw new Error('Clerk authentication required before Google Drive initialization');
+    }
+    
+    console.log('[🚀 INIT] ✅ Clerk authenticated - setting up Google Drive API client');
+    console.log('[🚀 INIT] Current GAPI status:', {
+      gapiExists: !!this.gapi,
+      clientExists: !!this.gapi?.client,
+      driveExists: !!this.gapi?.client?.drive
+    });
+    
+    // Load Google API client (for Drive API calls only)
+    if (!this.gapi) {
+      console.log('[🚀 INIT] 🔄 GAPI not loaded, calling loadGoogleApiClient...');
+      try {
+        await this.loadGoogleApiClient();
+        console.log('[🚀 INIT] ✅ loadGoogleApiClient completed');
+        console.log('[🚀 INIT] GAPI status after loading:', {
+          gapiExists: !!this.gapi,
+          clientExists: !!this.gapi?.client,
+          driveExists: !!this.gapi?.client?.drive
+        });
+      } catch (error) {
+        console.error('[🚀 INIT] ❌ Error loading Google API client:', error);
+        throw error;
+      }
+    } else {
+      console.log('[🚀 INIT] ✅ GAPI already loaded');
+    }
+    
+    // Get initial token from Clerk backend and validate connectivity
+    console.log('[🚀 INIT] 🔄 Getting access token from Clerk backend...');
+    const token = await this.getAccessToken();
+    if (token) {
+      console.log('[🚀 INIT] ✅ Token obtained, fetching user profile...');
+      await this.fetchUserProfile();
+      this.updateSigninStatus(true);
+      console.log('[🚀 INIT] ✅ Connected to Google Drive via Clerk backend');
+    } else {
+      console.log('[🚀 INIT] ❌ Failed to get token from Clerk backend');
+      this.updateSigninStatus(false);
+    }
+    
+    console.log('[🚀 INIT] Final GAPI status:', {
+      gapiExists: !!this.gapi,
+      clientExists: !!this.gapi?.client,
+      driveExists: !!this.gapi?.client?.drive
+    });
+    console.log('[🚀 INIT] ✅ Initialization completed');
+    console.log('[🚀 INIT] ==========================================');
   }
 
   /**
-   * Only initialize Google Drive service if Clerk user is authenticated
+   * Wait for Clerk to load and then initialize based on auth status
+   */
+  private async waitForClerkAndInitialize(): Promise<void> {
+    // Always load existing tokens first
+    this.loadTokensFromStorage();
+    
+    // Wait for Clerk to be ready
+    await this.waitForClerk();
+    
+    // Wait additional time for user data to be populated
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Now make decisions based on actual auth status
+    if (this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Clerk user authenticated, starting token refresh timer');
+      this.startTokenRefreshTimer();
+    } else {
+      // Be very conservative - only clear if we're absolutely sure
+      console.log('[GDriveService] Clerk loaded but no authenticated user found - keeping tokens for now');
+      // Don't clear tokens immediately - they might be valid
+    }
+  }
+
+  /**
+   * Wait for Clerk to be fully loaded
+   */
+  private async waitForClerk(): Promise<void> {
+    return new Promise((resolve) => {
+      if (window.Clerk && window.Clerk.loaded) {
+        resolve();
+        return;
+      }
+      
+      // Wait for clerk:loaded event
+      const handleClerkLoaded = () => {
+        window.removeEventListener('clerk:loaded', handleClerkLoaded);
+        resolve();
+      };
+      
+      window.addEventListener('clerk:loaded', handleClerkLoaded);
+      
+      // Fallback: check periodically in case we missed the event
+      const checkClerk = () => {
+        if (window.Clerk && window.Clerk.loaded) {
+          window.removeEventListener('clerk:loaded', handleClerkLoaded);
+          resolve();
+        } else {
+          setTimeout(checkClerk, 100);
+        }
+      };
+      setTimeout(checkClerk, 100);
+    });
+  }
+
+  /**
+   * Initialize the service (called from constructor)
    */
   private conditionalInitialize(): void {
-    // Delay initialization to allow Clerk to load
-    setTimeout(() => {
-      if (this.isClerkUserAuthenticated()) {
-        this.loadTokensFromStorage(); // ensures isSignedIn() reflects saved token
-        this.startTokenRefreshTimer(); // Start proactive token refresh
-      } else {
-        // Clear any existing tokens if no Clerk user
-        this.clearStoredTokens();
-      }
-    }, 100);
+    this.waitForClerkAndInitialize().catch(error => {
+      console.error('[GDriveService] Error during initialization:', error);
+    });
   }
 
   /**
@@ -136,175 +200,113 @@ class GDriveService {
     this.updateSigninStatus(false);
   }
 
-  private async loadGoogleScripts(): Promise<void> {
+  private async loadGoogleApiClient(): Promise<void> {
+    console.log('[📚 LOAD GAPI] ==========================================');
+    console.log('[📚 LOAD GAPI] loadGoogleApiClient() called');
+    
     return new Promise((resolve, reject) => {
-      if (this.gapi && this.google) {
-        // Try to restore session even if scripts were already loaded
-        this.tryRestoreSession();
+      if (this.gapi) {
+        console.log('[📚 LOAD GAPI] ✅ Google API client already loaded');
         resolve();
         return;
       }
 
+      console.log('[📚 LOAD GAPI] 🔄 Creating script tag for Google APIs...');
       const gapiScript = document.createElement('script');
       gapiScript.src = 'https://apis.google.com/js/api.js';
+      
       gapiScript.onload = () => {
+        console.log('[📚 LOAD GAPI] ✅ Google API script loaded from CDN');
+        console.log('[📚 LOAD GAPI] window.gapi available:', !!(window as any).gapi);
+        
         this.gapi = (window as any).gapi;
+        console.log('[📚 LOAD GAPI] this.gapi assigned:', !!this.gapi);
 
+        console.log('[📚 LOAD GAPI] 🔄 Loading GAPI client...');
         this.gapi.load('client', () => {
+          console.log('[📚 LOAD GAPI] ✅ GAPI client loaded, calling initGapiClient...');
+          
           this.initGapiClient().then(() => {
-            // Check if we already have both scripts loaded
-            if (this.google) {
-              this.tryRestoreSession();
-              resolve();
-            }
-          }).catch(reject);
+            console.log('[📚 LOAD GAPI] ✅ initGapiClient completed successfully');
+            console.log('[📚 LOAD GAPI] Final GAPI status:', {
+              gapiExists: !!this.gapi,
+              clientExists: !!this.gapi?.client,
+              driveExists: !!this.gapi?.client?.drive
+            });
+            console.log('[📚 LOAD GAPI] ==========================================');
+            resolve();
+          }).catch((error) => {
+            console.error('[📚 LOAD GAPI] ❌ initGapiClient failed:', error);
+            console.log('[📚 LOAD GAPI] ==========================================');
+            reject(error);
+          });
         });
       };
-      gapiScript.onerror = () => reject(new Error('Failed to load GAPI script'));
-      document.head.appendChild(gapiScript);
-
-      const gisScript = document.createElement('script');
-      gisScript.src = 'https://accounts.google.com/gsi/client';
-      gisScript.onload = () => {
-        this.google = (window as any).google;
-
-        try {
-          this.initTokenClient();
-          // Check if we already have both scripts loaded
-          if (this.gapi) {
-            this.tryRestoreSession();
-            resolve();
-          }
-        } catch (error) {
-          console.error('[GDriveService] Failed to initialize GIS Token Client:', error);
-          reject(error);
-        }
+      
+      gapiScript.onerror = (error) => {
+        console.error('[📚 LOAD GAPI] ❌ Failed to load Google API script:', error);
+        console.log('[📚 LOAD GAPI] ==========================================');
+        reject(new Error('Failed to load Google API script'));
       };
-      gisScript.onerror = () => reject(new Error('Failed to load GIS script'));
-      document.head.appendChild(gisScript);
+      
+      console.log('[📚 LOAD GAPI] 📎 Appending script to document head...');
+      document.head.appendChild(gapiScript);
     });
   }
 
-  private async tryRestoreSession() {
-    // Wait a bit for everything to be fully initialized
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // CRITICAL SECURITY CHECK: Only restore Google Drive session if user is authenticated with Clerk
-    const isClerkAuthenticated = this.isClerkUserAuthenticated();
-    if (!isClerkAuthenticated) {
-      this.clearStoredTokens();
-      this.updateSigninStatus(false);
-      return false;
+  // No longer needed - tokens come directly from Clerk backend
+
+  private isClerkUserAuthenticated(clerkUser?: any): boolean {
+    // If clerkUser is provided from React context, use that (preferred)
+    if (clerkUser !== undefined) {
+      const result = !!clerkUser;
+      console.log(`[GDriveService] Clerk auth check (from React): user=${!!clerkUser}`);
+      return result;
     }
 
-    if (this.loadTokensFromStorage()) {
-      // Validate the loaded token immediately
-      const isValid = await this.validateToken();
-      if (isValid) {
-        await this.fetchUserProfile();
-        this.updateSigninStatus(true);
-        return true;
-      } else {
-        console.log('[GDriveService] Loaded token is invalid, clearing and continuing...');
-        this.clearStoredTokens();
-      }
-    }
-
-    // If no refresh token or refresh failed, try silent sign-in
-    if (this.tokenClient) {
-      try {
-        const silentSuccess = await this.attemptSilentSignIn();
-        if (silentSuccess) {
-          return true;
-        }
-      } catch (error) {
-        console.error('[GDriveService] Silent sign-in attempt failed:', error);
-      }
-    }
-
-    this.updateSigninStatus(false);
-    return false;
-  }
-
-  private isClerkUserAuthenticated(): boolean {
-    // Check cache first to prevent excessive logging and calls
-    if (this.cachedClerkAuth && Date.now() - this.cachedClerkAuth.timestamp < this.clerkAuthCacheDuration) {
-      return this.cachedClerkAuth.result;
-    }
-
+    // Fallback to window.Clerk check (legacy, should be avoided)
     if (typeof window === 'undefined' || !window.Clerk) {
-      this.cachedClerkAuth = { result: false, timestamp: Date.now() };
       return false;
     }
     
     try {
-      // Check if Clerk is loaded and has an authenticated user
-      const clerkUser = window.Clerk.user;
-      const isSignedIn = window.Clerk.session !== null;
+      let windowClerkUser = null;
+      let isSignedIn = false;
       
-      const result = !!(clerkUser && isSignedIn);
-      
-      // Only log when the auth status changes, not on every check
-      if (!this.cachedClerkAuth || this.cachedClerkAuth.result !== result) {
-        console.log(`[GDriveService] Clerk auth status changed: user=${!!clerkUser}, session=${isSignedIn}`);
+      if (window.Clerk.user && window.Clerk.session) {
+        windowClerkUser = window.Clerk.user;
+        isSignedIn = window.Clerk.session !== null;
+      } else if (window.Clerk.client) {
+        windowClerkUser = window.Clerk.client.user;
+        isSignedIn = !!window.Clerk.client.session;
       }
       
-      this.cachedClerkAuth = { result, timestamp: Date.now() };
+      const result = !!(windowClerkUser && isSignedIn);
+      console.log(`[GDriveService] Clerk auth check (from window): user=${!!windowClerkUser}, session=${isSignedIn}`);
       return result;
     } catch (error) {
       console.error('[GDriveService] Error checking Clerk authentication:', error);
-      this.cachedClerkAuth = { result: false, timestamp: Date.now() };
       return false;
     }
   }
 
-  private clearStoredTokens(): void {
+  private clearCachedTokens(): void {
     this.accessToken = null;
     this.accessTokenExpiry = null;
     this.userProfile = null;
     this.appFolderId = null;
-    this.clearTokensFromStorage();
 
     // Clear GAPI client token if available
     if (this.gapi && this.gapi.client) {
       this.gapi.client.setToken(null);
     }
+    
+    console.log('[🔐 GOOGLE DRIVE AUTH] Cleared cached tokens and data');
   }
 
-  private async attemptSilentSignIn(): Promise<boolean> {
-    if (!this.tokenClient) {
-      return false;
-    }
+  // No longer needed - using Clerk backend tokens only
 
-    return new Promise((resolve) => {
-      try {
-        // Create a temporary callback to handle silent response
-        const originalCallback = this.tokenClient.callback;
-        
-        this.tokenClient.callback = (tokenResponse: any) => {
-          // Restore original callback
-          this.tokenClient.callback = originalCallback;
-          
-          if (tokenResponse.error) {
-            console.log('[GDriveService] Silent sign-in failed:', tokenResponse.error);
-            resolve(false);
-          } else {
-            console.log('[GDriveService] Silent sign-in successful!');
-            this.handleTokenResponse(tokenResponse, false); // Don't store refresh token
-            resolve(true);
-          }
-        };
-
-        // Request token silently - no user interaction
-        this.tokenClient.requestAccessToken({ prompt: '' }); // Empty prompt for silent
-      } catch (error) {
-        console.error('[GDriveService] Silent sign-in error:', error);
-        resolve(false);
-      }
-    });
-  }
-
-  private silentRefreshInProgress = false;
+  // No longer needed - removed client-side token refresh
 
   /**
    * Attempt to refresh the access token silently using the existing session
@@ -375,126 +377,11 @@ class GDriveService {
     }
   }
 
-  /**
-   * Start a timer that proactively refreshes tokens before they expire
-   */
-  private startTokenRefreshTimer(): void {
-    this.stopTokenRefreshTimer(); // Clear any existing timer
-    
-    const checkInterval = 5 * 60 * 1000; // Check every 5 minutes
-    
-    this.tokenRefreshTimer = setInterval(async () => {
-      if (this.isSignedIn() && this.accessTokenExpiry) {
-        const timeUntilExpiry = this.accessTokenExpiry - Date.now();
-        const refreshThreshold = 10 * 60 * 1000; // Refresh when 10 minutes left
-        
-        if (timeUntilExpiry < refreshThreshold && timeUntilExpiry > 0) {
-          console.log('[GDriveService] 🔄 Proactively refreshing token (expires in', Math.round(timeUntilExpiry / 60000), 'minutes)');
-          
-          try {
-            const refreshed = await this.attemptSilentTokenRefresh();
-            if (refreshed) {
-              console.log('[GDriveService] ✅ Proactive token refresh successful');
-            } else {
-              console.log('[GDriveService] ⚠️ Proactive token refresh failed');
-            }
-          } catch (error) {
-            console.warn('[GDriveService] Error during proactive token refresh:', error);
-          }
-        }
-      }
-    }, checkInterval);
-  }
-
-  /**
-   * Stop the token refresh timer
-   */
-  private stopTokenRefreshTimer(): void {
-    if (this.tokenRefreshTimer) {
-      clearInterval(this.tokenRefreshTimer);
-      this.tokenRefreshTimer = null;
-    }
-  }
+  // No longer needed - Clerk backend manages token refresh
 
 
 
-  private async handleTokenResponse(tokenResponse: any, storeRefreshToken: boolean = true) {
-    if (tokenResponse.error) {
-      console.error('[GDriveService] Error in token response:', tokenResponse.error);
-      this.updateSigninStatus(false);
-      return;
-    }
-    console.log('[GDriveService] Token response received:', tokenResponse);
-    
-    // Validate the token response structure
-    if (!tokenResponse.access_token || !tokenResponse.expires_in) {
-      console.error('[GDriveService] Invalid token response - missing access_token or expires_in');
-      this.updateSigninStatus(false);
-      return;
-    }
-    
-    // Check if refresh token is present
-    if (tokenResponse.refresh_token) {
-      console.log('[GDriveService] ✅ Refresh token received!');
-    } else {
-      console.log('[GDriveService] ⚠️ No refresh token in response. This is normal for web apps using Token Model.');
-    }
-    
-    this.accessToken = tokenResponse.access_token;
-    
-    // Ensure expires_in is a valid number and in seconds (typical OAuth2 format)
-    let expiresInSeconds = parseInt(tokenResponse.expires_in, 10);
-    if (isNaN(expiresInSeconds) || expiresInSeconds <= 0) {
-      console.warn('[GDriveService] Invalid expires_in value, defaulting to 1 hour');
-      expiresInSeconds = 3600; // Default to 1 hour
-    }
-    
-    // Validate that expires_in is reasonable (between 1 minute and 24 hours)
-    if (expiresInSeconds < 60) {
-      console.warn('[GDriveService] expires_in too short, setting to 1 hour');
-      expiresInSeconds = 3600;
-    } else if (expiresInSeconds > 86400) {
-      console.warn('[GDriveService] expires_in too long, capping at 24 hours');
-      expiresInSeconds = 86400;
-    }
-    
-    this.accessTokenExpiry = Date.now() + (expiresInSeconds * 1000);
-
-    console.log(`[GDriveService] Access token set: ${this.accessToken ? 'YES' : 'NO'}`);
-    console.log(`[GDriveService] Token expiry set to: ${new Date(this.accessTokenExpiry).toISOString()}`);
-    console.log(`[GDriveService] Expires in: ${expiresInSeconds} seconds (${Math.round(expiresInSeconds / 60)} minutes)`);
-
-    if (tokenResponse.refresh_token) {
-      console.log('[GDriveService] Refresh token received but will not be stored on the client.');
-    }
-
-    if (this.gapi && this.gapi.client) {
-        this.gapi.client.setToken({ access_token: this.accessToken });
-        console.log('[GDriveService] GAPI client token set.');
-    } else {
-        console.warn('[GDriveService] GAPI client not available to set token immediately.');
-    }
-
-    this.saveTokensToStorage();
-
-    // Validate the token immediately after setting it
-    const isValid = await this.validateToken();
-    if (!isValid) {
-      console.error('[GDriveService] New token failed validation - clearing');
-      this.clearStoredTokens();
-      this.updateSigninStatus(false);
-      return;
-    }
-
-    await this.fetchUserProfile();
-    this.updateSigninStatus(true);
-    console.log('[GDriveService] Sign-in status updated to true.');
-    
-    // Restart the token refresh timer with the new token
-    this.startTokenRefreshTimer();
-    
-    await this.findOrCreateAppFolder(); // Ensure app folder exists after sign-in
-  }
+  // No longer needed - removed client-side token handling
   
   private updateSigninStatus(isSignedIn: boolean) {
     // Only send update if status actually changed
@@ -537,78 +424,14 @@ class GDriveService {
     };
   }
   
-  private isSigningIn = false;
+  // No longer needed - removed client-side sign-in
 
-  public async signIn(prompt: 'select_account' | 'consent' | '' = ''): Promise<void> {
-    if (!this.tokenClient) {
-      console.error('[GDriveService] Token client not initialized. Cannot sign in.');
-      return;
-    }
-
-    // Prevent multiple simultaneous sign-in attempts
-    if (this.isSigningIn) {
-      console.log('[GDriveService] Sign-in already in progress, skipping duplicate request');
-      return;
-    }
-
-    // SECURITY CHECK: Only allow Google Drive sign-in if user is authenticated with Clerk
-    const isClerkAuthenticated = this.isClerkUserAuthenticated();
-    if (!isClerkAuthenticated) {
-      console.error('[GDriveService] Cannot sign in to Google Drive: No authenticated Clerk user found.');
-      this.clearStoredTokens(); // Clear any lingering tokens for security
-      throw new Error('User must be authenticated with Clerk before connecting Google Drive');
-    }
-
-    // If already signed in and token is valid, no need to sign in again
-    if (this.isSignedIn()) {
-      console.log('[GDriveService] Already signed in with valid token');
-      return;
-    }
-
-    this.isSigningIn = true;
-
-    try {
-      // First try silent sign-in if no specific prompt is requested
-      if (!prompt) {
-        const silentSuccess = await this.attemptSilentSignIn();
-        if (silentSuccess) {
-          return; // Successfully signed in silently
-        }
-        console.log('[GDriveService] Silent sign-in failed, prompting user...');
-      }
-
-      // Fall back to user prompt
-      console.log(`[GDriveService] Requesting token with prompt: '${prompt}'`);
-      this.tokenClient.requestAccessToken({
-        prompt: prompt || 'consent' // Use consent if no prompt specified
-      });
-    } finally {
-      // Reset the flag after a delay to allow for token response
-      setTimeout(() => {
-        this.isSigningIn = false;
-      }, 3000);
-    }
-  }
+  // No longer needed - no client-side sign-in, all handled by Clerk
 
   public signOut() {
-    console.log('[GDriveService] Signing out and clearing all tokens...');
-    
-    // Stop the token refresh timer
-    this.stopTokenRefreshTimer();
-    
-    if (this.accessToken && this.google?.accounts?.oauth2) {
-      try {
-        this.google.accounts.oauth2.revoke(this.accessToken, () => {
-          console.log('[GDriveService] Access token revoked.');
-        });
-      } catch (error) {
-        console.warn('[GDriveService] Error revoking access token:', error);
-      }
-    }
-    
-    this.clearStoredTokens();
+    console.log('[🔐 GOOGLE DRIVE AUTH] Signing out (clearing cached tokens only - Clerk manages the actual logout)');
+    this.clearCachedTokens();
     this.updateSigninStatus(false);
-    console.log('[GDriveService] User signed out and all tokens cleared.');
   }
 
   /**
@@ -616,7 +439,7 @@ class GDriveService {
    * This prevents token leakage between different user sessions
    */
   public onClerkSignOut(): void {
-    console.log('[GDriveService] Clerk user signed out - clearing Google Drive session for security');
+    console.log('[🔐 GOOGLE DRIVE AUTH] Clerk user signed out - clearing cached Google Drive data for security');
     this.signOut();
   }
 
@@ -626,32 +449,29 @@ class GDriveService {
       return this.lastSigninCheck.result;
     }
 
-    // CRITICAL: Check Clerk authentication first
-    if (!this.isClerkUserAuthenticated()) {
-      // Clear any tokens if Clerk user is not authenticated
-      if (this.accessToken || this.accessTokenExpiry) {
-        console.log('[GDriveService] Clerk user not authenticated, clearing Google Drive tokens');
-        this.clearStoredTokens();
-        this.updateSigninStatus(false);
-      }
-      this.lastSigninCheck = { result: false, timestamp: Date.now() };
-      return false;
+    // If we don't have a client-side token but Clerk is authenticated,
+    // we can still be considered "signed in" since we can get tokens from Clerk backend
+    if (!this.accessToken && this.isClerkUserAuthenticated()) {
+      console.log(`[🔐 GOOGLE DRIVE AUTH] No client token but Clerk authenticated - will fetch from backend when needed`);
+      this.lastSigninCheck = { result: true, timestamp: Date.now() };
+      return true;
     }
 
+    // Standard client-side token check
     const hasToken = !!this.accessToken;
     const hasExpiry = !!this.accessTokenExpiry;
     const isNotExpired = this.accessTokenExpiry ? Date.now() < this.accessTokenExpiry : false;
     
-    console.log(`[GDriveService] isSignedIn check: hasToken=${hasToken}, hasExpiry=${hasExpiry}, isNotExpired=${isNotExpired}`);
+    console.log(`[🔐 GOOGLE DRIVE AUTH] isSignedIn check: hasToken=${hasToken}, hasExpiry=${hasExpiry}, isNotExpired=${isNotExpired}`);
     if (hasToken && hasExpiry) {
       const minutesUntilExpiry = Math.round((this.accessTokenExpiry - Date.now()) / 60000);
-      console.log(`[GDriveService] Token expires in ${minutesUntilExpiry} minutes`);
+      console.log(`[🔐 GOOGLE DRIVE AUTH] Token expires in ${minutesUntilExpiry} minutes`);
       
       // Detect corrupted/invalid expiry times (more than 1 year in the future)
       const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
       if (this.accessTokenExpiry > oneYearFromNow) {
-        console.warn(`[GDriveService] ⚠️ Detected corrupted token expiry (${minutesUntilExpiry} minutes), clearing tokens`);
-        this.clearStoredTokens();
+        console.warn(`[🔐 GOOGLE DRIVE AUTH] ⚠️ Detected corrupted token expiry (${minutesUntilExpiry} minutes), clearing tokens`);
+        this.clearCachedTokens();
         this.updateSigninStatus(false);
         this.lastSigninCheck = { result: false, timestamp: Date.now() };
         return false;
@@ -659,7 +479,7 @@ class GDriveService {
       
       // Warn if token expires soon
       if (minutesUntilExpiry <= 5 && minutesUntilExpiry > 0) {
-        console.warn(`[GDriveService] ⚠️ Token expires in ${minutesUntilExpiry} minutes - consider refreshing`);
+        console.warn(`[🔐 GOOGLE DRIVE AUTH] ⚠️ Token expires in ${minutesUntilExpiry} minutes - consider refreshing`);
       }
     }
     
@@ -672,30 +492,39 @@ class GDriveService {
    * Validate that the current token actually works by making a lightweight API call
    */
   public async validateToken(): Promise<boolean> {
-    if (!this.accessToken || !this.gapi?.client?.drive) {
+    if (!this.accessToken) {
+      console.log('[🔐 GOOGLE DRIVE AUTH] ❌ No access token to validate');
       return false;
     }
 
+    // If Drive API client isn't ready yet, skip validation for now
+    // This happens during initial session restoration before API is fully loaded
+    if (!this.gapi?.client?.drive) {
+      console.log('[🔐 GOOGLE DRIVE AUTH] ⏳ Drive API client not ready yet, skipping validation (will validate later)');
+      // Don't reject the token, just defer validation
+      return true; 
+    }
+
     try {
-      console.log('[GDriveService] Validating token with API call...');
+      console.log('[🔐 GOOGLE DRIVE AUTH] Validating token with API call...');
       // Make a lightweight API call to verify the token works
       const response = await this.gapi.client.drive.about.get({
         fields: 'user'
       });
       
       if (response.status === 200) {
-        console.log('[GDriveService] ✅ Token validation successful');
+        console.log('[🔐 GOOGLE DRIVE AUTH] ✅ Token validation successful');
         return true;
       } else {
-        console.log('[GDriveService] ❌ Token validation failed - unexpected response');
+        console.log('[🔐 GOOGLE DRIVE AUTH] ❌ Token validation failed - unexpected response');
         return false;
       }
     } catch (error: any) {
-      console.log('[GDriveService] ❌ Token validation failed:', error);
+      console.log('[🔐 GOOGLE DRIVE AUTH] ❌ Token validation failed:', error);
       
       // Check if it's an authentication error
       if (error.status === 401 || error.result?.error?.code === 401) {
-        console.log('[GDriveService] 401 error during validation - clearing invalid tokens');
+        console.log('[🔐 GOOGLE DRIVE AUTH] 401 error during validation - clearing invalid tokens');
         this.clearStoredTokens();
         this.updateSigninStatus(false);
       }
@@ -737,37 +566,115 @@ class GDriveService {
     return false;
   }
 
+  /**
+   * Validate token once Drive API client is ready
+   * This is called after initialization to validate any restored tokens
+   */
+  private async validateTokenIfReady(): Promise<void> {
+    if (this.accessToken && this.gapi?.client?.drive) {
+      console.log('[🔐 GOOGLE DRIVE AUTH] Drive API ready - performing deferred token validation...');
+      const isValid = await this.validateToken();
+      if (!isValid) {
+        console.log('[🔐 GOOGLE DRIVE AUTH] ❌ Deferred validation failed - clearing invalid token');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      } else {
+        console.log('[🔐 GOOGLE DRIVE AUTH] ✅ Deferred validation successful - token is valid');
+      }
+    }
+  }
+
   public async getAccessToken(): Promise<string | null> {
     // CRITICAL: Check Clerk authentication first
     if (!this.isClerkUserAuthenticated()) {
-      console.log('[GDriveService] Cannot get access token: Clerk user not authenticated');
-      this.clearStoredTokens();
+      console.log('[🔐 GOOGLE DRIVE AUTH] Cannot get access token: Clerk user not authenticated');
+      this.clearCachedTokens();
       return null;
     }
 
-    // Check if current token is still valid (with 5 minute buffer)
-    if (this.accessToken && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) {
-      return this.accessToken;
-    }
-
-    console.log('[GDriveService] Access token expired or missing, attempting refresh...');
-
-    // Try silent refresh first
+    // First try to get fresh token from Clerk backend (most reliable)
     try {
-      const refreshed = await this.attemptSilentTokenRefresh();
-      if (refreshed && this.accessToken) {
-        console.log('[GDriveService] ✅ Token silently refreshed');
+      const clerkToken = await this.getTokenFromClerkBackend();
+      if (clerkToken) {
+        console.log('[🔐 GOOGLE DRIVE AUTH] ✅ Using fresh token from Clerk backend');
+        this.accessToken = clerkToken.access_token;
+        
+        // Validate expires_in from Clerk backend (should be reasonable, like 3600 seconds = 1 hour)
+        let expiresInSeconds = clerkToken.expires_in;
+        if (expiresInSeconds > 86400) { // More than 24 hours
+          console.warn(`[🔐 GOOGLE DRIVE AUTH] ⚠️ Clerk backend returned suspicious expires_in: ${expiresInSeconds} seconds, capping at 1 hour`);
+          expiresInSeconds = 3600; // Default to 1 hour
+        } else if (expiresInSeconds < 60) { // Less than 1 minute
+          console.warn(`[🔐 GOOGLE DRIVE AUTH] ⚠️ Clerk backend returned very short expires_in: ${expiresInSeconds} seconds, setting to 1 hour`);
+          expiresInSeconds = 3600;
+        }
+        
+        this.accessTokenExpiry = Date.now() + (expiresInSeconds * 1000);
+        console.log(`[🔐 GOOGLE DRIVE AUTH] Token expires in ${Math.round(expiresInSeconds / 60)} minutes`);
+        
+        // Set token in GAPI client
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken({ access_token: this.accessToken });
+        }
+        
         return this.accessToken;
       }
     } catch (error) {
-      console.warn('[GDriveService] Silent token refresh failed:', error);
+      console.warn('[🔐 GOOGLE DRIVE AUTH] Failed to get token from Clerk backend, falling back to client-side token:', error);
     }
 
-    // All refresh attempts failed
-    console.log('[GDriveService] ❌ All token refresh attempts failed. User will need to sign in again.');
-    this.clearStoredTokens();
+    // Fallback: Check if current cached token is still valid (with 5 minute buffer)
+    if (this.accessToken && this.accessTokenExpiry && Date.now() < this.accessTokenExpiry - (5 * 60 * 1000)) {
+      console.log('[🔐 GOOGLE DRIVE AUTH] ✅ Using cached token (still valid)');
+      return this.accessToken;
+    }
+
+    // All attempts failed
+    console.log('[🔐 GOOGLE DRIVE AUTH] ❌ No valid token available from Clerk backend');
+    this.clearCachedTokens();
     this.updateSigninStatus(false);
     return null;
+  }
+
+  /**
+   * Get Google Drive token from Clerk backend
+   * This uses Clerk's stored Google OAuth token which is more reliable
+   */
+  private async getTokenFromClerkBackend(): Promise<{access_token: string, expires_in: number} | null> {
+    try {
+      // Get Clerk session token for API authentication
+      const clerkSessionToken = await window.Clerk?.session?.getToken();
+      if (!clerkSessionToken) {
+        console.warn('[🔐 GOOGLE DRIVE AUTH] No Clerk session token available');
+        return null;
+      }
+
+      const response = await fetch('/drive/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${clerkSessionToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn('[🔐 GOOGLE DRIVE AUTH] Backend token request failed:', response.status, errorText);
+        return null;
+      }
+
+      const tokenData = await response.json();
+      if (tokenData.access_token && tokenData.expires_in) {
+        console.log('[🔐 GOOGLE DRIVE AUTH] ✅ Retrieved token from Clerk backend');
+        return tokenData;
+      } else {
+        console.warn('[🔐 GOOGLE DRIVE AUTH] Invalid token response from backend:', tokenData);
+        return null;
+      }
+    } catch (error) {
+      console.warn('[🔐 GOOGLE DRIVE AUTH] Error fetching token from Clerk backend:', error);
+      return null;
+    }
   }
   
   public async getUserProfile(): Promise<GoogleUser | null> {
@@ -851,25 +758,58 @@ class GDriveService {
   }
 
   public async getAppFolderId(): Promise<string | null> {
-    if (this.appFolderId) return this.appFolderId;
+    console.log('[📁 GET FOLDER ID] ==========================================');
+    console.log('[📁 GET FOLDER ID] getAppFolderId() called');
+    console.log('[📁 GET FOLDER ID] Current cached appFolderId:', this.appFolderId);
+    
+    if (this.appFolderId) {
+      console.log('[📁 GET FOLDER ID] ✅ Using cached folder ID:', this.appFolderId);
+      return this.appFolderId;
+    }
     
     // Deduplicate concurrent folder ID requests
     const cacheKey = 'getAppFolderId';
     if (this.pendingAPICalls.has(cacheKey)) {
-      console.log('[GDriveService] App folder ID request already in progress, waiting...');
+      console.log('[📁 GET FOLDER ID] 🔄 App folder ID request already in progress, waiting...');
       return this.pendingAPICalls.get(cacheKey);
     }
     
+    console.log('[📁 GET FOLDER ID] 🚀 Starting new app folder ID resolution...');
+    
     const folderPromise = (async () => {
       try {
+        console.log('[📁 GET FOLDER ID] Checking prerequisites...');
         const token = await this.getAccessToken();
+        
+        console.log('[📁 GET FOLDER ID] Prerequisites check:', {
+          token: !!token,
+          gapi: !!this.gapi,
+          client: !!this.gapi?.client,
+          drive: !!this.gapi?.client?.drive
+        });
+        
         if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-          console.warn('[GDriveService] Cannot get app folder ID: not signed in, token invalid, or GAPI Drive client not ready.');
+          console.warn('[📁 GET FOLDER ID] ❌ Cannot get app folder ID: not signed in, token invalid, or GAPI Drive client not ready.');
+          console.warn('[📁 GET FOLDER ID] Detailed status:', {
+            tokenLength: token?.length || 0,
+            gapiAvailable: !!this.gapi,
+            clientAvailable: !!this.gapi?.client,
+            driveAvailable: !!this.gapi?.client?.drive
+          });
           return null;
         }
-        return this.findOrCreateAppFolder();
+        
+        console.log('[📁 GET FOLDER ID] ✅ Prerequisites met, calling findOrCreateAppFolder...');
+        const result = await this.findOrCreateAppFolder();
+        console.log('[📁 GET FOLDER ID] findOrCreateAppFolder result:', result);
+        return result;
+      } catch (error) {
+        console.error('[📁 GET FOLDER ID] ❌ Error in getAppFolderId:', error);
+        return null;
       } finally {
+        console.log('[📁 GET FOLDER ID] 🧹 Cleaning up pending API call');
         this.pendingAPICalls.delete(cacheKey);
+        console.log('[📁 GET FOLDER ID] ==========================================');
       }
     })();
     
@@ -881,21 +821,53 @@ class GDriveService {
     // if (!this.isSignedIn() || !this.gapi || !this.gapi.client || !this.gapi.client.drive) { //isSignedIn now checks expiry
     const token = await this.getAccessToken(); // Ensure token is valid before proceeding
      if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-      console.error('[GDriveService] Drive client not available for findOrCreateAppFolder (token or GAPI issue).');
+      console.error('[🔍 FOLDER SEARCH] Drive client not available for findOrCreateAppFolder (token or GAPI issue).');
+      console.error('[🔍 FOLDER SEARCH] Debug info: token=', !!token, ', gapi=', !!this.gapi, ', client=', !!this.gapi?.client, ', drive=', !!this.gapi?.client?.drive);
       return null;
     }
+    
+    console.log('[🔍 FOLDER SEARCH] ==========================================');
+    console.log('[🔍 FOLDER SEARCH] Starting search for Google Drive app folder');
+    console.log('[🔍 FOLDER SEARCH] Target folder name:', FOLDER_NAME);
+    console.log('[🔍 FOLDER SEARCH] Target folder MIME type:', FOLDER_MIME_TYPE);
+    console.log('[🔍 FOLDER SEARCH] Current access token (first 20 chars):', token.substring(0, 20) + '...');
+    
     try {
-      // Try to find the folder first
+      // Build the search query
+      const searchQuery = `mimeType='${FOLDER_MIME_TYPE}' and name='${FOLDER_NAME}' and trashed=false`;
+      console.log('[🔍 FOLDER SEARCH] Search query:', searchQuery);
+      console.log('[🔍 FOLDER SEARCH] Search spaces: drive');
+      console.log('[🔍 FOLDER SEARCH] Requested fields: files(id, name, parents, createdTime, modifiedTime, ownedByMe, permissions)');
+      
+      // Try to find the folder first with expanded fields for debugging
       const response = await this.gapi.client.drive.files.list({
-        q: `mimeType='${FOLDER_MIME_TYPE}' and name='${FOLDER_NAME}' and trashed=false`,
-        fields: 'files(id, name)',
+        q: searchQuery,
+        fields: 'files(id, name, parents, createdTime, modifiedTime, ownedByMe, permissions)',
         spaces: 'drive', // Search in 'drive' not 'appDataFolder' unless that's the intent
       });
 
+      console.log('[🔍 FOLDER SEARCH] Raw API response:', JSON.stringify(response, null, 2));
       const files = response.result.files;
+      console.log('[🔍 FOLDER SEARCH] Files found:', files?.length || 0);
+      
       if (files && files.length > 0) {
-        console.log(`[GDriveService] Found app folder '${FOLDER_NAME}' with ID: ${files[0].id}`);
-        this.appFolderId = files[0].id;
+        console.log('[🔍 FOLDER SEARCH] ✅ Found existing folders with name "' + FOLDER_NAME + '":');
+        files.forEach((file, index) => {
+          console.log(`[🔍 FOLDER SEARCH] Folder ${index + 1}:`, {
+            id: file.id,
+            name: file.name,
+            parents: file.parents,
+            createdTime: file.createdTime,
+            modifiedTime: file.modifiedTime,
+            ownedByMe: file.ownedByMe,
+            permissions: file.permissions
+          });
+        });
+        
+        // Use the first folder found
+        const selectedFolder = files[0];
+        console.log(`[🔍 FOLDER SEARCH] ✅ Selected folder with ID: ${selectedFolder.id}`);
+        this.appFolderId = selectedFolder.id;
         
         // Cache the result
         this.cachedAppFolderId = {
@@ -905,17 +877,61 @@ class GDriveService {
         
         return this.appFolderId;
       } else {
+        console.log('[🔍 FOLDER SEARCH] ❌ No folders found with name "' + FOLDER_NAME + '"');
+        console.log('[🔍 FOLDER SEARCH] This could be due to:');
+        console.log('[🔍 FOLDER SEARCH] 1. Folder doesn\'t exist');
+        console.log('[🔍 FOLDER SEARCH] 2. OAuth scope limitations (drive.file vs drive)');
+        console.log('[🔍 FOLDER SEARCH] 3. Folder created by different OAuth application');
+        console.log('[🔍 FOLDER SEARCH] 4. Folder permissions issues');
+        
+        // Let's try a broader search to see what folders we CAN access
+        console.log('[🔍 FOLDER SEARCH] Attempting broader search to see accessible folders...');
+        try {
+          const broadResponse = await this.gapi.client.drive.files.list({
+            q: `mimeType='${FOLDER_MIME_TYPE}' and trashed=false`,
+            fields: 'files(id, name, parents, createdTime)',
+            pageSize: 10, // Limit to first 10 folders
+            spaces: 'drive',
+          });
+          
+          const accessibleFolders = broadResponse.result.files || [];
+          console.log('[🔍 FOLDER SEARCH] Accessible folders (first 10):');
+          accessibleFolders.forEach((folder, index) => {
+            console.log(`[🔍 FOLDER SEARCH] Accessible folder ${index + 1}:`, {
+              id: folder.id,
+              name: folder.name,
+              parents: folder.parents,
+              createdTime: folder.createdTime
+            });
+          });
+          
+          if (accessibleFolders.length === 0) {
+            console.log('[🔍 FOLDER SEARCH] ⚠️ No folders accessible at all! This suggests OAuth scope limitation.');
+          }
+        } catch (broadError) {
+          console.error('[🔍 FOLDER SEARCH] Error in broader search:', broadError);
+        }
+        
         // Create the folder if it doesn't exist
-        console.log(`[GDriveService] App folder '${FOLDER_NAME}' not found, creating...`);
+        console.log(`[🔍 FOLDER SEARCH] Creating new app folder '${FOLDER_NAME}'...`);
         const fileMetadata = {
           name: FOLDER_NAME,
           mimeType: FOLDER_MIME_TYPE,
         };
+        
+        console.log('[🔍 FOLDER SEARCH] Folder metadata for creation:', fileMetadata);
         const createResponse = await this.gapi.client.drive.files.create({
           resource: fileMetadata,
-          fields: 'id',
+          fields: 'id,name,createdTime,ownedByMe',
         });
-        console.log(`[GDriveService] Created app folder '${FOLDER_NAME}' with ID: ${createResponse.result.id}`);
+        
+        console.log('[🔍 FOLDER SEARCH] ✅ Created new app folder:', {
+          id: createResponse.result.id,
+          name: createResponse.result.name,
+          createdTime: createResponse.result.createdTime,
+          ownedByMe: createResponse.result.ownedByMe
+        });
+        
         this.appFolderId = createResponse.result.id;
         
         // Cache the result
@@ -927,17 +943,25 @@ class GDriveService {
         return this.appFolderId;
       }
     } catch (error: any) {
-      console.error(`[GDriveService] Error finding or creating app folder '${FOLDER_NAME}':`, error);
+      console.error(`[🔍 FOLDER SEARCH] ❌ Error finding or creating app folder '${FOLDER_NAME}':`, error);
+      console.error(`[🔍 FOLDER SEARCH] Error details:`, {
+        status: error.status,
+        statusText: error.statusText,
+        message: error.message,
+        result: error.result
+      });
       
       // Check if it's an authentication error
-      if (error.status === 401 || error.result?.error?.code === 401) {
-        console.log('[GDriveService] 401 error in findOrCreateAppFolder - clearing invalid tokens');
-        this.clearStoredTokens();
+          if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[🔐 GOOGLE DRIVE AUTH] 401 error in findOrCreateAppFolder - clearing cached tokens');
+        this.clearCachedTokens();
         this.updateSigninStatus(false);
       }
       
       this.appFolderId = null;
       return null;
+    } finally {
+      console.log('[🔍 FOLDER SEARCH] ==========================================');
     }
   }
 
@@ -1477,23 +1501,7 @@ class GDriveService {
     });
   }
 
-  private initTokenClient(): void {
-    if (!this.google || !this.google.accounts || !this.google.accounts.oauth2) {
-      throw new Error('Google Identity Services library not fully loaded.');
-    }
-
-    this.tokenClient = this.google.accounts.oauth2.initTokenClient({
-      client_id: GDRIVE_CLIENT_ID,
-      scope: BASE_SCOPES,
-      callback: this.handleTokenResponse.bind(this), // Bind context
-      error_callback: (error: any) => {
-        console.error('[GDriveService] GIS Token Client Error:', error);
-        this.updateSigninStatus(false);
-      },
-      // Try to request offline access (may not work with Token Model)
-      hint: 'offline_access', // This might help request refresh tokens
-    });
-  }
+  // No longer needed - no client-side OAuth token client
 
   /**
    * Save user settings to settings.json file in the app folder
@@ -2109,35 +2117,56 @@ class GDriveService {
   }
 
   /**
+   * Check if user is authenticated - prefer React context over window.Clerk
+   */
+  public isUserAuthenticated(clerkUser?: any): boolean {
+    return this.isClerkUserAuthenticated(clerkUser);
+  }
+
+  /**
    * Public method to check for and clear corrupted tokens
    * This should be called by the application on startup or when auth issues are detected
    */
-  public async checkAndClearCorruptedTokens(): Promise<void> {
+  public async checkAndClearCorruptedTokens(clerkUser?: any): Promise<void> {
     console.log('[GDriveService] Checking for corrupted tokens...');
     
-    // CRITICAL: Only check tokens if Clerk user is authenticated
-    if (!this.isClerkUserAuthenticated()) {
-      console.log('[GDriveService] No Clerk user authenticated, clearing any existing tokens');
-      this.clearStoredTokens();
+    // Only check if we actually have tokens to check
+    if (!this.accessToken || !this.accessTokenExpiry) {
+      console.log('[GDriveService] No tokens to check, skipping corruption check');
       return;
     }
     
-    // Check if we have tokens but they're corrupted
-    if (this.accessToken && this.accessTokenExpiry) {
-      const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
-      if (this.accessTokenExpiry > oneYearFromNow) {
-        console.warn('[GDriveService] Detected corrupted token expiry, clearing...');
-        this.clearCorruptedTokens();
-        return;
-      }
-      
-      // Try to validate the token
-      const isValid = await this.validateToken();
-      if (!isValid) {
-        console.warn('[GDriveService] Token validation failed, clearing...');
-        this.clearCorruptedTokens();
-        return;
-      }
+    // Check if we have tokens but they're corrupted (expiry more than 1 year in future)
+    const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
+    if (this.accessTokenExpiry > oneYearFromNow) {
+      console.warn('[GDriveService] Detected corrupted token expiry, clearing...');
+      this.clearCorruptedTokens();
+      return;
+    }
+    
+    // Only clear tokens if we're absolutely sure user is not authenticated
+    // Don't clear on Clerk loading race conditions
+    const isClerkLoaded = window.Clerk && window.Clerk.loaded;
+    const isUserAuthenticated = this.isClerkUserAuthenticated(clerkUser);
+    
+    if (isClerkLoaded && !isUserAuthenticated) {
+      // Additional check: wait a bit more to ensure user data is loaded
+      setTimeout(() => {
+        if (!this.isClerkUserAuthenticated(clerkUser)) {
+          console.log('[GDriveService] Confirmed user not authenticated after delay, clearing stale tokens');
+          this.clearStoredTokens();
+        }
+      }, 1000);
+    } else if (!isClerkLoaded) {
+      console.log('[GDriveService] Clerk not fully loaded yet, keeping tokens');
+    }
+    
+    // Try to validate the token
+    const isValid = await this.validateToken();
+    if (!isValid) {
+      console.warn('[GDriveService] Token validation failed, clearing...');
+      this.clearCorruptedTokens();
+      return;
     }
     
     console.log('[GDriveService] Token check completed - no corruption detected');

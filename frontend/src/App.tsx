@@ -84,13 +84,8 @@ function AppContent() {
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { isDriveConnected, isDriveLoading } = useAppData();
 
-  // Check for corrupted Google Drive tokens on app startup
-  useEffect(() => {
-    if (isClerkLoaded) {
-      // Check for corrupted tokens after Clerk loads
-      gDriveService.checkAndClearCorruptedTokens();
-    }
-  }, [isClerkLoaded]);
+  // Don't check for corrupted tokens here - let the auth flow handle it
+  // The race condition with Clerk loading was causing valid tokens to be cleared
 
   // Disable automatic Google Drive connection from AppContent
   // Let useStorageService handle authentication to avoid competing flows

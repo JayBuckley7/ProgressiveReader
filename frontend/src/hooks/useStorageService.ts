@@ -23,7 +23,7 @@ function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
     return serialize(a) === serialize(b);
 }
 
-export function useStorageService() {
+function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [isDriveBookLoading, setIsDriveBookLoading] = useState(false);
@@ -187,26 +187,29 @@ export function useStorageService() {
 
   useEffect(() => {
     // DON'T try to authenticate immediately - wait for user to actually need Google Drive
-    console.log(`[useStorageService] Clerk status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
+    console.log(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
     if (clerkLoaded) {
       setIsLoading(false);
       if (clerkUser) {
         // Check if this is a different user to avoid redundant loads
         const currentUserId = clerkUser.id;
         if (lastUserIdRef.current !== currentUserId) {
-          console.log('User signed in with Clerk:', clerkUser);
+          console.log('[👤 CLERK AUTH] ✅ User signed in with Clerk:', clerkUser);
           lastUserIdRef.current = currentUserId;
           
-          // Check if user was previously connected to Google Drive
-          // If so, auto-reconnect after a small delay to ensure Clerk is fully ready
-          const wasConnectedBefore = localStorage.getItem('wasGoogleDriveConnected') === 'true';
-          if (wasConnectedBefore) {
-            console.log('[useStorageService] User was connected before, auto-reconnecting after delay...');
+          // Check if user signed in with Google via Clerk (has Google external account)
+          const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
+            (acc) => acc.provider.startsWith("google")
+          );
+          
+          if (wasGoogleClerkLogin) {
+            console.log('[👤 CLERK AUTH] ✅ User signed in with Google via Clerk - auto-connecting to Google Drive...');
+            // Auto-connect to Google Drive after a small delay to ensure Clerk is fully ready
             setTimeout(() => {
               connectToGoogleDriveAndLoad();
             }, 1000); // 1 second delay to ensure Clerk is fully ready
           } else {
-            console.log('[useStorageService] New user, waiting for manual connection trigger');
+            console.log('[👤 CLERK AUTH] User did not sign in with Google, skipping Google Drive auto-connect');
           }
         }
       } else {
@@ -244,10 +247,10 @@ export function useStorageService() {
   useEffect(() => {
     if (!clerkUser) return;
 
-    console.log('[useStorageService] Setting up auth listener (manual mode - no auto-loading)...');
+    console.log('[🔐 GOOGLE DRIVE AUTH] Setting up auth listener (manual mode - no auto-loading)...');
 
     const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
-      console.log(`[useStorageService] Auth state changed: ${isAuthenticated}`);
+      console.log(`[🔐 GOOGLE DRIVE AUTH] Auth state changed: ${isAuthenticated}`);
       // Just log the state change, don't auto-load anything
       // The user will manually trigger connectToGoogleDriveAndLoad when they want to
     });
@@ -622,3 +625,7 @@ export function useStorageService() {
     moveBookToFolder
   };
 }
+
+// Export both named and default to help with HMR caching issues
+export { useStorageService };
+export default useStorageService;
