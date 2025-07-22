@@ -91,6 +91,22 @@ class GDriveService {
     this.startTokenRefreshTimer(); // Start proactive token refresh
   }
 
+  /**
+   * Clear corrupted or invalid tokens from localStorage
+   * This should be called when we detect authentication issues
+   */
+  public clearCorruptedTokens(): void {
+    console.log('[GDriveService] Clearing potentially corrupted tokens...');
+    this.clearStoredTokens();
+    
+    // Also clear any related cached data
+    this.appFolderId = null;
+    this.userProfile = null;
+    
+    // Force sign-out status
+    this.updateSigninStatus(false);
+  }
+
   private async loadGoogleScripts(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.gapi && this.google) {
@@ -153,9 +169,16 @@ class GDriveService {
     }
 
     if (this.loadTokensFromStorage()) {
-      await this.fetchUserProfile();
-      this.updateSigninStatus(true);
-      return true;
+      // Validate the loaded token immediately
+      const isValid = await this.validateToken();
+      if (isValid) {
+        await this.fetchUserProfile();
+        this.updateSigninStatus(true);
+        return true;
+      } else {
+        console.log('[GDriveService] Loaded token is invalid, clearing and continuing...');
+        this.clearStoredTokens();
+      }
     }
 
     try {
@@ -443,6 +466,13 @@ class GDriveService {
     }
     console.log('[GDriveService] Token response received:', tokenResponse);
     
+    // Validate the token response structure
+    if (!tokenResponse.access_token || !tokenResponse.expires_in) {
+      console.error('[GDriveService] Invalid token response - missing access_token or expires_in');
+      this.updateSigninStatus(false);
+      return;
+    }
+    
     // Check if refresh token is present
     if (tokenResponse.refresh_token) {
       console.log('[GDriveService] ✅ Refresh token received!');
@@ -451,11 +481,28 @@ class GDriveService {
     }
     
     this.accessToken = tokenResponse.access_token;
-    this.accessTokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
+    
+    // Ensure expires_in is a valid number and in seconds (typical OAuth2 format)
+    let expiresInSeconds = parseInt(tokenResponse.expires_in, 10);
+    if (isNaN(expiresInSeconds) || expiresInSeconds <= 0) {
+      console.warn('[GDriveService] Invalid expires_in value, defaulting to 1 hour');
+      expiresInSeconds = 3600; // Default to 1 hour
+    }
+    
+    // Validate that expires_in is reasonable (between 1 minute and 24 hours)
+    if (expiresInSeconds < 60) {
+      console.warn('[GDriveService] expires_in too short, setting to 1 hour');
+      expiresInSeconds = 3600;
+    } else if (expiresInSeconds > 86400) {
+      console.warn('[GDriveService] expires_in too long, capping at 24 hours');
+      expiresInSeconds = 86400;
+    }
+    
+    this.accessTokenExpiry = Date.now() + (expiresInSeconds * 1000);
 
     console.log(`[GDriveService] Access token set: ${this.accessToken ? 'YES' : 'NO'}`);
     console.log(`[GDriveService] Token expiry set to: ${new Date(this.accessTokenExpiry).toISOString()}`);
-    console.log(`[GDriveService] Expires in: ${tokenResponse.expires_in} seconds`);
+    console.log(`[GDriveService] Expires in: ${expiresInSeconds} seconds (${Math.round(expiresInSeconds / 60)} minutes)`);
 
     if (tokenResponse.refresh_token) {
       console.log('[GDriveService] Refresh token received but will not be stored on the client.');
@@ -470,8 +517,14 @@ class GDriveService {
 
     this.saveTokensToStorage();
 
-
-    // Store token details if needed (e.g., expiry for proactive refresh)
+    // Validate the token immediately after setting it
+    const isValid = await this.validateToken();
+    if (!isValid) {
+      console.error('[GDriveService] New token failed validation - clearing');
+      this.clearStoredTokens();
+      this.updateSigninStatus(false);
+      return;
+    }
 
     await this.fetchUserProfile();
     this.updateSigninStatus(true);
@@ -574,6 +627,15 @@ class GDriveService {
       const minutesUntilExpiry = Math.round((this.accessTokenExpiry - Date.now()) / 60000);
       console.log(`[GDriveService] Token expires in ${minutesUntilExpiry} minutes`);
       
+      // Detect corrupted/invalid expiry times (more than 1 year in the future)
+      const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
+      if (this.accessTokenExpiry > oneYearFromNow) {
+        console.warn(`[GDriveService] ⚠️ Detected corrupted token expiry (${minutesUntilExpiry} minutes), clearing tokens`);
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+        return false;
+      }
+      
       // Warn if token expires soon
       if (minutesUntilExpiry <= 5 && minutesUntilExpiry > 0) {
         console.warn(`[GDriveService] ⚠️ Token expires in ${minutesUntilExpiry} minutes - consider refreshing`);
@@ -581,6 +643,42 @@ class GDriveService {
     }
     
     return hasToken && hasExpiry && isNotExpired;
+  }
+
+  /**
+   * Validate that the current token actually works by making a lightweight API call
+   */
+  public async validateToken(): Promise<boolean> {
+    if (!this.accessToken || !this.gapi?.client?.drive) {
+      return false;
+    }
+
+    try {
+      console.log('[GDriveService] Validating token with API call...');
+      // Make a lightweight API call to verify the token works
+      const response = await this.gapi.client.drive.about.get({
+        fields: 'user'
+      });
+      
+      if (response.status === 200) {
+        console.log('[GDriveService] ✅ Token validation successful');
+        return true;
+      } else {
+        console.log('[GDriveService] ❌ Token validation failed - unexpected response');
+        return false;
+      }
+    } catch (error: any) {
+      console.log('[GDriveService] ❌ Token validation failed:', error);
+      
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error during validation - clearing invalid tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      
+      return false;
+    }
   }
 
   /**
@@ -746,8 +844,16 @@ class GDriveService {
         this.appFolderId = createResponse.result.id;
         return this.appFolderId;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[GDriveService] Error finding or creating app folder '${FOLDER_NAME}':`, error);
+      
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error in findOrCreateAppFolder - clearing invalid tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      
       this.appFolderId = null;
       return null;
     }
@@ -773,8 +879,16 @@ class GDriveService {
       });
       console.log('[GDriveService] Files listed:', response.result.files);
       return response.result.files || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('[GDriveService] Error listing files:', error);
+      
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error in listFiles - clearing invalid tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      
       return [];
     }
   }
@@ -950,8 +1064,16 @@ class GDriveService {
           return null;
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[GDriveService] Error getting metadata file:', error);
+      
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error in getMetadataFile - clearing invalid tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      
       return null;
     }
   }
@@ -1388,8 +1510,16 @@ class GDriveService {
         console.log('[GDriveService] No settings.json file found');
         return null;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[GDriveService] Error loading settings:', error);
+      
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error in loadSettings - clearing invalid tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      
       return null;
     }
   }
@@ -1551,8 +1681,16 @@ class GDriveService {
       } else {
         return [];
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[GDriveService] Error loading vocabulary:', error);
+      
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error in loadVocab - clearing invalid tokens');
+        this.clearStoredTokens();
+        this.updateSigninStatus(false);
+      }
+      
       return null;
     }
   }
@@ -1858,6 +1996,34 @@ class GDriveService {
       console.error('[GDriveService] Error updating book folder assignment:', error);
       throw error;
     }
+  }
+
+  /**
+   * Public method to check for and clear corrupted tokens
+   * This should be called by the application on startup or when auth issues are detected
+   */
+  public async checkAndClearCorruptedTokens(): Promise<void> {
+    console.log('[GDriveService] Checking for corrupted tokens...');
+    
+    // Check if we have tokens but they're corrupted
+    if (this.accessToken && this.accessTokenExpiry) {
+      const oneYearFromNow = Date.now() + (365 * 24 * 60 * 60 * 1000);
+      if (this.accessTokenExpiry > oneYearFromNow) {
+        console.warn('[GDriveService] Detected corrupted token expiry, clearing...');
+        this.clearCorruptedTokens();
+        return;
+      }
+      
+      // Try to validate the token
+      const isValid = await this.validateToken();
+      if (!isValid) {
+        console.warn('[GDriveService] Token validation failed, clearing...');
+        this.clearCorruptedTokens();
+        return;
+      }
+    }
+    
+    console.log('[GDriveService] Token check completed - no corruption detected');
   }
 }
 

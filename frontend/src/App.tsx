@@ -45,6 +45,14 @@ function AppContent() {
   const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { isDriveConnected, isLoading: isDriveLoading } = useGoogleDrive();
 
+  // Check for corrupted Google Drive tokens on app startup
+  useEffect(() => {
+    if (isClerkLoaded) {
+      // Check for corrupted tokens after Clerk loads
+      gDriveService.checkAndClearCorruptedTokens();
+    }
+  }, [isClerkLoaded]);
+
   useEffect(() => {
     // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
     if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
