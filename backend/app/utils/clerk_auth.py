@@ -91,8 +91,6 @@ def get_current_user():
         logger.error(f"Unexpected error during authentication: {e}")
         logger.error(f"Exception type: {type(e).__name__}")
         return None
-    
-    return None
 
 
 def require_auth(f):
