@@ -56,6 +56,13 @@ def create_app(config_class=Config) -> Flask:
     })
 
     app.logger.setLevel(logging.DEBUG)
+    
+    # Set up more detailed logging for debugging authentication issues
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # Enable debug logging for Clerk auth specifically
+    auth_logger = logging.getLogger('app.utils.clerk_auth')
+    auth_logger.setLevel(logging.DEBUG)
 
     # Configure Werkzeug logger filtering
     werkzeug_logger = logging.getLogger('werkzeug')

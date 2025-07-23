@@ -20,69 +20,76 @@ else:
 
 
 def verify_session_token(token):
-    """Verify a Clerk session token and return the decoded claims"""
+    """Verify a Clerk session token using Clerk's backend API"""
     if not clerk:
+        logger.error("Clerk client not initialized - missing CLERK_SECRET_KEY")
         return None
         
     try:
-        # For Clerk, we need to decode the JWT to get the session ID
-        # The token structure may vary, so let's decode it first
-        # Note: This is a simplified version - in production you should verify the JWT signature
-        decoded = jwt.decode(token, options={"verify_signature": False})
+        logger.debug("Verifying Clerk session token...")
         
-        # Get the subject (user ID) from the token
-        user_id = decoded.get('sub')
-        if not user_id:
+        # Use Clerk's backend API to verify the session token
+        # This is the proper way to verify Clerk tokens
+        session = clerk.sessions.verify_token(token)
+        
+        if not session:
+            logger.warning("Clerk session verification returned None")
             return None
             
+        logger.debug(f"Session verified successfully: {session.id}")
+        
         return {
-            'user_id': user_id,
-            'session_id': decoded.get('sid'),
-            'email': decoded.get('email')
+            'user_id': session.user_id,
+            'session_id': session.id,
+            'status': session.status
         }
+        
     except Exception as e:
-        logger.error(f"Error decoding token: {e}")
+        logger.error(f"Error verifying Clerk session token: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
         return None
 
 
 def get_current_user():
     """Get the current user from Clerk session"""
     if not clerk:
+        logger.error("Clerk client not available")
         return None
         
     # Get the session token from the Authorization header
     auth_header = request.headers.get('Authorization')
     if not auth_header:
+        logger.warning("No Authorization header found")
         return None
     
     # Extract the token (expecting "Bearer <token>")
     parts = auth_header.split(' ')
     if len(parts) != 2 or parts[0] != 'Bearer':
+        logger.warning("Invalid Authorization header format")
         return None
     
     session_token = parts[1]
+    logger.debug(f"Extracted session token (length: {len(session_token)})")
     
     try:
         # Verify the token and get claims
-        claims = verify_session_token(session_token)
-        if not claims:
+        session_info = verify_session_token(session_token)
+        if not session_info:
+            logger.warning("Session token verification failed")
             return None
             
-        # Get user details from Clerk
-        user = clerk.users.get(user_id=claims['user_id'])
+        user_id = session_info['user_id']
+        logger.debug(f"Getting user details for user_id: {user_id}")
         
-        # Add the email from claims if not in user object
-        if hasattr(user, 'email_addresses') and not user.email_addresses and claims.get('email'):
-            # Create a simple object to hold email info
-            class EmailAddress:
-                def __init__(self, email):
-                    self.email_address = email
-            user.email_addresses = [EmailAddress(claims['email'])]
-            
+        # Get user details from Clerk
+        user = clerk.users.get(user_id=user_id)
+        logger.debug(f"User retrieved successfully: {user.id}")
+        
         return user
             
     except Exception as e:
         logger.error(f"Unexpected error during authentication: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
         return None
     
     return None
@@ -92,9 +99,14 @@ def require_auth(f):
     """Decorator to require authentication for a route"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        logger.debug(f"[🔐 AUTH] require_auth called for route: {f.__name__}")
+        
         user = get_current_user()
         if not user:
+            logger.warning(f"[🔐 AUTH] Authentication failed for route: {f.__name__}")
             return jsonify({"error": "Authentication required"}), 401
+        
+        logger.debug(f"[🔐 AUTH] Authentication successful for user: {user.id}")
         
         # Store the user in Flask's g object for access in the route
         g.user = user

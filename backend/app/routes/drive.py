@@ -15,6 +15,26 @@ drive_bp = Blueprint('drive', __name__, url_prefix='/drive')
 clerk_secret_key = os.getenv('CLERK_SECRET_KEY')
 clerk_client = Clerk(bearer_auth=clerk_secret_key) if clerk_secret_key else None
 
+@drive_bp.route('/health', methods=['GET'])
+def drive_health():
+    """Health check endpoint to verify Clerk configuration"""
+    logger.info('🏥 [DRIVE HEALTH] Health check called')
+    
+    health_status = {
+        'clerk_secret_key_configured': bool(clerk_secret_key),
+        'clerk_client_initialized': bool(clerk_client),
+        'service': 'drive'
+    }
+    
+    if clerk_secret_key:
+        health_status['clerk_secret_key_length'] = len(clerk_secret_key)
+        health_status['clerk_secret_key_prefix'] = clerk_secret_key[:8] + '...' if len(clerk_secret_key) > 8 else clerk_secret_key
+    
+    logger.info(f'🏥 [DRIVE HEALTH] Status: {health_status}')
+    
+    status_code = 200 if health_status['clerk_client_initialized'] else 500
+    return jsonify(health_status), status_code
+
 GDRIVE_BASE = 'https://www.googleapis.com/drive/v3'
 UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
 
