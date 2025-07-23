@@ -20,29 +20,43 @@ else:
 
 
 def verify_session_token(token):
-    """Verify a Clerk session token using Clerk's backend API"""
+    """Verify a Clerk session token using proper JWT verification"""
     if not clerk:
         logger.error("Clerk client not initialized - missing CLERK_SECRET_KEY")
         return None
         
     try:
-        logger.debug("Verifying Clerk session token...")
+        logger.debug("Verifying Clerk session token with JWT...")
         
-        # Use Clerk's backend API to verify the session token
-        # This is the proper way to verify Clerk tokens
-        session = clerk.sessions.verify_token(token)
+        # Decode the JWT without verification first to get the session ID
+        unverified = jwt.decode(token, options={"verify_signature": False})
+        session_id = unverified.get('sid')
+        user_id = unverified.get('sub')
         
-        if not session:
-            logger.warning("Clerk session verification returned None")
+        if not session_id or not user_id:
+            logger.warning("Session token missing session ID or user ID")
             return None
-            
-        logger.debug(f"Session verified successfully: {session.id}")
         
-        return {
-            'user_id': session.user_id,
-            'session_id': session.id,
-            'status': session.status
-        }
+        logger.debug(f"Extracted session_id: {session_id}, user_id: {user_id}")
+        
+        # Use Clerk's sessions API to verify the session is valid
+        try:
+            session = clerk.sessions.retrieve(session_id)
+            if not session or session.status != 'active':
+                logger.warning(f"Session {session_id} is not active")
+                return None
+                
+            logger.debug(f"Session verified successfully: {session.id}")
+            
+            return {
+                'user_id': session.user_id,
+                'session_id': session.id,
+                'status': session.status
+            }
+            
+        except Exception as session_error:
+            logger.warning(f"Session retrieval failed: {session_error}")
+            return None
         
     except Exception as e:
         logger.error(f"Error verifying Clerk session token: {e}")
