@@ -27,23 +27,34 @@ def verify_session_token(token):
         
     try:
         logger.debug("Verifying Clerk session token with JWT...")
+        logger.debug(f"Token length: {len(token)}, starts with: {token[:20]}...")
         
         # Decode the JWT without verification first to get the session ID
         unverified = jwt.decode(token, options={"verify_signature": False})
+        logger.debug(f"JWT payload keys: {list(unverified.keys())}")
+        
         session_id = unverified.get('sid')
         user_id = unverified.get('sub')
         
+        logger.debug(f"Extracted from JWT - session_id: {session_id}, user_id: {user_id}")
+        
         if not session_id or not user_id:
-            logger.warning("Session token missing session ID or user ID")
+            logger.warning(f"Session token missing session ID ({session_id}) or user ID ({user_id})")
             return None
         
-        logger.debug(f"Extracted session_id: {session_id}, user_id: {user_id}")
+        logger.debug(f"Attempting to retrieve session {session_id} from Clerk...")
         
         # Use Clerk's sessions API to verify the session is valid
         try:
             session = clerk.sessions.retrieve(session_id)
-            if not session or session.status != 'active':
-                logger.warning(f"Session {session_id} is not active")
+            logger.debug(f"Session retrieved: ID={session.id if session else None}, status={getattr(session, 'status', None)}")
+            
+            if not session:
+                logger.warning(f"Session {session_id} not found in Clerk")
+                return None
+                
+            if session.status != 'active':
+                logger.warning(f"Session {session_id} is not active (status: {session.status})")
                 return None
                 
             logger.debug(f"Session verified successfully: {session.id}")
@@ -55,7 +66,8 @@ def verify_session_token(token):
             }
             
         except Exception as session_error:
-            logger.warning(f"Session retrieval failed: {session_error}")
+            logger.error(f"Session retrieval failed for {session_id}: {session_error}")
+            logger.error(f"Session error type: {type(session_error).__name__}")
             return None
         
     except Exception as e:
