@@ -460,12 +460,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               
               await highlightContent(freshElement);
               console.log('✅ highlightContent completed successfully');
-              if (settings?.cacheTranslations !== false && isTranslated && translatedContent) {
-                const html = contentRef.current?.innerHTML;
-                if (html) {
-                  saveTranslationToStorage(bookId, chapter, html, lastUseCefr, settings);
-                }
-              }
             } else {
               console.warn('⚠️ Content element is empty or missing when trying to highlight');
             }
