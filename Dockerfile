@@ -26,6 +26,9 @@ FROM python:3.11-slim
 # Accept build argument for backend Clerk secret
 ARG CLERK_SECRET_KEY
 
+# Set environment variable from build arg
+ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
+
 # Prevent Python from buffering stdout/stderr
 ENV PYTHONUNBUFFERED=1
 
