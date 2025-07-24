@@ -3,7 +3,7 @@ import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
 import { useState } from "react";
 
 interface TopActionsProps {
-  currentPage: "library" | "vocabulary" | "stats";
+  currentPage: "library" | "vocabulary" | "stats" | "admin";
   onShowLogin?: () => void;
 }
 
@@ -65,6 +65,14 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                 }`}
               >
                 📊 Stats
+              </button>
+              <button
+                onClick={() => { navigate("/admin"); setShowMobileMenu(false); }}
+                className={`w-full text-left px-3 py-2 rounded text-sm ${
+                  currentPage === "admin" ? "bg-blue-100 text-blue-700" : "text-gray-600"
+                }`}
+              >
+                ⚙️ Admin
               </button>
               <div className="pt-2 border-t">
                 <SignOutButton className="w-full text-left px-3 py-2 text-gray-600 rounded text-sm hover:bg-gray-100" />
@@ -132,6 +140,17 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   }`}
                 >
                   📊 Stats
+                </button>
+                <button
+                  onClick={() => navigate("/admin")}
+                  aria-label="Admin page"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === "admin"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  ⚙️ Admin
                 </button>
               </nav>
               <SignOutButton className="px-3 py-2 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100" />
