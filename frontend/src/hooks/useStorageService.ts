@@ -203,11 +203,22 @@ function useStorageService() {
           );
           
           if (wasGoogleClerkLogin) {
-            console.log('[👤 CLERK AUTH] ✅ User signed in with Google via Clerk - auto-connecting to Google Drive...');
-            // Auto-connect to Google Drive after a small delay to ensure Clerk is fully ready
-            setTimeout(() => {
-              connectToGoogleDriveAndLoad();
-            }, 1000); // 1 second delay to ensure Clerk is fully ready
+            // Only auto-connect to Google Drive if user is on a page that needs books
+            // Don't auto-connect on admin pages or other non-library pages
+            const currentPath = window.location.pathname;
+            const needsBooks = currentPath === '/' || currentPath.startsWith('/vocabulary') || currentPath.startsWith('/book/');
+            
+            console.log(`[👤 CLERK AUTH] Current path: '${currentPath}', needsBooks: ${needsBooks}`);
+            
+            if (needsBooks) {
+              console.log('[👤 CLERK AUTH] ✅ User signed in with Google via Clerk - auto-connecting to Google Drive...');
+              // Auto-connect to Google Drive after a small delay to ensure Clerk is fully ready
+              setTimeout(() => {
+                connectToGoogleDriveAndLoad();
+              }, 1000); // 1 second delay to ensure Clerk is fully ready
+            } else {
+              console.log(`[👤 CLERK AUTH] User on ${currentPath} - skipping auto Google Drive connection`);
+            }
           } else {
             console.log('[👤 CLERK AUTH] User did not sign in with Google, skipping Google Drive auto-connect');
           }

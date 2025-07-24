@@ -4,7 +4,7 @@ from openai import OpenAI
 import requests
 import re
 import json
-from ..utils.clerk_auth import require_auth, optional_auth
+from ..utils.clerk_auth import require_auth, optional_auth, require_admin
 from ..models import db, Bookmark
 from flask import g
 import logging
@@ -26,6 +26,41 @@ def get_next_openai_key() -> str | None:
     key = openai_key_pool[_key_index]
     _key_index = (_key_index + 1) % len(openai_key_pool)
     return key
+
+@api_bp.route('/debug/admin_check', methods=['GET'])
+@require_auth
+def debug_admin_check():
+    """Debug endpoint to check admin status and organization memberships."""
+    from ..utils.clerk_auth import is_progressive_reader_admin, clerk
+    
+    user = g.user
+    if not user:
+        return jsonify({"error": "No user found"}), 401
+    
+    debug_info = {
+        "user_id": user.id,
+        "is_admin": is_progressive_reader_admin(user.id),
+        "memberships": []
+    }
+    
+    if clerk:
+        try:
+            memberships = clerk.organization_memberships.list(user_id=[user.id])
+            for m in memberships.data:
+                org = getattr(m, "organization", None)
+                org_name = getattr(org, "name", "") if org else ""
+                debug_info["memberships"].append({
+                    "organization_name": org_name,
+                    "role": m.role,
+                    "is_progressive_reader": org_name == "ProgressiveReader",
+                    "is_admin_role": m.role.lower() == "admin"
+                })
+        except Exception as e:
+            debug_info["error"] = str(e)
+    else:
+        debug_info["error"] = "Clerk client not initialized"
+    
+    return jsonify(debug_info)
 
 @api_bp.route('/openai_key_configured', methods=['GET'])
 def openai_key_configured():

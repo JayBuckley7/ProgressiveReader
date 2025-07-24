@@ -1166,14 +1166,8 @@ class GDriveService {
     }
 
     try {
-      // Look for existing metadata.json file
-      const response = await this.gapi.client.drive.files.list({
-        q: `'${currentAppFolderId}' in parents and name='metadata.json' and trashed=false`,
-        fields: 'files(id, name)',
-        pageSize: 1,
-      });
-
-      const files = response.result.files || [];
+      // Search for existing metadata.json file with retry logic
+      const files = await this.searchFileWithRetry('metadata.json', true);
       
       if (files.length > 0) {
         // Metadata file exists, download its content
@@ -1202,8 +1196,8 @@ class GDriveService {
         
         return { fileId: metadataFileId, data };
       } else {
-        // No metadata file exists, create one
-        console.log('[GDriveService] No metadata.json found, creating new one');
+        // No metadata file exists after retry, create one
+        console.log('[GDriveService] No metadata.json found after retry, creating new one');
         const initialData = { books: {}, folders: {} };
         const newFileId = await this.createMetadataFile(initialData);
         if (newFileId) {
@@ -1557,14 +1551,8 @@ class GDriveService {
     }
 
     try {
-      // Look for existing settings.json file
-      const response = await this.gapi.client.drive.files.list({
-        q: `'${currentAppFolderId}' in parents and name='settings.json' and trashed=false`,
-        fields: 'files(id, name)',
-        pageSize: 1,
-      });
-
-      const files = response.result.files || [];
+      // Search for existing settings.json file with retry logic
+      const files = await this.searchFileWithRetry('settings.json', true);
       const settingsData = {
         ...settings,
         lastUpdated: new Date().toISOString(),
@@ -1602,14 +1590,8 @@ class GDriveService {
     }
 
     try {
-      // Look for existing settings.json file
-      const response = await this.gapi.client.drive.files.list({
-        q: `'${currentAppFolderId}' in parents and name='settings.json' and trashed=false`,
-        fields: 'files(id, name)',
-        pageSize: 1,
-      });
-
-      const files = response.result.files || [];
+      // Search for existing settings.json file with retry logic
+      const files = await this.searchFileWithRetry('settings.json', true);
       
       if (files.length > 0) {
         // Settings file exists, download its content
@@ -1639,7 +1621,7 @@ class GDriveService {
         }
       } else {
         // No settings file exists
-        console.log('[GDriveService] No settings.json file found');
+        console.log('[GDriveService] No settings.json file found after retry');
         return null;
       }
     } catch (error: any) {
@@ -1794,13 +1776,9 @@ class GDriveService {
     }
 
     try {
-      const response = await this.gapi.client.drive.files.list({
-        q: `'${currentAppFolderId}' in parents and name='vocab.json' and trashed=false`,
-        fields: 'files(id, name)',
-        pageSize: 1,
-      });
-
-      const files = response.result.files || [];
+      // Search for existing vocab.json file with retry logic
+      const files = await this.searchFileWithRetry('vocab.json', true);
+      
       if (files.length > 0) {
         const fileId = files[0].id;
         const currentToken = await this.getAccessToken();
@@ -1823,6 +1801,7 @@ class GDriveService {
           return [];
         }
       } else {
+        console.log('[GDriveService] No vocab.json file found after retry');
         return [];
       }
     } catch (error: any) {
@@ -2212,6 +2191,83 @@ class GDriveService {
     }
     
     console.log('[GDriveService] Token check completed - no corruption detected');
+  }
+
+  /**
+   * Clear caches that might interfere with finding recently uploaded files
+   */
+  private clearFileSearchCaches(): void {
+    console.log('[GDriveService] Clearing file search caches to handle file re-upload scenarios');
+    
+    // Clear folder ID cache
+    this.appFolderId = null;
+    this.cachedAppFolderId = null;
+    
+    // Clear any pending API calls
+    this.pendingAPICalls.clear();
+    
+    // Clear access token cache to force refresh
+    this.accessToken = null;
+    this.accessTokenExpiry = null;
+    
+    // Clear Clerk auth cache
+    this.cachedClerkAuth = null;
+    
+    console.log('[GDriveService] File search caches cleared');
+  }
+
+  /**
+   * Search for a file by name with retry logic and cache clearing
+   */
+  private async searchFileWithRetry(fileName: string, retryOnEmpty: boolean = true): Promise<any[]> {
+    const attemptSearch = async (attemptNumber: number): Promise<any[]> => {
+      console.log(`[GDriveService] Searching for ${fileName} (attempt ${attemptNumber})`);
+      
+      const currentAppFolderId = await this.getAppFolderId();
+      const token = await this.getAccessToken();
+      
+      if (!token || !currentAppFolderId || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
+        console.warn(`[GDriveService] Cannot search for ${fileName}: Prerequisites not met`);
+        return [];
+      }
+
+      const response = await this.gapi.client.drive.files.list({
+        q: `'${currentAppFolderId}' in parents and name='${fileName}' and trashed=false`,
+        fields: 'files(id, name, modifiedTime)',
+        pageSize: 10, // Get more results in case there are duplicates
+        orderBy: 'modifiedTime desc', // Most recently modified first
+      });
+
+      return response.result.files || [];
+    };
+
+    try {
+      // First attempt
+      let files = await attemptSearch(1);
+      
+      // If no files found and retry is enabled, clear caches and try again
+      if (files.length === 0 && retryOnEmpty) {
+        console.log(`[GDriveService] ${fileName} not found on first attempt, clearing caches and retrying...`);
+        this.clearFileSearchCaches();
+        
+        // Wait a moment for caches to clear
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Second attempt after cache clearing
+        files = await attemptSearch(2);
+        
+        if (files.length === 0) {
+          console.log(`[GDriveService] ${fileName} still not found after cache clearing`);
+        } else {
+          console.log(`[GDriveService] ✅ Found ${fileName} after cache clearing and retry`);
+        }
+      }
+      
+      return files;
+    } catch (error) {
+      console.error(`[GDriveService] Error searching for ${fileName}:`, error);
+      throw error;
+    }
   }
 }
 
