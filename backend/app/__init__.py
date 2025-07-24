@@ -93,16 +93,49 @@ def create_app(config_class=Config) -> Flask:
         return jsonify({"status": "healthy"}), 200
     # --- End Health Check Endpoint ---
 
-    # --- Import and register blueprints from routes ---
+    # --- Load OpenAI API keys BEFORE importing blueprints ---
     with app.app_context():
-        # Import parts of our application
+        # Load OpenAI API keys into the key pool first
+        # This must happen before importing the api blueprint to avoid empty pool issue
+        openai_keys = None
+        
+        # Try to load from mounted secret file first (production)
+        secret_keys_path = "/secrets/openai-keys.json"
+        if os.path.exists(secret_keys_path):
+            try:
+                with open(secret_keys_path, "r") as f:
+                    openai_keys = json.load(f)
+                app.logger.info(f"Loaded OpenAI keys from secret file: {secret_keys_path}")
+            except Exception as e:
+                app.logger.error(f"Failed to load OpenAI keys from {secret_keys_path}: {e}")
+        
+        # Fallback to environment variable (local development)
+        if not openai_keys:
+            openai_keys_json = os.environ.get("OPENAI_API_KEYS")
+            if openai_keys_json:
+                try:
+                    openai_keys = json.loads(openai_keys_json)
+                    app.logger.info("Loaded OpenAI keys from environment variable")
+                except json.JSONDecodeError as e:
+                    app.logger.error(f"Failed to parse OPENAI_API_KEYS JSON: {e}")
+        
+        # --- Import parts of our application first ---
         from .routes import main  # Main UI blueprint
         from .routes import reader  # Reader blueprint
-        from .routes import api  # API blueprint
+        from .routes import api  # API blueprint - this initializes the empty openai_key_pool
         from .routes import settings  # User settings endpoints
         from .routes import auth  # Authentication routes
         from .routes import drive  # Google Drive proxy routes
         from .routes import due_cards_google  # JPDB due cards with Google OAuth
+
+        # Add keys to the pool after importing but before registering blueprints
+        if openai_keys and isinstance(openai_keys, list):
+            # Now that api module is imported, populate the pool
+            api.openai_key_pool.extend(openai_keys)
+            app.logger.info(f"Added {len(openai_keys)} OpenAI API keys to pool")
+        else:
+            app.logger.info("No valid OpenAI API keys found")
+        
         # Register Blueprints
         app.register_blueprint(main.main_bp)
         app.register_blueprint(reader.reader_bp)

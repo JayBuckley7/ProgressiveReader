@@ -3,7 +3,7 @@ import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
 import { useState } from "react";
 
 interface TopActionsProps {
-  currentPage: "library" | "vocabulary" | "stats";
+  currentPage: "library" | "vocabulary" | "stats" | "admin";
   onShowLogin?: () => void;
 }
 

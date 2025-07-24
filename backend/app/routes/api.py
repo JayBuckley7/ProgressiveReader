@@ -4,7 +4,7 @@ from openai import OpenAI
 import requests
 import re
 import json
-from ..utils.clerk_auth import require_auth, optional_auth
+from ..utils.clerk_auth import require_auth, optional_auth, require_admin
 from ..models import db, Bookmark
 from flask import g
 import logging
@@ -13,11 +13,98 @@ logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+# --- OpenAI API Key Pool ---
+openai_key_pool: list[str] = []
+_key_index = 0
+
+
+def get_next_openai_key() -> str | None:
+    """Return the next key from the pool using round-robin rotation."""
+    global _key_index
+    if not openai_key_pool:
+        return None
+    key = openai_key_pool[_key_index]
+    _key_index = (_key_index + 1) % len(openai_key_pool)
+    return key
+
+@api_bp.route('/debug/admin_check', methods=['GET'])
+@require_auth
+def debug_admin_check():
+    """Debug endpoint to check admin status and organization memberships."""
+    from ..utils.clerk_auth import is_progressive_reader_admin, clerk
+    
+    user = g.user
+    if not user:
+        return jsonify({"error": "No user found"}), 401
+    
+    debug_info = {
+        "user_id": user.id,
+        "is_admin": is_progressive_reader_admin(user.id),
+        "memberships": []
+    }
+    
+    if clerk:
+        try:
+            memberships = clerk.organization_memberships.list(user_id=[user.id])
+            for m in memberships.data:
+                org = getattr(m, "organization", None)
+                org_name = getattr(org, "name", "") if org else ""
+                debug_info["memberships"].append({
+                    "organization_name": org_name,
+                    "role": m.role,
+                    "is_progressive_reader": org_name == "ProgressiveReader",
+                    "is_admin_role": m.role.lower() == "admin"
+                })
+        except Exception as e:
+            debug_info["error"] = str(e)
+    else:
+        debug_info["error"] = "Clerk client not initialized"
+    
+    return jsonify(debug_info)
+
 @api_bp.route('/openai_key_configured', methods=['GET'])
 def openai_key_configured():
-    """Return whether the server has an OpenAI API key configured."""
-    configured = bool(current_app.config.get('OPENAI_API_KEY'))
-    return jsonify({'openai_key_configured': configured})
+    """Return whether the server has at least one OpenAI API key."""
+    configured = bool(openai_key_pool or current_app.config.get('OPENAI_API_KEY'))
+    return jsonify({'openai_key_configured': configured,
+                    'pool_size': len(openai_key_pool)})
+
+
+@api_bp.route('/openai_keys/add', methods=['POST'])
+@require_admin
+def add_openai_key():
+    """Add an API key to the rotation pool."""
+    data = request.get_json() or {}
+    key = data.get('key')
+    if not key:
+        return jsonify({'error': 'Missing key'}), 400
+    openai_key_pool.append(key)
+    current_app.logger.info(f'Added OpenAI key. Pool size now {len(openai_key_pool)}')
+    return jsonify({'success': True, 'pool_size': len(openai_key_pool)})
+
+
+@api_bp.route('/openai_keys/remove', methods=['POST'])
+@require_admin
+def remove_openai_key():
+    """Remove an API key from the rotation pool."""
+    data = request.get_json() or {}
+    key = data.get('key')
+    if not key:
+        return jsonify({'error': 'Missing key'}), 400
+    try:
+        openai_key_pool.remove(key)
+        current_app.logger.info(
+            f'Removed OpenAI key. Pool size now {len(openai_key_pool)}')
+        return jsonify({'success': True, 'pool_size': len(openai_key_pool)})
+    except ValueError:
+        return jsonify({'error': 'Key not found'}), 404
+
+
+@api_bp.route('/openai_keys', methods=['GET'])
+@require_admin
+def list_openai_keys():
+    """Return the list of stored OpenAI API keys."""
+    return jsonify({'keys': openai_key_pool})
 
 @api_bp.route('/translate', methods=['POST'])
 def translate_content():
@@ -40,12 +127,12 @@ def translate_content():
 
 
     if use_server_key:
-        api_key_to_use = user_api_key or current_app.config.get('OPENAI_API_KEY')
+        api_key_to_use = user_api_key or get_next_openai_key() or current_app.config.get('OPENAI_API_KEY')
     else:
         api_key_to_use = user_api_key
 
     if not api_key_to_use:
-        return jsonify({"error": "OpenAI API key not configured..."}), 400
+        return jsonify({'error': 'OpenAI API key not configured'}), 400
 
     # Ensure system_prompt is defined or moved to config if it's complex
     system_prompt = (
@@ -228,9 +315,11 @@ def list_user_decks():
         # Import the helper function from jpdb_due module
         from app.utils.jpdb_due import fetch_user_decks
 
-        decks = fetch_user_decks(username=username,
-                               password=password,
-                               cookie_string=cookie)
+        decks = fetch_user_decks(
+            username=username,
+            password=password,
+            cookie_string=cookie,
+        )
 
         if decks is None:
             return jsonify({'error': 'Failed to fetch decks from JPDB'}), 400

@@ -3,6 +3,7 @@ import { showError, Canceled } from '../utils/util';
 import { reverseIndex } from './parse';
 import { Keybind } from '../types';
 import { vocabBank } from '../services/vocabBank';
+import { parseOffline } from '../utils/offlineParser';
 
 // Configuration interface
 export interface JpHighlighterConfig {
@@ -11,6 +12,7 @@ export interface JpHighlighterConfig {
     contextWidth: number;
     forqOnMine: boolean;
     showPopupOnHover?: boolean;
+    useOfflineParser?: boolean;
     miningDeckId?: string | number;
     forqDeckId?: string | number;
     blacklistDeckId?: string | number;
@@ -40,6 +42,7 @@ export const defaultConfig: JpHighlighterConfig = {
     contextWidth: 1,
     forqOnMine: false,
     showPopupOnHover: true,
+    useOfflineParser: false,
     // Initialize keybinds to a default "None" state or specific defaults
     showPopupKey: { code: 'ShiftLeft', modifiers: [] }, // Default from settingsModal.js was 'ShiftLeft' string
     addKey: { code: 'None', modifiers: [] },
@@ -173,6 +176,7 @@ export function loadConfig(): JpHighlighterConfig {
         loadedConfig.customWordCSS = localStorage.getItem('customWordCSS') || localStorage.getItem('jpdb_custom_word_css') || undefined;
         loadedConfig.customPopupCSS = localStorage.getItem('customPopupCSS') || localStorage.getItem('jpdb_custom_popup_css') || undefined;
         loadedConfig.touchscreenSupport = localStorage.getItem('touchscreenSupport') === 'true' || false;
+        loadedConfig.useOfflineParser = localStorage.getItem('useOfflineParser') === 'true' || false;
     } catch (e) {
         console.error('Error loading configuration from localStorage:', e);
     }
@@ -199,10 +203,12 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
     const currentConfig = getCurrentConfig(); // Get current config
     try {
         console.log('parseText called with', textSegments.length, 'segments');
-        
-        if (!currentConfig.apiKey) {
-            console.error('JPDB API Key is not set in config during parseText:', currentConfig);
-            throw new Error('JPDB API Key is not set. Please set it in settings.');
+
+        if (currentConfig.useOfflineParser || !currentConfig.apiKey) {
+            const text = textSegments.join(' ');
+            const tokens = await parseOffline(text);
+            vocabBank.updateFromTokens(tokens);
+            return tokens;
         }
         
         console.log(`Sending ${textSegments.length} text segments to JPDB API. API Key exists:`, !!currentConfig.apiKey);

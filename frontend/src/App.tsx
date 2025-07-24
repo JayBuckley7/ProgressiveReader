@@ -22,6 +22,7 @@ import { VocabularyPage } from "./components/VocabularyPage";
 import { LoginModal } from "./components/LoginModal";
 import { AppDataProvider, useAppData } from "./contexts/AppDataContext";
 import { gDriveService } from "./services/gdriveService";
+import { AdminPage } from "./components/AdminPage";
 
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -132,10 +133,11 @@ function AppContent() {
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
         <SignedIn>
           <Routes>
-            <Route path="/" element={<MainLayout />}> 
+            <Route path="/" element={<MainLayout />}>
               <Route index element={<BookLibrary />} />
               <Route path="vocabulary" element={<VocabularyPage />} />
               <Route path="stats" element={<StatsPlaceholder />} />
+              <Route path="admin" element={<AdminPage />} />
             </Route>
             <Route path="book/:bookId" element={<BookReaderRoute />} />
           </Routes>
@@ -157,6 +159,8 @@ function MainLayout() {
     ? 'vocabulary'
     : location.pathname.startsWith('/stats')
     ? 'stats'
+    : location.pathname.startsWith('/admin')
+    ? 'admin'
     : 'library';
 
   return (

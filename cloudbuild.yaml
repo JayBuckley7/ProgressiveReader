@@ -60,6 +60,7 @@ steps:
             --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
             --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
             --set-secrets /secrets/env.json=app-config:latest \
+            --set-secrets /secrets/openai-keys.json=openai-key-pool:latest \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \

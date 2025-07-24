@@ -588,6 +588,19 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (useCefr) {
       payload.cefr_level = localStorage.getItem("cefrLevel") || "B2";
     }
+    
+    // Debug: Log the payload being sent
+    console.log("Translation payload:", {
+      contentLength: payload.content?.length || 0,
+      target_lang: payload.target_lang,
+      model: payload.model,
+      hasApiKey: !!payload.api_key,
+      use_server_key: payload.use_server_key,
+      use_cefr: payload.use_cefr,
+      cefr_level: payload.cefr_level,
+      stream: payload.stream
+    });
+    
     try {
       const resp = await fetch("/api/translate", {
         method: "POST",
@@ -654,7 +667,17 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           }
         }
       } else {
-        toast.error("Translation request failed");
+        // Get detailed error information
+        const errorText = await resp.text();
+        let errorMessage = "Translation request failed";
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `Translation failed: ${resp.status} ${resp.statusText}`;
+        }
+        console.error("Translation error details:", errorText);
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Translation error:", error);

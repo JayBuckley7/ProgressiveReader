@@ -19,9 +19,7 @@ const localKeys = {
   preferDueCards: "preferDueCards",
   customWordCSS: "customWordCSS",
   customPopupCSS: "customPopupCSS",
-  jpdbUsername: "jpdbUsername",
-  jpdbPassword: "jpdbPassword",
-  jpdbCookie: "jpdbCookie",
+
 };
 
 const cookieKeys = {
@@ -45,6 +43,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
     const [isCloudLoading, setIsCloudLoading] = useState(false);
     const [serverKeyAvailable, setServerKeyAvailable] = useState<boolean | null>(null);
+    const [isApiConfigExpanded, setIsApiConfigExpanded] = useState(false);
 
   const [localState, setLocalState] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
@@ -61,9 +60,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     preferDueCards: localStorage.getItem(localKeys.preferDueCards) === "true",
     customWordCSS: localStorage.getItem(localKeys.customWordCSS) || "",
     customPopupCSS: localStorage.getItem(localKeys.customPopupCSS) || "",
-    jpdbUsername: localStorage.getItem(localKeys.jpdbUsername) || "",
-    jpdbPassword: localStorage.getItem(localKeys.jpdbPassword) || "",
-    jpdbCookie: localStorage.getItem(localKeys.jpdbCookie) || "",
   }));
 
   const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
@@ -141,6 +137,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     showPopupOnHover: settings.showPopupOnHover ?? true,
     touchscreenSupport: settings.touchscreenSupport ?? false,
     disableFadeAnimation: settings.disableFadeAnimation ?? false,
+    useOfflineParser: settings.useOfflineParser ?? false,
     customPopupCSS: localState.customPopupCSS,
   });
 
@@ -180,6 +177,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
     if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
     if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
+    if (importedSettings.useOfflineParser !== undefined) settingsUpdates.useOfflineParser = importedSettings.useOfflineParser;
     
     if (Object.keys(settingsUpdates).length > 0) {
       updateSettings(settingsUpdates);
@@ -284,33 +282,68 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
           {activeTab === "general" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">API Configuration</h3>
-                <TextInput
-                  label="OpenAI API Key"
-                  value={localState.openaiKey}
-                  onChange={v => handleChange("openaiKey", v)}
-                  placeholder="sk-..."
-                  type="password"
-                />
-                <CheckboxInput
-                  label="Use Server Key"
-                  description="Fallback to server key when no local key"
-                  checked={localState.useServerKey}
-                  onChange={v => handleChange("useServerKey", v)}
-                />
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                  Server Key Status:
-                  {serverKeyAvailable === null ? (
-                    <span className="font-semibold text-gray-500"> Checking...</span>
-                  ) : serverKeyAvailable ? (
-                    <span className="font-semibold text-green-600 dark:text-green-400">✓ Configured</span>
-                  ) : (
-                    <span className="font-semibold text-red-600 dark:text-red-400">✗ Not Configured</span>
-                  )}
-                  <span className="text-gray-600 dark:text-gray-400 ml-1">(used if cookie is empty)</span>
-                </p>
-                            </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <button
+                  onClick={() => setIsApiConfigExpanded(!isApiConfigExpanded)}
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors"
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">🔑 API Configuration</h3>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      Optional: Bring your own OpenAI API key for unlimited translations
+                    </p>
+                  </div>
+                  <svg 
+                    className={`w-5 h-5 text-blue-600 dark:text-blue-400 transform transition-transform ${isApiConfigExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {isApiConfigExpanded && (
+                  <div className="px-4 pb-4 border-t border-blue-200 dark:border-blue-700">
+                    <div className="pt-4 space-y-4">
+                      <div className="bg-blue-100 dark:bg-blue-800/40 rounded-lg p-3">
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          <strong>💡 Note:</strong> The server provides free translations with shared API keys. 
+                          You can add your own OpenAI API key here for unlimited personal usage and faster responses.
+                        </p>
+                      </div>
+                      
+                      <TextInput
+                        label="OpenAI API Key (Optional)"
+                        value={localState.openaiKey}
+                        onChange={v => handleChange("openaiKey", v)}
+                        placeholder="sk-... (leave empty to use server key)"
+                        type="password"
+                      />
+                      
+                      <CheckboxInput
+                        label="Use Server Key as Fallback"
+                        description="Automatically use server key when your personal key fails or is empty"
+                        checked={localState.useServerKey}
+                        onChange={v => handleChange("useServerKey", v)}
+                      />
+                      
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          <strong>Server Key Status:</strong>
+                          {serverKeyAvailable === null ? (
+                            <span className="font-semibold text-gray-500"> Checking...</span>
+                          ) : serverKeyAvailable ? (
+                            <span className="font-semibold text-green-600 dark:text-green-400"> ✓ Available</span>
+                          ) : (
+                            <span className="font-semibold text-red-600 dark:text-red-400"> ✗ Not Available</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput
@@ -374,6 +407,8 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 onChange={v => updateSettings({ cacheTranslations: v })}
               />
 
+
+
               <SliderInput
                 label="Font Size"
                 value={settings.fontSize}
@@ -397,68 +432,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   type="password"
                 />
                 
-                <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
-                  <h4 className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-3">Due Cards Authentication</h4>
-                  <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                    For due cards feature, provide either username/password OR session cookie (not both)
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <TextInput
-                      label="JPDB Username"
-                      value={localState.jpdbUsername}
-                      onChange={v => handleChange("jpdbUsername", v)}
-                      placeholder="Your JPDB username"
-                    />
-                    <TextInput
-                      label="JPDB Password"
-                      value={localState.jpdbPassword}
-                      onChange={v => handleChange("jpdbPassword", v)}
-                      placeholder="Your JPDB password"
-                      type="password"
-                    />
-                  </div>
-                  
-                  <div className="mt-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TextInput
-                        label="JPDB Session Cookie (Alternative)"
-                        value={localState.jpdbCookie}
-                        onChange={v => handleChange("jpdbCookie", v)}
-                        placeholder="e.g., sid=your_session_id_here"
-                        type="password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // Open JPDB in new tab
-                          window.open('https://jpdb.io/login', '_blank');
-                          
-                          // Wait a moment then prompt for cookie
-                          setTimeout(() => {
-                            const instructions = `
-1. Log in to JPDB in the new tab that just opened
-2. Press F12 to open Developer Tools
-3. Go to Application tab → Cookies → jpdb.io
-4. Find the 'sid' cookie and copy its value
-5. Paste it below (format: sid=your_value_here)`;
-                            
-                            const cookie = prompt(instructions + '\n\nPaste your JPDB session cookie:');
-                            if (cookie && cookie.trim()) {
-                              handleChange("jpdbCookie", cookie.trim());
-                            }
-                          }, 2000);
-                        }}
-                        className="mt-6 px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
-                      >
-                        Get Cookie
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Advanced: Use browser dev tools to copy your JPDB session cookie, or click "Get Cookie" for help
-                    </p>
-                  </div>
-                </div>
+                <CheckboxInput
+                  label="Use Offline Parser"
+                  description="Parse text locally when JPDB API key is missing or unavailable"
+                  checked={settings.useOfflineParser ?? false}
+                  onChange={v => updateSettings({ useOfflineParser: v })}
+                />
+
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

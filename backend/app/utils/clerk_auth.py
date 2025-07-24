@@ -133,6 +133,76 @@ def require_auth(f):
     return decorated_function
 
 
+def is_progressive_reader_admin(user_id: str) -> bool:
+    """Check if the given user is an Admin of the ProgressiveReader organization."""
+    logger.info(f"[🔐 ADMIN CHECK] Checking admin status for user_id: {user_id}")
+    
+    if not clerk:
+        logger.error("[🔐 ADMIN CHECK] ❌ Clerk client not initialized")
+        return False
+    
+    try:
+        logger.debug(f"[🔐 ADMIN CHECK] Fetching organization memberships for user: {user_id}")
+        # Use the correct API method to get user's organization memberships
+        memberships = clerk.users.get_organization_memberships(user_id=user_id)
+        
+        logger.info(f"[🔐 ADMIN CHECK] Found {len(memberships.data)} organization memberships")
+        
+        for i, m in enumerate(memberships.data):
+            org = getattr(m, "organization", None)
+            org_name = getattr(org, "name", "") if org else ""
+            role = m.role
+            
+            logger.info(f"[🔐 ADMIN CHECK] Membership {i+1}: org='{org_name}', role='{role}'")
+            
+            # Check if this is the ProgressiveReader org with admin role
+            is_progressive_reader = org_name == "ProgressiveReader"
+            # Handle both "admin" and "org:admin" role formats
+            is_admin_role = role.lower() == "admin" or role.lower() == "org:admin"
+            
+            logger.debug(f"[🔐 ADMIN CHECK] Checks: is_progressive_reader={is_progressive_reader}, is_admin_role={is_admin_role}")
+            
+            if is_progressive_reader and is_admin_role:
+                logger.info(f"[🔐 ADMIN CHECK] ✅ User {user_id} is admin of ProgressiveReader org")
+                return True
+        
+        logger.warning(f"[🔐 ADMIN CHECK] ❌ User {user_id} is not an admin of ProgressiveReader org")
+        return False
+        
+    except Exception as e:
+        logger.error(f"[🔐 ADMIN CHECK] ❌ Error checking admin membership for {user_id}: {e}")
+        logger.error(f"[🔐 ADMIN CHECK] Exception type: {type(e).__name__}")
+        return False
+
+
+def require_admin(f):
+    """Decorator to require ProgressiveReader admin role."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        logger.info(f"[🔐 ADMIN DECORATOR] require_admin called for route: {f.__name__}")
+        
+        user = get_current_user()
+        if not user:
+            logger.warning(f"[🔐 ADMIN DECORATOR] ❌ No authenticated user found for route: {f.__name__}")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        logger.info(f"[🔐 ADMIN DECORATOR] ✅ User authenticated: {user.id}")
+        logger.info(f"[🔐 ADMIN DECORATOR] Checking admin permissions for route: {f.__name__}")
+        
+        is_admin = is_progressive_reader_admin(user.id)
+        logger.info(f"[🔐 ADMIN DECORATOR] Admin check result: {is_admin}")
+        
+        if not is_admin:
+            logger.warning(f"[🔐 ADMIN DECORATOR] ❌ User {user.id} denied access to admin route: {f.__name__}")
+            return jsonify({"error": "Forbidden"}), 403
+        
+        logger.info(f"[🔐 ADMIN DECORATOR] ✅ User {user.id} granted access to admin route: {f.__name__}")
+        g.user = user
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 def optional_auth(f):
     """Decorator to optionally authenticate (user might be None)"""
     @wraps(f)

@@ -35,7 +35,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     );
     
     if (wasGoogleClerkLogin) {
-      // User signed in with Google - show auto-connecting message
+      // User signed in with Google - show auto-connecting message with manual option
       return (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🔄</div>
@@ -45,9 +45,19 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           <p className="text-gray-500 dark:text-gray-400 mb-6">
             Since you signed in with Google, we're automatically connecting to your Google Drive to load your books.
           </p>
-          <div className="flex justify-center">
+          <div className="flex justify-center mb-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
+          <p className="text-sm text-gray-400 mb-4">Taking too long?</p>
+          <button
+            onClick={async () => {
+              console.log('Manual Google Drive connection requested');
+              await connectToGoogleDriveAndLoad();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Connect Manually
+          </button>
         </div>
       );
     } else {
@@ -86,7 +96,8 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     moveBookToFolder,
     isDriveConnected,
     isLoading,
-    isDriveBookLoading
+    isDriveBookLoading,
+    connectToGoogleDriveAndLoad
   } = useAppData();
 
   // All book handling is delegated to the storage service.
