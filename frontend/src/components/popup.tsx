@@ -445,7 +445,9 @@ export class Popup {
         }
 
         const card = this.#data.token.card;
-        const url = `https://jpdb.io/vocabulary/${card.vid}/${encodeURIComponent(card.spelling)}/${encodeURIComponent(card.reading)}`;
+        const url = card.vid && card.vid !== 0
+            ? `https://jpdb.io/vocabulary/${card.vid}/${encodeURIComponent(card.spelling)}/${encodeURIComponent(card.reading)}`
+            : `https://jpdb.io/search?q=${encodeURIComponent(card.spelling)}`;
 
         // Create header with word info
         const header = createElement('div', { id: 'header' },
@@ -466,8 +468,11 @@ export class Popup {
 
         // Create meanings list (simplified)
         const meaningsList = createElement('ol', {},
-            ...card.meanings.map(meaning => 
-                createElement('li', {}, meaning.glosses.join('; '))
+            ...(card.meanings && card.meanings.length > 0
+                ? card.meanings.map(meaning =>
+                    createElement('li', {}, meaning.glosses.join('; '))
+                )
+                : [createElement('li', {}, 'No definition available')]
             )
         );
 
