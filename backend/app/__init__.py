@@ -28,7 +28,11 @@ def create_app(config_class=Config) -> Flask:
             with open(secret_path, "r") as f:
                 config_data = json.load(f)
             for key, value in config_data.items():
-                os.environ.setdefault(key, str(value))
+                # Special handling for OPENAI_API_KEYS to preserve JSON array format
+                if key == "OPENAI_API_KEYS" and isinstance(value, list):
+                    os.environ.setdefault(key, json.dumps(value))
+                else:
+                    os.environ.setdefault(key, str(value))
         except Exception as e:
             logging.warning(f"Failed to load secrets from {secret_path}: {e}")
     app = Flask(
