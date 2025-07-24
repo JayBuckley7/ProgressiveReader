@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    envDir: '../', // Load .env from project root instead of frontend directory
     resolve: {
       alias: {
         "~": path.resolve(__dirname, "./src"),
