@@ -36,7 +36,7 @@ def openai_key_configured():
 
 
 @api_bp.route('/openai_keys/add', methods=['POST'])
-@require_auth
+@require_admin
 def add_openai_key():
     """Add an API key to the rotation pool."""
     data = request.get_json() or {}
@@ -49,7 +49,7 @@ def add_openai_key():
 
 
 @api_bp.route('/openai_keys/remove', methods=['POST'])
-@require_auth
+@require_admin
 def remove_openai_key():
     """Remove an API key from the rotation pool."""
     data = request.get_json() or {}
@@ -66,7 +66,7 @@ def remove_openai_key():
 
 
 @api_bp.route('/openai_keys', methods=['GET'])
-@require_auth
+@require_admin
 def list_openai_keys():
     """Return the list of stored OpenAI API keys."""
     return jsonify({'keys': openai_key_pool})
