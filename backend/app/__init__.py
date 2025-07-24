@@ -78,6 +78,10 @@ def create_app(config_class=Config) -> Flask:
         """
         Let React/Vite router handle every route, always return index.html
         """
+        # Check if it's an API request that should return 404 instead of serving the SPA
+        if path.startswith("api/"):
+            return "API endpoint not found", 404
+            
         if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
         else:
@@ -85,11 +89,13 @@ def create_app(config_class=Config) -> Flask:
 
     @app.errorhandler(404)
     def redirect_404(e):
-        """Redirect unknown routes to the homepage for the SPA."""
-        # Avoid redirect loops for API or static requests
+        """Only redirect API requests to 404, let SPA handle UI routes."""
+        # Only apply 404 handling to API requests, not UI routes
         if request.path.startswith("/api"):
-            return e, 404
-        return redirect(url_for("main.index"))
+            return e
+        # For non-API routes, let the SPA route handler above deal with it
+        # This should not be reached for normal UI routes
+        return send_from_directory(app.static_folder, "index.html")
 
     # --- Health Check Endpoint ---
     @app.route('/health')
