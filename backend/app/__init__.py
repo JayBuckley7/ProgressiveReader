@@ -22,7 +22,7 @@ def create_app(config_class=Config) -> Flask:
     load_dotenv()
 
     # Load additional configuration from a mounted secret if available
-    secret_path = os.environ.get("APP_CONFIG_PATH", "/secrets/app-config")
+    secret_path = os.environ.get("APP_CONFIG_PATH", "/secrets/env.json")
     if os.path.exists(secret_path):
         try:
             with open(secret_path, "r") as f:
