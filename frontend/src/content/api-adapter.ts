@@ -3,6 +3,7 @@ import { showError, Canceled } from '../utils/util';
 import { reverseIndex } from './parse';
 import { Keybind } from '../types';
 import { vocabBank } from '../services/vocabBank';
+import { parseOffline } from '../utils/offlineParser';
 
 // Configuration interface
 export interface JpHighlighterConfig {
@@ -197,12 +198,15 @@ export function loadConfig(): JpHighlighterConfig {
 // Parse text using JPDB API
 export async function parseText(textSegments: string[]): Promise<Token[]> {
     const currentConfig = getCurrentConfig(); // Get current config
+    const offlinePref = localStorage.getItem('useOfflineParser') === 'true';
     try {
         console.log('parseText called with', textSegments.length, 'segments');
-        
-        if (!currentConfig.apiKey) {
-            console.error('JPDB API Key is not set in config during parseText:', currentConfig);
-            throw new Error('JPDB API Key is not set. Please set it in settings.');
+
+        if (offlinePref || !currentConfig.apiKey) {
+            const text = textSegments.join('');
+            const tokens = await parseOffline(text);
+            vocabBank.updateFromTokens(tokens);
+            return tokens;
         }
         
         console.log(`Sending ${textSegments.length} text segments to JPDB API. API Key exists:`, !!currentConfig.apiKey);

@@ -141,6 +141,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     showPopupOnHover: settings.showPopupOnHover ?? true,
     touchscreenSupport: settings.touchscreenSupport ?? false,
     disableFadeAnimation: settings.disableFadeAnimation ?? false,
+    useOfflineParser: settings.useOfflineParser ?? false,
     customPopupCSS: localState.customPopupCSS,
   });
 
@@ -180,6 +181,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
     if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
     if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
+    if (importedSettings.useOfflineParser !== undefined) settingsUpdates.useOfflineParser = importedSettings.useOfflineParser;
     
     if (Object.keys(settingsUpdates).length > 0) {
       updateSettings(settingsUpdates);
@@ -372,6 +374,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 description="Store last translation per chapter for offline use"
                 checked={settings.cacheTranslations ?? true}
                 onChange={v => updateSettings({ cacheTranslations: v })}
+              />
+
+              <CheckboxInput
+                label="Use Offline Parser"
+                description="Parse text locally when JPDB API key is missing"
+                checked={settings.useOfflineParser ?? false}
+                onChange={v => updateSettings({ useOfflineParser: v })}
               />
 
               <SliderInput
