@@ -6,6 +6,7 @@ import { useAppData } from "../contexts/AppDataContext";
 // LocalStorage & Cookie keys
 const localKeys = {
   openaiKey: "openaiKey",
+  useServerKey: "useServerKey",
   openaiModel: "openaiModel",
   cefrLevel: "cefrLevel",
   autoload: "autoloadTranslations",
@@ -43,9 +44,11 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     const { saveSettings, loadSettings, isAuthenticated } = useAppData();
     const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
     const [isCloudLoading, setIsCloudLoading] = useState(false);
+    const [serverKeyAvailable, setServerKeyAvailable] = useState<boolean | null>(null);
 
   const [localState, setLocalState] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
+    useServerKey: localStorage.getItem(localKeys.useServerKey) !== "false",
     openaiModel: localStorage.getItem(localKeys.openaiModel) || "gpt-4o-mini",
     cefrLevel: parseInt(localStorage.getItem(localKeys.cefrLevel) || "3"),
     autoload: localStorage.getItem(localKeys.autoload) === "true",
@@ -82,6 +85,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     console.log('🔔 Synced all settings to localStorage and cookies');
   }, [localState, jpdbApiKey]);
 
+  useEffect(() => {
+    fetch('/api/openai_key_configured')
+      .then(res => res.json())
+      .then(data => setServerKeyAvailable(data.openai_key_configured))
+      .catch(() => setServerKeyAvailable(false));
+  }, []);
+
 
 
     if (!settings) return null;
@@ -94,6 +104,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   const createSettingsObject = () => ({
     // API and model settings
     openai_api_key: localState.openaiKey,
+    use_server_key: localState.useServerKey,
     jpdb_api_key: jpdbApiKey,
     openai_model: localState.openaiModel,
     target_language: settings.targetLanguage,
@@ -139,6 +150,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     const newLocalState = {
       ...localState,
       openaiKey: importedSettings.openai_api_key ?? localState.openaiKey,
+      useServerKey: importedSettings.use_server_key ?? localState.useServerKey,
       openaiModel: importedSettings.openai_model ?? localState.openaiModel,
       cefrLevel: parseInt(importedSettings.cefr_index ?? String(localState.cefrLevel)),
       autoload: importedSettings.autoload_preference ?? localState.autoload,
@@ -281,8 +293,21 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   placeholder="sk-..."
                   type="password"
                 />
+                <CheckboxInput
+                  label="Use Server Key"
+                  description="Fallback to server key when no local key"
+                  checked={localState.useServerKey}
+                  onChange={v => handleChange("useServerKey", v)}
+                />
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                  Server Key Status: <span className="font-semibold text-green-600 dark:text-green-400">✓ Configured</span>
+                  Server Key Status:
+                  {serverKeyAvailable === null ? (
+                    <span className="font-semibold text-gray-500"> Checking...</span>
+                  ) : serverKeyAvailable ? (
+                    <span className="font-semibold text-green-600 dark:text-green-400">✓ Configured</span>
+                  ) : (
+                    <span className="font-semibold text-red-600 dark:text-red-400">✗ Not Configured</span>
+                  )}
                   <span className="text-gray-600 dark:text-gray-400 ml-1">(used if cookie is empty)</span>
                 </p>
                             </div>
