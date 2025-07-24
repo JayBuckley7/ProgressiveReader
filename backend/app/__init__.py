@@ -99,25 +99,14 @@ def create_app(config_class=Config) -> Flask:
         # This must happen before importing the api blueprint to avoid empty pool issue
         openai_keys = None
         
-        # Try to load from mounted secret file first (production)
-        secret_keys_path = "/secrets/openai-keys.json"
-        if os.path.exists(secret_keys_path):
+        # Load from environment variable (works for both local dev and production)
+        openai_keys_json = os.environ.get("OPENAI_API_KEYS")
+        if openai_keys_json:
             try:
-                with open(secret_keys_path, "r") as f:
-                    openai_keys = json.load(f)
-                app.logger.info(f"Loaded OpenAI keys from secret file: {secret_keys_path}")
-            except Exception as e:
-                app.logger.error(f"Failed to load OpenAI keys from {secret_keys_path}: {e}")
-        
-        # Fallback to environment variable (local development)
-        if not openai_keys:
-            openai_keys_json = os.environ.get("OPENAI_API_KEYS")
-            if openai_keys_json:
-                try:
-                    openai_keys = json.loads(openai_keys_json)
-                    app.logger.info("Loaded OpenAI keys from environment variable")
-                except json.JSONDecodeError as e:
-                    app.logger.error(f"Failed to parse OPENAI_API_KEYS JSON: {e}")
+                openai_keys = json.loads(openai_keys_json)
+                app.logger.info("Loaded OpenAI keys from environment variable")
+            except json.JSONDecodeError as e:
+                app.logger.error(f"Failed to parse OPENAI_API_KEYS JSON: {e}")
         
         # --- Import parts of our application first ---
         from .routes import main  # Main UI blueprint
