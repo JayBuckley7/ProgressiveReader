@@ -34,47 +34,26 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
-  # 4. Run build verification tests against health and configuration endpoints
+  # 4. Run build verification tests against health endpoint only
   - name: "gcr.io/cloud-builders/gcloud"
-    id: "BVT"
+    id: "BVT-Pre-Deploy"
     waitFor: ["Push to Artifact Registry"]
     entrypoint: "bash"
     args:
       - "-c"
       - |
-        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
-        
-        # Test 1: Health check
-        HEALTH_CHECK_URL="$$SERVICE_URL/health"
-        echo "BVT 1/2: Checking health at: $$HEALTH_CHECK_URL"
-        curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "BVT failed for $$HEALTH_CHECK_URL" && exit 1)
-        echo "✅ Health check passed"
-        
-        # Test 2: OpenAI key configuration check
-        OPENAI_CHECK_URL="$$SERVICE_URL/api/openai_key_configured"
-        echo "BVT 2/2: Checking OpenAI key configuration at: $$OPENAI_CHECK_URL"
-        OPENAI_RESPONSE=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$$OPENAI_CHECK_URL") || (echo "BVT failed - could not reach $$OPENAI_CHECK_URL" && exit 1)
-        
-        # Parse and validate the response
-        echo "OpenAI configuration response: $$OPENAI_RESPONSE"
-        CONFIGURED=$(echo "$$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
-        POOL_SIZE=$(echo "$$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
-        
-        if [ "$$CONFIGURED" -eq 1 ] && [ "$$POOL_SIZE" -gt 0 ]; then
-          echo "✅ OpenAI keys configured correctly (pool_size: $$POOL_SIZE)"
-        else
-          echo "❌ BVT failed - OpenAI keys not properly configured"
-          echo "Expected: openai_key_configured=true and pool_size>0"
-          echo "Got: $$OPENAI_RESPONSE"
-          exit 1
-        fi
-        
-        echo "🎉 All BVT checks passed!"
+          SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
+          
+          # Test: Health check only (before deployment)
+          HEALTH_CHECK_URL="$$SERVICE_URL/health"
+          echo "Pre-deployment BVT: Checking health at: $$HEALTH_CHECK_URL"
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "Pre-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
+          echo "✅ Pre-deployment health check passed"
 
   # 5. Deploy to Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy to Cloud Run"
-    waitFor: ["BVT"]
+    waitFor: ["BVT-Pre-Deploy"]
     entrypoint: "bash"
     args:
       - "-c"
@@ -88,7 +67,49 @@ steps:
             --allow-unauthenticated \
             --set-env-vars APP_ENV=${_ENVIRONMENT} \
             --vpc-connector floof-connector \
-            --vpc-egress private-ranges-only
+            --vpc-egress private-ranges-only \
+            --memory 512Mi \
+            --concurrency 80 \
+            --max-instances 40 \
+            --timeout 300 \
+            --execution-environment gen2
+
+  # 6. Post-deployment verification including OpenAI keys
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "BVT-Post-Deploy" 
+    waitFor: ["Deploy to Cloud Run"]
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+          SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
+          
+          # Test 1: Health check
+          HEALTH_CHECK_URL="$$SERVICE_URL/health"
+          echo "Post-deployment BVT 1/2: Checking health at: $$HEALTH_CHECK_URL"
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "Post-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
+          echo "✅ Health check passed"
+          
+          # Test 2: OpenAI key configuration check
+          OPENAI_CHECK_URL="$$SERVICE_URL/api/openai_key_configured"
+          echo "Post-deployment BVT 2/2: Checking OpenAI key configuration at: $$OPENAI_CHECK_URL"
+          OPENAI_RESPONSE=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$$OPENAI_CHECK_URL") || (echo "Post-deployment BVT failed - could not reach $$OPENAI_CHECK_URL" && exit 1)
+          
+          # Parse and validate the response
+          echo "OpenAI configuration response: $$OPENAI_RESPONSE"
+          CONFIGURED=$(echo "$$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
+          POOL_SIZE=$(echo "$$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
+          
+          if [ "$$CONFIGURED" -eq 1 ] && [ "$$POOL_SIZE" -gt 0 ]; then
+            echo "✅ OpenAI keys configured correctly (pool_size: $$POOL_SIZE)"
+          else
+            echo "❌ Post-deployment BVT failed - OpenAI keys not properly configured"
+            echo "Expected: openai_key_configured=true and pool_size>0"
+            echo "Got: $$OPENAI_RESPONSE"
+            exit 1
+          fi
+          
+          echo "🎉 All post-deployment BVT checks passed!"
 
 images:
   - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
