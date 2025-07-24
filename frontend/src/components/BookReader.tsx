@@ -581,6 +581,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       target_lang: settings?.targetLanguage || "English",
       model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
       api_key: localStorage.getItem("openaiKey") || "",
+      use_server_key: localStorage.getItem("useServerKey") !== "false",
       use_cefr: useCefr,
       stream: true,
     };

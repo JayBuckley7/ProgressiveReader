@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+@api_bp.route('/openai_key_configured', methods=['GET'])
+def openai_key_configured():
+    """Return whether the server has an OpenAI API key configured."""
+    configured = bool(current_app.config.get('OPENAI_API_KEY'))
+    return jsonify({'openai_key_configured': configured})
+
 @api_bp.route('/translate', methods=['POST'])
 def translate_content():
     """Translate HTML content with OpenAI and return JSON or stream events."""
@@ -24,6 +30,7 @@ def translate_content():
     target_language = data.get('target_lang')
     model = data.get('model', 'gpt-4-turbo') # Default to gpt-4-turbo
     user_api_key = data.get('api_key')
+    use_server_key = data.get('use_server_key', True)
     cefr_level = data.get('cefr_level')
     stream = data.get('stream', False)
     use_cefr = data.get('use_cefr', False) # Get use_cefr flag
@@ -32,8 +39,13 @@ def translate_content():
         return jsonify({"error": "Missing required fields: content, target_lang"}), 400
 
 
-    api_key_to_use = user_api_key if user_api_key else current_app.config.get('OPENAI_API_KEY')
-    if not api_key_to_use: return jsonify({"error": "OpenAI API key not configured..."}), 400
+    if use_server_key:
+        api_key_to_use = user_api_key or current_app.config.get('OPENAI_API_KEY')
+    else:
+        api_key_to_use = user_api_key
+
+    if not api_key_to_use:
+        return jsonify({"error": "OpenAI API key not configured..."}), 400
 
     # Ensure system_prompt is defined or moved to config if it's complex
     system_prompt = (
