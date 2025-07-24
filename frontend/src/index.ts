@@ -195,22 +195,10 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     Logger.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
     Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
     
-    const directCookieCheck = document.cookie.includes('jpdb_api_key=') && 
-                             document.cookie.split('jpdb_api_key=')[1]?.split(';')[0]?.trim();
-    
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
-        console.error('JPDB API Key is not set in config');
-        if (directCookieCheck) {
-            Logger.log('Found API key directly in cookie, attempting to use it and reload config');
-            // This scenario is less likely now with centralized config, but as a safeguard:
-            // Manually setting and reloading could be an option, but loadConfig should handle it.
-            // For now, we rely on loadConfig having done its job. If key is still missing, alert.
-             alert('JPDB API Key is not set. Please set it in settings. Attempted to load from cookie.');
-            return;
-        } else {
-            alert('JPDB API Key is not set. Please set it in settings.');
-            return;
-        }
+        Logger.warn('JPDB API Key is not set. Falling back to offline parser if available.');
+        // Do not abort here. parseText() will handle offline parsing when no API key
+        // is configured or when the "Use Offline Parser" option is enabled.
     }
     
     // Store original content for later restoration
