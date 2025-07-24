@@ -133,6 +133,37 @@ def require_auth(f):
     return decorated_function
 
 
+def is_progressive_reader_admin(user_id: str) -> bool:
+    """Check if the given user is an Admin of the ProgressiveReader organization."""
+    if not clerk:
+        return False
+    try:
+        memberships = clerk.organization_memberships.list(user_id=[user_id])
+        for m in memberships.data:
+            org = getattr(m, "organization", None)
+            org_name = getattr(org, "name", "") if org else ""
+            if org_name == "ProgressiveReader" and m.role.lower() == "admin":
+                return True
+    except Exception as e:
+        logger.error(f"Error checking admin membership for {user_id}: {e}")
+    return False
+
+
+def require_admin(f):
+    """Decorator to require ProgressiveReader admin role."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "Authentication required"}), 401
+        if not is_progressive_reader_admin(user.id):
+            return jsonify({"error": "Forbidden"}), 403
+        g.user = user
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 def optional_auth(f):
     """Decorator to optionally authenticate (user might be None)"""
     @wraps(f)

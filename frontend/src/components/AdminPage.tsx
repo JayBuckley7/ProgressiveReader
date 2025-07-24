@@ -4,10 +4,15 @@ import { getAuthHeaders } from "../utils/auth";
 export function AdminPage() {
   const [keys, setKeys] = useState<string[]>([]);
   const [newKey, setNewKey] = useState("");
+  const [unauthorized, setUnauthorized] = useState(false);
 
   async function loadKeys() {
     const headers = await getAuthHeaders();
     const res = await fetch("/api/openai_keys", { headers });
+    if (res.status === 403) {
+      setUnauthorized(true);
+      return;
+    }
     if (res.ok) {
       const data = await res.json();
       setKeys(data.keys || []);
@@ -48,6 +53,9 @@ export function AdminPage() {
   return (
     <div className="p-4 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
+      {unauthorized && (
+        <p className="text-red-600 mb-4">You do not have access to this page.</p>
+      )}
       <div className="mb-6">
         <label className="block font-medium mb-2">Add OpenAI API Key</label>
         <input
