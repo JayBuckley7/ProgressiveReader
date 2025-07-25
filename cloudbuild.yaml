@@ -1,5 +1,5 @@
 steps:
-syn  # 1. Load frontend environment variables from PR-app-config secret
+  # 1. Load frontend environment variables from PR-app-config secret
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Load Frontend Env Vars"
     entrypoint: "bash"
