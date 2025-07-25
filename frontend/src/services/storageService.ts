@@ -521,7 +521,7 @@ class StorageService {
             // Check cache first to prevent redundant API calls
             const now = Date.now();
             if (this.bookListCache && (now - this.bookListCache.timestamp < this.CACHE_DURATION)) {
-                console.log('getUserBooks: Using cached book list to prevent redundant API calls');
+                //// console.log('getUserBooks: Using cached book list to prevent redundant API calls');
                 
                 // Update books with current cached cover URLs and trigger callbacks
                 const updatedBooks = this.bookListCache.data.map(book => {
@@ -612,7 +612,7 @@ class StorageService {
                         const coverTask = this.downloadCoverAsync(bookFileId, coverImageId, bookMetadata.title, onCoverReady);
                         coverDownloadTasks.push(coverTask);
                     } else {
-                        console.log(`[Cover Debug] Using cached cover for book: ${bookMetadata.title}`);
+                        //// console.log(`[Cover Debug] Using cached cover for book: ${bookMetadata.title}`);
                         // Immediately call the callback with the cached URL
                         onCoverReady(bookFileId, cachedCoverUrl);
                     }
@@ -665,7 +665,7 @@ class StorageService {
             try {
                 const isValid = await this.testBlobUrl(cachedUrl);
                 if (isValid) {
-                    console.log(`[Cover Cache] Using cached URL for book ${bookId}`);
+                    //// console.log(`[Cover Cache] Using cached URL for book ${bookId}`);
                     return cachedUrl;
                 } else {
                     // URL is invalid, remove from cache
@@ -1059,7 +1059,7 @@ class StorageService {
                         // Save back to cloud
                         const success = await gDriveService.updateMetadataFile(fileId, data);
                         if (success) {
-                            console.log('Reading progress synced to cloud successfully');
+                            //// console.log('Reading progress synced to cloud successfully');
                         } else {
                             console.warn('Failed to sync progress to cloud, but local save succeeded');
                         }

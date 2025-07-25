@@ -1,0 +1,22 @@
+🎯 onWordHoverStart function name: onWordHoverStart parse.tsx:245:25
+🎯 About to call onWordHoverStart with event: 
+mouseenter { target: span.jpdb-word.not-in-deck.jlpt-unknown
+, buttons: 0, clientX: 375, clientY: 304, layerX: 375, layerY: 627 }
+parse.tsx:246:25
+🔧 DEFAULT onWordHoverStart called - this should not happen! parse.tsx:115:13
+🎯 onWordHoverStart call completed successfully parse.tsx:249:29
+🎯 mouseleave event fired on wrapper parse.tsx:256:25
+🎯 onWordHoverStop function type: function parse.tsx:257:25
+🔧 DEFAULT onWordHoverStop called - this should not happen! parse.tsx:118:13
+🎯 mouseenter event fired on wrapper parse.tsx:243:25
+🎯 onWordHoverStart function type: function parse.tsx:244:25
+🎯 onWordHoverStart function name: onWordHoverStart parse.tsx:245:25
+🎯 About to call onWordHoverStart with event: 
+mouseenter { target: span.jpdb-word.not-in-deck.common-word
+, buttons: 0, clientX: 431, clientY: 349, layerX: 431, layerY: 672 }
+parse.tsx:246:25
+🔧 DEFAULT onWordHoverStart called - this should not happen! parse.tsx:115:13
+🎯 onWordHoverStart call completed successfully parse.tsx:249:29
+🎯 mouseleave event fired on wrapper parse.tsx:256:25
+🎯 onWordHoverStop function type: function parse.tsx:257:25
+🔧 DEFAULT onWordHoverStop called - this should not happen!

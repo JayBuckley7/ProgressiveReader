@@ -80,7 +80,6 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     isDriveLoading: googleDriveData.isLoading,
     driveUser: googleDriveData.driveUser,
     driveFiles: googleDriveData.driveFiles,
-    isDriveLoading: googleDriveData.isLoading,
     driveError: googleDriveData.error,
     isTokenNearExpiry: googleDriveData.isTokenNearExpiry,
     isRefreshing: googleDriveData.isRefreshing,

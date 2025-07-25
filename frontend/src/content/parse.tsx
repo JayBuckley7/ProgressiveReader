@@ -111,17 +111,24 @@ function wrap(node: Node, wrapper: HTMLElement) {
 export const reverseIndex = new Map<string, { className: string; elements: JpdbWord[] }>();
 
 // Function that will be hooked up to event handlers
-let onWordHoverStart: (e: MouseEvent) => void = () => {};
-let onWordHoverStop: () => void = () => {};
+let onWordHoverStart: (e: MouseEvent) => void = () => {
+    console.log('🔧 DEFAULT onWordHoverStart called - this should not happen!');
+};
+let onWordHoverStop: () => void = () => {
+    console.log('🔧 DEFAULT onWordHoverStop called - this should not happen!');
+};
 
 export function setWordHoverHandlers(
     startHandler: (e: MouseEvent) => void,
     stopHandler: () => void
 ) {
     console.log('🔧 setWordHoverHandlers called with:', typeof startHandler, typeof stopHandler);
+    console.log('🔧 startHandler function name:', startHandler.name);
+    console.log('🔧 startHandler function toString:', startHandler.toString().substring(0, 200));
     onWordHoverStart = startHandler;
     onWordHoverStop = stopHandler;
     console.log('🔧 Handlers set, onWordHoverStart is now:', typeof onWordHoverStart);
+    console.log('🔧 onWordHoverStart function name after assignment:', onWordHoverStart.name);
 }
 
 // List of super common words that should not be colored (particles, basic grammar, etc.)
@@ -129,7 +136,7 @@ const COMMON_WORDS = new Set([
     // Basic particles
     'は', 'が', 'を', 'に', 'で', 'と', 'の', 'から', 'まで', 'より', 'へ',
     // Common conjunctions and grammar
-    'です', 'である', 'だ', 'である', 'ます', 'ました', 'だった', 'でした',
+    'です', 'である', 'だ', 'ます', 'ました', 'だった', 'でした',
     // Basic auxiliary words
     'て', 'た', 'で', 'だ', 'な', 'よ', 'ね', 'か', 'さ', 'ぞ', 'わ',
     // Common pronouns and basic words
@@ -139,6 +146,8 @@ const COMMON_WORDS = new Set([
     // Basic punctuation representations
     '、', '。', '！', '？', '（', '）', '「', '」'
 ]);
+
+const SINGLE_PARTICLES = new Set(['は','が','を','に','で','と','の','へ']);
 
 // Helper function to get JLPT-based color class
 function getJlptColorClass(token: Token): string {
@@ -157,7 +166,7 @@ function getJlptColorClass(token: Token): string {
     }
     
     // Check word length for additional common word heuristics
-    if (word.length === 1 && /[はがをにでとのからまでよりへ]/.test(word)) {
+    if (word.length === 1 && SINGLE_PARTICLES.has(word)) {
         return 'common-word';
     }
     
@@ -166,18 +175,32 @@ function getJlptColorClass(token: Token): string {
 }
 
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
+    fragments = fragments.filter(f => f.length > 0);
     let fragmentIndex = 0;
     let curOffset = 0;
     let fragment = fragments[fragmentIndex];
-    const text = fragments.map(x => x.node.data).join('');
+    const text = fragments.map(x => x.node.data.replace(/\u00A0/g,' ')).join('');
+    
+    console.log('🎯 DOM OVERLAY: Processing text:', JSON.stringify(text));
+    console.log('🎯 DOM OVERLAY: text length:', text.length);
+    console.log('🎯 DOM OVERLAY: text bytes:', Array.from(text).map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
+    console.log('🎯 DOM OVERLAY: fragments count:', fragments.length);
+    fragments.forEach((frag, i) => {
+        console.log(`🎯 FRAGMENT[${i}]: [${frag.start}:${frag.end}] length=${frag.length} data="${frag.node.data}"`);
+    });
 
     for (const token of tokens) {
         if (!fragment) return;
+        
+        console.log(`🎯 PROCESSING TOKEN: "${token.card.spelling}" at [${token.start}:${token.end}]`);
+        console.log(`🎯 Current offset: ${curOffset}, fragment index: ${fragmentIndex}`);
 
         // Wrap all unparsed fragments that appear before the token
         while (curOffset < token.start) {
+            console.log(`🎯 UNPARSED: curOffset=${curOffset} < token.start=${token.start}, fragment=[${fragment.start}:${fragment.end}]`);
             if (fragment.end > token.start) {
                 // Only the beginning of the node is unparsed. Split it.
+                console.log(`🎯 SPLITTING fragment at token.start=${token.start}`);
                 splitFragment(fragments, fragmentIndex, token.start);
             }
 
@@ -185,7 +208,9 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             unparsedWrapper.className = 'jpdb-word unparsed';
             wrap(fragment.node, unparsedWrapper);
 
+            console.log(`🎯 UNPARSED WRAPPED: "${fragment.node.data}" (length=${fragment.length})`);
             curOffset += fragment.length;
+            console.log(`🎯 NEW curOffset: ${curOffset}`);
 
             fragment = fragments[++fragmentIndex];
             if (!fragment) return;
@@ -193,8 +218,10 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
 
         // Accumulate fragments until we have enough to fit the current token
         while (curOffset < token.end) {
+            console.log(`🎯 TOKEN FRAGMENT: curOffset=${curOffset} < token.end=${token.end}, fragment=[${fragment.start}:${fragment.end}]`);
             if (fragment.end > token.end) {
                 // Only the beginning of the node is part of the token. Split it.
+                console.log(`🎯 SPLITTING fragment at token.end=${token.end}`);
                 splitFragment(fragments, fragmentIndex, token.end);
             }
 
@@ -212,13 +239,17 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             wrapper.className = className;
             
             // Add debugging and ensure we use current handlers
-            wrapper.addEventListener('mouseenter', (e) => {
+            wrapper.addEventListener('mouseenter', (event: Event) => {
                 console.log('🎯 mouseenter event fired on wrapper');
                 console.log('🎯 onWordHoverStart function type:', typeof onWordHoverStart);
-                if (typeof onWordHoverStart === 'function') {
-                    onWordHoverStart(e);
-                } else {
-                    console.error('🎯 onWordHoverStart is not a function!', onWordHoverStart);
+                console.log('🎯 onWordHoverStart function name:', onWordHoverStart.name);
+                console.log('🎯 About to call onWordHoverStart with event:', event);
+                try {
+                    onWordHoverStart(event as MouseEvent);
+                    console.log('🎯 onWordHoverStart call completed successfully');
+                } catch (error) {
+                    console.error('🎯 Error in onWordHoverStart:', error);
+                    console.error('🎯 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
                 }
             });
             wrapper.addEventListener('mouseleave', (e) => {
@@ -244,7 +275,27 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 contextOffset: curOffset,
             };
 
+            // Enhanced diagnostic logging for token wrapping
+            console.log(`🎯 WRAPPING TOKEN:`, {
+                tokenSpelling: token.card.spelling,
+                tokenStart: token.start,
+                tokenEnd: token.end,
+                fragmentText: fragment.node.data,
+                fragmentStart: fragment.start,
+                fragmentEnd: fragment.end,
+                curOffset: curOffset,
+                textAtOffset: text.slice(token.start, token.end),
+                actualTextContent: fragment.node.data
+            });
+
             wrap(fragment.node, wrapper);
+
+            // Verify the wrapper was created correctly
+            console.log(`🎯 WRAPPER CREATED:`, {
+                wrapperText: wrapper.textContent,
+                expectedSpelling: token.card.spelling,
+                match: wrapper.textContent === token.card.spelling
+            });
 
             if (!fragment.hasRuby) {
                 for (const ruby of token.rubies) {
@@ -274,7 +325,10 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 }
             }
 
+            console.log(`🎯 TOKEN WRAPPED: "${fragment.node.data}" for token "${token.card.spelling}"`);
+            console.log(`🎯 BEFORE: curOffset=${curOffset}, fragment.end=${fragment.end}`);
             curOffset = fragment.end;
+            console.log(`🎯 AFTER: curOffset=${curOffset}`);
 
             fragment = fragments[++fragmentIndex];
             if (!fragment) break;

@@ -41,20 +41,20 @@ UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multip
 
 def _get_google_token_object(user_id: str):
     """Return the OAuth token object for the user or None."""
-    logger.info('🔗 [CLERK TOKEN] _get_google_token_object called for user: %s', user_id)
+    # # logger.info('🔗 [CLERK TOKEN] _get_google_token_object called for user: %s', user_id)
     
     if not clerk_client:
         logger.error('🔗 [CLERK TOKEN] ❌ Clerk client not configured')
         return None
     
-    logger.info('🔗 [CLERK TOKEN] ✅ Clerk client available, making API call...')
+    # # logger.info('🔗 [CLERK TOKEN] ✅ Clerk client available, making API call...')
     
     try:
         import threading
         import time
         
-        logger.info('🔗 [CLERK TOKEN] 🚀 Calling clerk_client.users.get_o_auth_access_token...')
-        logger.info('🔗 [CLERK TOKEN] Parameters: user_id=%s, provider=oauth_google', user_id)
+        # # logger.info('🔗 [CLERK TOKEN] 🚀 Calling clerk_client.users.get_o_auth_access_token...')    
+        # # logger.info('🔗 [CLERK TOKEN] Parameters: user_id=%s, provider=oauth_google', user_id)
         
         # Windows-compatible timeout using threading
         result = [None]
@@ -86,13 +86,13 @@ def _get_google_token_object(user_id: str):
             
         tokens = result[0]
         
-        logger.info('🔗 [CLERK TOKEN] ✅ Received response from Clerk API in %.2f seconds', elapsed_time)
-        logger.info('🔗 [CLERK TOKEN] Tokens received: %s', len(tokens) if tokens else 0)
+        # logger.info('🔗 [CLERK TOKEN] ✅ Received response from Clerk API in %.2f seconds', elapsed_time)
+        # logger.info('🔗 [CLERK TOKEN] Tokens received: %s', len(tokens) if tokens else 0)
         
         if tokens and len(tokens) > 0:
             token_obj = tokens[0]
-            logger.info('🔗 [CLERK TOKEN] ✅ Returning first token object')
-            logger.info('🔗 [CLERK TOKEN] Token preview: %s...', str(token_obj.token)[:20] if hasattr(token_obj, 'token') else 'No token attr')
+            # logger.info('🔗 [CLERK TOKEN] ✅ Returning first token object')
+            # logger.info('🔗 [CLERK TOKEN] Token preview: %s...', str(token_obj.token)[:20] if hasattr(token_obj, 'token') else 'No token attr')
             return token_obj
         else:
             logger.warning('🔗 [CLERK TOKEN] ⚠️ No tokens returned from Clerk')

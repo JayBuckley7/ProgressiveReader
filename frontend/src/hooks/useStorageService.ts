@@ -258,7 +258,7 @@ function useStorageService() {
   useEffect(() => {
     if (!clerkUser) return;
 
-    console.log('[🔐 GOOGLE DRIVE AUTH] Setting up auth listener (manual mode - no auto-loading)...');
+    //// console.log('[🔐 GOOGLE DRIVE AUTH] Setting up auth listener (manual mode - no auto-loading)...');
 
     const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
       console.log(`[🔐 GOOGLE DRIVE AUTH] Auth state changed: ${isAuthenticated}`);

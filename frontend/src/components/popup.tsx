@@ -391,14 +391,14 @@ export class Popup {
 
     fadeIn() {
         try {
-            console.log('🔔 [Popup] fadeIn() called');
-            console.log('🔔 [Popup] Element exists:', !!this.#element);
-            console.log('🔔 [Popup] outerStyle exists:', !!this.#outerStyle);
-            console.log('🔔 [Popup] Current element style:', this.#element.style.cssText);
+                //// console.log('🔔 [Popup] fadeIn() called');
+                //// console.log('🔔 [Popup] Element exists:', !!this.#element);
+                //// console.log('🔔 [Popup] outerStyle exists:', !!this.#outerStyle);
+                //// console.log('🔔 [Popup] Current element style:', this.#element.style.cssText);
             
             const currentConfig = getCurrentConfig();
             const disableFade = currentConfig.customPopupCSS?.includes('disable-fade-animation') || currentConfig.disableFadeAnimation;
-            console.log('🔔 [Popup] Fade animation disabled:', disableFade);
+            //// console.log('🔔 [Popup] Fade animation disabled:', disableFade);
             
             if (!disableFade) {
                 this.#outerStyle.transition = 'opacity 60ms ease-in, visibility 60ms';
@@ -407,9 +407,9 @@ export class Popup {
             this.#outerStyle.visibility = 'visible';
             this.isVisible = true;
             
-            console.log('🔔 [Popup] After fadeIn - element style:', this.#element.style.cssText);
-            console.log('🔔 [Popup] After fadeIn - isVisible:', this.isVisible);
-            console.log('🔔 [Popup] Element in DOM:', document.body.contains(this.#element));
+            // console.log('🔔 [Popup] After fadeIn - element style:', this.#element.style.cssText);
+            // console.log('🔔 [Popup] After fadeIn - isVisible:', this.isVisible);
+            // console.log('🔔 [Popup] Element in DOM:', document.body.contains(this.#element));
         } catch (error) {
             console.error('🔔 [Popup] Error in fadeIn:', error);
         }
@@ -521,11 +521,11 @@ export class Popup {
 
     showForWord(word: JpdbWord, mouseX = 0, mouseY = 0) {
         try {
-            console.log('🔔 [Popup] showForWord called with word:', word);
-            console.log('🔔 [Popup] word.jpdbData exists:', !!word.jpdbData);
+            //// console.log('🔔 [Popup] showForWord called with word:', word);
+            //// console.log('🔔 [Popup] word.jpdbData exists:', !!word.jpdbData);
             
             const currentConfig = getCurrentConfig();
-            console.log('🔔 [Popup] Current popup config (showPopupOnHover from getCurrentConfig()):', currentConfig.showPopupOnHover);
+            //// console.log('🔔 [Popup] Current popup config (showPopupOnHover from getCurrentConfig()):', currentConfig.showPopupOnHover);
             
             const data = word.jpdbData;
             

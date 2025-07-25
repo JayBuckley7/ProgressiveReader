@@ -398,9 +398,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, []);
 
-  // Initialize JPDB highlighter
+  // Initialize JPDB highlighter once on mount
   useEffect(() => {
     if (contentRef.current) {
+      console.log('🎯 Initializing JPDB once on component mount');
       initializeJpdb(contentRef.current);
     }
   }, []);
@@ -429,8 +430,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       
       if (contentElement) {
         console.log('🔍 About to call highlightContent on', isTranslated ? 'translated' : 'original', 'content...');
-        // Use longer timeout to ensure React has finished all re-renders
-        const timeoutId = setTimeout(async () => {
+        
+        // Use requestAnimationFrame for more reliable DOM readiness instead of arbitrary timeout
+        const frameId = requestAnimationFrame(async () => {
           try {
             // Reload configuration to ensure latest settings are used
             const config = loadJpdbConfig();
@@ -466,8 +468,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           } catch (error) {
             console.error('❌ Error in highlightContent:', error);
           }
-        }, 300); // Increased timeout to ensure React is done rendering
-        return () => clearTimeout(timeoutId);
+        });
+        return () => cancelAnimationFrame(frameId);
       } else {
         console.warn('⚠️ Could not find .prose element in contentRef');
         console.log('Available elements:', contentRef.current.querySelector('*'));
@@ -1113,26 +1115,16 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   const toggleJpdbHighlight = () => {
     console.log('🎯 JPDB highlight button clicked, current state:', jpdbHighlighted);
-    console.log('🎯 Available functions:', { 
-      initializeJpdb: typeof initializeJpdb, 
-      highlightContent: typeof highlightContent 
-    });
     
     setJpdbHighlighted(prev => {
       const newState = !prev;
       console.log('🎯 Setting JPDB highlight state to:', newState);
       
       // If enabling highlighting, ensure JPDB config is reloaded to get latest settings
-      if (newState && contentRef.current) {
-        console.log('🎯 Re-initializing JPDB with latest settings...');
-        setTimeout(() => {
-          if (contentRef.current) {
-            // Reload configuration first to ensure latest settings are used
-            const config = loadJpdbConfig();
-            console.log('🎯 Reloaded JPDB config:', config);
-            initializeJpdb(contentRef.current);
-          }
-        }, 100);
+      // No need to re-initialize - just reload config since initialization already happened
+      if (newState) {
+        console.log('🎯 Reloading JPDB config for latest settings...');
+        loadJpdbConfig(); // Just reload config, don't re-initialize
       }
       
       return newState;
