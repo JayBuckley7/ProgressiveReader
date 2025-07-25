@@ -34,10 +34,47 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
-  # 4. Run build verification tests against health endpoint only
+  # 4. Create/Update app-config secret with environment variables
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Update App Config Secret"
+    waitFor: ["Push to Artifact Registry"]
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+          echo "🔧 Creating/updating app-config secret from env.json..."
+          
+          # Check if env.json exists
+          if [ ! -f "env.json" ]; then
+            echo "❌ env.json file not found! This is required for app configuration."
+            echo "Available files in current directory:"
+            ls -la
+            exit 1
+          fi
+          
+          # Validate JSON format
+          cat env.json | jq . > /dev/null || (echo "❌ env.json is not valid JSON" && exit 1)
+          
+          # Create or update the secret
+          if gcloud secrets describe app-config --project=$PROJECT_ID >/dev/null 2>&1; then
+            echo "📝 Updating existing app-config secret..."
+            gcloud secrets versions add app-config --data-file=env.json --project=$PROJECT_ID
+          else
+            echo "🆕 Creating new app-config secret..."
+            gcloud secrets create app-config --data-file=env.json --project=$PROJECT_ID
+          fi
+          
+          echo "✅ app-config secret updated successfully"
+          
+          # Verify the secret content (for debugging)
+          echo "🔍 Verifying secret content..."
+          gcloud secrets versions access latest --secret=app-config --project=$PROJECT_ID | jq -r 'keys[]' | head -5
+          echo "✅ Secret verification complete"
+
+  # 5. Run build verification tests against health endpoint only (moved to after secret update)
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Pre-Deploy"
-    waitFor: ["Push to Artifact Registry"]
+    waitFor: ["Update App Config Secret"]
     entrypoint: "bash"
     args:
       - "-c"
@@ -50,7 +87,7 @@ steps:
           curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "Pre-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
           echo "✅ Pre-deployment health check passed"
 
-  # 5. Deploy to Cloud Run
+  # 6. Deploy to Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy to Cloud Run"
     waitFor: ["BVT-Pre-Deploy"]
@@ -74,7 +111,7 @@ steps:
             --timeout 300 \
             --execution-environment gen2
 
-  # 6. Post-deployment verification including OpenAI keys
+  # 7. Post-deployment verification including OpenAI keys and Clerk configuration
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Post-Deploy" 
     waitFor: ["Deploy to Cloud Run"]
@@ -84,15 +121,25 @@ steps:
       - |
           SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
           
-          # Test 1: Health check
+          # Test 1: Health check (now includes Clerk validation)
           HEALTH_CHECK_URL="$$SERVICE_URL/health"
-          echo "Post-deployment BVT 1/2: Checking health at: $$HEALTH_CHECK_URL"
-          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "Post-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
-          echo "✅ Health check passed"
+          echo "Post-deployment BVT 1/3: Checking health at: $$HEALTH_CHECK_URL"
+          HEALTH_RESPONSE=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$$HEALTH_CHECK_URL") || (echo "Post-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
+          echo "Health check response: $$HEALTH_RESPONSE"
+          
+          # Validate Clerk configuration from health check
+          CLERK_HEALTHY=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*true' | wc -l)
+          if [ "$$CLERK_HEALTHY" -eq 1 ]; then
+            echo "✅ Health check passed (including Clerk configuration)"
+          else
+            echo "❌ BVT failed - Clerk configuration issue detected in health check"
+            echo "Health response: $$HEALTH_RESPONSE"
+            exit 1
+          fi
           
           # Test 2: OpenAI key configuration check
           OPENAI_CHECK_URL="$$SERVICE_URL/api/openai_key_configured"
-          echo "Post-deployment BVT 2/2: Checking OpenAI key configuration at: $$OPENAI_CHECK_URL"
+          echo "Post-deployment BVT 2/3: Checking OpenAI key configuration at: $$OPENAI_CHECK_URL"
           OPENAI_RESPONSE=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$$OPENAI_CHECK_URL") || (echo "Post-deployment BVT failed - could not reach $$OPENAI_CHECK_URL" && exit 1)
           
           # Parse and validate the response
@@ -106,6 +153,22 @@ steps:
             echo "❌ Post-deployment BVT failed - OpenAI keys not properly configured"
             echo "Expected: openai_key_configured=true and pool_size>0"
             echo "Got: $$OPENAI_RESPONSE"
+            exit 1
+          fi
+          
+          # Test 3: Specific Clerk publishable key validation
+          echo "Post-deployment BVT 3/3: Validating Clerk publishable key is available for frontend"
+          CLERK_PUB_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
+          CLERK_SECRET_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
+          
+          if [ "$$CLERK_PUB_CONFIGURED" -eq 1 ] && [ "$$CLERK_SECRET_CONFIGURED" -eq 1 ]; then
+            echo "✅ Clerk keys configured correctly (both publishable and secret keys present)"
+          else
+            echo "❌ Post-deployment BVT failed - Missing Clerk Publishable Key or Secret Key"
+            echo "This is likely due to app-config secret not being properly mounted or parsed"
+            echo "clerk_publishable_key_configured: $$CLERK_PUB_CONFIGURED (should be 1)"
+            echo "clerk_secret_key_configured: $$CLERK_SECRET_CONFIGURED (should be 1)"
+            echo "Full health response: $$HEALTH_RESPONSE"
             exit 1
           fi
           

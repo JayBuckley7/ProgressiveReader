@@ -124,6 +124,47 @@ export function setWordHoverHandlers(
     console.log('🔧 Handlers set, onWordHoverStart is now:', typeof onWordHoverStart);
 }
 
+// List of super common words that should not be colored (particles, basic grammar, etc.)
+const COMMON_WORDS = new Set([
+    // Basic particles
+    'は', 'が', 'を', 'に', 'で', 'と', 'の', 'から', 'まで', 'より', 'へ',
+    // Common conjunctions and grammar
+    'です', 'である', 'だ', 'である', 'ます', 'ました', 'だった', 'でした',
+    // Basic auxiliary words
+    'て', 'た', 'で', 'だ', 'な', 'よ', 'ね', 'か', 'さ', 'ぞ', 'わ',
+    // Common pronouns and basic words
+    'これ', 'それ', 'あれ', 'この', 'その', 'あの', 'ここ', 'そこ', 'あそこ',
+    // Numbers and basic counters (super basic ones)
+    '一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
+    // Basic punctuation representations
+    '、', '。', '！', '？', '（', '）', '「', '」'
+]);
+
+// Helper function to get JLPT-based color class
+function getJlptColorClass(token: Token): string {
+    const word = token.card.spelling;
+    
+    // Check if it's a super common word first
+    if (COMMON_WORDS.has(word)) {
+        return 'common-word';
+    }
+    
+    // Check for JLPT level from the token data
+    const jlptLevel = (token as any).jlpt;
+    if (jlptLevel) {
+        // Convert JLPT level to CSS class (e.g., "5" -> "jlpt-n5")
+        return `jlpt-n${jlptLevel}`;
+    }
+    
+    // Check word length for additional common word heuristics
+    if (word.length === 1 && /[はがをにでとのからまでよりへ]/.test(word)) {
+        return 'common-word';
+    }
+    
+    // Unknown JLPT level
+    return 'jlpt-unknown';
+}
+
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
     let fragmentIndex = 0;
     let curOffset = 0;
@@ -157,8 +198,10 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 splitFragment(fragments, fragmentIndex, token.end);
             }
 
-            // Create class name exactly like the original implementation
-            const className = `jpdb-word ${token.card.state.join(' ')}`;
+            // Create class name with JLPT-based coloring
+            const baseClassName = `jpdb-word ${token.card.state.join(' ')}`;
+            const jlptColorClass = getJlptColorClass(token);
+            const className = `${baseClassName} ${jlptColorClass}`;
             
             const wrapper = (
                 token.rubies.length > 0 && !fragment.hasRuby ? 
@@ -238,10 +281,12 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
         }
     }
 
-    // Wrap any left-over fragments in unparsed wrappers
-    for (const fragment of fragments.slice(fragmentIndex)) {
+    // After a text, add any remaining unparsed fragments
+    while (fragment) {
         const unparsedWrapper = document.createElement('span');
         unparsedWrapper.className = 'jpdb-word unparsed';
         wrap(fragment.node, unparsedWrapper);
+
+        fragment = fragments[++fragmentIndex];
     }
 } 

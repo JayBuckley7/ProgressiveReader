@@ -1,5 +1,5 @@
 // Import dependencies - no direct CSS import needed
-import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers } from './content/parse';
+import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers, resetColorCounter } from './content/parse';
 import { getCurrentConfig, loadConfig, parseText, JpHighlighterConfig } from './content/api-adapter';
 import { JpdbWord, getJpdbData } from './content/word';
 import { nonNull } from './utils/util';
@@ -189,6 +189,9 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
 // Main function to apply JPDB highlighting to a content element
 export async function highlightContent(contentElement: HTMLElement): Promise<void> {
     Logger.log('highlightContent called', contentElement);
+    
+    // Reset color counter for fresh color rotation
+    resetColorCounter();
     
     let currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
     Logger.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));

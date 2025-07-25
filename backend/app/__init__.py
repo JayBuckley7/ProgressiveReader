@@ -19,7 +19,7 @@ class FilterImageRequests(logging.Filter):
 
 
 def create_app(config_class=Config) -> Flask:
-    load_dotenv()
+    load_dotenv()new bvt
 
     # Load additional configuration from a mounted secret if available
     secret_path = os.environ.get("APP_CONFIG_PATH", "/secrets/env.json")
@@ -100,7 +100,30 @@ def create_app(config_class=Config) -> Flask:
     # --- Health Check Endpoint ---
     @app.route('/health')
     def health_check():
-        return jsonify({"status": "healthy"}), 200
+        health_status = {
+            "status": "healthy",
+            "clerk_secret_key_configured": bool(os.environ.get("CLERK_SECRET_KEY")),
+            "clerk_publishable_key_configured": bool(os.environ.get("VITE_CLERK_PUBLISHABLE_KEY"))
+        }
+        
+        # Add more details for debugging
+        if os.environ.get("CLERK_SECRET_KEY"):
+            clerk_secret = os.environ.get("CLERK_SECRET_KEY")
+            health_status["clerk_secret_key_length"] = len(clerk_secret)
+            health_status["clerk_secret_key_prefix"] = clerk_secret[:8] + "..." if len(clerk_secret) > 8 else clerk_secret
+        
+        if os.environ.get("VITE_CLERK_PUBLISHABLE_KEY"):
+            clerk_pub = os.environ.get("VITE_CLERK_PUBLISHABLE_KEY")
+            health_status["clerk_publishable_key_length"] = len(clerk_pub)
+            health_status["clerk_publishable_key_prefix"] = clerk_pub[:8] + "..." if len(clerk_pub) > 8 else clerk_pub
+        
+        # Overall Clerk health status
+        clerk_healthy = health_status["clerk_secret_key_configured"] and health_status["clerk_publishable_key_configured"]
+        health_status["clerk_overall_healthy"] = clerk_healthy
+        
+        # Return 500 if Clerk is not properly configured
+        status_code = 200 if clerk_healthy else 500
+        return jsonify(health_status), status_code
     # --- End Health Check Endpoint ---
 
     # --- Load OpenAI API keys BEFORE importing blueprints ---
