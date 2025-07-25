@@ -61,21 +61,12 @@ jobs:
             echo "ENVIRONMENT=dev"                  >> $GITHUB_OUTPUT
           fi
 
-      - name: Load secret env.json
-        id: secrets
-        run: |
-          gcloud secrets versions access latest --secret PR-app-config > env.json
-          # Load most variables as regular env vars (exclude arrays and complex objects)
-          cat env.json | jq -r 'to_entries | map(select(.value | type != "array")) | map("\(.key)=\(.value)") | .[]' >> $GITHUB_ENV
-          # Handle OPENAI_API_KEYS specially to preserve JSON format
-          echo "OPENAI_API_KEYS_JSON=$(cat env.json | jq -c '.OPENAI_API_KEYS')" >> $GITHUB_ENV
-
       - name: Submit build to Cloud Build
         run: |
           unset SERVICE_URL || true
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
-            --substitutions=_COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }},_VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY,_VITE_GDRIVE_CLIENT_ID=$VITE_GDRIVE_CLIENT_ID,_VITE_GAPI_KEY=$VITE_GAPI_KEY,_CLERK_SECRET_KEY=$CLERK_SECRET_KEY,_OPENAI_API_KEYS_JSON=$OPENAI_API_KEYS_JSON \
+            --substitutions=_COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \
             --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .
