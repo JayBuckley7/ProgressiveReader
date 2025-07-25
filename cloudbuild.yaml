@@ -157,7 +157,7 @@ steps:
             echo "✅ Clerk keys configured correctly (both publishable and secret keys present)"
           else
             echo "❌ Post-deployment BVT failed - Missing Clerk Publishable Key or Secret Key"
-            echo "This is likely due to app-config secret not being properly mounted or parsed"
+            echo "This is likely due to PR-app-config secret not being properly mounted or parsed"
             echo "clerk_publishable_key_configured: $$CLERK_PUB_CONFIGURED (should be 1)"
             echo "clerk_secret_key_configured: $$CLERK_SECRET_CONFIGURED (should be 1)"
             echo "Full health response: $$HEALTH_RESPONSE"
