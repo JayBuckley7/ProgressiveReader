@@ -22,7 +22,7 @@ steps:
         echo "🔑 [BUILD DEBUG] VITE_CLERK_PUBLISHABLE_KEY length: $(cat /workspace/vite_clerk_key.txt | wc -c)"
         echo "🔑 [BUILD DEBUG] VITE_GDRIVE_CLIENT_ID: $(cat /workspace/vite_gdrive_client.txt | cut -c1-20)..."
         echo "🔑 [BUILD DEBUG] VITE_GAPI_KEY: $(cat /workspace/vite_gapi_key.txt | cut -c1-15)..."
-        
+        echo "🔑 [BUILD DEBUG] CLERK_SECRET_KEY: $(cat /workspace/clerk_secret.txt | cut -c1-10)...$(cat /workspace/clerk_secret.txt | tail -c6)"
         echo "✅ Frontend environment variables extracted and logged"
 
   # 2. Build Docker image and tag with commit SHA and latest
