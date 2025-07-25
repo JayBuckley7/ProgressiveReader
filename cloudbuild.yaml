@@ -134,7 +134,7 @@ steps:
           # Wait for deployment to be ready with explicit timeout
           echo "⏳ Waiting for deployment to be ready..."
           timeout 300 bash -c 'while true; do
-            STATUS=$$(gcloud run services describe $${_SERVICE_NAME} --region us-central1 --format="value(status.conditions[0].status)")
+            STATUS=$$(gcloud run services describe progressive-reader --region us-central1 --format="value(status.conditions[0].status)")
             if [ "$$STATUS" = "True" ]; then
               echo "✅ Deployment ready"
               break
@@ -145,7 +145,7 @@ steps:
           
           # Promote to serve traffic
           echo "🚀 Promoting new revision to serve traffic..."
-          gcloud run services update-traffic ${_SERVICE_NAME} --to-latest --region us-central1
+          gcloud run services update-traffic progressive-reader --to-latest --region us-central1
 
   # 8. Post-deployment verification including OpenAI keys and Clerk configuration
   - name: "gcr.io/cloud-builders/gcloud"
