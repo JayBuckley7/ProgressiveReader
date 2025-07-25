@@ -1,5 +1,5 @@
 steps:
-  # 1. Load frontend environment variables from PR-app-config secret
+syn  # 1. Load frontend environment variables from PR-app-config secret
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Load Frontend Env Vars"
     entrypoint: "bash"
@@ -113,39 +113,39 @@ steps:
     args:
       - "-c"
       - |
-                     # Deploy to Cloud Run with explicit timeout and no-wait flag
-           gcloud run deploy ${_SERVICE_NAME} \
-             --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
-             --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-             --set-secrets /secrets/env.json=PR-app-config:latest \
-             --region us-central1 \
-             --platform managed \
-             --allow-unauthenticated \
-             --set-env-vars APP_ENV=${_ENVIRONMENT} \
-             --vpc-connector floof-connector \
-             --vpc-egress private-ranges-only \
-             --memory 1Gi \
-             --concurrency 80 \
-             --max-instances 40 \
-             --timeout 300 \
-             --execution-environment gen2 \
-             --no-traffic
-           
-           # Wait for deployment to be ready with explicit timeout
-           echo "⏳ Waiting for deployment to be ready..."
-           timeout 300 bash -c 'while true; do
-             STATUS=$(gcloud run services describe ${_SERVICE_NAME} --region us-central1 --format="value(status.conditions[0].status)")
-             if [ "$STATUS" = "True" ]; then
-               echo "✅ Deployment ready"
-               break
-             fi
-             echo "⏳ Still waiting... (status: $STATUS)"
-             sleep 10
-           done'
-           
-           # Promote to serve traffic
-           echo "🚀 Promoting new revision to serve traffic..."
-           gcloud run services update-traffic ${_SERVICE_NAME} --to-latest --region us-central1
+          # Deploy to Cloud Run with explicit timeout and no-wait flag
+          gcloud run deploy ${_SERVICE_NAME} \
+            --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+            --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+            --set-secrets /secrets/env.json=PR-app-config:latest \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars APP_ENV=${_ENVIRONMENT} \
+            --vpc-connector floof-connector \
+            --vpc-egress private-ranges-only \
+            --memory 1Gi \
+            --concurrency 80 \
+            --max-instances 40 \
+            --timeout 300 \
+            --execution-environment gen2 \
+            --no-traffic
+          
+          # Wait for deployment to be ready with explicit timeout
+          echo "⏳ Waiting for deployment to be ready..."
+          timeout 300 bash -c 'while true; do
+            STATUS=$(gcloud run services describe ${_SERVICE_NAME} --region us-central1 --format="value(status.conditions[0].status)")
+            if [ "$STATUS" = "True" ]; then
+              echo "✅ Deployment ready"
+              break
+            fi
+            echo "⏳ Still waiting... (status: $STATUS)"
+            sleep 10
+          done'
+          
+          # Promote to serve traffic
+          echo "🚀 Promoting new revision to serve traffic..."
+          gcloud run services update-traffic ${_SERVICE_NAME} --to-latest --region us-central1
 
   # 8. Post-deployment verification including OpenAI keys and Clerk configuration
   - name: "gcr.io/cloud-builders/gcloud"
