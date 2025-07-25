@@ -19,7 +19,7 @@ class FilterImageRequests(logging.Filter):
 
 
 def create_app(config_class=Config) -> Flask:
-    load_dotenv()new bvt
+    load_dotenv()
 
     # Load additional configuration from a mounted secret if available
     secret_path = os.environ.get("APP_CONFIG_PATH", "/secrets/env.json")
