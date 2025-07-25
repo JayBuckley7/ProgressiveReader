@@ -29,7 +29,7 @@ const cookieKeys = {
 // Tab configuration with icons
 const tabs = [
   { id: "general", label: "General", icon: "⚙️" },
-  { id: "jlpt", label: "JLPT", icon: "🎌" },
+  { id: "highlight", label: "Highlighter", icon: "🎌" },
   { id: "accessibility", label: "Accessibility", icon: "♿" },
 ] as const;
 
@@ -40,7 +40,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 }) {
     const { settings, updateSettings } = useSettings();
     const { saveSettings, loadSettings, isAuthenticated } = useAppData();
-    const [activeTab, setActiveTab] = useState<"general" | "jlpt" | "accessibility">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "highlight" | "accessibility">("general");
     const [isCloudLoading, setIsCloudLoading] = useState(false);
     const [serverKeyAvailable, setServerKeyAvailable] = useState<boolean | null>(null);
     const [isApiConfigExpanded, setIsApiConfigExpanded] = useState(false);
@@ -422,81 +422,117 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
             </div>
           )}
 
-          {activeTab === "jlpt" && (
+          {activeTab === "highlight" && (
             <div className="space-y-6 animate-fade-in">
-              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB Integration</h3>
-                <TextInput
-                  label="JPDB API Key"
-                  value={jpdbApiKey}
-                  onChange={setJpdbApiKey}
-                  placeholder="Enter your JPDB API key"
-                  type="password"
-                />
-                
-                <CheckboxInput
-                  label="Use Offline Parser"
-                  description="Always use offline parser instead of JPDB API, even when API key is available"
-                  checked={settings.useOfflineParser ?? false}
-                  onChange={v => updateSettings({ useOfflineParser: v })}
-                />
-
-
-
+              {/* Parser toggle */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Parser
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="parser"
+                      value="google"
+                      checked={settings.useOfflineParser}
+                      onChange={() => updateSettings({ useOfflineParser: true })}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm">Google Translate</span>
+                  </label>
+                  <label
+                    className={`flex items-center gap-2 cursor-pointer ${!jpdbApiKey ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="parser"
+                      value="jpdb"
+                      checked={!settings.useOfflineParser}
+                      onChange={() => updateSettings({ useOfflineParser: false })}
+                      disabled={!jpdbApiKey}
+                      className="text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-sm">JPDB</span>
+                  </label>
+                </div>
+                {!jpdbApiKey && (
+                  <p className="text-xs text-purple-600 dark:text-purple-400">
+                    Enter a JPDB API key below to enable JPDB parsing.
+                  </p>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TextInput
-                  label="Mining Deck ID"
-                  value={localState.jpdbDeckId}
-                  onChange={v => handleChange("jpdbDeckId", v)}
-                  placeholder="e.g., 12345"
-                />
-                <TextInput
-                  label="FORQ Deck ID"
-                  value={localState.forqDeckId}
-                  onChange={v => handleChange("forqDeckId", v)}
-                  placeholder="e.g., 67890"
-                />
-                <TextInput
-                  label="Blacklist Deck ID"
-                  value={localState.blacklistDeckId}
-                  onChange={v => handleChange("blacklistDeckId", v)}
-                  placeholder="e.g., 11111"
-                />
-                <TextInput
-                  label="Never Forget Deck ID"
-                  value={localState.neverForgetDeckId}
-                  onChange={v => handleChange("neverForgetDeckId", v)}
-                  placeholder="e.g., 22222"
-                />
-                            </div>
+              {/* JPDB API key visible when JPDB parser selected or key missing */}
+              {(!settings.useOfflineParser || !jpdbApiKey) && (
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB API Key</h3>
+                  <TextInput
+                    label="JPDB API Key"
+                    value={jpdbApiKey}
+                    onChange={setJpdbApiKey}
+                    placeholder="Enter your JPDB API key"
+                    type="password"
+                  />
+                </div>
+              )}
 
-              <TextInput
-                label="Context Sentences"
-                type="number"
-                value={String(localState.contextSentenceCount)}
-                onChange={v => handleChange("contextSentenceCount", parseInt(v) || 1)}
-                min="1"
-                max="5"
-              />
+              {!settings.useOfflineParser && jpdbApiKey && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Mining Deck ID"
+                      value={localState.jpdbDeckId}
+                      onChange={v => handleChange('jpdbDeckId', v)}
+                      placeholder="e.g., 12345"
+                    />
+                    <TextInput
+                      label="FORQ Deck ID"
+                      value={localState.forqDeckId}
+                      onChange={v => handleChange('forqDeckId', v)}
+                      placeholder="e.g., 67890"
+                    />
+                    <TextInput
+                      label="Blacklist Deck ID"
+                      value={localState.blacklistDeckId}
+                      onChange={v => handleChange('blacklistDeckId', v)}
+                      placeholder="e.g., 11111"
+                    />
+                    <TextInput
+                      label="Never Forget Deck ID"
+                      value={localState.neverForgetDeckId}
+                      onChange={v => handleChange('neverForgetDeckId', v)}
+                      placeholder="e.g., 22222"
+                    />
+                  </div>
 
-              <div className="space-y-3">
-                <CheckboxInput
-                  label="Add to FORQ When Mining"
-                  description="Automatically add mined cards to your FORQ deck"
-                  checked={localState.autoAddToFORQ}
-                  onChange={v => handleChange("autoAddToFORQ", v)}
-                />
-                <CheckboxInput
-                  label="Prefer Due Cards"
-                  description="Prioritize due cards in translation suggestions"
-                  checked={localState.preferDueCards}
-                  onChange={v => handleChange("preferDueCards", v)}
-                />
-                            </div>
-                        </div>
-                    )}
+                  <TextInput
+                    label="Context Sentences"
+                    type="number"
+                    value={String(localState.contextSentenceCount)}
+                    onChange={v => handleChange('contextSentenceCount', parseInt(v) || 1)}
+                    min="1"
+                    max="5"
+                  />
+
+                  <div className="space-y-3">
+                    <CheckboxInput
+                      label="Add to FORQ When Mining"
+                      description="Automatically add mined cards to your FORQ deck"
+                      checked={localState.autoAddToFORQ}
+                      onChange={v => handleChange('autoAddToFORQ', v)}
+                    />
+                    <CheckboxInput
+                      label="Prefer Due Cards"
+                      description="Prioritize due cards in translation suggestions"
+                      checked={localState.preferDueCards}
+                      onChange={v => handleChange('preferDueCards', v)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {activeTab === "accessibility" && (
             <div className="space-y-6 animate-fade-in">
