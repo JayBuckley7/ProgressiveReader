@@ -1,7 +1,7 @@
 // Dictionary Initializer Service - handles pre-indexing during app startup
 import { indexedDbService } from './indexedDbService';
 import { dictionaryWorkerManager } from './dictionaryWorkerManager';
-import { getDictionaryArchiveEntries, getDictionaryArchiveJson } from './jitendexService';
+import { importDictionaryToIndexedDb } from './dictionaryImporter';
 import type { ProgressCallback } from './dictionaryWorkerManager';
 
 export interface InitializationStatus {
@@ -132,22 +132,35 @@ class DictionaryInitializer {
         uint8Array.set(chunk, offset);
         offset += chunk.length;
       }
+
+      // Import dictionary into IndexedDB
+      this.updateProgress({ stage: 'importing_database', progress: 15 });
+      await importDictionaryToIndexedDb(arrayBuffer, (prog) => {
+        const scaled = 15 + (prog.progress * 0.4); // 15-55%
+        this.updateProgress({
+          stage: 'importing_database',
+          progress: scaled,
+          processedFiles: prog.processedFiles,
+          totalFiles: prog.totalFiles,
+          totalEntries: prog.totalEntries
+        });
+      });
       
       // Initialize worker
-      this.updateProgress({ stage: 'initializing_worker', progress: 15 });
+      this.updateProgress({ stage: 'initializing_worker', progress: 60 });
       await dictionaryWorkerManager.initialize();
-      
+
       // Load dictionary in worker
-      this.updateProgress({ stage: 'loading_archive', progress: 20 });
+      this.updateProgress({ stage: 'loading_archive', progress: 65 });
       const workerResult = await dictionaryWorkerManager.loadDictionary(arrayBuffer);
       console.log(`Worker loaded ${workerResult.totalFiles} files`);
-      
+
       // Build optimized index in background
-      this.updateProgress({ stage: 'building_index', progress: 25 });
-      
+      this.updateProgress({ stage: 'building_index', progress: 70 });
+
       const indexResult = await dictionaryWorkerManager.buildIndex((progress) => {
-        // Forward progress from worker, scaling it to 25-95% range
-        const scaledProgress = 25 + (progress.progress * 0.7);
+        // Forward progress from worker, scaling it to 70-95% range
+        const scaledProgress = 70 + (progress.progress * 0.25);
         this.updateProgress({
           ...progress,
           progress: scaledProgress
