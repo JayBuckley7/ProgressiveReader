@@ -89,7 +89,7 @@ steps:
             --set-env-vars APP_ENV=${_ENVIRONMENT} \
             --vpc-connector floof-connector \
             --vpc-egress private-ranges-only \
-            --memory 512Mi \
+            --memory 1Gi \
             --concurrency 80 \
             --max-instances 40 \
             --timeout 300 \
