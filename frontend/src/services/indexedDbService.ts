@@ -158,6 +158,87 @@ class IndexedDbService {
   }
 
   /**
+   * Incrementally add entries to the search index (for streaming imports)
+   */
+  async addToSearchIndex(entries: DictionaryEntry[]): Promise<void> {
+    if (!this.db) await this.initialize();
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.SEARCH_INDEX_STORE], 'readwrite');
+      const store = transaction.objectStore(this.SEARCH_INDEX_STORE);
+
+      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => resolve();
+
+      // Build term mappings for this batch
+      const termToEntryIds = new Map<string, string[]>();
+      
+      entries.forEach(entry => {
+        // Index by term
+        if (!termToEntryIds.has(entry.term)) {
+          termToEntryIds.set(entry.term, []);
+        }
+        termToEntryIds.get(entry.term)!.push(entry.id);
+
+        // Index by reading if different
+        if (entry.reading && entry.reading !== entry.term) {
+          if (!termToEntryIds.has(entry.reading)) {
+            termToEntryIds.set(entry.reading, []);
+          }
+          termToEntryIds.get(entry.reading)!.push(entry.id);
+        }
+      });
+
+      // Process each term
+      let processedTerms = 0;
+      const totalTerms = termToEntryIds.size;
+
+      if (totalTerms === 0) {
+        resolve();
+        return;
+      }
+
+      termToEntryIds.forEach((newEntryIds, term) => {
+        // First, try to get existing index entry
+        const getRequest = store.get(term);
+        
+        getRequest.onsuccess = () => {
+          const existingIndex = getRequest.result;
+          
+          if (existingIndex) {
+            // Merge with existing entry IDs
+            const mergedIds = [...existingIndex.entryIds, ...newEntryIds];
+            const updatedIndex: SearchIndex = { term, entryIds: mergedIds };
+            const putRequest = store.put(updatedIndex);
+            
+            putRequest.onsuccess = () => {
+              processedTerms++;
+              if (processedTerms === totalTerms) {
+                resolve();
+              }
+            };
+            putRequest.onerror = () => reject(putRequest.error);
+          } else {
+            // Create new index entry
+            const newIndex: SearchIndex = { term, entryIds: newEntryIds };
+            const addRequest = store.add(newIndex);
+            
+            addRequest.onsuccess = () => {
+              processedTerms++;
+              if (processedTerms === totalTerms) {
+                resolve();
+              }
+            };
+            addRequest.onerror = () => reject(addRequest.error);
+          }
+        };
+        
+        getRequest.onerror = () => reject(getRequest.error);
+      });
+    });
+  }
+
+  /**
    * Fast lookup using search index
    */
   async lookupTerm(term: string): Promise<DictionaryEntry[]> {

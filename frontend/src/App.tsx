@@ -23,8 +23,7 @@ import { LoginModal } from "./components/LoginModal";
 import { AppDataProvider, useAppData } from "./contexts/AppDataContext";
 import { gDriveService } from "./services/gdriveService";
 import { AdminPage } from "./components/AdminPage";
-import { dictionaryInitializer } from "./services/dictionaryInitializer";
-import DictionaryInitProgress from "./components/DictionaryInitProgress";
+
 
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -138,19 +137,7 @@ function AppContent() {
     }
   }, [isClerkLoaded, isClerkSignedIn]);
 
-  // Start dictionary initialization when app loads (only if offline parser is enabled)
-  useEffect(() => {
-    const isOfflineParserEnabled = localStorage.getItem('useOfflineParser') === 'true';
-    
-    if (isOfflineParserEnabled) {
-      console.log('🔄 Starting dictionary pre-indexing on app startup (offline parser enabled)...');
-      dictionaryInitializer.initialize().catch(error => {
-        console.error('Failed to initialize dictionary:', error);
-      });
-    } else {
-      console.log('📱 Skipping dictionary pre-indexing (offline parser disabled)');
-    }
-  }, []); // Empty dependency array - runs once on mount
+  // Offline parser functionality is now handled directly by individual services as needed
 
   return (
     <SettingsProvider>
@@ -171,7 +158,6 @@ function AppContent() {
         </SignedOut>
         <Footer />
         <DangerZone />
-        <DictionaryInitProgress />
         <Toaster />
       </div>
     </SettingsProvider>

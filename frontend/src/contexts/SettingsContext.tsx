@@ -226,6 +226,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = (updates: Partial<Settings>) => {
     console.log("Updating settings:", updates);
+    
     setCurrentSettings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
@@ -247,8 +248,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if ('cacheTranslations' in updates) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
       }
+      
       if ('useOfflineParser' in updates) {
         localStorage.setItem('useOfflineParser', String(updated.useOfflineParser));
+        
+        if (updated.useOfflineParser && !prev.useOfflineParser) {
+          console.log('✅ Offline parser enabled');
+        }
       }
 
       // Auto-save to cloud with debouncing
@@ -353,6 +359,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
     styleElement.textContent = settings.customCss;
   }, [settings?.customCss]);
+
+
 
   return (
     <SettingsContext.Provider value={{

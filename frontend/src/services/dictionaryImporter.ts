@@ -30,10 +30,11 @@ export async function importDictionaryToIndexedDb(
 
   let processedFiles = 0;
   let totalEntries = 0;
-  const allEntries: DictionaryEntry[] = [];
 
+  // Process each term bank file and stream to IndexedDB immediately
   for (const termBankFile of termBankFiles) {
     const termBankData = await getDictionaryArchiveJson<any[]>(entries, termBankFile.filename);
+    const batch: DictionaryEntry[] = [];
 
     for (let i = 0; i < termBankData.length; i++) {
       const entry = termBankData[i];
@@ -52,9 +53,15 @@ export async function importDictionaryToIndexedDb(
         sourceFile: termBankFile.filename
       };
 
-      allEntries.push(processed);
+      batch.push(processed);
       totalEntries++;
     }
+
+    // Store this batch directly to IndexedDB (streaming approach)
+    await indexedDbService.storeDictionaryEntries(batch);
+    
+    // Build search index incrementally for this batch
+    await indexedDbService.addToSearchIndex(batch);
 
     processedFiles++;
     if (progressCallback) {
@@ -63,8 +70,7 @@ export async function importDictionaryToIndexedDb(
     }
   }
 
-  await indexedDbService.storeDictionaryEntries(allEntries);
-  await indexedDbService.buildSearchIndex(allEntries);
+  // Mark indexing as complete
   await indexedDbService.markIndexingComplete();
 
   return { totalEntries };

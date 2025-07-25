@@ -17,6 +17,9 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 openai_key_pool: list[str] = []
 _key_index = 0
 
+# --- Google Translate API Key ---
+google_translate_api_key: str | None = None
+
 
 def get_next_openai_key() -> str | None:
     """Return the next key from the pool using round-robin rotation."""
@@ -70,6 +73,13 @@ def openai_key_configured():
                     'pool_size': len(openai_key_pool)})
 
 
+@api_bp.route('/google_translate_configured', methods=['GET'])
+def google_translate_configured():
+    """Return whether the server has Google Translate API key configured."""
+    configured = bool(google_translate_api_key)
+    return jsonify({'google_translate_configured': configured})
+
+
 @api_bp.route('/openai_keys/add', methods=['POST'])
 @require_admin
 def add_openai_key():
@@ -108,7 +118,7 @@ def list_openai_keys():
 
 @api_bp.route('/translate', methods=['POST'])
 def translate_content():
-    """Translate HTML content with OpenAI and return JSON or stream events."""
+    """Translate HTML content with OpenAI or Google Translate and return JSON or stream events."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -121,11 +131,82 @@ def translate_content():
     cefr_level = data.get('cefr_level')
     stream = data.get('stream', False)
     use_cefr = data.get('use_cefr', False) # Get use_cefr flag
+    translation_service = data.get('translation_service', 'openai')  # 'openai' or 'google'
 
     if content is None or target_language is None:
         return jsonify({"error": "Missing required fields: content, target_lang"}), 400
 
+    # Handle Google Translate service
+    if translation_service == 'google':
+        if not google_translate_api_key:
+            return jsonify({'error': 'Google Translate API key not configured'}), 400
+        
+        current_app.logger.info(
+            f"--- Google Translate Request --- Lang: {target_language}"
+        )
+        
+        try:
+            # Strip HTML tags for Google Translate since it works with plain text
+            import re
+            clean_content = re.sub(r'<[^>]+>', '', content)
+            
+            # Prepare request to Google Cloud Translate API
+            translate_url = 'https://translation.googleapis.com/language/translate/v2'
+            
+            # Map common language codes to Google Translate format
+            lang_mapping = {
+                'English': 'en',
+                'Japanese': 'ja',
+                'Chinese': 'zh',
+                'Spanish': 'es',
+                'French': 'fr',
+                'German': 'de',
+                'Korean': 'ko',
+                'Russian': 'ru',
+                'Portuguese': 'pt',
+                'Italian': 'it'
+            }
+            
+            # Convert target language to Google Translate format
+            target_lang_code = lang_mapping.get(target_language, target_language.lower()[:2])
+            
+            payload = {
+                'q': clean_content,
+                'target': target_lang_code,
+                'source': 'auto',  # Auto-detect source language
+                'key': google_translate_api_key,
+                'format': 'text'
+            }
+            
+            response = requests.post(translate_url, data=payload)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            if 'data' not in result or 'translations' not in result['data']:
+                return jsonify({"error": "Invalid response from Google Translate API"}), 500
+            
+            translation = result['data']['translations'][0]
+            translated_text = translation['translatedText']
+            
+            # Wrap the translated text back in basic HTML structure if the original had tags
+            if '<' in content and '>' in content:
+                translated_text = f"<p>{translated_text}</p>"
+            
+            current_app.logger.info(
+                f"Google Translate successful. First 100 chars: {translated_text[:100]}..."
+            )
+            
+            return jsonify({"translated_text": translated_text})
+            
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error calling Google Translate API: {e}", exc_info=True)
+            return jsonify({"error": f"Error during translation: {e}"}), 500
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error with Google Translate: {e}", exc_info=True)
+            return jsonify({"error": f"Error during translation: {e}"}), 500
 
+    # Handle OpenAI service (original logic)
     if use_server_key:
         api_key_to_use = user_api_key or get_next_openai_key() or current_app.config.get('OPENAI_API_KEY')
     else:

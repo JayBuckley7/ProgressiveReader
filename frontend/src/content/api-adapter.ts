@@ -3,7 +3,9 @@ import { showError, Canceled } from '../utils/util';
 import { reverseIndex } from './parse';
 import { Keybind } from '../types';
 import { vocabBank } from '../services/vocabBank';
-import { parseOffline } from '../utils/offlineParser';
+import { parseWithGoogleTranslate } from '../utils/googleTranslateParser';
+
+
 
 // Configuration interface
 export interface JpHighlighterConfig {
@@ -205,17 +207,17 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
         console.log('parseText called with', textSegments.length, 'segments');
 
         if (currentConfig.useOfflineParser) {
-            console.log('Using offline parser (toggle enabled)');
+            console.log('Using offline parser with Google Translate (toggle enabled)');
             const text = textSegments.join(' ');
-            const tokens = await parseOffline(text);
+            const tokens = await parseWithGoogleTranslate(text);
             vocabBank.updateFromTokens(tokens);
             return tokens;
         }
         
         if (!currentConfig.apiKey) {
-            console.log('No API key available, falling back to offline parser');
+            console.log('No JPDB API key available, falling back to Google Translate parser');
             const text = textSegments.join(' ');
-            const tokens = await parseOffline(text);
+            const tokens = await parseWithGoogleTranslate(text);
             vocabBank.updateFromTokens(tokens);
             return tokens;
         }

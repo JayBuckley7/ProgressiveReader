@@ -46,12 +46,14 @@ steps:
         echo "🔑 [DOCKER DEBUG] VITE_CLERK_PUBLISHABLE_KEY length: $${#VITE_CLERK_PUBLISHABLE_KEY}"
         echo "🔑 [DOCKER DEBUG] VITE_GDRIVE_CLIENT_ID build arg: $${VITE_GDRIVE_CLIENT_ID:0:20}..."
         echo "🔑 [DOCKER DEBUG] VITE_GAPI_KEY build arg: $${VITE_GAPI_KEY:0:15}..."
+        echo "🔑 [DOCKER DEBUG] GOOGLE_TRANSLATE_API_KEY build arg: $${GOOGLE_TRANSLATE_API_KEY:0:15}..."
         
         docker build \
           --build-arg VITE_CLERK_PUBLISHABLE_KEY="$$VITE_CLERK_PUBLISHABLE_KEY" \
           --build-arg VITE_GDRIVE_CLIENT_ID="$$VITE_GDRIVE_CLIENT_ID" \
           --build-arg VITE_GAPI_KEY="$$VITE_GAPI_KEY" \
           --build-arg CLERK_SECRET_KEY="$$CLERK_SECRET_KEY" \
+          --build-arg GOOGLE_TRANSLATE_API_KEY="$$GOOGLE_TRANSLATE_API_KEY" \
           -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
           -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest \
           .
@@ -94,7 +96,7 @@ steps:
             echo "$$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"' && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
             echo "$$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"' && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
             echo "$$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
-            
+            echo "$$SECRET_CONTENT" | grep -q '"GOOGLE_TRANSLATE_API_KEY"' && echo "✅ GOOGLE_TRANSLATE_API_KEY found" || (echo "❌ GOOGLE_TRANSLATE_API_KEY missing" && exit 1)
             echo "✅ PR-app-config secret verification complete"
           else
             echo "❌ PR-app-config secret not found. Please create it first."
@@ -188,6 +190,7 @@ steps:
           echo "  - clerk_overall_healthy: $${CLERK_OVERALL:-'not found'}"
           echo "  - clerk_publishable_key_configured: $${CLERK_PUB_CONFIGURED:-'not found'}"
           echo "  - clerk_secret_key_configured: $${CLERK_SECRET_CONFIGURED:-'not found'}"
+          echo "  - google_translate_api_key_configured: $${GOOGLE_TRANSLATE_API_KEY_CONFIGURED:-'not found'}"
           
           if [ "$$CLERK_OVERALL" = "true" ]; then
             echo "✅ Health check passed (Clerk configuration is healthy)"

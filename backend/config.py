@@ -22,6 +22,14 @@ class Config:
     ]
     JPDB_API_URL = 'https://jpdb.io/api/v1/parse'
     JPDB_REVIEW_URL = 'https://jpdb.io/api/v1/review'
+    
+    # Google Cloud Translation API
+    GOOGLE_TRANSLATE_API_KEY = os.environ.get('GOOGLE_TRANSLATE_API_KEY', 'AIzaSyD2KjB528FT_SEUFU5R98qvU23DGMCyfn4')
+    GOOGLE_TRANSLATE_API_URL = 'https://translation.googleapis.com/language/translate/v2'
+    
+    # Allow large files (for dictionary files like jitendex-yomitan.zip)
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
+    
     SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "True").lower() in (
         "true",

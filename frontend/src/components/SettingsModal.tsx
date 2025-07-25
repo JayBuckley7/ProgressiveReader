@@ -2,7 +2,6 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAppData } from "../contexts/AppDataContext";
-import { loadDictionary } from "../services/offlineDict";
 
 // LocalStorage & Cookie keys
 const localKeys = {

@@ -2,7 +2,8 @@ import { jsxCreateElement as createElement } from '../utils/jsx';
 import { nonNull } from '../utils/util';
 import { getCurrentConfig, mineWord, reviewCard, updateWordState, JpHighlighterConfig } from '../content/api-adapter';
 import { getSentences, JpdbWord, JpdbWordData } from '../content/word';
-import { lookupJitendexWord, formatJitendexDefinition } from '../services/jitendexService';
+import { googleTranslateService } from '../services/googleTranslateService';
+import { lookupJitendexWord } from '../services/jitendexService';
 
 // Helper function to check if we're in offline mode
 function isOfflineMode(): boolean {
@@ -502,22 +503,20 @@ export class Popup {
         let meaningsList: HTMLElement | DocumentFragment;
         
         if (isOfflineMode()) {
-            // In offline mode, try to get Jitendex definitions
+            // In offline mode, try to get Google Translate definitions
             try {
-                const jitendexResults = await lookupJitendexWord(card.spelling);
+                const translateResults = await lookupJitendexWord(card.spelling);
                 
-                if (jitendexResults.length > 0) {
-                    // Create Jitendex definitions section
-                    const jitendexDefinitions = jitendexResults.slice(0, 3).map(entry =>
+                if (translateResults.length > 0) {
+                    // Create Google Translate definitions section
+                    const translationDefinitions = translateResults.slice(0, 3).map(entry =>
                         createElement('li', {}, 
                             createElement('div', { style: 'margin-bottom: 0.5em;' },
-                                createElement('strong', {}, `${entry.term}${entry.reading && entry.reading !== entry.term ? ` (${entry.reading})` : ''}`),
-                                createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em;' },
-                                    ...(entry.definitions && entry.definitions.length > 0 
-                                        ? entry.definitions.slice(0, 2).map((def: string, index: number) => 
-                                            createElement('div', { key: index }, `${index + 1}. ${def}`)
-                                        )
-                                        : [createElement('div', {}, 'No definition available')]
+                                createElement('strong', {}, `${entry.original}${card.reading && card.reading !== entry.original ? ` (${card.reading})` : ''}`),
+                                createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em; color: #666;' },
+                                    createElement('div', {}, entry.translation),
+                                    entry.confidence && createElement('div', { style: 'font-size: 0.8em; margin-top: 0.25em; opacity: 0.7;' }, 
+                                        `Confidence: ${Math.round(entry.confidence * 100)}%`
                                     )
                                 )
                             )
@@ -525,19 +524,19 @@ export class Popup {
                     );
 
                     meaningsList = createElement('div', {},
-                        createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Jitendex Dictionary'),
-                        createElement('ol', {}, ...jitendexDefinitions)
+                        createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
+                        createElement('ol', {}, ...translationDefinitions)
                     );
                 } else {
-                    // No Jitendex results, show fallback
+                    // No translation results, show fallback
                     meaningsList = createElement('ol', {},
-                        createElement('li', {}, 'No dictionary definition found')
+                        createElement('li', {}, 'No translation found')
                     );
                 }
             } catch (error) {
-                console.error('Failed to lookup Jitendex definition:', error);
+                console.error('Failed to translate with Google Translate:', error);
                 meaningsList = createElement('ol', {},
-                    createElement('li', {}, 'Dictionary lookup failed')
+                    createElement('li', {}, 'Translation failed')
                 );
             }
         } else {
