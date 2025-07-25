@@ -27,10 +27,18 @@ import { AdminPage } from "./components/AdminPage";
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+console.log('🔐 [APP CLERK DEBUG] App component Clerk key check:', clerkPubKey ? `${clerkPubKey.substring(0, 10)}...${clerkPubKey.substring(clerkPubKey.length - 5)}` : 'UNDEFINED')
+console.log('🔐 [APP CLERK DEBUG] Environment mode:', import.meta.env.MODE)
+console.log('🔐 [APP CLERK DEBUG] Available VITE_ vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')))
+
 export default function App() {
   if (!clerkPubKey) {
+    console.error('❌ [APP CLERK DEBUG] Missing VITE_CLERK_PUBLISHABLE_KEY in App component!')
+    console.error('❌ [APP CLERK DEBUG] Available env vars:', import.meta.env)
     throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in environment variables");
   }
+  
+  console.log('✅ [APP CLERK DEBUG] Clerk key available for ClerkProvider')
 
   return (
     <ClerkProvider 

@@ -55,4 +55,4 @@ EXPOSE 8080
 ENV PORT=8080
 
 # Run the Flask app with Gunicorn with proper timeout configuration
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "120", "--worker-class", "sync", "--workers", "2", "--max-requests", "1000", "--max-requests-jitter", "100", "run:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "300", "--worker-class", "sync", "--workers", "1", "--max-requests", "500", "--max-requests-jitter", "50", "--preload", "run:app"] 

@@ -17,7 +17,13 @@ steps:
         echo "$$SECRET_CONTENT" | grep -o '"VITE_GAPI_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_gapi_key.txt
         echo "$$SECRET_CONTENT" | grep -o '"CLERK_SECRET_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/clerk_secret.txt
         
-        echo "✅ Frontend environment variables extracted"
+        # Debug logging for extracted values
+        echo "🔑 [BUILD DEBUG] Extracted VITE_CLERK_PUBLISHABLE_KEY: $(cat /workspace/vite_clerk_key.txt | cut -c1-10)...$(cat /workspace/vite_clerk_key.txt | tail -c6)"
+        echo "🔑 [BUILD DEBUG] VITE_CLERK_PUBLISHABLE_KEY length: $(cat /workspace/vite_clerk_key.txt | wc -c)"
+        echo "🔑 [BUILD DEBUG] VITE_GDRIVE_CLIENT_ID: $(cat /workspace/vite_gdrive_client.txt | cut -c1-20)..."
+        echo "🔑 [BUILD DEBUG] VITE_GAPI_KEY: $(cat /workspace/vite_gapi_key.txt | cut -c1-15)..."
+        
+        echo "✅ Frontend environment variables extracted and logged"
 
   # 2. Build Docker image and tag with commit SHA and latest
   - name: "gcr.io/cloud-builders/docker"
@@ -34,6 +40,12 @@ steps:
         CLERK_SECRET_KEY=$(cat /workspace/clerk_secret.txt)
         
         echo "🔨 Building Docker image with frontend environment variables..."
+        
+        # Debug logging for build args (partial values for security)
+        echo "🔑 [DOCKER DEBUG] VITE_CLERK_PUBLISHABLE_KEY build arg: $${VITE_CLERK_PUBLISHABLE_KEY:0:10}...$${VITE_CLERK_PUBLISHABLE_KEY: -5}"
+        echo "🔑 [DOCKER DEBUG] VITE_CLERK_PUBLISHABLE_KEY length: $${#VITE_CLERK_PUBLISHABLE_KEY}"
+        echo "🔑 [DOCKER DEBUG] VITE_GDRIVE_CLIENT_ID build arg: $${VITE_GDRIVE_CLIENT_ID:0:20}..."
+        echo "🔑 [DOCKER DEBUG] VITE_GAPI_KEY build arg: $${VITE_GAPI_KEY:0:15}..."
         
         docker build \
           --build-arg VITE_CLERK_PUBLISHABLE_KEY="$$VITE_CLERK_PUBLISHABLE_KEY" \
