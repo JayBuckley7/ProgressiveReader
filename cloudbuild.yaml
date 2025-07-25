@@ -34,53 +34,39 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
-  # 4. Create/Update app-config secret with environment variables
+  # 4. Verify PR-app-config secret exists and is accessible
   - name: "gcr.io/cloud-builders/gcloud"
-    id: "Update App Config Secret"
+    id: "Verify PR-App Config Secret"
     waitFor: ["Push to Artifact Registry"]
     entrypoint: "bash"
     args:
       - "-c"
       - |
-          echo "🔧 Creating/updating app-config secret from substitution variables..."
+          echo "🔍 Verifying PR-app-config secret exists and is accessible..."
           
-          # Create JSON content from substitution variables
-          cat > /tmp/app-config.json << EOF
-          {
-            "VITE_CLERK_PUBLISHABLE_KEY": "${_VITE_CLERK_PUBLISHABLE_KEY}",
-            "CLERK_SECRET_KEY": "${_CLERK_SECRET_KEY}",
-            "VITE_GDRIVE_CLIENT_ID": "${_VITE_GDRIVE_CLIENT_ID}",
-            "VITE_GAPI_KEY": "${_VITE_GAPI_KEY}",
-            "OPENAI_API_KEYS": ${_OPENAI_API_KEYS_JSON:-"[]"}
-          }
-          EOF
-          
-          # Validate JSON format
-          cat /tmp/app-config.json | jq . > /dev/null || (echo "❌ Generated JSON is not valid" && cat /tmp/app-config.json && exit 1)
-          
-          echo "✅ Generated app-config JSON:"
-          cat /tmp/app-config.json | jq -r 'keys[]'
-          
-          # Create or update the secret
-          if gcloud secrets describe app-config --project=$PROJECT_ID >/dev/null 2>&1; then
-            echo "📝 Updating existing app-config secret..."
-            gcloud secrets versions add app-config --data-file=/tmp/app-config.json --project=$PROJECT_ID
+          # Check if the secret exists
+          if gcloud secrets describe PR-app-config --project=$PROJECT_ID >/dev/null 2>&1; then
+            echo "✅ PR-app-config secret found"
+            
+            # Verify we can access the content and it has required keys
+            echo "🔍 Verifying secret content has required configuration..."
+            SECRET_CONTENT=$(gcloud secrets versions access latest --secret=PR-app-config --project=$PROJECT_ID)
+            
+            # Check for essential keys
+            echo "$$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"' && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
+            echo "$$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"' && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
+            echo "$$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
+            
+            echo "✅ PR-app-config secret verification complete"
           else
-            echo "🆕 Creating new app-config secret..."
-            gcloud secrets create app-config --data-file=/tmp/app-config.json --project=$PROJECT_ID
+            echo "❌ PR-app-config secret not found. Please create it first."
+            exit 1
           fi
-          
-          echo "✅ app-config secret updated successfully"
-          
-          # Verify the secret content (for debugging)
-          echo "🔍 Verifying secret content..."
-          gcloud secrets versions access latest --secret=app-config --project=$PROJECT_ID | jq -r 'keys[]' | head -5
-          echo "✅ Secret verification complete"
 
   # 5. Run build verification tests against health endpoint only (moved to after secret update)
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Pre-Deploy"
-    waitFor: ["Update App Config Secret"]
+    waitFor: ["Verify PR-App Config Secret"]
     entrypoint: "bash"
     args:
       - "-c"
@@ -104,7 +90,7 @@ steps:
           gcloud run deploy ${_SERVICE_NAME} \
             --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
             --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-            --set-secrets /secrets/env.json=app-config:latest \
+            --set-secrets /secrets/env.json=PR-app-config:latest \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
