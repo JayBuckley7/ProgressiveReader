@@ -64,7 +64,7 @@ jobs:
       - name: Load secret env.json
         id: secrets
         run: |
-          gcloud secrets versions access latest --secret app-config > env.json
+          gcloud secrets versions access latest --secret PR-app-config > env.json
           # Load most variables as regular env vars
           cat env.json | jq -r 'to_entries|select(.key != "OPENAI_API_KEYS")|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
           # Handle OPENAI_API_KEYS specially to preserve JSON format
