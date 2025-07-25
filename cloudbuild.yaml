@@ -1,16 +1,50 @@
 steps:
-  # 1. Build Docker image and tag with commit SHA and latest
+  # 1. Load frontend environment variables from PR-app-config secret
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Load Frontend Env Vars"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "📦 Loading frontend environment variables from PR-app-config..."
+        
+        # Get the secret content
+        SECRET_CONTENT=$(gcloud secrets versions access latest --secret=PR-app-config --project=$PROJECT_ID)
+        
+        # Extract frontend environment variables and save to file for next step
+        echo "$$SECRET_CONTENT" | grep -o '"VITE_CLERK_PUBLISHABLE_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_clerk_key.txt
+        echo "$$SECRET_CONTENT" | grep -o '"VITE_GDRIVE_CLIENT_ID"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_gdrive_client.txt  
+        echo "$$SECRET_CONTENT" | grep -o '"VITE_GAPI_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_gapi_key.txt
+        echo "$$SECRET_CONTENT" | grep -o '"CLERK_SECRET_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/clerk_secret.txt
+        
+        echo "✅ Frontend environment variables extracted"
+
+  # 2. Build Docker image and tag with commit SHA and latest
   - name: "gcr.io/cloud-builders/docker"
     id: "Build Docker Image"
+    waitFor: ["Load Frontend Env Vars"]
+    entrypoint: "bash"
     args:
-      - "build"
-      - "-t"
-      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
-      - "-t"
-      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
-      - "."
+      - "-c"
+      - |
+        # Read the environment variables from files
+        VITE_CLERK_PUBLISHABLE_KEY=$(cat /workspace/vite_clerk_key.txt)
+        VITE_GDRIVE_CLIENT_ID=$(cat /workspace/vite_gdrive_client.txt)
+        VITE_GAPI_KEY=$(cat /workspace/vite_gapi_key.txt)
+        CLERK_SECRET_KEY=$(cat /workspace/clerk_secret.txt)
+        
+        echo "🔨 Building Docker image with frontend environment variables..."
+        
+        docker build \
+          --build-arg VITE_CLERK_PUBLISHABLE_KEY="$$VITE_CLERK_PUBLISHABLE_KEY" \
+          --build-arg VITE_GDRIVE_CLIENT_ID="$$VITE_GDRIVE_CLIENT_ID" \
+          --build-arg VITE_GAPI_KEY="$$VITE_GAPI_KEY" \
+          --build-arg CLERK_SECRET_KEY="$$CLERK_SECRET_KEY" \
+          -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest \
+          .
 
-  # 2. Push image with commit SHA tag
+  # 3. Push image with commit SHA tag
   - name: "gcr.io/cloud-builders/docker"
     id: "Push to Artifact Registry"
     waitFor: ["Build Docker Image"]
@@ -18,7 +52,7 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
 
-  # 3. Push latest tag
+  # 4. Push latest tag
   - name: "gcr.io/cloud-builders/docker"
     id: "Push latest tag"
     waitFor: ["Build Docker Image"]
@@ -26,7 +60,7 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
-  # 4. Verify PR-app-config secret exists and is accessible
+  # 5. Verify PR-app-config secret exists and is accessible
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Verify PR-App Config Secret"
     waitFor: ["Push to Artifact Registry"]
@@ -55,7 +89,7 @@ steps:
             exit 1
           fi
 
-  # 5. Run build verification tests against health endpoint only (moved to after secret update)
+  # 6. Run build verification tests against health endpoint only (moved to after secret update)
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Pre-Deploy"
     waitFor: ["Verify PR-App Config Secret"]
@@ -71,7 +105,7 @@ steps:
           curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "Pre-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
           echo "✅ Pre-deployment health check passed"
 
-  # 6. Deploy to Cloud Run
+  # 7. Deploy to Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy to Cloud Run"
     waitFor: ["BVT-Pre-Deploy"]
@@ -79,23 +113,41 @@ steps:
     args:
       - "-c"
       - |
-          gcloud run deploy ${_SERVICE_NAME} \
-            --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
-            --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-            --set-secrets /secrets/env.json=PR-app-config:latest \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars APP_ENV=${_ENVIRONMENT} \
-            --vpc-connector floof-connector \
-            --vpc-egress private-ranges-only \
-            --memory 1Gi \
-            --concurrency 80 \
-            --max-instances 40 \
-            --timeout 300 \
-            --execution-environment gen2
+                     # Deploy to Cloud Run with explicit timeout and no-wait flag
+           gcloud run deploy ${_SERVICE_NAME} \
+             --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+             --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+             --set-secrets /secrets/env.json=PR-app-config:latest \
+             --region us-central1 \
+             --platform managed \
+             --allow-unauthenticated \
+             --set-env-vars APP_ENV=${_ENVIRONMENT} \
+             --vpc-connector floof-connector \
+             --vpc-egress private-ranges-only \
+             --memory 1Gi \
+             --concurrency 80 \
+             --max-instances 40 \
+             --timeout 300 \
+             --execution-environment gen2 \
+             --no-traffic
+           
+           # Wait for deployment to be ready with explicit timeout
+           echo "⏳ Waiting for deployment to be ready..."
+           timeout 300 bash -c 'while true; do
+             STATUS=$(gcloud run services describe ${_SERVICE_NAME} --region us-central1 --format="value(status.conditions[0].status)")
+             if [ "$STATUS" = "True" ]; then
+               echo "✅ Deployment ready"
+               break
+             fi
+             echo "⏳ Still waiting... (status: $STATUS)"
+             sleep 10
+           done'
+           
+           # Promote to serve traffic
+           echo "🚀 Promoting new revision to serve traffic..."
+           gcloud run services update-traffic ${_SERVICE_NAME} --to-latest --region us-central1
 
-  # 7. Post-deployment verification including OpenAI keys and Clerk configuration
+  # 8. Post-deployment verification including OpenAI keys and Clerk configuration
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Post-Deploy" 
     waitFor: ["Deploy to Cloud Run"]
