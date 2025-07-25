@@ -42,26 +42,32 @@ steps:
     args:
       - "-c"
       - |
-          echo "🔧 Creating/updating app-config secret from env.json..."
+          echo "🔧 Creating/updating app-config secret from substitution variables..."
           
-          # Check if env.json exists
-          if [ ! -f "env.json" ]; then
-            echo "❌ env.json file not found! This is required for app configuration."
-            echo "Available files in current directory:"
-            ls -la
-            exit 1
-          fi
+          # Create JSON content from substitution variables
+          cat > /tmp/app-config.json << EOF
+          {
+            "VITE_CLERK_PUBLISHABLE_KEY": "${_VITE_CLERK_PUBLISHABLE_KEY}",
+            "CLERK_SECRET_KEY": "${_CLERK_SECRET_KEY}",
+            "VITE_GDRIVE_CLIENT_ID": "${_VITE_GDRIVE_CLIENT_ID}",
+            "VITE_GAPI_KEY": "${_VITE_GAPI_KEY}",
+            "OPENAI_API_KEYS": ${_OPENAI_API_KEYS_JSON:-"[]"}
+          }
+          EOF
           
           # Validate JSON format
-          cat env.json | jq . > /dev/null || (echo "❌ env.json is not valid JSON" && exit 1)
+          cat /tmp/app-config.json | jq . > /dev/null || (echo "❌ Generated JSON is not valid" && cat /tmp/app-config.json && exit 1)
+          
+          echo "✅ Generated app-config JSON:"
+          cat /tmp/app-config.json | jq -r 'keys[]'
           
           # Create or update the secret
           if gcloud secrets describe app-config --project=$PROJECT_ID >/dev/null 2>&1; then
             echo "📝 Updating existing app-config secret..."
-            gcloud secrets versions add app-config --data-file=env.json --project=$PROJECT_ID
+            gcloud secrets versions add app-config --data-file=/tmp/app-config.json --project=$PROJECT_ID
           else
             echo "🆕 Creating new app-config secret..."
-            gcloud secrets create app-config --data-file=env.json --project=$PROJECT_ID
+            gcloud secrets create app-config --data-file=/tmp/app-config.json --project=$PROJECT_ID
           fi
           
           echo "✅ app-config secret updated successfully"
