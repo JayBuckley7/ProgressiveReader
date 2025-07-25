@@ -111,13 +111,35 @@ steps:
           HEALTH_RESPONSE=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$$HEALTH_CHECK_URL") || (echo "Post-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
           echo "Health check response: $$HEALTH_RESPONSE"
           
-          # Validate Clerk configuration from health check
-          CLERK_HEALTHY=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*true' | wc -l)
-          if [ "$$CLERK_HEALTHY" -eq 1 ]; then
-            echo "✅ Health check passed (including Clerk configuration)"
+          # Validate Clerk configuration from health check with detailed logging
+          echo "🔍 Analyzing Clerk configuration from health response..."
+          echo "Raw health response: $$HEALTH_RESPONSE"
+          
+          # Check individual Clerk components
+          CLERK_OVERALL=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+          CLERK_PUB_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+          CLERK_SECRET_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+          
+          echo "📊 Clerk Configuration Analysis:"
+          echo "  - clerk_overall_healthy: $${CLERK_OVERALL:-'not found'}"
+          echo "  - clerk_publishable_key_configured: $${CLERK_PUB_CONFIGURED:-'not found'}"
+          echo "  - clerk_secret_key_configured: $${CLERK_SECRET_CONFIGURED:-'not found'}"
+          
+          if [ "$$CLERK_OVERALL" = "true" ]; then
+            echo "✅ Health check passed (Clerk configuration is healthy)"
           else
-            echo "❌ BVT failed - Clerk configuration issue detected in health check"
-            echo "Health response: $$HEALTH_RESPONSE"
+            echo "❌ BVT failed - Clerk configuration issue detected:"
+            if [ "$$CLERK_PUB_CONFIGURED" != "true" ]; then
+              echo "  ❌ CLERK_PUBLISHABLE_KEY not configured properly"
+            else
+              echo "  ✅ CLERK_PUBLISHABLE_KEY is configured"
+            fi
+            if [ "$$CLERK_SECRET_CONFIGURED" != "true" ]; then
+              echo "  ❌ CLERK_SECRET_KEY not configured properly"
+            else
+              echo "  ✅ CLERK_SECRET_KEY is configured"
+            fi
+            echo "Full health response: $$HEALTH_RESPONSE"
             exit 1
           fi
           
