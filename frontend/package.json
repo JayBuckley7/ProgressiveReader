@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.31.8",
+    "@zip.js/zip.js": "^2.7.68",
     "clsx": "^2.1.1",
     "gapi-script": "^1.2.0",
     "react": "^19.0.0",

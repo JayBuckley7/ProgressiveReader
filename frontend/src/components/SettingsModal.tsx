@@ -2,6 +2,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAppData } from "../contexts/AppDataContext";
+import { loadDictionary } from "../services/offlineDict";
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -236,6 +237,8 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     }
   };
 
+
+
     return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[calc(100vh-1rem)] sm:max-h-[90vh] overflow-hidden animate-slide-up flex flex-col">
@@ -434,10 +437,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 
                 <CheckboxInput
                   label="Use Offline Parser"
-                  description="Parse text locally when JPDB API key is missing or unavailable"
+                  description="Always use offline parser instead of JPDB API, even when API key is available"
                   checked={settings.useOfflineParser ?? false}
                   onChange={v => updateSettings({ useOfflineParser: v })}
                 />
+
+
 
               </div>
 

@@ -10,10 +10,16 @@ import Logger from './utils/logger';
 
 let currentHover: [JpdbWord, number, number] | null = null;
 let popupKeyHeld = false; // Add popupKeyHeld state
+let popupHovered = false; // Track if mouse is over popup
 
 // Track initialization state and event listener references
 let isInitialized = false;
 let globalMousedownHandler: ((event: MouseEvent) => void) | null = null;
+
+// Function to set popup hover state (called from popup)
+function setPopupHovered(hovered: boolean): void {
+    popupHovered = hovered;
+}
 
 // Initialize logger debug state from a global flag if present
 Logger.setDebug((window as any).jpHighlighterDebug === true);
@@ -96,8 +102,6 @@ function waitForCSS(): Promise<void> {
 
 // Extract text segments from a DOM element - ALIGNED with fragment extraction
 function extractCleanTextSegments(rootElement: HTMLElement): string[] {
-    console.log('🎯 SEGMENT EXTRACTION: Starting to process', rootElement.tagName);
-    
     let allText = '';
     
     function processNode(node: Node) {
@@ -105,26 +109,19 @@ function extractCleanTextSegments(rootElement: HTMLElement): string[] {
         
         if (category === 'text') {
             const textContent = node.textContent || '';
-            console.log(`🎯 SEGMENT TEXT NODE: "${textContent}" (length: ${textContent.length}, trimmed: "${textContent.trim()}")`);
             // Include ALL text content, including spaces - same as fragment creation
             if (textContent.trim() !== '') {
                 allText += textContent;
-                console.log(`🎯 SEGMENT ADDED: "${textContent}"`);
-            } else {
-                console.log('🎯 SEGMENT SKIPPED: empty/whitespace text node');
             }
         } else if (category === 'inline' || category === 'ruby') {
-            console.log(`🎯 SEGMENT INLINE: ${node.nodeName} with ${node.childNodes.length} children`);
             Array.from(node.childNodes).forEach(processNode);
         } else if (category === 'block') {
-            console.log(`🎯 SEGMENT BLOCK: ${node.nodeName}, processing children`);
             Array.from(node.childNodes).forEach(processNode);
         }
     }
     
     processNode(rootElement);
     
-    console.log(`🎯 SEGMENT EXTRACTION COMPLETE: total text length: ${allText.length}`);
     // Return as single segment that matches the concatenated fragment text
     return allText.length > 0 ? [allText] : [];
 }
@@ -135,15 +132,12 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
     let currentParagraph: Fragment[] = [];
     let globalOffset = 0;
     
-    console.log('🎯 FRAGMENT CREATION: Starting to process', contentElement.tagName);
-    
     // This is a simplified version that doesn't handle all edge cases
     function processNode(node: Node) {
         const category = displayCategory(node);
         
         if (category === 'text') {
             const textContent = node.textContent || '';
-            console.log(`🎯 FRAGMENT TEXT NODE: "${textContent}" (length: ${textContent.length}, trimmed: "${textContent.trim()}")`);
             if (textContent.trim() !== '') {
                 const length = textContent.length;
                 currentParagraph.push({
@@ -153,16 +147,11 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
                     node: node as Text,
                     hasRuby: false
                 });
-                console.log(`🎯 FRAGMENT ADDED: [${globalOffset}:${globalOffset + length}] "${textContent}"`);
                 globalOffset += length;
-            } else {
-                console.log('🎯 FRAGMENT SKIPPED: empty/whitespace text node');
             }
         } else if (category === 'inline' || category === 'ruby') {
-            console.log(`🎯 FRAGMENT INLINE: ${node.nodeName} with ${node.childNodes.length} children`);
             Array.from(node.childNodes).forEach(processNode);
         } else if (category === 'block') {
-            console.log(`🎯 FRAGMENT BLOCK: ${node.nodeName}, ending paragraph`);
             if (currentParagraph.length > 0) {
                 paragraphs.push([...currentParagraph]);
                 currentParagraph = [];
@@ -181,7 +170,6 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
         paragraphs.push(currentParagraph);
     }
     
-    console.log(`🎯 FRAGMENT CREATION COMPLETE: ${paragraphs.length} paragraphs, total offset: ${globalOffset}`);
     return paragraphs;
 }
 
@@ -229,53 +217,9 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
         Logger.log(`Created ${paragraphs.length} paragraph fragments`);
 
-        // CRITICAL DIAGNOSTIC: Compare text segments vs fragment text
-        const fragmentText = paragraphs.map(p => p.map(f => f.node.data).join('')).join('');
-        const segmentText = textSegments.join('');
-        console.log('🎯 TEXT MISMATCH ANALYSIS:');
-        console.log('🎯 Text from segments (sent to API):', JSON.stringify(segmentText));
-        console.log('🎯 Text from fragments (in DOM):', JSON.stringify(fragmentText));
-        console.log('🎯 Texts match:', segmentText === fragmentText);
-        console.log('🎯 Segment length:', segmentText.length);
-        console.log('🎯 Fragment length:', fragmentText.length);
-        console.log('🎯 First 50 chars comparison:');
-        console.log('🎯   Segments:', segmentText.slice(0, 50));
-        console.log('🎯   Fragments:', fragmentText.slice(0, 50));
-        
-        // DETAILED BREAKDOWN: Show segment vs fragment differences
-        console.log('🎯 DETAILED BREAKDOWN:');
-        console.log('🎯 Individual segments:', textSegments.map((seg, i) => `[${i}]: "${seg}"`));
-        console.log('🎯 Fragment text by paragraph:');
-        paragraphs.forEach((p, i) => {
-            const pText = p.map(f => f.node.data).join('');
-            console.log(`🎯   Paragraph[${i}]: "${pText}"`);
-        });
-        
-        Logger.log('About to parse text with API...');
-        console.log('🎯 TEXT SEGMENTS being sent to API:', textSegments.map((seg, i) => `[${i}]: "${seg}"`));
         let tokens = await parseText(textSegments); // Tokens have global offsets
 
         Logger.log(`Received ${tokens.length} tokens from API`);
-
-        // VERIFICATION: Texts should now match due to aligned extraction
-        if (segmentText !== fragmentText) {
-            console.error('🎯 ERROR: Text mismatch still detected despite aligned extraction!');
-            console.error('🎯 This indicates a bug in the alignment logic.');
-        } else {
-            console.log('🎯 SUCCESS: Text segments and fragments are now aligned!');
-        }
-        console.log('🎯 TOKENS received from API:', tokens.slice(0, 10).map(t => ({
-            spelling: t.card?.spelling,
-            start: t.start,
-            end: t.end,
-            length: t.length
-        })));
-        console.log('🔍 Sample tokens:', tokens.slice(0, 3).map(t => ({
-            start: t.start, 
-            end: t.end, 
-            spelling: t.card?.spelling,
-            state: t.card?.state
-        })));
         
         for (const paragraph of paragraphs) { // A paragraph is a Fragment[]
             if (paragraph.length > 0) {
@@ -309,43 +253,12 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                     }));
                     
                     if (relativeFragments.length > 0 && relativeTokens.length > 0) {
-                        // Debug logging of first fragment/token
-                        Logger.log(
-                            `Processing paragraph. Global start: ${globalParagraphStartOffset}. Relative Fragments (first):`,
-                            JSON.stringify(relativeFragments[0]),
-                            'Relative Tokens (first):',
-                            JSON.stringify(relativeTokens[0])
-                        );
-                        
-                        console.log('🔍 About to call applyTokens with:', {
-                            relativeFragments: relativeFragments.length,
-                            relativeTokens: relativeTokens.length,
-                            firstFragmentText: relativeFragments[0]?.node?.data,
-                            firstTokenSpelling: relativeTokens[0]?.card?.spelling
-                        });
+                        applyTokens(relativeFragments, relativeTokens);
                     }
-
-                    applyTokens(relativeFragments, relativeTokens);
-                    console.log('🔍 applyTokens call completed for this paragraph');
                                  }
              }
          }
 
-        // Diagnostic logging: Show all hoverable elements created after highlighting
-        const allJpdbWords = contentElement.querySelectorAll('.jpdb-word');
-        console.log('🎯 TOTAL hoverable elements created:', allJpdbWords.length);
-        console.log('🎯 Hoverable elements summary:');
-        allJpdbWords.forEach((element, index) => {
-            const text = element.textContent;
-            const jpdbData = getJpdbData(element as JpdbWord);
-            console.log(`🎯 [${index}] "${text}" ->`, {
-                spelling: jpdbData?.token?.card?.spelling,
-                reading: jpdbData?.token?.card?.reading,
-                state: jpdbData?.token?.card?.state,
-                hasData: !!jpdbData,
-                elementClass: element.className
-            });
-        });
     } catch (error) {
         console.error('Error in highlightContent:', error);
         showError(error instanceof Error ? error : new Error(String(error)));
@@ -361,62 +274,61 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
 
 // Word hover handlers
 function onWordHoverStart(event: MouseEvent): void {
-    console.log('🚨 SIMPLE TEST: onWordHoverStart function called!');
-    console.log('🔔 onWordHoverStart: FUNCTION ENTRY - event received:', event);
-    
     try {
         const target = event.target as HTMLElement;
-        console.log('🔔 onWordHoverStart: target element:', target);
-        if (!target) {
-            console.log('🔔 onWordHoverStart: no target, returning');
-            return;
-        }
+        if (!target) return;
 
         const jpdbWordElement = target.closest('.jpdb-word') as JpdbWord | null;
-        console.log('🔔 onWordHoverStart: jpdbWordElement found:', !!jpdbWordElement);
-        if (!jpdbWordElement) {
-            console.log('🔔 onWordHoverStart: no jpdb-word element found, returning');
-            return;
-        }
+        if (!jpdbWordElement) return;
 
         // Store hover information regardless of whether we show the popup
         currentHover = [jpdbWordElement, event.clientX, event.clientY];
-        console.log('🔔 onWordHoverStart: currentHover set to:', currentHover);
         
         // Only show popup on hover if the setting is enabled OR the popup key is held
-        const currentConfig = getCurrentConfig(); // Get latest config
-        console.log('🔔 onWordHoverStart triggered');
-        console.log('🔔 showPopupOnHover from config:', currentConfig.showPopupOnHover);
-        console.log('🔔 popupKeyHeld:', popupKeyHeld);
-        console.log('🔔 localStorage showPopupOnHover:', localStorage.getItem('showPopupOnHover'));
+        const currentConfig = getCurrentConfig();
         
         if (currentConfig.showPopupOnHover || popupKeyHeld) {
-            console.log('🔔 Will show popup because:', currentConfig.showPopupOnHover ? 'hover is enabled' : 'popup key is held');
             const jpdbData = getJpdbData(jpdbWordElement);
-            console.log('🔔 jpdbData:', jpdbData);
             if (jpdbData) {
                 // Set jpdbData for compatibility with existing code
                 if (!('jpdbData' in jpdbWordElement)) {
                     (jpdbWordElement as any).jpdbData = jpdbData;
                 }
-                console.log('🔔 Calling Popup.get().showForWord()');
                 Popup.get().showForWord(jpdbWordElement, event.clientX, event.clientY);
-            } else {
-                console.error('🔔 JpdbWord element is missing jpdbData on hover!', jpdbWordElement);
             }
-        } else {
-            console.log('🔔 Not showing popup: hover is disabled and key is not held');
         }
     } catch (error) {
-        console.error('🔔 onWordHoverStart: CRITICAL ERROR:', error);
-        console.error('🔔 onWordHoverStart: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-        console.error('🔔 onWordHoverStart: Event details:', event);
+        console.error('Error in onWordHoverStart:', error);
     }
 }
 
-function onWordHoverStop(): void {
+function onWordHoverStop(event?: MouseEvent): void {
+    // Check if mouse is actually over the popup element
+    const popup = Popup.get();
+    const mouseX = event?.clientX || 0;
+    const mouseY = event?.clientY || 0;
+    const popupRect = popup.element.getBoundingClientRect();
+    const isMouseOverPopup = mouseX >= popupRect.left && mouseX <= popupRect.right && 
+                            mouseY >= popupRect.top && mouseY <= popupRect.bottom;
+    
+    // Update popup hover state based on actual mouse position
+    if (isMouseOverPopup && !popupHovered) {
+        popupHovered = true;
+    }
+    
     currentHover = null;
-    // Do NOT call fadeOut here based on jpd-breader logic
+    
+    // Hide popup when hover stops, unless popup key is held or mouse is over popup
+    const currentConfig = getCurrentConfig();
+    if (currentConfig.showPopupOnHover && !popupKeyHeld) {
+        // Longer delay to allow moving between adjacent words and to popup
+        setTimeout(() => {
+            // Only hide if we're still not hovering, key isn't held, and mouse isn't over popup
+            if (!currentHover && !popupKeyHeld && !popupHovered) {
+                Popup.get().fadeOut();
+            }
+        }, 300); // Increased delay to give more time to move to popup
+    }
 }
 
 // Global keydown listener for hotkeys
@@ -545,6 +457,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             wireUpToggle, // Use the actual wireUpToggle function
             highlightContent, // Use the actual highlightContent function
             setDebug: Logger.setDebug, // Allow toggling debug logging
+            setPopupHovered, // Expose popup hover state setter
             Popup // Expose the Popup for direct access if needed
         };
 

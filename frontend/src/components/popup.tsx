@@ -2,6 +2,13 @@ import { jsxCreateElement as createElement } from '../utils/jsx';
 import { nonNull } from '../utils/util';
 import { getCurrentConfig, mineWord, reviewCard, updateWordState, JpHighlighterConfig } from '../content/api-adapter';
 import { getSentences, JpdbWord, JpdbWordData } from '../content/word';
+import { lookupJitendexWord, formatJitendexDefinition } from '../services/jitendexService';
+
+// Helper function to check if we're in offline mode
+function isOfflineMode(): boolean {
+    const config = getCurrentConfig();
+    return config.useOfflineParser ?? false;
+}
 
 // Parts of speech dictionary
 const PARTS_OF_SPEECH: { [k: string]: string } = {
@@ -160,6 +167,11 @@ export class Popup {
     #data!: JpdbWordData;
     isVisible: boolean = false;
 
+    // Public getter for the element
+    get element(): HTMLElement {
+        return this.#element;
+    }
+
     static #popup: Popup;
 
     static get(): Popup {
@@ -195,6 +207,19 @@ export class Popup {
                 demoMode ? '' : 'position:absolute;top:0;left:0;opacity:0;visibility:hidden;'
             };`
         }) as HTMLElement;
+
+        // Add popup hover tracking directly to the element
+        this.#element.addEventListener('mouseenter', () => {
+            if (window.jpHighlighter && window.jpHighlighter.setPopupHovered) {
+                window.jpHighlighter.setPopupHovered(true);
+            }
+        });
+
+        this.#element.addEventListener('mouseleave', () => {
+            if (window.jpHighlighter && window.jpHighlighter.setPopupHovered) {
+                window.jpHighlighter.setPopupHovered(false);
+            }
+        });
 
         // Use regular DOM instead of Shadow DOM for compatibility
         const shadow = this.#element; // this.#element.attachShadow({ mode: 'closed' });
@@ -346,11 +371,12 @@ export class Popup {
             :host-context(.dark) #header a { color: #eee; }
         `;
 
-        this.#customStyle = createElement('style') as HTMLElement;
+        this.#customStyle = createElement('style', null) as HTMLElement;
         this.#mineButtons = createElement('section', { id: 'mine-buttons' }) as HTMLElement;
         this.#vocabSection = createElement('section', { id: 'vocab-content' }) as HTMLElement;
         
-        const reviewButtons = createElement('section', { id: 'review-buttons' }, 
+        // Only create review buttons if not in offline mode  
+        const reviewButtons = !isOfflineMode() ? createElement('section', { id: 'review-buttons' }, 
             createElement('button', {
                 class: 'nothing',
                 onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'nothing')
@@ -371,12 +397,18 @@ export class Popup {
                 class: 'easy',
                 onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'easy')
             }, 'Easy')
-        ) as HTMLElement;
+        ) as HTMLElement : null;
+
+        // Create article with conditional review buttons
+        const articleChildren = [this.#mineButtons];
+        if (reviewButtons) {
+            articleChildren.push(reviewButtons);
+        }
+        articleChildren.push(this.#vocabSection);
 
         const article = createElement('article', { lang: 'ja' }, 
-            this.#mineButtons,
-            reviewButtons,
-            this.#vocabSection
+            articleChildren[0], 
+            ...(articleChildren.slice(1))
         ) as HTMLElement;
 
         shadow.append(
@@ -436,7 +468,7 @@ export class Popup {
         this.#outerStyle.userSelect = '';
     }
 
-    render() {
+    async render() {
         if (this.#data === undefined) return;
 
         if (!this.#data.token.card) {
@@ -466,47 +498,97 @@ export class Popup {
             ...card.pitchAccent.map(pitch => renderPitch(card.reading, pitch))
         );
 
-        // Create meanings list (simplified)
-        const meaningsList = createElement('ol', {},
-            ...(card.meanings && card.meanings.length > 0
-                ? card.meanings.map(meaning =>
-                    createElement('li', {}, meaning.glosses.join('; '))
+        // Create meanings list with Jitendx support in offline mode
+        let meaningsList: HTMLElement | DocumentFragment;
+        
+        if (isOfflineMode()) {
+            // In offline mode, try to get Jitendex definitions
+            try {
+                const jitendexResults = await lookupJitendexWord(card.spelling);
+                
+                if (jitendexResults.length > 0) {
+                    // Create Jitendex definitions section
+                    const jitendexDefinitions = jitendexResults.slice(0, 3).map(entry =>
+                        createElement('li', {}, 
+                            createElement('div', { style: 'margin-bottom: 0.5em;' },
+                                createElement('strong', {}, `${entry.term}${entry.reading && entry.reading !== entry.term ? ` (${entry.reading})` : ''}`),
+                                createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em;' },
+                                    ...(entry.definitions && entry.definitions.length > 0 
+                                        ? entry.definitions.slice(0, 2).map((def: string, index: number) => 
+                                            createElement('div', { key: index }, `${index + 1}. ${def}`)
+                                        )
+                                        : [createElement('div', {}, 'No definition available')]
+                                    )
+                                )
+                            )
+                        )
+                    );
+
+                    meaningsList = createElement('div', {},
+                        createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Jitendex Dictionary'),
+                        createElement('ol', {}, ...jitendexDefinitions)
+                    );
+                } else {
+                    // No Jitendex results, show fallback
+                    meaningsList = createElement('ol', {},
+                        createElement('li', {}, 'No dictionary definition found')
+                    );
+                }
+            } catch (error) {
+                console.error('Failed to lookup Jitendex definition:', error);
+                meaningsList = createElement('ol', {},
+                    createElement('li', {}, 'Dictionary lookup failed')
+                );
+            }
+        } else {
+            // Online mode - use regular JPDB meanings
+            meaningsList = createElement('ol', {},
+                ...(card.meanings && card.meanings.length > 0
+                    ? card.meanings.map(meaning =>
+                        createElement('li', {}, meaning.glosses.join('; '))
+                    )
+                    : [createElement('li', {}, 'No definition available')]
                 )
-                : [createElement('li', {}, 'No definition available')]
-            )
-        );
+            );
+        }
 
         this.#vocabSection.replaceChildren(header, metainfo, meaningsList);
 
-        // Create mine buttons
-        const blacklisted = card.state.includes('blacklisted');
-        const neverForget = card.state.includes('never-forget');
+        // Only create and show mine buttons if not in offline mode
+        if (!isOfflineMode()) {
+            // Create mine buttons
+            const blacklisted = card.state.includes('blacklisted');
+            const neverForget = card.state.includes('never-forget');
 
-        const addButton = createElement('button', {
-            class: 'add',
-            onclick: this.#demoMode ? undefined : () => mineWord(
-                this.#data.token.card,
-                getCurrentConfig().forqOnMine,
-                getSentences(this.#data, getCurrentConfig().contextWidth).trim() || undefined
-            )
-        }, 'Add');
+            const addButton = createElement('button', {
+                class: 'add',
+                onclick: this.#demoMode ? undefined : () => mineWord(
+                    this.#data.token.card,
+                    getCurrentConfig().forqOnMine,
+                    getSentences(this.#data, getCurrentConfig().contextWidth).trim() || undefined
+                )
+            }, 'Add');
 
-        const blacklistButton = createElement('button', {
-            class: 'blacklist',
-            onclick: this.#demoMode ? undefined : async () => await updateWordState(this.#data.token.card, 'blacklist', !blacklisted)
-        }, !blacklisted ? 'Blacklist' : 'Remove from blacklist');
+            const blacklistButton = createElement('button', {
+                class: 'blacklist',
+                onclick: this.#demoMode ? undefined : async () => await updateWordState(this.#data.token.card, 'blacklist', !blacklisted)
+            }, !blacklisted ? 'Blacklist' : 'Remove from blacklist');
 
-        const neverForgetButton = createElement('button', {
-            class: 'never-forget',
-            onclick: this.#demoMode ? undefined : async () => await updateWordState(this.#data.token.card, 'never-forget', !neverForget)
-        }, !neverForget ? 'Never forget' : 'Unmark as never forget');
+            const neverForgetButton = createElement('button', {
+                class: 'never-forget',
+                onclick: this.#demoMode ? undefined : async () => await updateWordState(this.#data.token.card, 'never-forget', !neverForget)
+            }, !neverForget ? 'Never forget' : 'Unmark as never forget');
 
-        this.#mineButtons.replaceChildren(addButton, blacklistButton, neverForgetButton);
+            this.#mineButtons.replaceChildren(addButton, blacklistButton, neverForgetButton);
+        } else {
+            // In offline mode, hide mine buttons by clearing all children
+            this.#mineButtons.innerHTML = '';
+        }
     }
 
-    setData(data: JpdbWordData) {
+    async setData(data: JpdbWordData) {
         this.#data = data;
-        this.render();
+        await this.render();
     }
 
     containsMouse(event: MouseEvent): boolean {
@@ -519,35 +601,27 @@ export class Popup {
         return false;
     }
 
-    showForWord(word: JpdbWord, mouseX = 0, mouseY = 0) {
+    async showForWord(word: JpdbWord, mouseX = 0, mouseY = 0) {
         try {
-            //// console.log('🔔 [Popup] showForWord called with word:', word);
-            //// console.log('🔔 [Popup] word.jpdbData exists:', !!word.jpdbData);
-            
             const currentConfig = getCurrentConfig();
-            //// console.log('🔔 [Popup] Current popup config (showPopupOnHover from getCurrentConfig()):', currentConfig.showPopupOnHover);
-            
             const data = word.jpdbData;
             
             if (!data) {
-                console.error('🔔 [Popup] No jpdbData on word element');
+                console.error('No jpdbData on word element');
                 return;
             }
             
             if (!data.token) {
-                console.error('🔔 [Popup] No token in jpdbData');
+                console.error('No token in jpdbData');
                 return;
             }
             
             if (!data.token.card) {
-                console.error('🔔 [Popup] No card in token data');
+                console.error('No card in token data');
                 return;
             }
 
-            console.log('🔔 [Popup] Data validation passed, calling setData');
-            this.setData(data); // Because we need the dimensions of the popup with the new data
-
-            console.log('🔔 [Popup] Getting word bounding box');
+            await this.setData(data); // Because we need the dimensions of the popup with the new data
             const bbox = getClosestClientRect(word, mouseX, mouseY);
 
             const wordLeft = window.scrollX + bbox.left;
@@ -605,16 +679,13 @@ export class Popup {
             left = Math.max(minLeft, Math.min(maxLeft, left));
             top = Math.max(minTop, Math.min(maxTop, top));
 
-            console.log('🔔 [Popup] Setting popup position:', { left, top });
             this.#outerStyle.left = `${left}px`;
             this.#outerStyle.top = `${top}px`;
 
-            console.log('🔔 [Popup] About to call fadeIn()');
             this.fadeIn();
-            console.log('🔔 [Popup] fadeIn() completed successfully');
         } catch (error) {
-            console.error('🔔 [Popup] Error in showForWord:', error);
-            console.error('🔔 [Popup] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+            console.error('Error in showForWord:', error);
+            console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         }
     }
 

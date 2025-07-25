@@ -75,7 +75,7 @@ export function loadConfig(): JpHighlighterConfig {
     // Load from cookies
     const getCookie = (name: string): string | undefined => {
         console.log(`Attempting to retrieve cookie '${name}'`);
-        console.log('All cookies:', document.cookie);
+        // console.log('All cookies:', document.cookie);
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         console.log(`Parts found for ${name}:`, parts.length);
@@ -194,7 +194,7 @@ export function loadConfig(): JpHighlighterConfig {
     // loadedConfig[keybindKey] would be undefined. The spread above handles this by keeping the default.
     // If it *was* in localStorage and parsed to { code: 'None', ... }, that will correctly override a different default.
 
-    console.log('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance, null, 2));
+    // console.log('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance, null, 2));
     return currentConfigInstance; // Return the new config instance
 }
 
@@ -204,7 +204,16 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
     try {
         console.log('parseText called with', textSegments.length, 'segments');
 
-        if (currentConfig.useOfflineParser || !currentConfig.apiKey) {
+        if (currentConfig.useOfflineParser) {
+            console.log('Using offline parser (toggle enabled)');
+            const text = textSegments.join(' ');
+            const tokens = await parseOffline(text);
+            vocabBank.updateFromTokens(tokens);
+            return tokens;
+        }
+        
+        if (!currentConfig.apiKey) {
+            console.log('No API key available, falling back to offline parser');
             const text = textSegments.join(' ');
             const tokens = await parseOffline(text);
             vocabBank.updateFromTokens(tokens);

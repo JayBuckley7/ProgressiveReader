@@ -414,18 +414,16 @@ function isNoun(segment: string): boolean {
 }
 
 export async function parseOffline(text: string): Promise<Token[]> {
-  console.log('🔍 parseOffline received text:', JSON.stringify(text));
-  console.log('🔍 text length:', text.length);
-  console.log('🔍 text bytes:', Array.from(text).map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
+  // Debug logging removed for cleaner console output
   
   try {
     // Initial segmentation with TinySegmenter
     const rawSegments = segmenter.segment(text);
-    console.log('🔍 TinySegmenter raw segments:', rawSegments.length, rawSegments);
+    // TinySegmenter debug logging removed
     
     // Improve segmentation with post-processing
     const improvedSegments = await improveSegmentation(rawSegments);
-    console.log('🔍 Improved segments:', improvedSegments.length, improvedSegments);
+    // Improved segments debug logging removed
     
     // DEBUG: Show word-to-segment mapping
     debugWordSegmentMapping(text, improvedSegments);
@@ -440,8 +438,6 @@ export async function parseOffline(text: string): Promise<Token[]> {
       const entry = await lookup(word);
       const start = offset;
       const end = start + word.length;
-      console.log(`🎯 TOKEN: "${word}" at [${start}:${end}] (length: ${word.length})`);
-      console.log(`🎯 TOKEN chars: ${Array.from(word).map(c => `${c}(${c.charCodeAt(0)})`).join(' ')}`);
       offset = end;
       
       const card: Card = {
@@ -453,7 +449,13 @@ export async function parseOffline(text: string): Promise<Token[]> {
         reading: entry?.reading ?? word,
         frequencyRank: null,
         pitchAccent: [],
-        meanings: entry ? [{ glosses: [], partOfSpeech: entry.pos }] : [],
+        meanings: entry?.meanings?.map(meaning => ({
+          glosses: meaning.glosses,
+          partOfSpeech: meaning.partOfSpeech ?? entry?.pos ?? ['unknown']
+        })) ?? [{ 
+          glosses: ['No definition available'], 
+          partOfSpeech: entry?.pos ?? ['unknown'] 
+        }],
       };
       
       const token: Token = {
@@ -472,7 +474,7 @@ export async function parseOffline(text: string): Promise<Token[]> {
       tokens.push(token);
     }
     
-    console.log('🔍 Generated tokens:', tokens.length);
+    // Token count debug logging removed
     return tokens;
     
   } catch (error) {
@@ -498,7 +500,13 @@ export async function parseOffline(text: string): Promise<Token[]> {
         reading: entry?.reading ?? word,
         frequencyRank: null,
         pitchAccent: [],
-        meanings: entry ? [{ glosses: [], partOfSpeech: entry.pos }] : [],
+        meanings: entry?.meanings?.map(meaning => ({
+          glosses: meaning.glosses,
+          partOfSpeech: meaning.partOfSpeech ?? entry?.pos ?? ['unknown']
+        })) ?? [{ 
+          glosses: ['No definition available'], 
+          partOfSpeech: entry?.pos ?? ['unknown'] 
+        }],
       };
       
       const token: Token = {
@@ -526,8 +534,7 @@ export async function parseOffline(text: string): Promise<Token[]> {
  * This helps visualize the segmentation before adding overlays
  */
 function debugWordSegmentMapping(originalText: string, segments: string[]): void {
-  console.log('\n📊 WORD-TO-SEGMENT MAPPING DEBUG:');
-  console.log('=' .repeat(50));
+  // Word-to-segment mapping debug section removed for cleaner console output
   
   // Create a mapping of character positions to segment info
   const charToSegmentMap: Array<{
@@ -558,23 +565,20 @@ function debugWordSegmentMapping(originalText: string, segments: string[]): void
   });
   
   // Display the mapping
-  console.log('Original text:', `"${originalText}"`);
-  console.log('Character breakdown:');
+  // Original text debug logging removed
   
   charToSegmentMap.forEach((mapping, charIndex) => {
     const isFirstCharOfSegment = mapping.positionInSegment === 0;
     const segmentMarker = isFirstCharOfSegment ? `[S${mapping.segmentIndex}]` : '     ';
     
-    console.log(
-      `${charIndex.toString().padStart(3)}: "${mapping.char}" ${segmentMarker} → "${mapping.segmentText}"`
-    );
+    // Character debug logging removed
   });
   
-  console.log('\nSegment summary:');
+  // Segment summary debug logging removed
   segments.forEach((segment, index) => {
     const charCount = segment.length;
     const segmentType = getSegmentType(segment);
-    console.log(`  Segment ${index}: "${segment}" (${charCount} chars, ${segmentType})`);
+    // Individual segment debug logging removed
   });
   
   console.log('=' .repeat(50));

@@ -2,6 +2,7 @@ import { Token } from '../types';
 import { nonNull } from '../utils/util';
 import { jsxCreateElement as createElement } from '../utils/jsx';
 import { JpdbWord } from './word';
+import { getCurrentConfig } from '../content/api-adapter';
 
 // Global WeakMap for storing JPDB data when elements are not extensible
 declare global {
@@ -111,10 +112,10 @@ function wrap(node: Node, wrapper: HTMLElement) {
 export const reverseIndex = new Map<string, { className: string; elements: JpdbWord[] }>();
 
 // Function that will be hooked up to event handlers
-let onWordHoverStart: (e: MouseEvent) => void = () => {
+let onWordHoverStart: (event: MouseEvent) => void = () => {
     console.log('🔧 DEFAULT onWordHoverStart called - this should not happen!');
 };
-let onWordHoverStop: () => void = () => {
+let onWordHoverStop: (event?: MouseEvent) => void = () => {
     console.log('🔧 DEFAULT onWordHoverStop called - this should not happen!');
 };
 
@@ -149,29 +150,41 @@ const COMMON_WORDS = new Set([
 
 const SINGLE_PARTICLES = new Set(['は','が','を','に','で','と','の','へ']);
 
-// Helper function to get JLPT-based color class
-function getJlptColorClass(token: Token): string {
+// Helper function to get appropriate color class based on mode
+function getColorClass(token: Token): string {
     const word = token.card.spelling;
     
-    // Check if it's a super common word first
-    if (COMMON_WORDS.has(word)) {
-        return 'common-word';
-    }
+    // Check if we're in offline mode
+    const config = getCurrentConfig();
+    const isOfflineMode = config.useOfflineParser;
     
-    // Check for JLPT level from the token data
-    const jlptLevel = (token as any).jlpt;
-    if (jlptLevel) {
-        // Convert JLPT level to CSS class (e.g., "5" -> "jlpt-n5")
-        return `jlpt-n${jlptLevel}`;
+    if (isOfflineMode) {
+        // OFFLINE MODE: Use JLPT-based coloring
+        
+        // Check if it's a super common word first
+        if (COMMON_WORDS.has(word)) {
+            return 'common-word';
+        }
+        
+        // Check for JLPT level from the token data
+        const jlptLevel = (token as any).jlpt;
+        if (jlptLevel) {
+            // Convert JLPT level to CSS class (e.g., "5" -> "jlpt-n5")
+            return `jlpt-n${jlptLevel}`;
+        }
+        
+        // Check word length for additional common word heuristics
+        if (word.length === 1 && SINGLE_PARTICLES.has(word)) {
+            return 'common-word';
+        }
+        
+        // Unknown JLPT level
+        return 'jlpt-unknown';
+    } else {
+        // ONLINE MODE: Use JPDB state-based coloring
+        // Return empty string since state classes are already in baseClassName
+        return '';
     }
-    
-    // Check word length for additional common word heuristics
-    if (word.length === 1 && SINGLE_PARTICLES.has(word)) {
-        return 'common-word';
-    }
-    
-    // Unknown JLPT level
-    return 'jlpt-unknown';
 }
 
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
@@ -180,27 +193,14 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
     let curOffset = 0;
     let fragment = fragments[fragmentIndex];
     const text = fragments.map(x => x.node.data.replace(/\u00A0/g,' ')).join('');
-    
-    console.log('🎯 DOM OVERLAY: Processing text:', JSON.stringify(text));
-    console.log('🎯 DOM OVERLAY: text length:', text.length);
-    console.log('🎯 DOM OVERLAY: text bytes:', Array.from(text).map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
-    console.log('🎯 DOM OVERLAY: fragments count:', fragments.length);
-    fragments.forEach((frag, i) => {
-        console.log(`🎯 FRAGMENT[${i}]: [${frag.start}:${frag.end}] length=${frag.length} data="${frag.node.data}"`);
-    });
 
     for (const token of tokens) {
         if (!fragment) return;
         
-        console.log(`🎯 PROCESSING TOKEN: "${token.card.spelling}" at [${token.start}:${token.end}]`);
-        console.log(`🎯 Current offset: ${curOffset}, fragment index: ${fragmentIndex}`);
-
         // Wrap all unparsed fragments that appear before the token
         while (curOffset < token.start) {
-            console.log(`🎯 UNPARSED: curOffset=${curOffset} < token.start=${token.start}, fragment=[${fragment.start}:${fragment.end}]`);
             if (fragment.end > token.start) {
                 // Only the beginning of the node is unparsed. Split it.
-                console.log(`🎯 SPLITTING fragment at token.start=${token.start}`);
                 splitFragment(fragments, fragmentIndex, token.start);
             }
 
@@ -208,27 +208,22 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             unparsedWrapper.className = 'jpdb-word unparsed';
             wrap(fragment.node, unparsedWrapper);
 
-            console.log(`🎯 UNPARSED WRAPPED: "${fragment.node.data}" (length=${fragment.length})`);
             curOffset += fragment.length;
-            console.log(`🎯 NEW curOffset: ${curOffset}`);
-
             fragment = fragments[++fragmentIndex];
             if (!fragment) return;
         }
 
         // Accumulate fragments until we have enough to fit the current token
         while (curOffset < token.end) {
-            console.log(`🎯 TOKEN FRAGMENT: curOffset=${curOffset} < token.end=${token.end}, fragment=[${fragment.start}:${fragment.end}]`);
             if (fragment.end > token.end) {
                 // Only the beginning of the node is part of the token. Split it.
-                console.log(`🎯 SPLITTING fragment at token.end=${token.end}`);
                 splitFragment(fragments, fragmentIndex, token.end);
             }
 
-            // Create class name with JLPT-based coloring
+            // Create class name with appropriate coloring based on mode
             const baseClassName = `jpdb-word ${token.card.state.join(' ')}`;
-            const jlptColorClass = getJlptColorClass(token);
-            const className = `${baseClassName} ${jlptColorClass}`;
+            const additionalColorClass = getColorClass(token);
+            const className = additionalColorClass ? `${baseClassName} ${additionalColorClass}` : baseClassName;
             
             const wrapper = (
                 token.rubies.length > 0 && !fragment.hasRuby ? 
@@ -238,28 +233,16 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             
             wrapper.className = className;
             
-            // Add debugging and ensure we use current handlers
+            // Add event handlers
             wrapper.addEventListener('mouseenter', (event: Event) => {
-                console.log('🎯 mouseenter event fired on wrapper');
-                console.log('🎯 onWordHoverStart function type:', typeof onWordHoverStart);
-                console.log('🎯 onWordHoverStart function name:', onWordHoverStart.name);
-                console.log('🎯 About to call onWordHoverStart with event:', event);
                 try {
                     onWordHoverStart(event as MouseEvent);
-                    console.log('🎯 onWordHoverStart call completed successfully');
                 } catch (error) {
-                    console.error('🎯 Error in onWordHoverStart:', error);
-                    console.error('🎯 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+                    console.error('Error in onWordHoverStart:', error);
                 }
             });
-            wrapper.addEventListener('mouseleave', (e) => {
-                console.log('🎯 mouseleave event fired on wrapper');
-                console.log('🎯 onWordHoverStop function type:', typeof onWordHoverStop);
-                if (typeof onWordHoverStop === 'function') {
-                    onWordHoverStop();
-                } else {
-                    console.error('🎯 onWordHoverStop is not a function!', onWordHoverStop);
-                }
+            wrapper.addEventListener('mouseleave', (event: Event) => {
+                onWordHoverStop(event as MouseEvent);
             });
 
             const idx = reverseIndex.get(`${token.card.vid}/${token.card.sid}`);
@@ -275,27 +258,7 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 contextOffset: curOffset,
             };
 
-            // Enhanced diagnostic logging for token wrapping
-            console.log(`🎯 WRAPPING TOKEN:`, {
-                tokenSpelling: token.card.spelling,
-                tokenStart: token.start,
-                tokenEnd: token.end,
-                fragmentText: fragment.node.data,
-                fragmentStart: fragment.start,
-                fragmentEnd: fragment.end,
-                curOffset: curOffset,
-                textAtOffset: text.slice(token.start, token.end),
-                actualTextContent: fragment.node.data
-            });
-
             wrap(fragment.node, wrapper);
-
-            // Verify the wrapper was created correctly
-            console.log(`🎯 WRAPPER CREATED:`, {
-                wrapperText: wrapper.textContent,
-                expectedSpelling: token.card.spelling,
-                match: wrapper.textContent === token.card.spelling
-            });
 
             if (!fragment.hasRuby) {
                 for (const ruby of token.rubies) {
@@ -325,10 +288,7 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 }
             }
 
-            console.log(`🎯 TOKEN WRAPPED: "${fragment.node.data}" for token "${token.card.spelling}"`);
-            console.log(`🎯 BEFORE: curOffset=${curOffset}, fragment.end=${fragment.end}`);
             curOffset = fragment.end;
-            console.log(`🎯 AFTER: curOffset=${curOffset}`);
 
             fragment = fragments[++fragmentIndex];
             if (!fragment) break;
