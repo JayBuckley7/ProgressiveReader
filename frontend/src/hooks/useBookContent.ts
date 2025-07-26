@@ -197,6 +197,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         console.error('❌ Error loading book content:', error);
         if (loadedBookIdRef.current === requestId) {
           setError(error instanceof Error ? error.message : 'Failed to load book');
+          setIsLoading(false); // Exit loading state on failure
           loadedBookIdRef.current = null; // Reset on error
         }
       } finally {
