@@ -28,6 +28,9 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   const [error, setError] = useState<string | null>(null);
   const processorRef = useRef<any>(null);
   const loadedBookIdRef = useRef<string | null>(null);
+  const prevMetadataRef = useRef<
+    Pick<BookMetadata, 'title' | 'fileType' | 'driveFileId'> | null
+  >(null);
 
   // Add debug logging to track hook execution
   console.log(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
@@ -50,7 +53,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
   // Load and process the book
   useEffect(() => {
-    // Skip if no metadata or if this book is already loaded
+    // Skip if no metadata
     if (!bookMetadata) {
       console.warn('useBookContent: No book metadata found for bookId:', bookId);
       setError('Book not found');
@@ -58,8 +61,15 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       return;
     }
 
-    // Skip if this book is already loaded to prevent redundant processing
-    if (loadedBookIdRef.current === bookId && bookContent) {
+    const prev = prevMetadataRef.current;
+    const metaUnchanged =
+      prev &&
+      prev.title === bookMetadata.title &&
+      prev.fileType === bookMetadata.fileType &&
+      prev.driveFileId === bookMetadata.driveFileId;
+
+    // Skip if this book is already loaded and metadata hasn't changed
+    if (loadedBookIdRef.current === bookId && bookContent && metaUnchanged) {
       console.log('useBookContent: Book already loaded, skipping reload for:', bookId);
       setIsLoading(false);
       return;
@@ -164,6 +174,12 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
         console.log('✅ Book loading complete!');
 
+        prevMetadataRef.current = {
+          title: bookMetadata.title,
+          fileType: bookMetadata.fileType,
+          driveFileId: bookMetadata.driveFileId,
+        };
+
               } catch (error) {
           console.error('❌ Error loading book content:', error);
           setError(error instanceof Error ? error.message : 'Failed to load book');
@@ -174,7 +190,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     };
 
     loadBook();
-  }, [bookId, bookMetadata?.title, bookMetadata?.fileType, bookMetadata?.driveFileId]); // More specific dependencies
+  }, [bookId, bookMetadata]);
 
   // Reset loaded book reference when bookId changes
   useEffect(() => {
