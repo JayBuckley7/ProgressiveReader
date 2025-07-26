@@ -82,12 +82,13 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     }
 
     const loadBook = async () => {
+      const requestId = bookId;
       try {
         setIsLoading(true);
         setError(null);
         // Mark the current book as in-progress immediately to prevent
         // duplicate loads triggered by re-renders while loading
-        loadedBookIdRef.current = bookId;
+        loadedBookIdRef.current = requestId;
 
         console.log('Loading book content for:', bookMetadata.title, 'ID:', bookId);
         console.log('Book metadata:', bookMetadata);
@@ -165,6 +166,15 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           console.log('Step 7: Skipping pre-load for large book (' + totalChapters + ' chapters)');
         }
 
+        // Bail out if the user navigated away before load finished
+        if (loadedBookIdRef.current !== requestId) {
+          console.warn(
+            'useBookContent: Active book changed before load completed, ignoring results for:',
+            requestId
+          );
+          return;
+        }
+
         setBookContent({
           title: bookMetadata.title,
           totalChapters,
@@ -173,7 +183,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         });
 
         // Mark this book as loaded
-        loadedBookIdRef.current = bookId;
+        loadedBookIdRef.current = requestId;
 
         console.log('✅ Book loading complete!');
 
@@ -183,12 +193,16 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           driveFileId: bookMetadata.driveFileId,
         };
 
-              } catch (error) {
-          console.error('❌ Error loading book content:', error);
+      } catch (error) {
+        console.error('❌ Error loading book content:', error);
+        if (loadedBookIdRef.current === requestId) {
           setError(error instanceof Error ? error.message : 'Failed to load book');
           loadedBookIdRef.current = null; // Reset on error
+        }
       } finally {
-        setIsLoading(false);
+        if (loadedBookIdRef.current === requestId) {
+          setIsLoading(false);
+        }
       }
     };
 
