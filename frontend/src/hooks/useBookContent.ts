@@ -28,6 +28,11 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   const [error, setError] = useState<string | null>(null);
   const processorRef = useRef<any>(null);
   const loadedBookIdRef = useRef<string | null>(null);
+  const activeLoadRef = useRef<{
+    bookId: string;
+    requestId: string;
+    metadata: Pick<BookMetadata, 'title' | 'fileType' | 'driveFileId'>;
+  } | null>(null);
   const prevMetadataRef = useRef<
     Pick<BookMetadata, 'title' | 'fileType' | 'driveFileId'> | null
   >(null);
@@ -75,20 +80,35 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       return;
     }
 
-    // Skip if already loading this book to prevent duplicate loading
-    if (isLoading && loadedBookIdRef.current === bookId) {
+    // Skip if already loading this book with the same metadata to prevent duplicate loading
+    if (
+      isLoading &&
+      activeLoadRef.current &&
+      activeLoadRef.current.bookId === bookId &&
+      activeLoadRef.current.metadata.title === bookMetadata.title &&
+      activeLoadRef.current.metadata.fileType === bookMetadata.fileType &&
+      activeLoadRef.current.metadata.driveFileId === bookMetadata.driveFileId
+    ) {
       console.log('useBookContent: Book is already loading, skipping duplicate request for:', bookId);
       return;
     }
 
     const loadBook = async () => {
-      const requestId = bookId;
+      const requestId = `${bookId}-${Date.now()}`;
       try {
         setIsLoading(true);
         setError(null);
         // Mark the current book as in-progress immediately to prevent
         // duplicate loads triggered by re-renders while loading
-        loadedBookIdRef.current = requestId;
+        activeLoadRef.current = {
+          bookId,
+          requestId,
+          metadata: {
+            title: bookMetadata.title,
+            fileType: bookMetadata.fileType,
+            driveFileId: bookMetadata.driveFileId,
+          },
+        };
 
         console.log('Loading book content for:', bookMetadata.title, 'ID:', bookId);
         console.log('Book metadata:', bookMetadata);
@@ -167,7 +187,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         }
 
         // Bail out if the user navigated away before load finished
-        if (loadedBookIdRef.current !== requestId) {
+        if (activeLoadRef.current?.requestId !== requestId) {
           console.warn(
             'useBookContent: Active book changed before load completed, ignoring results for:',
             requestId
@@ -183,7 +203,8 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         });
 
         // Mark this book as loaded
-        loadedBookIdRef.current = requestId;
+        loadedBookIdRef.current = bookId;
+        activeLoadRef.current = null;
 
         console.log('✅ Book loading complete!');
 
@@ -195,14 +216,16 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
       } catch (error) {
         console.error('❌ Error loading book content:', error);
-        if (loadedBookIdRef.current === requestId) {
+        if (activeLoadRef.current?.requestId === requestId) {
           setError(error instanceof Error ? error.message : 'Failed to load book');
           setIsLoading(false); // Exit loading state on failure
           loadedBookIdRef.current = null; // Reset on error
+          activeLoadRef.current = null;
         }
       } finally {
-        if (loadedBookIdRef.current === requestId) {
+        if (activeLoadRef.current?.requestId === requestId) {
           setIsLoading(false);
+          activeLoadRef.current = null;
         }
       }
     };
@@ -225,6 +248,9 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       setBookContent(null);
       setCurrentChapterContent(null);
       processorRef.current = null;
+    }
+    if (activeLoadRef.current?.bookId !== bookId) {
+      activeLoadRef.current = null;
     }
   }, [bookId]);
 
