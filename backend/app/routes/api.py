@@ -225,6 +225,80 @@ def translate_content():
             current_app.logger.error(f"Unexpected error with Google Translate: {e}", exc_info=True)
             return jsonify({"error": f"Error during translation: {e}"}), 500
 
+
+@api_bp.route('/translate/batch', methods=['POST'])
+def translate_batch():
+    """Translate multiple words/phrases in a single batch request for better performance."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    words = data.get('words', [])
+    target_language = data.get('target_lang', 'English')
+    translation_service = data.get('translation_service', 'google')
+
+    if not words or not isinstance(words, list):
+        return jsonify({"error": "Missing or invalid 'words' field (should be list)"}), 400
+
+    if translation_service == 'google':
+        if not google_translate_api_key:
+            return jsonify({'error': 'Google Translate API key not configured'}), 400
+
+        try:
+            # Map common language codes to Google Translate format
+            lang_mapping = {
+                'English': 'en',
+                'Japanese': 'ja',
+                'Chinese': 'zh',
+                'Spanish': 'es',
+                'French': 'fr',
+                'German': 'de',
+                'Korean': 'ko',
+                'Russian': 'ru',
+                'Portuguese': 'pt',
+                'Italian': 'it'
+            }
+
+            target_lang_code = lang_mapping.get(target_language, target_language.lower()[:2])
+            translate_url = 'https://translation.googleapis.com/language/translate/v2'
+
+            # Google Translate supports multiple queries in one request
+            payload = {
+                'q': words,  # Send all words at once
+                'target': target_lang_code,
+                'key': google_translate_api_key,
+                'format': 'text'
+            }
+
+            response = requests.post(translate_url, data=payload)
+            response.raise_for_status()
+
+            result = response.json()
+
+            if 'data' not in result or 'translations' not in result['data']:
+                return jsonify({"error": "Invalid response from Google Translate API"}), 500
+
+            translations = result['data']['translations']
+            
+            # Create word->translation mapping
+            translation_map = {}
+            for i, translation in enumerate(translations):
+                if i < len(words):
+                    translation_map[words[i]] = translation['translatedText']
+
+            current_app.logger.info(f"Batch translated {len(words)} words successfully")
+            return jsonify({"translations": translation_map})
+
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error calling Google Translate API: {e}", exc_info=True)
+            return jsonify({"error": f"Error during batch translation: {e}"}), 500
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error with batch translate: {e}", exc_info=True)
+            return jsonify({"error": f"Error during batch translation: {e}"}), 500
+
+    else:
+        return jsonify({"error": "Batch translation currently only supports Google Translate"}), 400
+
     # Handle OpenAI service (original logic)
     if use_server_key:
         api_key_to_use = user_api_key or get_next_openai_key() or current_app.config.get('OPENAI_API_KEY')

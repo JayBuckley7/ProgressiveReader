@@ -503,41 +503,61 @@ export class Popup {
         let meaningsList: HTMLElement | DocumentFragment;
         
         if (isOfflineMode()) {
-            // In offline mode, try to get Google Translate definitions
-            try {
-                const translateResults = await lookupJitendexWord(card.spelling);
-                
-                if (translateResults.length > 0) {
-                    // Create Google Translate definitions section
-                    const translationDefinitions = translateResults.slice(0, 3).map(entry =>
-                        createElement('li', {}, 
-                            createElement('div', { style: 'margin-bottom: 0.5em;' },
-                                createElement('strong', {}, `${entry.original}${card.reading && card.reading !== entry.original ? ` (${card.reading})` : ''}`),
-                                createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em; color: #666;' },
-                                    createElement('div', {}, entry.translation),
-                                    entry.confidence && createElement('div', { style: 'font-size: 0.8em; margin-top: 0.25em; opacity: 0.7;' }, 
-                                        `Confidence: ${Math.round(entry.confidence * 100)}%`
+            // Check if card already has meanings from optimized Google Translate parser
+            if (card.meanings && card.meanings.length > 0 && card.meanings[0].glosses.length > 0 && card.meanings[0].glosses[0] !== 'No translation available') {
+                // Use pre-populated meanings from optimized parser
+                meaningsList = createElement('div', {},
+                    createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
+                    createElement('ol', {},
+                        ...card.meanings.map(meaning =>
+                            createElement('li', {}, 
+                                createElement('div', { style: 'margin-bottom: 0.5em;' },
+                                    createElement('strong', {}, `${card.spelling}${card.reading && card.reading !== card.spelling ? ` (${card.reading})` : ''}`),
+                                    createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em; color: #666;' },
+                                        meaning.glosses.join('; ')
                                     )
                                 )
                             )
                         )
-                    );
+                    )
+                );
+            } else {
+                // Fallback to Jitendex lookup for words not handled by optimized parser
+                try {
+                    const translateResults = await lookupJitendexWord(card.spelling);
+                    
+                    if (translateResults.length > 0) {
+                        // Create Google Translate definitions section
+                        const translationDefinitions = translateResults.slice(0, 3).map(entry =>
+                            createElement('li', {}, 
+                                createElement('div', { style: 'margin-bottom: 0.5em;' },
+                                    createElement('strong', {}, `${entry.original}${card.reading && card.reading !== entry.original ? ` (${card.reading})` : ''}`),
+                                    createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em; color: #666;' },
+                                        createElement('div', {}, entry.translation),
+                                        entry.confidence && createElement('div', { style: 'font-size: 0.8em; margin-top: 0.25em; opacity: 0.7;' }, 
+                                            `Confidence: ${Math.round(entry.confidence * 100)}%`
+                                        )
+                                    )
+                                )
+                            )
+                        );
 
-                    meaningsList = createElement('div', {},
-                        createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
-                        createElement('ol', {}, ...translationDefinitions)
-                    );
-                } else {
-                    // No translation results, show fallback
+                        meaningsList = createElement('div', {},
+                            createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
+                            createElement('ol', {}, ...translationDefinitions)
+                        );
+                    } else {
+                        // No translation results, show fallback
+                        meaningsList = createElement('ol', {},
+                            createElement('li', {}, 'No translation found')
+                        );
+                    }
+                } catch (error) {
+                    console.error('Failed to translate with Google Translate:', error);
                     meaningsList = createElement('ol', {},
-                        createElement('li', {}, 'No translation found')
+                        createElement('li', {}, 'Translation failed')
                     );
                 }
-            } catch (error) {
-                console.error('Failed to translate with Google Translate:', error);
-                meaningsList = createElement('ol', {},
-                    createElement('li', {}, 'Translation failed')
-                );
             }
         } else {
             // Online mode - use regular JPDB meanings
