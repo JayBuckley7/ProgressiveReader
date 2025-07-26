@@ -35,17 +35,17 @@ def get_next_openai_key() -> str | None:
 def debug_admin_check():
     """Debug endpoint to check admin status and organization memberships."""
     from ..utils.clerk_auth import is_progressive_reader_admin, clerk
-    
+
     user = g.user
     if not user:
         return jsonify({"error": "No user found"}), 401
-    
+
     debug_info = {
         "user_id": user.id,
         "is_admin": is_progressive_reader_admin(user.id),
         "memberships": []
     }
-    
+
     if clerk:
         try:
             memberships = clerk.organization_memberships.list(user_id=[user.id])
@@ -62,7 +62,7 @@ def debug_admin_check():
             debug_info["error"] = str(e)
     else:
         debug_info["error"] = "Clerk client not initialized"
-    
+
     return jsonify(debug_info)
 
 @api_bp.route('/openai_key_configured', methods=['GET'])
@@ -124,7 +124,16 @@ def translate_content():
         return jsonify({"error": "Invalid JSON payload"}), 400
 
     content = data.get('content')
-    target_language = data.get('target_lang')
+    target_language = (
+        data.get('target_lang')
+        or data.get('target_language')
+        or data.get('targetLanguage')
+    )
+    source_language = (
+        data.get('source_lang')
+        or data.get('source_language')
+        or data.get('sourceLanguage')
+    )
     model = data.get('model', 'gpt-4-turbo') # Default to gpt-4-turbo
     user_api_key = data.get('api_key')
     use_server_key = data.get('use_server_key', True)
@@ -133,26 +142,30 @@ def translate_content():
     use_cefr = data.get('use_cefr', False) # Get use_cefr flag
     translation_service = data.get('translation_service', 'openai')  # 'openai' or 'google'
 
-    if content is None or target_language is None:
-        return jsonify({"error": "Missing required fields: content, target_lang"}), 400
+    if content is None:
+        return jsonify({"error": "Missing required field: content"}), 400
+
+    # Default to English if no target language specified
+    if target_language is None:
+        target_language = 'English'
 
     # Handle Google Translate service
     if translation_service == 'google':
         if not google_translate_api_key:
             return jsonify({'error': 'Google Translate API key not configured'}), 400
-        
+
         current_app.logger.info(
             f"--- Google Translate Request --- Lang: {target_language}"
         )
-        
+
         try:
             # Strip HTML tags for Google Translate since it works with plain text
             import re
             clean_content = re.sub(r'<[^>]+>', '', content)
-            
+
             # Prepare request to Google Cloud Translate API
             translate_url = 'https://translation.googleapis.com/language/translate/v2'
-            
+
             # Map common language codes to Google Translate format
             lang_mapping = {
                 'English': 'en',
@@ -166,39 +179,45 @@ def translate_content():
                 'Portuguese': 'pt',
                 'Italian': 'it'
             }
-            
-            # Convert target language to Google Translate format
+
+            # Convert languages to Google Translate format
             target_lang_code = lang_mapping.get(target_language, target_language.lower()[:2])
-            
+            source_lang_code = None
+            if source_language:
+                source_lang_code = lang_mapping.get(source_language, source_language.lower()[:2])
+
             payload = {
                 'q': clean_content,
                 'target': target_lang_code,
-                'source': 'auto',  # Auto-detect source language
                 'key': google_translate_api_key,
                 'format': 'text'
             }
-            
+
+            # Include source language if provided, otherwise let Google auto-detect
+            if source_lang_code:
+                payload['source'] = source_lang_code
+
             response = requests.post(translate_url, data=payload)
             response.raise_for_status()
-            
+
             result = response.json()
-            
+
             if 'data' not in result or 'translations' not in result['data']:
                 return jsonify({"error": "Invalid response from Google Translate API"}), 500
-            
+
             translation = result['data']['translations'][0]
             translated_text = translation['translatedText']
-            
+
             # Wrap the translated text back in basic HTML structure if the original had tags
             if '<' in content and '>' in content:
                 translated_text = f"<p>{translated_text}</p>"
-            
+
             current_app.logger.info(
                 f"Google Translate successful. First 100 chars: {translated_text[:100]}..."
             )
-            
+
             return jsonify({"translated_text": translated_text})
-            
+
         except requests.exceptions.RequestException as e:
             current_app.logger.error(f"Error calling Google Translate API: {e}", exc_info=True)
             return jsonify({"error": f"Error during translation: {e}"}), 500
