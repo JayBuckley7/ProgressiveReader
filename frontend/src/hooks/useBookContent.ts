@@ -204,6 +204,9 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   useEffect(() => {
     if (loadedBookIdRef.current !== bookId) {
       loadedBookIdRef.current = null;
+      // Clear previously stored metadata so returning to a book with
+      // updated details doesn't incorrectly skip reloading
+      prevMetadataRef.current = null;
       setBookContent(null);
       setCurrentChapterContent(null);
       processorRef.current = null;
