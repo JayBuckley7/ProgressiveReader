@@ -88,6 +88,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       .catch(() => setServerKeyAvailable(false));
   }, []);
 
+  // Ensure a parser is always active - default to Google Translate when no
+  // JPDB API key is configured and JPDB parser is selected
+  useEffect(() => {
+    if (!jpdbApiKey && !settings.useOfflineParser) {
+      updateSettings({ useOfflineParser: true });
+    }
+  }, [jpdbApiKey, settings.useOfflineParser]);
+
 
 
     if (!settings) return null;

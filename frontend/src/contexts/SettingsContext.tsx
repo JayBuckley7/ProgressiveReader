@@ -43,7 +43,7 @@ const defaultSettings: Settings = {
   touchscreenSupport: true,
   disableFadeAnimation: false,
   cacheTranslations: true,
-  useOfflineParser: false,
+  useOfflineParser: true,
 };
 
 const SETTINGS_COOKIE = "prSettings";
