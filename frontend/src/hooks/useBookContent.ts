@@ -28,6 +28,12 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   const [error, setError] = useState<string | null>(null);
   const processorRef = useRef<any>(null);
   const loadedBookIdRef = useRef<string | null>(null);
+
+  const activeLoadRef = useRef<{
+    bookId: string;
+    requestId: string;
+    metadata: Pick<BookMetadata, 'title' | 'fileType' | 'driveFileId'>;
+  } | null>(null);
   const prevMetadataRef = useRef<
     Pick<BookMetadata, 'title' | 'fileType' | 'driveFileId'> | null
   >(null);
@@ -75,16 +81,35 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       return;
     }
 
-    // Skip if already loading this book to prevent duplicate loading
-    if (isLoading && loadedBookIdRef.current === bookId) {
+    // Skip if already loading this book with the same metadata to prevent duplicate loading
+    if (
+      isLoading &&
+      activeLoadRef.current &&
+      activeLoadRef.current.bookId === bookId &&
+      activeLoadRef.current.metadata.title === bookMetadata.title &&
+      activeLoadRef.current.metadata.fileType === bookMetadata.fileType &&
+      activeLoadRef.current.metadata.driveFileId === bookMetadata.driveFileId
+    ) {
       console.log('useBookContent: Book is already loading, skipping duplicate request for:', bookId);
       return;
     }
 
     const loadBook = async () => {
+      const requestId = `${bookId}-${Date.now()}`;
       try {
         setIsLoading(true);
         setError(null);
+        // Mark the current book as in-progress immediately to prevent
+        // duplicate loads triggered by re-renders while loading
+        activeLoadRef.current = {
+          bookId,
+          requestId,
+          metadata: {
+            title: bookMetadata.title,
+            fileType: bookMetadata.fileType,
+            driveFileId: bookMetadata.driveFileId,
+          },
+        };
 
         console.log('Loading book content for:', bookMetadata.title, 'ID:', bookId);
         console.log('Book metadata:', bookMetadata);
@@ -162,6 +187,15 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           console.log('Step 7: Skipping pre-load for large book (' + totalChapters + ' chapters)');
         }
 
+        // Bail out if the user navigated away before load finished
+        if (activeLoadRef.current?.requestId !== requestId) {
+          console.warn(
+            'useBookContent: Active book changed before load completed, ignoring results for:',
+            requestId
+          );
+          return;
+        }
+
         setBookContent({
           title: bookMetadata.title,
           totalChapters,
@@ -180,25 +214,43 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           driveFileId: bookMetadata.driveFileId,
         };
 
-              } catch (error) {
-          console.error('❌ Error loading book content:', error);
+      } catch (error) {
+        console.error('❌ Error loading book content:', error);
+        if (activeLoadRef.current?.requestId === requestId) {
           setError(error instanceof Error ? error.message : 'Failed to load book');
+          setIsLoading(false); // Exit loading state on failure
           loadedBookIdRef.current = null; // Reset on error
+          activeLoadRef.current = null;
+        }
       } finally {
-        setIsLoading(false);
+        if (activeLoadRef.current?.requestId === requestId) {
+          setIsLoading(false);
+          activeLoadRef.current = null;
+        }
       }
     };
 
     loadBook();
-  }, [bookId, bookMetadata]);
+  }, [
+    bookId,
+    bookMetadata?.title,
+    bookMetadata?.fileType,
+    bookMetadata?.driveFileId,
+  ]);
 
   // Reset loaded book reference when bookId changes
   useEffect(() => {
     if (loadedBookIdRef.current !== bookId) {
       loadedBookIdRef.current = null;
+      // Clear previously stored metadata so returning to a book with
+      // updated details doesn't incorrectly skip reloading
+      prevMetadataRef.current = null;
       setBookContent(null);
       setCurrentChapterContent(null);
       processorRef.current = null;
+    }
+    if (activeLoadRef.current?.bookId !== bookId) {
+      activeLoadRef.current = null;
     }
   }, [bookId]);
 
