@@ -204,7 +204,6 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
         // Mark this book as loaded
         loadedBookIdRef.current = bookId;
-        activeLoadRef.current = null;
 
         console.log('✅ Book loading complete!');
 
