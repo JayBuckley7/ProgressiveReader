@@ -28,6 +28,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   const [error, setError] = useState<string | null>(null);
   const processorRef = useRef<any>(null);
   const loadedBookIdRef = useRef<string | null>(null);
+
   const activeLoadRef = useRef<{
     bookId: string;
     requestId: string;
