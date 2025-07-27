@@ -92,6 +92,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   });
 
   const [progressLoaded, setProgressLoaded] = useState(false);
+
+  useEffect(() => {
+    setProgressLoaded(false);
+  }, [bookId]);
   
   // Handle initial PDF page from URL
   const initialPdfPage = useMemo(() => {
@@ -143,23 +147,25 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   }, [bookId, bookMetadata, progressLoaded, currentChapter, getReadingProgress, searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (bookMetadata && bookMetadata.fileType === "pdf") {
-      (async () => {
-        const blob = await storageService.downloadBook(bookId, bookMetadata);
-        if (blob) {
-          const arrayBuffer = await blob.arrayBuffer();
-          setPdfData(arrayBuffer);
-          
-          // Navigate to the correct PDF page after data loads
-          setTimeout(() => {
-            if (pdfViewerRef.current) {
-              pdfViewerRef.current.goToPage(pdfCurrentPage);
-            }
-          }, 100);
-        }
-      })();
+    if (!bookMetadata || bookMetadata.fileType !== "pdf" || !progressLoaded) return;
+
+    const load = async () => {
+      const blob = await storageService.downloadBook(bookId, bookMetadata);
+      if (blob) {
+        const arrayBuffer = await blob.arrayBuffer();
+        setPdfData(arrayBuffer);
+        setPdfLoaded(true);
+      }
+    };
+
+    load();
+  }, [bookMetadata, bookId, progressLoaded]);
+
+  useEffect(() => {
+    if (pdfLoaded && pdfViewerRef.current && pdfCurrentPage != null) {
+      pdfViewerRef.current.goToPage(pdfCurrentPage);
     }
-  }, [bookId, bookMetadata, progressLoaded, getReadingProgress]);
+  }, [pdfLoaded, pdfCurrentPage]);
   const updateChapter = useCallback(
     (ch: number) => {
       // Clear any pending progress save before switching chapters
@@ -210,8 +216,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, chapter);
 
   // TODO: Progress tracking - replace with real API calls
-  const progress = { currentChapter: 0, currentPosition: 0 };
-  const updateProgress = async (data: any) => { console.log("Update progress (TODO):", data); };
 
   const { settings } = useSettings();
 
@@ -219,6 +223,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
   const [pdfPageCount, setPdfPageCount] = useState(0);
   const [pdfCurrentPage, setPdfCurrentPage] = useState(initialPdfPage);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
 
   
   const [showSettings, setShowSettings] = useState(false);
@@ -226,6 +231,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const scrollPositionRef = useRef(0);
   const saveProgressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const jpdbInitRef = useRef(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
@@ -241,6 +247,26 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     startTime: null as number | null,
     isSwiping: false
   });
+
+  const swipeInitRef = useRef(false);
+  const nextChapterRef = useRef(nextChapter);
+  const prevChapterRef = useRef(prevChapter);
+
+  useEffect(() => {
+    nextChapterRef.current = nextChapter;
+  }, [nextChapter]);
+
+  useEffect(() => {
+    prevChapterRef.current = prevChapter;
+  }, [prevChapter]);
+
+  const progress = useMemo(
+    () => ({ currentChapter: chapter, currentPosition: scrollPositionRef.current }),
+    [chapter, scrollPositionRef.current]
+  );
+  const updateProgress = async (data: any) => {
+    console.log("Update progress (TODO):", data);
+  };
 
   // Handle internal EPUB links (like TOC navigation)
   useEffect(() => {
@@ -443,6 +469,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   // Initialize JPDB highlighter once on mount
   useEffect(() => {
+    if (jpdbInitRef.current) return;
+    jpdbInitRef.current = true;
     if (contentRef.current) {
       console.log('🎯 Initializing JPDB once on component mount');
       initializeJpdb(contentRef.current);
@@ -520,6 +548,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, [jpdbHighlighted]); // ONLY depend on jpdbHighlighted state changes
 
+  useEffect(() => {
+    if (!jpdbHighlighted && contentRef.current) {
+      const el = contentRef.current.querySelector('.prose') as HTMLElement | null;
+      if (el?.dataset.originalContent) {
+        el.innerHTML = el.dataset.originalContent;
+      }
+    }
+  }, [jpdbHighlighted]);
+
   // Restore scroll position from progress
   useEffect(() => {
     if (progress && contentRef.current && chapter === progress.currentChapter) {
@@ -529,8 +566,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   // Swipe controls implementation
   useEffect(() => {
+    if (swipeInitRef.current || !contentRef.current) return;
+    swipeInitRef.current = true;
+
     const contentEl = contentRef.current;
-    if (!contentEl || !bookContent) return;
+    if (!contentEl) return;
 
     const minLockDistance = 10;
     const minSwipeDistance = 60;
@@ -584,10 +624,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       if (Math.abs(dx) > minSwipeDistance && velocity > minVelocity) {
         if (dx < 0) {
           // Swipe left - next chapter
-          nextChapter();
+          nextChapterRef.current();
         } else {
           // Swipe right - previous chapter
-          prevChapter();
+          prevChapterRef.current();
         }
       }
 
@@ -603,7 +643,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       contentEl.removeEventListener('pointermove', handlePointerMove);
       contentEl.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [bookContent, chapter]);
+  }, []);
 
   // Translate using the user's personal OpenAI key entirely in the browser
   const translateWithOpenAI = async (html: string, useCefr: boolean): Promise<string> => {
