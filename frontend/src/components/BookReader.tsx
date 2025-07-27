@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
@@ -160,23 +160,51 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       })();
     }
   }, [bookId, bookMetadata, progressLoaded, getReadingProgress]);
-  const updateChapter = setCurrentChapter ?? ((ch: number) => {
-    setLocalChapter(ch);
-    searchParams.set('ch', String(ch));
-    setSearchParams(searchParams, { replace: true });
-    
-    // Save progress when chapter changes
-    if (bookMetadata && progressLoaded) {
-      saveBookProgress(
-        bookId, 
-        ch, 
-        0, // Reset scroll position for new chapter
-        undefined, 
-        undefined,
-        bookMetadata.fileType
-      );
-    }
-  });
+  const updateChapter = useCallback(
+    (ch: number) => {
+      // Clear any pending progress save before switching chapters
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
+      }
+
+      if (setCurrentChapter) {
+        setCurrentChapter(ch);
+      } else {
+        setLocalChapter(ch);
+      }
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("ch", String(ch));
+      setSearchParams(newParams, { replace: true });
+
+      // Reset scroll position when chapter changes
+      scrollPositionRef.current = 0;
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+
+      // Save progress when chapter changes
+      if (bookMetadata && progressLoaded) {
+        saveBookProgress(
+          bookId,
+          ch,
+          0, // Reset scroll position for new chapter
+          undefined,
+          undefined,
+          bookMetadata.fileType
+        );
+      }
+    },
+    [
+      setCurrentChapter,
+      searchParams,
+      setSearchParams,
+      setLocalChapter,
+      bookId,
+      bookMetadata,
+      progressLoaded,
+      saveBookProgress,
+    ]
+  );
 
   // Use the new useBookContent hook instead of placeholder data
   const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, chapter);
@@ -194,7 +222,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   
   const [showSettings, setShowSettings] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
+  // Track scroll position without triggering re-renders
+  const scrollPositionRef = useRef(0);
+  const saveProgressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false); // Track if current content is translated
@@ -314,26 +344,31 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     };
   }, [bookContent, bookMetadata?.fileType, updateChapter]);
 
-  // Update reading progress
-  useEffect(() => {
-    const updateProgressDebounced = setTimeout(() => {
-      if (bookMetadata && progressLoaded) {
-        // Save scroll position progress for EPUB/text books
-        if (bookMetadata.fileType !== 'pdf') {
-          saveBookProgress(
-            bookId,
-            chapter,
-            scrollPosition,
-            undefined,
-            undefined,
-            bookMetadata.fileType
-          );
-        }
-      }
-    }, 2000); // Debounce for 2 seconds to avoid too frequent saves
+  // Save reading progress helper
+  const fileType = bookMetadata?.fileType;
+  const saveProgress = useCallback(() => {
+    if (fileType && progressLoaded && fileType !== "pdf") {
+      saveBookProgress(
+        bookId,
+        chapter,
+        scrollPositionRef.current,
+        undefined,
+        undefined,
+        fileType
+      );
+    }
+  }, [fileType, progressLoaded, saveBookProgress, bookId, chapter]);
 
-    return () => clearTimeout(updateProgressDebounced);
-  }, [bookId, chapter, scrollPosition, bookMetadata, progressLoaded, saveBookProgress]);
+  // Ensure progress is saved when chapter changes and on unmount
+  useEffect(() => {
+    saveProgress();
+    return () => {
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
+      }
+      saveProgress();
+    };
+  }, [saveProgress]);
 
   // Clear translated content when chapter changes, but check for autoload first
   useEffect(() => {
@@ -383,20 +418,28 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, [chapter, currentChapterContent, bookId, settings?.targetLanguage]);
 
-  // Handle scroll tracking
+  // Handle scroll tracking without re-rendering on every scroll
   useEffect(() => {
     const handleScroll = () => {
-      if (contentRef.current) {
-        setScrollPosition(contentRef.current.scrollTop);
+      if (!contentRef.current) return;
+      scrollPositionRef.current = contentRef.current.scrollTop;
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
       }
+      saveProgressTimeoutRef.current = setTimeout(saveProgress, 2000);
     };
 
     const content = contentRef.current;
     if (content) {
       content.addEventListener('scroll', handleScroll);
-      return () => content.removeEventListener('scroll', handleScroll);
+      return () => {
+        content.removeEventListener('scroll', handleScroll);
+        if (saveProgressTimeoutRef.current) {
+          clearTimeout(saveProgressTimeoutRef.current);
+        }
+      };
     }
-  }, []);
+  }, [saveProgress]);
 
   // Initialize JPDB highlighter once on mount
   useEffect(() => {
@@ -1101,7 +1144,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     );
   }
 
-  const nextChapter = () => {
+  const nextChapter = useCallback(() => {
     if (bookContent && chapter < bookContent.totalChapters - 1) {
       console.log('Moving to next chapter, clearing any translated content');
       setIsTranslated(false);
@@ -1109,9 +1152,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setIsAutoloaded(false);
       updateChapter(chapter + 1);
     }
-  };
+  }, [bookContent, chapter, updateChapter]);
 
-  const prevChapter = () => {
+  const prevChapter = useCallback(() => {
     if (chapter > 0) {
       console.log('Moving to previous chapter, clearing any translated content');
       setIsTranslated(false);
@@ -1119,10 +1162,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setIsAutoloaded(false);
       updateChapter(chapter - 1);
     }
-  };
+  }, [chapter, updateChapter]);
 
   // PDF page navigation handlers
-  const nextPdfPage = () => {
+  const nextPdfPage = useCallback(() => {
     if (pdfPageCount && pdfCurrentPage < pdfPageCount) {
       const newPage = pdfCurrentPage + 1;
       setPdfCurrentPage(newPage);
@@ -1141,9 +1184,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       }
 
     }
-  };
+  }, [pdfPageCount, pdfCurrentPage, bookMetadata, progressLoaded, saveBookProgress, bookId]);
 
-  const prevPdfPage = () => {
+  const prevPdfPage = useCallback(() => {
     if (pdfCurrentPage > 1) {
       const newPage = pdfCurrentPage - 1;
       setPdfCurrentPage(newPage);
@@ -1161,7 +1204,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         );
       }
     }
-  };
+  }, [pdfCurrentPage, pdfPageCount, bookMetadata, progressLoaded, saveBookProgress, bookId]);
 
 
   const clearTranslation = () => {
@@ -1173,7 +1216,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   };
 
-  const toggleJpdbHighlight = () => {
+  const toggleJpdbHighlight = useCallback(() => {
     console.log('🎯 JPDB highlight button clicked, current state:', jpdbHighlighted);
     
     setJpdbHighlighted(prev => {
@@ -1189,7 +1232,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       
       return newState;
     });
-  };
+  }, [jpdbHighlighted]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { ContentsDrawer } from "./ContentsDrawer";
 import { api } from "~/utils/api.ts";
 import type { ChapterTitle } from "../types";
@@ -19,7 +19,7 @@ interface ReaderControlsProps {
   jpdbHighlighted: boolean;
 }
 
-export function ReaderControls({
+function ReaderControlsComponent({
   currentChapter,
   totalChapters,
   onPrevChapter,
@@ -201,3 +201,5 @@ export function ReaderControls({
     </div>
   );
 }
+
+export const ReaderControls = React.memo(ReaderControlsComponent);
