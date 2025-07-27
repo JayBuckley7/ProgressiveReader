@@ -173,27 +173,32 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         clearTimeout(saveProgressTimeoutRef.current);
       }
 
+      // If chapter is controlled externally, delegate and exit early
       if (setCurrentChapter) {
         setCurrentChapter(ch);
-      } else {
-        setLocalChapter(ch);
+        return;
       }
+
+      // Update local state and URL
+      setLocalChapter(ch);
       const newParams = new URLSearchParams(searchParams);
       newParams.set("ch", String(ch));
       setSearchParams(newParams, { replace: true });
 
-      // Reset scroll position when chapter changes
-      scrollPositionRef.current = 0;
-      if (contentRef.current) {
-        contentRef.current.scrollTop = 0;
-      }
+      // Reset scroll position *after* progress for the previous chapter is saved
+      setTimeout(() => {
+        scrollPositionRef.current = 0;
+        if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+        }
+      }, 0);
 
-      // Save progress when chapter changes
+      // Save progress for the new chapter starting at position 0
       if (bookMetadata && progressLoaded) {
         saveBookProgress(
           bookId,
           ch,
-          0, // Reset scroll position for new chapter
+          0,
           undefined,
           undefined,
           bookMetadata.fileType
