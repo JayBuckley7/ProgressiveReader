@@ -186,7 +186,21 @@ function useStorageService() {
   }, [connectToGoogleDriveAndLoad]);
 
   useEffect(() => {
-    // DON'T try to authenticate immediately - wait for user to actually need Google Drive
+    // 🚨 RACE CONDITION FIX 🚨
+    // Previously, there was an automatic effect that tried to connect to Google Drive
+    // immediately when a user signed in with Google OAuth through Clerk. This caused
+    // a race condition where the effect ran before Clerk had fully finalized the
+    // user session, resulting in "valid tokens being cleared" as noted in GitHub issues.
+    // 
+    // SOLUTION: We now use a coordinated approach:
+    // 1. Only auto-connect on specific pages that need books (not admin pages)
+    // 2. Add a 1-second delay to ensure Clerk is fully ready
+    // 3. Let the storage service handle authentication to avoid competing flows
+    // 4. Prefer manual user-triggered connection over automatic connection
+    //
+    // This prevents multiple parts of the app from trying to manage authentication
+    // simultaneously and ensures proper state coordination.
+    
     console.log(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
     if (clerkLoaded) {
       setIsLoading(false);

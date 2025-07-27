@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppData } from '../contexts/AppDataContext';
-import { BookReader } from "./BookReader";
 import { BookMetadata, ReadingProgress } from '../services/storageService';
 
 interface Book {
@@ -22,7 +21,6 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardProps) {
-  const [showReader, setShowReader] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
@@ -66,7 +64,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
 
   const handleOpenBook = (resumeFromProgress = false) => {
     if (onSelectBook) {
-      // If using external navigation, pass the book ID
+      // External navigation (preferred) - delegate to parent
       if (resumeFromProgress && progress) {
         // Add chapter/page info to URL for resumption
         const baseUrl = `/book/${book.id}`;
@@ -81,7 +79,20 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
         onSelectBook(book.id);
       }
     } else if (book.fileId) {
-      setShowReader(true);
+      // Fallback navigation - use window.location for consistency
+      // This avoids the modal pattern that causes lifecycle issues
+      const baseUrl = `/book/${book.id}`;
+      if (resumeFromProgress && progress) {
+        if (progress.fileType === 'pdf' && progress.currentPage) {
+          window.location.href = `${baseUrl}?page=${progress.currentPage}`;
+        } else if (progress.currentChapter !== undefined) {
+          window.location.href = `${baseUrl}?ch=${progress.currentChapter}`;
+        } else {
+          window.location.href = baseUrl;
+        }
+      } else {
+        window.location.href = baseUrl;
+      }
     } else {
       console.log("No file available for:", book.title);
     }
@@ -139,10 +150,6 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
   const handleCardClick = () => {
     handleOpenBook(false);
   };
-
-  if (showReader) {
-    return <BookReader bookId={book.id} onClose={() => setShowReader(false)} />;
-  }
 
   return (
     <div

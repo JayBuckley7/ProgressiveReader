@@ -91,12 +91,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return currentChapter ?? fromQuery;
   });
 
-  const [progressLoaded, setProgressLoaded] = useState(false);
+    const [progressLoaded, setProgressLoaded] = useState(false);
 
+  // Reset progress loaded state when book changes
   useEffect(() => {
     setProgressLoaded(false);
   }, [bookId]);
-  
+   
   // Handle initial PDF page from URL
   const initialPdfPage = useMemo(() => {
     const pageFromQuery = parseInt(searchParams.get('page') || '1', 10);
@@ -105,46 +106,69 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   const chapter = currentChapter ?? localChapter;
 
-  // Load reading progress when book opens
+  // Refs for current values to avoid effect dependencies
+  const currentChapterRef = useRef(currentChapter);
+  const searchParamsRef = useRef(searchParams);
+  const setSearchParamsRef = useRef(setSearchParams);
+
+  // Update refs when values change
   useEffect(() => {
-    if (!progressLoaded && bookMetadata) {
-      (async () => {
-        try {
-          const progress = await getReadingProgress(bookId);
-          if (progress) {
-            console.log('📖 Restoring reading progress:', progress);
-            
-            if (bookMetadata.fileType === 'pdf' && progress.currentPage) {
-              // For PDFs, restore the page (only if not set via URL)
-              if (!searchParams.get('page')) {
-                setPdfCurrentPage(progress.currentPage);
-              }
-            } else if (progress.currentChapter !== undefined) {
-              // For EPUB/text books, restore the chapter (only if not set via URL or prop)
-              if (!currentChapter && !searchParams.get('ch')) {
-                setLocalChapter(progress.currentChapter);
-                searchParams.set('ch', String(progress.currentChapter));
-                setSearchParams(searchParams, { replace: true });
-              }
+    currentChapterRef.current = currentChapter;
+  }, [currentChapter]);
+
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
+
+  useEffect(() => {
+    setSearchParamsRef.current = setSearchParams;
+  }, [setSearchParams]);
+
+  // Load reading progress when book opens (runs once per book)
+  useEffect(() => {
+    if (!bookMetadata || progressLoaded) return;
+    
+    (async () => {
+      try {
+        const progress = await getReadingProgress(bookId);
+        if (progress) {
+          console.log('📖 Restoring reading progress:', progress);
+          
+          if (bookMetadata.fileType === 'pdf' && progress.currentPage) {
+            // For PDFs, restore the page (only if not set via URL)
+            const currentSearchParams = searchParamsRef.current;
+            if (!currentSearchParams.get('page')) {
+              setPdfCurrentPage(progress.currentPage);
             }
+          } else if (progress.currentChapter !== undefined) {
+            // For EPUB/text books, restore the chapter (only if not set via URL or prop)
+            const currentSearchParams = searchParamsRef.current;
+            const currentChapterValue = currentChapterRef.current;
             
-            // Restore scroll position if available
-            if (progress.currentPosition) {
-              setTimeout(() => {
-                if (contentRef.current) {
-                  contentRef.current.scrollTop = progress.currentPosition;
-                }
-              }, 500); // Delay to ensure content is loaded
+            if (!currentChapterValue && !currentSearchParams.get('ch')) {
+              setLocalChapter(progress.currentChapter);
+              const newParams = new URLSearchParams(currentSearchParams);
+              newParams.set('ch', String(progress.currentChapter));
+              setSearchParamsRef.current(newParams, { replace: true });
             }
           }
-        } catch (error) {
-          console.error('Failed to load reading progress:', error);
-        } finally {
-          setProgressLoaded(true);
+          
+          // Restore scroll position if available
+          if (progress.currentPosition) {
+            setTimeout(() => {
+              if (contentRef.current) {
+                contentRef.current.scrollTop = progress.currentPosition;
+              }
+            }, 500); // Delay to ensure content is loaded
+          }
         }
-      })();
-    }
-  }, [bookId, bookMetadata, progressLoaded, currentChapter, getReadingProgress, searchParams, setSearchParams]);
+      } catch (error) {
+        console.error('Failed to load reading progress:', error);
+      } finally {
+        setProgressLoaded(true);
+      }
+    })();
+  }, [bookId, bookMetadata, getReadingProgress]); // Only depend on book-related values
 
   useEffect(() => {
     if (!bookMetadata || bookMetadata.fileType !== "pdf" || !progressLoaded) return;
@@ -273,99 +297,118 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     console.log("Update progress (TODO):", data);
   };
 
-  // Handle internal EPUB links (like TOC navigation)
+  // Refs for current values to avoid effect dependencies
+  const bookContentRef = useRef(bookContent);
+  const updateChapterRef = useRef(updateChapter);
+
+  // Update refs when values change
+  useEffect(() => {
+    bookContentRef.current = bookContent;
+  }, [bookContent]);
+
+  useEffect(() => {
+    updateChapterRef.current = updateChapter;
+  }, [updateChapter]);
+
+  // Stable link click handler that doesn't change with chapter updates
+  const handleLinkClick = useCallback((e: Event) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a');
+    
+    if (!link || !link.href) return;
+    
+    console.log('🔗 Link clicked:', link.href, 'text:', link.textContent);
+    
+    // Check if this is an internal EPUB link
+    const href = link.getAttribute('href') || '';
+    const isInternalLink = href.startsWith('#') || 
+                         href.endsWith('.xhtml') || 
+                         href.endsWith('.html') ||
+                         href.includes('.xhtml#') ||
+                         href.includes('.html#');
+    
+    if (!isInternalLink) {
+      console.log('🔗 External link, allowing default behavior');
+      return; // Let external links work normally
+    }
+    
+    console.log('🔗 Internal EPUB link detected, preventing default and finding target chapter');
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentBookContent = bookContentRef.current;
+    const contentEl = contentRef.current;
+    
+    if (!currentBookContent || !contentEl) return;
+    
+    // Try to find the target chapter
+    let targetChapter = -1;
+    
+    // Method 1: Look for chapter by href in chapterTitles
+    if (currentBookContent.chapterTitles) {
+      const chapterMatch = currentBookContent.chapterTitles.find(ch => {
+        const chapterHref = ch.href || '';
+        // Compare the base file name
+        const linkBase = href.split('#')[0].split('/').pop() || '';
+        const chapterBase = chapterHref.split('#')[0].split('/').pop() || '';
+        return linkBase && chapterBase && linkBase === chapterBase;
+      });
+      
+      if (chapterMatch) {
+        targetChapter = chapterMatch.index;
+        console.log('🔗 Found target chapter by href match:', targetChapter, chapterMatch.title);
+      }
+    }
+    
+    // Method 2: Try to parse chapter number from href
+    if (targetChapter === -1) {
+      const chapterMatch = href.match(/chapter[_-]?(\d+)/i) || 
+                         href.match(/ch[_-]?(\d+)/i) ||
+                         href.match(/(\d+)\.x?html/i);
+      if (chapterMatch) {
+        const chapterNum = parseInt(chapterMatch[1], 10);
+        if (chapterNum >= 1 && chapterNum <= currentBookContent.totalChapters) {
+          targetChapter = chapterNum - 1; // Convert to 0-based index
+          console.log('🔗 Found target chapter by number parsing:', targetChapter);
+        }
+      }
+    }
+    
+    // Method 3: Look for anchor in current or nearby chapters
+    if (targetChapter === -1 && href.startsWith('#')) {
+      const anchorId = href.substring(1);
+      console.log('🔗 Looking for anchor:', anchorId, 'in nearby chapters');
+      
+      // Check current chapter first
+      const currentContent = contentEl.innerHTML;
+      if (currentContent.includes(`id="${anchorId}"`)) {
+        console.log('🔗 Anchor found in current chapter, scrolling to element');
+        const anchorEl = contentEl.querySelector(`#${anchorId}`);
+        if (anchorEl) {
+          anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+      }
+      
+      // TODO: Search other chapters if needed (more complex implementation)
+      console.log('🔗 Anchor not found in current chapter');
+    }
+    
+    // Navigate to the target chapter if found
+    if (targetChapter >= 0 && targetChapter < currentBookContent.totalChapters) {
+      console.log('🔗 ✅ Navigating to chapter:', targetChapter);
+      updateChapterRef.current(targetChapter);
+    } else {
+      console.log('🔗 ❌ Could not find target chapter for link:', href);
+      // Show a helpful message to the user
+      alert(`Unable to navigate to: ${link.textContent || href}\n\nThis link could not be mapped to a chapter in the current book structure.`);
+    }
+  }, []); // No dependencies - stable handler
+
+  // Handle internal EPUB links (bind once per book, not per chapter)
   useEffect(() => {
     const contentEl = contentRef.current;
-    if (!contentEl || !bookContent || bookMetadata?.fileType === 'pdf') return;
-
-    const handleLinkClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a');
-      
-      if (!link || !link.href) return;
-      
-      console.log('🔗 Link clicked:', link.href, 'text:', link.textContent);
-      
-      // Check if this is an internal EPUB link
-      const href = link.getAttribute('href') || '';
-      const isInternalLink = href.startsWith('#') || 
-                           href.endsWith('.xhtml') || 
-                           href.endsWith('.html') ||
-                           href.includes('.xhtml#') ||
-                           href.includes('.html#');
-      
-      if (!isInternalLink) {
-        console.log('🔗 External link, allowing default behavior');
-        return; // Let external links work normally
-      }
-      
-      console.log('🔗 Internal EPUB link detected, preventing default and finding target chapter');
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Try to find the target chapter
-      let targetChapter = -1;
-      
-      // Method 1: Look for chapter by href in chapterTitles
-      if (bookContent.chapterTitles) {
-        const chapterMatch = bookContent.chapterTitles.find(ch => {
-          const chapterHref = ch.href || '';
-          // Compare the base file name
-          const linkBase = href.split('#')[0].split('/').pop() || '';
-          const chapterBase = chapterHref.split('#')[0].split('/').pop() || '';
-          return linkBase && chapterBase && linkBase === chapterBase;
-        });
-        
-        if (chapterMatch) {
-          targetChapter = chapterMatch.index;
-          console.log('🔗 Found target chapter by href match:', targetChapter, chapterMatch.title);
-        }
-      }
-      
-      // Method 2: Try to parse chapter number from href
-      if (targetChapter === -1) {
-        const chapterMatch = href.match(/chapter[_-]?(\d+)/i) || 
-                           href.match(/ch[_-]?(\d+)/i) ||
-                           href.match(/(\d+)\.x?html/i);
-        if (chapterMatch) {
-          const chapterNum = parseInt(chapterMatch[1], 10);
-          if (chapterNum >= 1 && chapterNum <= bookContent.totalChapters) {
-            targetChapter = chapterNum - 1; // Convert to 0-based index
-            console.log('🔗 Found target chapter by number parsing:', targetChapter);
-          }
-        }
-      }
-      
-      // Method 3: Look for anchor in current or nearby chapters
-      if (targetChapter === -1 && href.startsWith('#')) {
-        const anchorId = href.substring(1);
-        console.log('🔗 Looking for anchor:', anchorId, 'in nearby chapters');
-        
-        // Check current chapter first
-        const currentContent = contentEl.innerHTML;
-        if (currentContent.includes(`id="${anchorId}"`)) {
-          console.log('🔗 Anchor found in current chapter, scrolling to element');
-          const anchorEl = contentEl.querySelector(`#${anchorId}`);
-          if (anchorEl) {
-            anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-          }
-        }
-        
-        // TODO: Search other chapters if needed (more complex implementation)
-        console.log('🔗 Anchor not found in current chapter');
-      }
-      
-      // Navigate to the target chapter if found
-      if (targetChapter >= 0 && targetChapter < bookContent.totalChapters) {
-        console.log('🔗 ✅ Navigating to chapter:', targetChapter);
-        updateChapter(targetChapter);
-      } else {
-        console.log('🔗 ❌ Could not find target chapter for link:', href);
-        // Show a helpful message to the user
-        alert(`Unable to navigate to: ${link.textContent || href}\n\nThis link could not be mapped to a chapter in the current book structure.`);
-      }
-    };
+    if (!contentEl || bookMetadata?.fileType === 'pdf') return;
 
     // Add click event listener to the content area
     contentEl.addEventListener('click', handleLinkClick);
@@ -373,7 +416,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return () => {
       contentEl.removeEventListener('click', handleLinkClick);
     };
-  }, [bookContent, bookMetadata?.fileType, updateChapter]);
+  }, [bookId, bookMetadata?.fileType, handleLinkClick]); // Only rebind when book changes
 
   // Save reading progress helper
   const fileType = bookMetadata?.fileType;
@@ -449,17 +492,26 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, [chapter, currentChapterContent, bookId, settings?.targetLanguage]);
 
-  // Handle scroll tracking without re-rendering on every scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!contentRef.current) return;
-      scrollPositionRef.current = contentRef.current.scrollTop;
-      if (saveProgressTimeoutRef.current) {
-        clearTimeout(saveProgressTimeoutRef.current);
-      }
-      saveProgressTimeoutRef.current = setTimeout(saveProgress, 2000);
-    };
+  // Ref for current saveProgress function to avoid effect dependencies
+  const saveProgressRef = useRef(saveProgress);
 
+  // Update ref when saveProgress changes
+  useEffect(() => {
+    saveProgressRef.current = saveProgress;
+  }, [saveProgress]);
+
+  // Stable scroll handler that doesn't change with saveProgress updates
+  const handleScroll = useCallback(() => {
+    if (!contentRef.current) return;
+    scrollPositionRef.current = contentRef.current.scrollTop;
+    if (saveProgressTimeoutRef.current) {
+      clearTimeout(saveProgressTimeoutRef.current);
+    }
+    saveProgressTimeoutRef.current = setTimeout(() => saveProgressRef.current(), 2000);
+  }, []); // No dependencies - stable handler
+
+  // Handle scroll tracking (bind once when content is available)
+  useEffect(() => {
     const content = contentRef.current;
     if (content) {
       content.addEventListener('scroll', handleScroll);
@@ -470,7 +522,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         }
       };
     }
-  }, [saveProgress]);
+  }, [handleScroll]); // Only rebind when handler changes (which it won't)
 
   // Initialize JPDB highlighter once on mount
   useEffect(() => {
@@ -482,7 +534,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, []);
 
-  // Apply JPDB highlighting when user explicitly enables it
+  // Apply JPDB highlighting when enabled or when content changes while enabled
   useEffect(() => {
     console.log('🔍 JPDB highlighting effect triggered:', {
       hasContentRef: !!contentRef.current,
@@ -493,9 +545,18 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       isTranslating
     });
 
-    // ONLY run highlighting when user explicitly enables it (jpdbHighlighted becomes true)
-    // Do NOT run on content changes unless highlighting is already enabled
+    // Run highlighting when:
+    // 1. User toggles highlighting on (jpdbHighlighted becomes true)
+    // 2. Content changes while highlighting is already enabled
+    // 3. Translation state changes while highlighting is enabled
     if (jpdbHighlighted && contentRef.current && !isTranslating) {
+      // Only proceed if we have actual content to highlight
+      const hasContent = isTranslated ? !!translatedContent : !!currentChapterContent;
+      if (!hasContent) {
+        console.log('🔍 No content available for highlighting yet');
+        return;
+      }
+
       const contentElement = contentRef.current.querySelector('.prose');
       console.log('🔍 Content element found:', !!contentElement);
       console.log('🔍 Current content state:', { 
@@ -551,7 +612,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         console.log('Available elements:', contentRef.current.querySelector('*'));
       }
     }
-  }, [jpdbHighlighted]); // ONLY depend on jpdbHighlighted state changes
+  }, [jpdbHighlighted, currentChapterContent, translatedContent, isTranslated, isTranslating]); // Respond to content changes when highlighting is enabled
 
   useEffect(() => {
     if (!jpdbHighlighted && contentRef.current) {
