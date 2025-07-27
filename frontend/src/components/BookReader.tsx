@@ -562,6 +562,50 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     };
   }, [bookContent, chapter]);
 
+  // Translate using the user's personal OpenAI key entirely in the browser
+  const translateWithOpenAI = async (html: string, useCefr: boolean): Promise<string> => {
+    const targetLang = settings?.targetLanguage || "English";
+    const model = localStorage.getItem("openaiModel") || "gpt-4o-mini";
+    const cefrLevel = localStorage.getItem("cefrLevel") || "B2";
+    const apiKey = localStorage.getItem("openaiKey") || "";
+
+    const systemPrompt =
+      "You are a helpful translator. You translate the provided HTML content while preserving the HTML structure. ONLY return the translated HTML content, with no introductory text, explanations, or markdown formatting like ```html.";
+    let userPrompt = `Translate the following HTML content to ${targetLang}`;
+    if (useCefr) {
+      userPrompt += `, simplifying for CEFR level ${cefrLevel}. Preserve HTML tags.`;
+    } else {
+      userPrompt += ". Preserve HTML tags.";
+    }
+
+    const body = {
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `${userPrompt}\n\nHTML Content:\n\`\`\`html\n${html}\n\`\`\`` }
+      ]
+    };
+
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) {
+      throw new Error(await resp.text());
+    }
+    const data = await resp.json();
+    let text = data.choices?.[0]?.message?.content?.trim() || "";
+    if (text.startsWith("```html")) text = text.slice(7).trim();
+    else if (text.startsWith("```")) text = text.slice(3).trim();
+    if (text.endsWith("```")) text = text.slice(0, -3).trim();
+    return `<div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8"><div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">${text}</div></div>`;
+  };
+
   /**
    * Translate the current chapter using the backend API.
    * @param useCefr - If true include the CEFR level in the request.
@@ -577,6 +621,25 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
     // Always translate from the original chapter HTML
     const contentToTranslate = currentChapterContent;
+
+    const personalKey = localStorage.getItem("openaiKey") || "";
+    const useServer = localStorage.getItem("useServerKey") !== "false";
+    if (personalKey && !useServer) {
+      try {
+        const finalWrapped = await translateWithOpenAI(contentToTranslate, useCefr);
+        setTranslatedContent(finalWrapped);
+        setIsTranslated(true);
+        setIsAutoloaded(false);
+        saveTranslationToStorage(bookId, chapter, finalWrapped, useCefr, settings);
+      } catch (err) {
+        console.error("Translation error:", err);
+        toast.error("Translation error");
+      } finally {
+        setIsTranslating(false);
+        toast.dismiss(toastId);
+      }
+      return;
+    }
 
     const payload: any = {
       content: contentToTranslate,
