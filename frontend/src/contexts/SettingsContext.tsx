@@ -19,7 +19,6 @@ interface Settings {
   touchscreenSupport?: boolean;
   disableFadeAnimation?: boolean;
   cacheTranslations?: boolean;
-  useOfflineParser?: boolean;
 }
 
 interface SettingsContextType {
@@ -43,7 +42,6 @@ const defaultSettings: Settings = {
   touchscreenSupport: true,
   disableFadeAnimation: false,
   cacheTranslations: true,
-  useOfflineParser: true,
 };
 
 const SETTINGS_COOKIE = "prSettings";
@@ -116,7 +114,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
-        localStorage.setItem('useOfflineParser', String(updated.useOfflineParser));
         console.log('🔔 Initial sync of accessibility settings to localStorage');
 
         setSettingsStorage(updated);
@@ -127,9 +124,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // If no cookie settings, sync defaults to localStorage
       localStorage.setItem('showPopupOnHover', String(defaultSettings.showPopupOnHover));
       localStorage.setItem('touchscreenSupport', String(defaultSettings.touchscreenSupport));
-      localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
-      localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
-      localStorage.setItem('useOfflineParser', String(defaultSettings.useOfflineParser));
+              localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
+        localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
       console.log('🔔 Initial sync of default accessibility settings to localStorage');
       setSettingsStorage(defaultSettings);
     }
@@ -247,14 +243,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
       if ('cacheTranslations' in updates) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
-      }
-      
-      if ('useOfflineParser' in updates) {
-        localStorage.setItem('useOfflineParser', String(updated.useOfflineParser));
-        
-        if (updated.useOfflineParser && !prev.useOfflineParser) {
-          console.log('✅ Offline parser enabled');
-        }
       }
 
       // Auto-save to cloud with debouncing

@@ -272,7 +272,7 @@ export async function parseWithGoogleTranslate(text: string): Promise<Token[]> {
            // Fallback: parallel individual calls with Promise.all()
            const translationPromises = failedWords.map(async (word) => {
              try {
-               const response = await fetch('/api/translate', {
+               const response = await fetch('/api/translate/vocabulary', {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({

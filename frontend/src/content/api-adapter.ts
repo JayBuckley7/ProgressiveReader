@@ -14,7 +14,6 @@ export interface JpHighlighterConfig {
     contextWidth: number;
     forqOnMine: boolean;
     showPopupOnHover?: boolean;
-    useOfflineParser?: boolean;
     miningDeckId?: string | number;
     forqDeckId?: string | number;
     blacklistDeckId?: string | number;
@@ -44,7 +43,6 @@ export const defaultConfig: JpHighlighterConfig = {
     contextWidth: 1,
     forqOnMine: false,
     showPopupOnHover: true,
-    useOfflineParser: false,
     // Initialize keybinds to a default "None" state or specific defaults
     showPopupKey: { code: 'ShiftLeft', modifiers: [] }, // Default from settingsModal.js was 'ShiftLeft' string
     addKey: { code: 'None', modifiers: [] },
@@ -178,7 +176,6 @@ export function loadConfig(): JpHighlighterConfig {
         loadedConfig.customWordCSS = localStorage.getItem('customWordCSS') || localStorage.getItem('jpdb_custom_word_css') || undefined;
         loadedConfig.customPopupCSS = localStorage.getItem('customPopupCSS') || localStorage.getItem('jpdb_custom_popup_css') || undefined;
         loadedConfig.touchscreenSupport = localStorage.getItem('touchscreenSupport') === 'true' || false;
-        loadedConfig.useOfflineParser = localStorage.getItem('useOfflineParser') === 'true' || false;
     } catch (e) {
         console.error('Error loading configuration from localStorage:', e);
     }
@@ -206,16 +203,8 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
     try {
         console.log('parseText called with', textSegments.length, 'segments');
 
-        if (currentConfig.useOfflineParser) {
-            console.log('Using offline parser with Google Translate (toggle enabled)');
-            const text = textSegments.join(' ');
-            const tokens = await parseWithGoogleTranslate(text);
-            vocabBank.updateFromTokens(tokens);
-            return tokens;
-        }
-        
         if (!currentConfig.apiKey) {
-            console.log('No JPDB API key available, falling back to Google Translate parser');
+            console.log('No JPDB API key available, using Google Translate parser');
             const text = textSegments.join(' ');
             const tokens = await parseWithGoogleTranslate(text);
             vocabBank.updateFromTokens(tokens);

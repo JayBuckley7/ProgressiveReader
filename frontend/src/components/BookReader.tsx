@@ -623,8 +623,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     const contentToTranslate = currentChapterContent;
 
     const personalKey = localStorage.getItem("openaiKey") || "";
-    const useServer = localStorage.getItem("useServerKey") !== "false";
-    if (personalKey && !useServer) {
+    if (personalKey) {
       try {
         const finalWrapped = await translateWithOpenAI(contentToTranslate, useCefr);
         setTranslatedContent(finalWrapped);
@@ -646,7 +645,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       target_lang: settings?.targetLanguage || "English",
       model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
       api_key: localStorage.getItem("openaiKey") || "",
-      use_server_key: localStorage.getItem("useServerKey") !== "false",
       use_cefr: useCefr,
       stream: true,
     };
@@ -660,14 +658,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       target_lang: payload.target_lang,
       model: payload.model,
       hasApiKey: !!payload.api_key,
-      use_server_key: payload.use_server_key,
       use_cefr: payload.use_cefr,
       cefr_level: payload.cefr_level,
       stream: payload.stream
     });
     
     try {
-      const resp = await fetch("/api/translate", {
+      const resp = await fetch("/api/translate/chapter", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

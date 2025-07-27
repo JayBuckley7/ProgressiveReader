@@ -118,7 +118,13 @@ def list_openai_keys():
 
 @api_bp.route('/translate', methods=['POST'])
 def translate_content():
-    """Translate HTML content with OpenAI or Google Translate and return JSON or stream events."""
+    """
+    [DEPRECATED] Generic translate endpoint. Use /translate/chapter or /translate/vocabulary instead.
+    Translate HTML content with OpenAI or Google Translate and return JSON or stream events.
+    """
+    # Add deprecation warning
+    current_app.logger.warning("DEPRECATED: /api/translate endpoint used. Please use /api/translate/chapter or /api/translate/vocabulary instead.")
+    
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid JSON payload"}), 400
@@ -338,6 +344,357 @@ def translate_content():
         except Exception as e:
             current_app.logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
             return jsonify({"error": f"Error during translation: {e}"}), 500
+
+
+@api_bp.route('/translate/chapter', methods=['POST'])
+def translate_chapter():
+    """Translate chapter HTML content with OpenAI or Google Translate, optimized for long-form content with streaming support."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    content = data.get('content')
+    target_language = (
+        data.get('target_lang')
+        or data.get('target_language')
+        or data.get('targetLanguage')
+    )
+    source_language = (
+        data.get('source_lang')
+        or data.get('source_language')
+        or data.get('sourceLanguage')
+    )
+    model = data.get('model', 'gpt-4o-mini')  # Default optimized for chapters
+    user_api_key = data.get('api_key')
+    cefr_level = data.get('cefr_level')
+    stream = data.get('stream', False)
+    use_cefr = data.get('use_cefr', False)
+    translation_service = data.get('translation_service', 'openai')  # Default to OpenAI for chapters
+
+    if content is None:
+        return jsonify({"error": "Missing required field: content"}), 400
+
+    # Default to English if no target language specified
+    if target_language is None:
+        target_language = 'English'
+
+    current_app.logger.info(
+        f"--- Chapter Translation Request --- Lang: {target_language}, Model: {model}, "
+        f"Service: {translation_service}, CEFR: {cefr_level or 'N/A'}, Stream: {stream}"
+    )
+
+    # Handle Google Translate service (simplified for chapters)
+    if translation_service == 'google':
+        if not google_translate_api_key:
+            return jsonify({'error': 'Google Translate API key not configured'}), 400
+
+        try:
+            # Strip HTML tags for Google Translate since it works with plain text
+            import re
+            clean_content = re.sub(r'<[^>]+>', '', content)
+
+            # Prepare request to Google Cloud Translate API
+            translate_url = 'https://translation.googleapis.com/language/translate/v2'
+
+            # Map common language codes to Google Translate format
+            lang_mapping = {
+                'English': 'en',
+                'Japanese': 'ja',
+                'Chinese': 'zh',
+                'Spanish': 'es',
+                'French': 'fr',
+                'German': 'de',
+                'Korean': 'ko',
+                'Russian': 'ru',
+                'Portuguese': 'pt',
+                'Italian': 'it'
+            }
+
+            # Convert languages to Google Translate format
+            target_lang_code = lang_mapping.get(target_language, target_language.lower()[:2])
+            source_lang_code = None
+            if source_language:
+                source_lang_code = lang_mapping.get(source_language, source_language.lower()[:2])
+
+            payload = {
+                'q': clean_content,
+                'target': target_lang_code,
+                'key': google_translate_api_key,
+                'format': 'text'
+            }
+
+            # Include source language if provided, otherwise let Google auto-detect
+            if source_lang_code:
+                payload['source'] = source_lang_code
+
+            response = requests.post(translate_url, data=payload)
+            response.raise_for_status()
+
+            result = response.json()
+
+            if 'data' not in result or 'translations' not in result['data']:
+                return jsonify({"error": "Invalid response from Google Translate API"}), 500
+
+            translation = result['data']['translations'][0]
+            translated_text = translation['translatedText']
+
+            # Wrap the translated text back in basic HTML structure if the original had tags
+            if '<' in content and '>' in content:
+                translated_text = f"<p>{translated_text}</p>"
+
+            current_app.logger.info(
+                f"Chapter Google Translate successful. First 100 chars: {translated_text[:100]}..."
+            )
+
+            return jsonify({"translated_text": translated_text})
+
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error calling Google Translate API for chapter: {e}", exc_info=True)
+            return jsonify({"error": f"Error during chapter translation: {e}"}), 500
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error with Google Translate for chapter: {e}", exc_info=True)
+            return jsonify({"error": f"Error during chapter translation: {e}"}), 500
+
+    else:
+        # Handle OpenAI service for chapter translation
+        # Simplified logic: if user provides personal key, use it; otherwise use server keys
+        api_key_to_use = (
+            user_api_key
+            or get_next_openai_key()
+            or current_app.config.get("OPENAI_API_KEY")
+        )
+
+        if not api_key_to_use:
+            return jsonify({"error": "OpenAI API key not configured"}), 400
+
+        system_prompt = (
+            "You are a professional translator specializing in literary content. "
+            "Translate the provided HTML chapter content while preserving the HTML structure, "
+            "maintaining narrative flow and literary style. ONLY return the translated HTML "
+            "content, with no introductory text, explanations, or markdown formatting like ```html."
+        )
+        user_prompt_prefix = f"Translate the following chapter content to {target_language}"
+        if use_cefr and cefr_level:
+            user_prompt_prefix += (
+                f", adapting the complexity to CEFR level {cefr_level} while maintaining "
+                f"the essence and flow of the original text. Preserve HTML tags."
+            )
+        else:
+            user_prompt_prefix += ". Preserve HTML tags and maintain literary quality."
+        full_user_prompt = (
+            f"{user_prompt_prefix}\n\nChapter Content:\n```html\n{content}\n```"
+        )
+
+        try:
+            client = OpenAI(api_key=api_key_to_use)
+
+            if stream:
+                def generate():
+                    buffer = ""
+                    last_chunk = ""
+
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": full_user_prompt},
+                        ],
+                        stream=True,
+                        temperature=0.3,  # Lower temperature for more consistent translations
+                    )
+
+                    yield "data: {\"status\": \"started\"}\n\n"
+
+                    for chunk in completion:
+                        part = chunk.choices[0].delta.content
+                        if part is not None:
+                            buffer += part
+                            last_chunk += part
+                            while "```html" in buffer:
+                                buffer = buffer.replace("```html", "", 1)
+                            while "```" in buffer:
+                                buffer = buffer.replace("```", "", 1)
+                            yield f"data: {json.dumps({'content': buffer})}\n\n"
+                            buffer = ""
+
+                    if buffer:
+                        yield f"data: {json.dumps({'content': buffer})}\n\n"
+
+                    clean_translated_text = last_chunk
+                    if clean_translated_text.startswith("```html"):
+                        clean_translated_text = clean_translated_text[7:].strip()
+                    elif clean_translated_text.startswith("```"):
+                        clean_translated_text = clean_translated_text[3:].strip()
+                    if clean_translated_text.endswith("```"):
+                        clean_translated_text = clean_translated_text[:-3].strip()
+
+                    yield (
+                        "data: "
+                        f"{json.dumps({'complete': True, 'translated_text': clean_translated_text})}"
+                        "\n\n"
+                    )
+                    yield "data: [DONE]\n\n"
+
+                return Response(generate(), mimetype="text/event-stream")
+            else:
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": full_user_prompt},
+                    ],
+                    temperature=0.3,  # Lower temperature for more consistent translations
+                )
+                translated_text = completion.choices[0].message.content.strip()
+
+                if translated_text.startswith("```html"):
+                    translated_text = translated_text[7:].strip()
+                elif translated_text.startswith("```"):
+                    translated_text = translated_text[3:].strip()
+                if translated_text.endswith("```"):
+                    translated_text = translated_text[:-3].strip()
+
+                current_app.logger.info(
+                    f"Chapter translation successful. First 100 chars: {translated_text[:100]}..."
+                )
+                return jsonify({"translated_text": translated_text})
+
+        except Exception as e:
+            current_app.logger.error(f"Error calling OpenAI API for chapter: {e}", exc_info=True)
+            return jsonify({"error": f"Error during chapter translation: {e}"}), 500
+
+
+@api_bp.route('/translate/vocabulary', methods=['POST'])
+def translate_vocabulary():
+    """Translate individual words or phrases for vocabulary highlighting, optimized for speed and accuracy."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    content = data.get('content')
+    target_language = (
+        data.get('target_lang')
+        or data.get('target_language')
+        or data.get('targetLanguage')
+        or 'English'  # Default for vocabulary
+    )
+    translation_service = data.get('translation_service', 'google')  # Default to Google for vocabulary
+
+    if content is None:
+        return jsonify({"error": "Missing required field: content"}), 400
+
+    current_app.logger.info(
+        f"--- Vocabulary Translation Request --- Content: '{content[:50]}...', "
+        f"Lang: {target_language}, Service: {translation_service}"
+    )
+
+    # Google Translate is preferred for vocabulary (faster, cheaper)
+    if translation_service == 'google':
+        if not google_translate_api_key:
+            return jsonify({'error': 'Google Translate API key not configured'}), 400
+
+        try:
+            # Clean content for vocabulary translation (remove any HTML if present)
+            import re
+            clean_content = re.sub(r'<[^>]+>', '', content).strip()
+
+            # Prepare request to Google Cloud Translate API
+            translate_url = 'https://translation.googleapis.com/language/translate/v2'
+
+            # Map common language codes to Google Translate format
+            lang_mapping = {
+                'English': 'en',
+                'Japanese': 'ja',
+                'Chinese': 'zh',
+                'Spanish': 'es',
+                'French': 'fr',
+                'German': 'de',
+                'Korean': 'ko',
+                'Russian': 'ru',
+                'Portuguese': 'pt',
+                'Italian': 'it'
+            }
+
+            target_lang_code = lang_mapping.get(target_language, target_language.lower()[:2])
+
+            payload = {
+                'q': clean_content,
+                'target': target_lang_code,
+                'key': google_translate_api_key,
+                'format': 'text'
+            }
+
+            response = requests.post(translate_url, data=payload)
+            response.raise_for_status()
+
+            result = response.json()
+
+            if 'data' not in result or 'translations' not in result['data']:
+                return jsonify({"error": "Invalid response from Google Translate API"}), 500
+
+            translation = result['data']['translations'][0]
+            translated_text = translation['translatedText']
+
+            current_app.logger.info(
+                f"Vocabulary Google Translate successful: '{clean_content}' -> '{translated_text}'"
+            )
+
+            return jsonify({"translated_text": translated_text})
+
+        except requests.exceptions.RequestException as e:
+            current_app.logger.error(f"Error calling Google Translate API for vocabulary: {e}", exc_info=True)
+            return jsonify({"error": f"Error during vocabulary translation: {e}"}), 500
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error with Google Translate for vocabulary: {e}", exc_info=True)
+            return jsonify({"error": f"Error during vocabulary translation: {e}"}), 500
+
+    else:
+        # OpenAI fallback for vocabulary (if explicitly requested)
+        user_api_key = data.get('api_key')
+        use_server_key = data.get('use_server_key', True)
+        
+        if use_server_key:
+            api_key_to_use = (
+                user_api_key
+                or get_next_openai_key()
+                or current_app.config.get("OPENAI_API_KEY")
+            )
+        else:
+            api_key_to_use = user_api_key
+
+        if not api_key_to_use:
+            return jsonify({"error": "OpenAI API key not configured"}), 400
+
+        # Simplified prompt for vocabulary translation
+        system_prompt = (
+            "You are a precise translator for vocabulary learning. "
+            "Translate the given word or short phrase accurately and concisely. "
+            "Provide only the translation, no explanations or extra text."
+        )
+        user_prompt = f"Translate '{content}' to {target_language}"
+
+        try:
+            client = OpenAI(api_key=api_key_to_use)
+
+            completion = client.chat.completions.create(
+                model="gpt-3.5-turbo",  # Faster model for vocabulary
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.1,  # Very low temperature for consistent vocabulary translations
+                max_tokens=50,  # Limit tokens for vocabulary responses
+            )
+            translated_text = completion.choices[0].message.content.strip()
+
+            current_app.logger.info(
+                f"Vocabulary OpenAI translation successful: '{content}' -> '{translated_text}'"
+            )
+            return jsonify({"translated_text": translated_text})
+
+        except Exception as e:
+            current_app.logger.error(f"Error calling OpenAI API for vocabulary: {e}", exc_info=True)
+            return jsonify({"error": f"Error during vocabulary translation: {e}"}), 500
 
 
 @api_bp.route('/translate/batch', methods=['POST'])

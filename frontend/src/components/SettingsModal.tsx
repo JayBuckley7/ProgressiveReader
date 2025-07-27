@@ -6,7 +6,6 @@ import { useAppData } from "../contexts/AppDataContext";
 // LocalStorage & Cookie keys
 const localKeys = {
   openaiKey: "openaiKey",
-  useServerKey: "useServerKey",
   openaiModel: "openaiModel",
   cefrLevel: "cefrLevel",
   autoload: "autoloadTranslations",
@@ -42,12 +41,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     const { saveSettings, loadSettings, isAuthenticated } = useAppData();
   const [activeTab, setActiveTab] = useState<"general" | "highlight" | "accessibility">("general");
     const [isCloudLoading, setIsCloudLoading] = useState(false);
-    const [serverKeyAvailable, setServerKeyAvailable] = useState<boolean | null>(null);
     const [isApiConfigExpanded, setIsApiConfigExpanded] = useState(false);
 
   const [localState, setLocalState] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
-    useServerKey: localStorage.getItem(localKeys.useServerKey) !== "false",
     openaiModel: localStorage.getItem(localKeys.openaiModel) || "gpt-4o-mini",
     cefrLevel: parseInt(localStorage.getItem(localKeys.cefrLevel) || "3"),
     autoload: localStorage.getItem(localKeys.autoload) === "true",
@@ -72,6 +69,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       localStorage.setItem(storageKey, typeof value === "boolean" ? value.toString() : String(value));
     });
     
+    // Clean up deprecated settings
+    localStorage.removeItem("useServerKey");
+    localStorage.removeItem("useOfflineParser");
+    
     // Store JPDB API key in both cookie formats for compatibility
     if (jpdbApiKey) {
       document.cookie = `jpdbApiKey=${jpdbApiKey}; path=/;`;
@@ -81,20 +82,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     console.log('🔔 Synced all settings to localStorage and cookies');
   }, [localState, jpdbApiKey]);
 
-  useEffect(() => {
-    fetch('/api/openai_key_configured')
-      .then(res => res.json())
-      .then(data => setServerKeyAvailable(data.openai_key_configured))
-      .catch(() => setServerKeyAvailable(false));
-  }, []);
-
-  // Ensure a parser is always active - default to Google Translate when no
-  // JPDB API key is configured and JPDB parser is selected
-  useEffect(() => {
-    if (!jpdbApiKey && !settings.useOfflineParser) {
-      updateSettings({ useOfflineParser: true });
-    }
-  }, [jpdbApiKey, settings.useOfflineParser]);
+  // Note: Parser selection is now automatic based on JPDB API key presence
 
 
 
@@ -108,7 +96,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   const createSettingsObject = () => ({
     // API and model settings
     openai_api_key: localState.openaiKey,
-    use_server_key: localState.useServerKey,
     jpdb_api_key: jpdbApiKey,
     openai_model: localState.openaiModel,
     target_language: settings.targetLanguage,
@@ -145,7 +132,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     showPopupOnHover: settings.showPopupOnHover ?? true,
     touchscreenSupport: settings.touchscreenSupport ?? false,
     disableFadeAnimation: settings.disableFadeAnimation ?? false,
-    useOfflineParser: settings.useOfflineParser ?? false,
     customPopupCSS: localState.customPopupCSS,
   });
 
@@ -155,7 +141,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     const newLocalState = {
       ...localState,
       openaiKey: importedSettings.openai_api_key ?? localState.openaiKey,
-      useServerKey: importedSettings.use_server_key ?? localState.useServerKey,
       openaiModel: importedSettings.openai_model ?? localState.openaiModel,
       cefrLevel: parseInt(importedSettings.cefr_index ?? String(localState.cefrLevel)),
       autoload: importedSettings.autoload_preference ?? localState.autoload,
@@ -185,7 +170,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
     if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
     if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
-    if (importedSettings.useOfflineParser !== undefined) settingsUpdates.useOfflineParser = importedSettings.useOfflineParser;
     
     if (Object.keys(settingsUpdates).length > 0) {
       updateSettings(settingsUpdates);
@@ -330,26 +314,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                         placeholder="sk-... (leave empty to use server key)"
                         type="password"
                       />
-                      
-                      <CheckboxInput
-                        label="Use Server Key as Fallback"
-                        description="Automatically use server key when your personal key fails or is empty"
-                        checked={localState.useServerKey}
-                        onChange={v => handleChange("useServerKey", v)}
-                      />
-                      
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          <strong>Server Key Status:</strong>
-                          {serverKeyAvailable === null ? (
-                            <span className="font-semibold text-gray-500"> Checking...</span>
-                          ) : serverKeyAvailable ? (
-                            <span className="font-semibold text-green-600 dark:text-green-400"> ✓ Available</span>
-                          ) : (
-                            <span className="font-semibold text-red-600 dark:text-red-400"> ✗ Not Available</span>
-                          )}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -432,60 +396,22 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
           {activeTab === "highlight" && (
             <div className="space-y-6 animate-fade-in">
-              {/* Parser toggle */}
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Parser
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="parser"
-                      value="google"
-                      checked={settings.useOfflineParser}
-                      onChange={() => updateSettings({ useOfflineParser: true })}
-                      className="text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">Google Translate</span>
-                  </label>
-                  <label
-                    className={`flex items-center gap-2 cursor-pointer ${!jpdbApiKey ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="parser"
-                      value="jpdb"
-                      checked={!settings.useOfflineParser}
-                      onChange={() => updateSettings({ useOfflineParser: false })}
-                      disabled={!jpdbApiKey}
-                      className="text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-sm">JPDB</span>
-                  </label>
-                </div>
-                {!jpdbApiKey && (
-                  <p className="text-xs text-purple-600 dark:text-purple-400">
-                    Enter a JPDB API key below to enable JPDB parsing.
-                  </p>
-                )}
+              {/* JPDB API key section - always visible */}
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB API Key</h3>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
+                  Optional: Enter your JPDB API key to use JPDB parsing, otherwise Google Translate will be used automatically.
+                </p>
+                <TextInput
+                  label="JPDB API Key"
+                  value={jpdbApiKey}
+                  onChange={setJpdbApiKey}
+                  placeholder="Enter your JPDB API key"
+                  type="password"
+                />
               </div>
 
-              {/* JPDB API key visible when JPDB parser selected or key missing */}
-              {(!settings.useOfflineParser || !jpdbApiKey) && (
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB API Key</h3>
-                  <TextInput
-                    label="JPDB API Key"
-                    value={jpdbApiKey}
-                    onChange={setJpdbApiKey}
-                    placeholder="Enter your JPDB API key"
-                    type="password"
-                  />
-                </div>
-              )}
-
-              {!settings.useOfflineParser && jpdbApiKey && (
+              {jpdbApiKey && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <TextInput

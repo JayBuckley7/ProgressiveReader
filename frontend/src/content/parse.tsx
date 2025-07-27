@@ -154,11 +154,11 @@ const SINGLE_PARTICLES = new Set(['は','が','を','に','で','と','の','へ
 function getColorClass(token: Token): string {
     const word = token.card.spelling;
     
-    // Check if we're in offline mode
-    const config = getCurrentConfig();
-    const isOfflineMode = config.useOfflineParser;
+    // Check if we should use Google Translate (no JPDB key available)
+    const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
+    const shouldUseGoogleTranslate = !jpdbApiKey;
     
-    if (isOfflineMode) {
+    if (shouldUseGoogleTranslate) {
         // OFFLINE MODE: Use JLPT-based coloring
         
         // Check if it's a super common word first

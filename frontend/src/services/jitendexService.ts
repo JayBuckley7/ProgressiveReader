@@ -8,10 +8,10 @@ let resultCache: Map<string, GoogleTranslateResult> = new Map();
  */
 export async function lookupJitendexWord(word: string): Promise<GoogleTranslateResult[]> {
   try {
-    // Check if offline parser is enabled
-    const isOfflineParserEnabled = localStorage.getItem('useOfflineParser') === 'true';
-    if (!isOfflineParserEnabled) {
-      console.log('📱 Offline parser disabled, skipping translation lookup');
+    // Check if JPDB API key is available - if yes, skip Google Translate cache
+    const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
+    if (jpdbApiKey) {
+      console.log('📱 JPDB API key available, skipping Google Translate cache lookup');
       return [];
     }
 
@@ -52,10 +52,10 @@ export async function lookupJitendexWord(word: string): Promise<GoogleTranslateR
  */
 export async function lookupJitendexWordsBatch(words: string[]): Promise<{ [word: string]: GoogleTranslateResult[] }> {
   try {
-    // Check if offline parser is enabled
-    const isOfflineParserEnabled = localStorage.getItem('useOfflineParser') === 'true';
-    if (!isOfflineParserEnabled) {
-      console.log('📱 Offline parser disabled, skipping batch translation lookup');
+    // Check if JPDB API key is available - if yes, skip Google Translate cache
+    const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
+    if (jpdbApiKey) {
+      console.log('📱 JPDB API key available, skipping Google Translate batch cache lookup');
       return {};
     }
 

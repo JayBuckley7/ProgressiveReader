@@ -8,43 +8,17 @@ export interface GoogleTranslateResult {
 }
 
 class GoogleTranslateService {
-  private readonly baseUrl = 'https://translation.googleapis.com/language/translate/v2';
   private translationCache = new Map<string, GoogleTranslateResult>();
-  private apiKey: string | null = null;
 
   /**
-   * Set the Google Translate API key
+   * Set the Google Translate API key (not needed for backend calls, but kept for compatibility)
    */
   setApiKey(key: string): void {
-    this.apiKey = key;
-    console.log('✅ Google Translate API key configured');
+    console.log('✅ Google Translate configured to use backend service');
   }
 
   /**
-   * Get API key from environment or localStorage
-   */
-  private getApiKey(): string {
-    // Try environment variable first
-    if (import.meta.env.VITE_GOOGLE_TRANSLATE_API_KEY) {
-      return import.meta.env.VITE_GOOGLE_TRANSLATE_API_KEY;
-    }
-    
-    // Try localStorage
-    const storedKey = localStorage.getItem('googleTranslateApiKey');
-    if (storedKey) {
-      return storedKey;
-    }
-
-    // Use the manually set key
-    if (this.apiKey) {
-      return this.apiKey;
-    }
-
-    throw new Error('Google Translate API key not found. Please set VITE_GOOGLE_TRANSLATE_API_KEY environment variable or configure it in settings.');
-  }
-
-  /**
-   * Translate text using Google Cloud Translate API
+   * Translate text using the backend Google Translate API
    */
   async translateText(
     text: string,
@@ -66,62 +40,67 @@ class GoogleTranslateService {
         throw new Error('Empty text cannot be translated');
       }
 
-      // Get API key
-      const apiKey = this.getApiKey();
+      console.log(`🔄 Translating "${cleanText}" from ${sourceLang} to ${targetLang} using backend Google Translate`);
       
-      console.log(`🔄 Translating "${cleanText}" from ${sourceLang} to ${targetLang} using Google Translate`);
-      
-      // Prepare request body
-      const requestBody: any = {
-        q: cleanText,
-        target: targetLang
+      // Map language codes to full names for backend
+      const langMapping = {
+        'en': 'English',
+        'ja': 'Japanese',
+        'zh': 'Chinese',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'ko': 'Korean',
+        'ru': 'Russian',
+        'pt': 'Portuguese',
+        'it': 'Italian',
+        'auto': undefined // Don't send source for auto-detect
       };
 
-      // Only add source if it's not auto-detect
-      if (sourceLang !== 'auto') {
-        requestBody.source = sourceLang;
-      }
+      const targetLanguage = langMapping[targetLang] || 'English';
+      const sourceLanguage = sourceLang === 'auto' ? undefined : langMapping[sourceLang];
 
-      // Make API request
-      const response = await fetch(`${this.baseUrl}?key=${apiKey}`, {
+      // Call backend vocabulary translation endpoint
+      const response = await fetch('/api/translate/vocabulary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          content: cleanText,
+          target_lang: targetLanguage,
+          source_lang: sourceLanguage,
+          translation_service: 'google'
+        })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(`Google Translate API error: ${response.status} ${response.statusText}${errorData ? ` - ${errorData.error?.message || ''}` : ''}`);
+        throw new Error(`Backend Google Translate error: ${response.status} ${response.statusText}${errorData?.error ? ` - ${errorData.error}` : ''}`);
       }
 
       const data = await response.json();
       
-      if (!data.data?.translations?.[0]) {
-        throw new Error('Invalid response from Google Translate API');
+      if (!data.translated_text) {
+        throw new Error('Invalid response from backend Google Translate API');
       }
 
-      const translation = data.data.translations[0];
-      const detectedSourceLang = translation.detectedSourceLanguage || sourceLang;
-
       const result: GoogleTranslateResult = {
-        translation: translation.translatedText,
-        source: detectedSourceLang,
+        translation: data.translated_text,
+        source: sourceLang,
         target: targetLang,
-        original: cleanText,
-        confidence: translation.confidence
+        original: cleanText
       };
 
       // Cache the result
       this.translationCache.set(cacheKey, result);
       
-      console.log(`✅ Translation: "${cleanText}" → "${result.translation}" (detected: ${detectedSourceLang})`);
+      console.log(`✅ Backend Translation: "${cleanText}" → "${result.translation}"`);
       
       return result;
 
     } catch (error) {
-      console.error('Google Translate error:', error);
+      console.error('Backend Google Translate error:', error);
       
       // Return fallback result
       return {
@@ -148,17 +127,82 @@ class GoogleTranslateService {
   }
 
   /**
-   * Batch translate multiple texts
+   * Batch translate multiple texts using backend batch endpoint
    */
   async translateBatch(
     texts: string[],
     sourceLang: string = 'auto',
     targetLang: string = 'en'
   ): Promise<GoogleTranslateResult[]> {
-    // For now, do sequential translations to avoid rate limits
-    // In production, you might want to use the batch API endpoint
-    const promises = texts.map(text => this.translateText(text, sourceLang, targetLang));
-    return Promise.all(promises);
+    try {
+      console.log(`🔄 Batch translating ${texts.length} items using backend Google Translate`);
+
+      // Map language codes to full names for backend
+      const langMapping = {
+        'en': 'English',
+        'ja': 'Japanese',
+        'zh': 'Chinese',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'ko': 'Korean',
+        'ru': 'Russian',
+        'pt': 'Portuguese',
+        'it': 'Italian'
+      };
+
+      const targetLanguage = langMapping[targetLang] || 'English';
+
+      // Call backend batch translation endpoint
+      const response = await fetch('/api/translate/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          words: texts,
+          target_lang: targetLanguage,
+          translation_service: 'google'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(`Backend batch translate error: ${response.status} ${errorData?.error || response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.translations || !Array.isArray(data.translations)) {
+        throw new Error('Invalid response from backend batch translate API');
+      }
+
+      // Convert backend response to GoogleTranslateResult format
+      const results: GoogleTranslateResult[] = texts.map((text, index) => {
+        const translation = data.translations[index];
+        return {
+          translation: translation || `[Translation error: No result for "${text}"]`,
+          source: sourceLang,
+          target: targetLang,
+          original: text
+        };
+      });
+
+      console.log(`✅ Batch translation completed: ${results.length} items`);
+      
+      return results;
+
+    } catch (error) {
+      console.error('Backend batch translate error:', error);
+      
+      // Return fallback results
+      return texts.map(text => ({
+        translation: `[Translation error: ${error.message}]`,
+        source: sourceLang,
+        target: targetLang,
+        original: text
+      }));
+    }
   }
 
   /**
@@ -180,46 +224,38 @@ class GoogleTranslateService {
   }
 
   /**
-   * Check if Google Translate service is available
+   * Check if Google Translate service is available (checks backend)
    */
   async checkServiceHealth(): Promise<boolean> {
     try {
       const result = await this.translateText('hello', 'en', 'ja');
       return result.translation !== undefined && !result.translation.includes('[Translation error');
     } catch (error) {
-      console.warn('Google Translate service health check failed:', error);
+      console.warn('Backend Google Translate service health check failed:', error);
       return false;
     }
   }
 
   /**
-   * Check if API key is configured
+   * Check if service is configured (always true for backend calls)
    */
   isConfigured(): boolean {
-    try {
-      this.getApiKey();
-      return true;
-    } catch {
-      return false;
-    }
+    // Backend handles the API key, so this is always true
+    return true;
   }
 
   /**
-   * Store API key in localStorage
+   * Store API key in localStorage (no longer needed for backend calls)
    */
   storeApiKey(key: string): void {
-    localStorage.setItem('googleTranslateApiKey', key);
-    this.apiKey = key;
-    console.log('✅ Google Translate API key stored');
+    console.log('✅ Google Translate configured to use backend service (API key not stored locally)');
   }
 
   /**
-   * Remove API key from localStorage
+   * Remove API key from localStorage (no longer needed for backend calls)
    */
   removeStoredApiKey(): void {
-    localStorage.removeItem('googleTranslateApiKey');
-    this.apiKey = null;
-    console.log('🗑️ Google Translate API key removed');
+    console.log('✅ Google Translate using backend service (no local API key to remove)');
   }
 }
 

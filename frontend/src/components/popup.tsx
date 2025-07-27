@@ -5,10 +5,10 @@ import { getSentences, JpdbWord, JpdbWordData } from '../content/word';
 import { googleTranslateService } from '../services/googleTranslateService';
 import { lookupJitendexWord } from '../services/jitendexService';
 
-// Helper function to check if we're in offline mode
-function isOfflineMode(): boolean {
-    const config = getCurrentConfig();
-    return config.useOfflineParser ?? false;
+// Helper function to check if we should use Google Translate (no JPDB key available)
+function shouldUseGoogleTranslate(): boolean {
+    const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
+    return !jpdbApiKey;
 }
 
 // Parts of speech dictionary
@@ -377,7 +377,7 @@ export class Popup {
         this.#vocabSection = createElement('section', { id: 'vocab-content' }) as HTMLElement;
         
         // Only create review buttons if not in offline mode  
-        const reviewButtons = !isOfflineMode() ? createElement('section', { id: 'review-buttons' }, 
+        const reviewButtons = !shouldUseGoogleTranslate() ? createElement('section', { id: 'review-buttons' }, 
             createElement('button', {
                 class: 'nothing',
                 onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'nothing')
@@ -502,7 +502,7 @@ export class Popup {
         // Create meanings list with Jitendx support in offline mode
         let meaningsList: HTMLElement | DocumentFragment;
         
-        if (isOfflineMode()) {
+        if (shouldUseGoogleTranslate()) {
             // Check if card already has meanings from optimized Google Translate parser
             if (card.meanings && card.meanings.length > 0 && card.meanings[0].glosses.length > 0 && card.meanings[0].glosses[0] !== 'No translation available') {
                 // Use pre-populated meanings from optimized parser
@@ -574,7 +574,7 @@ export class Popup {
         this.#vocabSection.replaceChildren(header, metainfo, meaningsList);
 
         // Only create and show mine buttons if not in offline mode
-        if (!isOfflineMode()) {
+        if (!shouldUseGoogleTranslate()) {
             // Create mine buttons
             const blacklisted = card.state.includes('blacklisted');
             const neverForget = card.state.includes('never-forget');
