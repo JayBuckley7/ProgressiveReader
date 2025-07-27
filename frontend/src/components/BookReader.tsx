@@ -76,7 +76,16 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const { books, getReadingProgress, saveBookProgress } = useAppData();
   const bookMetadata = useMemo(() => books.find(b => b.id === bookId), [books, bookId]);
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle initial PDF page from URL
+  const initialPdfPage = useMemo(() => {
+    const pageFromQuery = parseInt(searchParams.get('page') || '1', 10);
+    return Math.max(1, pageFromQuery);
+  }, [searchParams]);
+
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(initialPdfPage);
 
   const handleBack = () => {
     if (onBack) {
@@ -91,19 +100,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return currentChapter ?? fromQuery;
   });
 
-    const [progressLoaded, setProgressLoaded] = useState(false);
+  const [progressLoaded, setProgressLoaded] = useState(false);
 
   // Reset progress loaded state when book changes
   useEffect(() => {
     setProgressLoaded(false);
   }, [bookId]);
    
-  // Handle initial PDF page from URL
-  const initialPdfPage = useMemo(() => {
-    const pageFromQuery = parseInt(searchParams.get('page') || '1', 10);
-    return Math.max(1, pageFromQuery);
-  }, [searchParams]);
-
   const chapter = currentChapter ?? localChapter;
 
   // Refs for current values to avoid effect dependencies
@@ -190,6 +193,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       pdfViewerRef.current.goToPage(pdfCurrentPage);
     }
   }, [pdfLoaded, pdfCurrentPage]);
+
   const updateChapter = useCallback(
     (ch: number) => {
       // Clear any pending progress save before switching chapters
@@ -251,8 +255,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // PDF page navigation state
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
   const [pdfPageCount, setPdfPageCount] = useState(0);
-  const [pdfCurrentPage, setPdfCurrentPage] = useState(initialPdfPage);
-  const [pdfLoaded, setPdfLoaded] = useState(false);
 
   
   const [showSettings, setShowSettings] = useState(false);
@@ -278,16 +280,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   });
 
   const swipeInitRef = useRef(false);
-  const nextChapterRef = useRef(nextChapter);
-  const prevChapterRef = useRef(prevChapter);
-
-  useEffect(() => {
-    nextChapterRef.current = nextChapter;
-  }, [nextChapter]);
-
-  useEffect(() => {
-    prevChapterRef.current = prevChapter;
-  }, [prevChapter]);
+  const nextChapterRef = useRef<() => void>(() => {});
+  const prevChapterRef = useRef<() => void>(() => {});
 
   const progress = useMemo(
     () => ({ currentChapter: chapter, currentPosition: scrollPositionRef.current }),
@@ -1242,14 +1236,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     updatePlaybackState();
   }, [isSpeaking, isPaused]);
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   const nextChapter = useCallback(() => {
     if (bookContent && chapter < bookContent.totalChapters - 1) {
       console.log('Moving to next chapter, clearing any translated content');
@@ -1269,6 +1255,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       updateChapter(chapter - 1);
     }
   }, [chapter, updateChapter]);
+
+  // Update refs after functions are declared
+  useEffect(() => {
+    nextChapterRef.current = nextChapter;
+  }, [nextChapter]);
+
+  useEffect(() => {
+    prevChapterRef.current = prevChapter;
+  }, [prevChapter]);
 
   // PDF page navigation handlers
   const nextPdfPage = useCallback(() => {
@@ -1339,6 +1334,16 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       return newState;
     });
   }, [jpdbHighlighted]);
+
+  // ✅ ALL HOOKS ARE NOW CALLED - Conditional rendering can happen after this point
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
