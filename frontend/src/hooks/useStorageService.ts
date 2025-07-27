@@ -427,7 +427,6 @@ function useStorageService() {
 
       // SECURITY: Clear Google Drive tokens when Clerk user signs out
       // This prevents token leakage between different user sessions
-      const { gDriveService } = await import('../services/gdriveService');
       gDriveService.onClerkSignOut();
 
       // Clear persisted settings
