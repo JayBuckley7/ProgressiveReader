@@ -225,6 +225,120 @@ def translate_content():
             current_app.logger.error(f"Unexpected error with Google Translate: {e}", exc_info=True)
             return jsonify({"error": f"Error during translation: {e}"}), 500
 
+    else:
+        # Handle OpenAI service using either the server key pool or user key
+        if use_server_key:
+            api_key_to_use = (
+                user_api_key
+                or get_next_openai_key()
+                or current_app.config.get("OPENAI_API_KEY")
+            )
+        else:
+            api_key_to_use = user_api_key
+
+        if not api_key_to_use:
+            return jsonify({"error": "OpenAI API key not configured"}), 400
+
+        system_prompt = (
+            "You are a helpful translator. You translate the provided HTML content "
+            "while preserving the HTML structure. ONLY return the translated HTML "
+            "content, with no introductory text, explanations, or markdown "
+            "formatting like ```html."
+        )
+        user_prompt_prefix = f"Translate the following HTML content to {target_language}"
+        if use_cefr and cefr_level:
+            user_prompt_prefix += (
+                f", simplifying for CEFR level {cefr_level}. Preserve HTML tags."
+            )
+        else:
+            user_prompt_prefix += ". Preserve HTML tags."
+        full_user_prompt = (
+            f"{user_prompt_prefix}\n\nHTML Content:\n```html\n{content}\n```"
+        )
+
+        current_app.logger.info(
+            (
+                f"--- API/Translate Request --- Lang: {target_language}, Model: {model}, "
+                f"CEFR: {cefr_level or 'N/A'}, Stream: {stream}"
+            )
+        )
+
+        try:
+            client = OpenAI(api_key=api_key_to_use)
+
+            if stream:
+                def generate():
+                    buffer = ""
+                    last_chunk = ""
+
+                    completion = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": full_user_prompt},
+                        ],
+                        stream=True,
+                    )
+
+                    yield "data: {\"status\": \"started\"}\n\n"
+
+                    for chunk in completion:
+                        part = chunk.choices[0].delta.content
+                        if part is not None:
+                            buffer += part
+                            last_chunk += part
+                            while "```html" in buffer:
+                                buffer = buffer.replace("```html", "", 1)
+                            while "```" in buffer:
+                                buffer = buffer.replace("```", "", 1)
+                            yield f"data: {json.dumps({'content': buffer})}\n\n"
+                            buffer = ""
+
+                    if buffer:
+                        yield f"data: {json.dumps({'content': buffer})}\n\n"
+
+                    clean_translated_text = last_chunk
+                    if clean_translated_text.startswith("```html"):
+                        clean_translated_text = clean_translated_text[7:].strip()
+                    elif clean_translated_text.startswith("```"):
+                        clean_translated_text = clean_translated_text[3:].strip()
+                    if clean_translated_text.endswith("```"):
+                        clean_translated_text = clean_translated_text[:-3].strip()
+
+                    yield (
+                        "data: "
+                        f"{json.dumps({'complete': True, 'translated_text': clean_translated_text})}"
+                        "\n\n"
+                    )
+                    yield "data: [DONE]\n\n"
+
+                return Response(generate(), mimetype="text/event-stream")
+            else:
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": full_user_prompt},
+                    ],
+                )
+                translated_text = completion.choices[0].message.content.strip()
+
+                if translated_text.startswith("```html"):
+                    translated_text = translated_text[7:].strip()
+                elif translated_text.startswith("```"):
+                    translated_text = translated_text[3:].strip()
+                if translated_text.endswith("```"):
+                    translated_text = translated_text[:-3].strip()
+
+                current_app.logger.info(
+                    f"Translation successful. First 100 chars: {translated_text[:100]}..."
+                )
+                return jsonify({"translated_text": translated_text})
+
+        except Exception as e:
+            current_app.logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
+            return jsonify({"error": f"Error during translation: {e}"}), 500
+
 
 @api_bp.route('/translate/batch', methods=['POST'])
 def translate_batch():
@@ -299,127 +413,6 @@ def translate_batch():
     else:
         return jsonify({"error": "Batch translation currently only supports Google Translate"}), 400
 
-    # Handle OpenAI service (original logic)
-    if use_server_key:
-        api_key_to_use = user_api_key or get_next_openai_key() or current_app.config.get('OPENAI_API_KEY')
-    else:
-        api_key_to_use = user_api_key
-
-    if not api_key_to_use:
-        return jsonify({'error': 'OpenAI API key not configured'}), 400
-
-    # Ensure system_prompt is defined or moved to config if it's complex
-    system_prompt = (
-        "You are a helpful translator. You translate the provided HTML content "
-        "while preserving the HTML structure. ONLY return the translated HTML "
-        "content, with no introductory text, explanations, or markdown "
-        "formatting like ```html."  # Simplified for now
-    )
-    user_prompt_prefix = (
-        f"Translate the following HTML content to {target_language}"
-    )
-    if use_cefr and cefr_level: # Check use_cefr flag
-        user_prompt_prefix += (
-            f", simplifying for CEFR level {cefr_level}. Preserve HTML tags."
-        )
-    else:
-        user_prompt_prefix += ". Preserve HTML tags."
-    full_user_prompt = (
-        f"{user_prompt_prefix}\n\nHTML Content:\n```html\n{content}\n```"
-    )
-
-    current_app.logger.info(
-        (
-            f"--- API/Translate Request --- Lang: {target_language}, Model: {model}, "
-            f"CEFR: {cefr_level or 'N/A'}, Stream: {stream}"
-        )
-    )
-
-    try:
-        client = OpenAI(api_key=api_key_to_use)
-
-        if stream:
-            # Handle streaming response
-            def generate():
-                buffer = ""
-                last_chunk = "" # Store the complete translated text to save to cache at the end
-
-                # Create a streaming request to OpenAI
-                completion = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": full_user_prompt},
-                    ],
-                    stream=True,
-                )
-
-                # Send SSE format for streaming events
-                yield "data: {\"status\": \"started\"}\n\n"
-
-                for chunk in completion:
-                    content = chunk.choices[0].delta.content
-
-                    # Some chunks might not have content
-                    if content is not None:
-                        buffer += content
-                        last_chunk += content
-
-                        # Clean any markdown code blocks on the fly
-                        while "```html" in buffer:
-                            buffer = buffer.replace("```html", "", 1)
-                        while "```" in buffer:
-                            buffer = buffer.replace("```", "", 1)
-
-                        # Send the accumulated buffer
-                        yield f"data: {json.dumps({'content': buffer})}\n\n"
-                        buffer = ""  # Clear buffer after sending
-
-                # Ensure the final chunk is sent (if any remains in buffer)
-                if buffer:
-                    yield f"data: {json.dumps({'content': buffer})}\n\n"
-
-                # Send complete translated text for caching
-                clean_translated_text = last_chunk
-                if clean_translated_text.startswith("```html"):
-                    clean_translated_text = clean_translated_text[7:].strip()
-                elif clean_translated_text.startswith("```"):
-                    clean_translated_text = clean_translated_text[3:].strip()
-                if clean_translated_text.endswith("```"):
-                    clean_translated_text = clean_translated_text[:-3].strip()
-
-                yield (
-                    "data: "
-                    f"{json.dumps({'complete': True, 'translated_text': clean_translated_text})}"
-                    "\n\n"
-                )
-                yield "data: [DONE]\n\n"
-
-            # Return the generator as a streaming response
-            return Response(generate(), mimetype='text/event-stream')
-        else:
-            # Handle non-streaming (original) response method
-            completion = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": full_user_prompt},
-                ],
-            )
-            translated_text = completion.choices[0].message.content.strip()
-
-            if translated_text.startswith("```html"): translated_text = translated_text[7:].strip()
-            elif translated_text.startswith("```"): translated_text = translated_text[3:].strip()
-            if translated_text.endswith("```"): translated_text = translated_text[:-3].strip()
-
-            current_app.logger.info(
-                f"Translation successful. First 100 chars: {translated_text[:100]}..."
-            )
-            return jsonify({"translated_text": translated_text})
-
-    except Exception as e:
-        current_app.logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
-        return jsonify({"error": f"Error during translation: {e}"}), 500
 
 @api_bp.route('/delete_cached_translation', methods=['POST'])
 def delete_cached_translation_route():
