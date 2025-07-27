@@ -19,17 +19,15 @@ if (!PUBLISHABLE_KEY) {
 console.log('✅ [CLERK DEBUG] Publishable key validation passed')
 
 async function startApp() {
-
-  // StrictMode disabled to prevent double/triple firing of effects during development
   const app = (
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <React.StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </React.StrictMode>
   );
 
-  const AppComponent = app;
-
-  ReactDOM.createRoot(document.getElementById('root')!).render(AppComponent);
+  ReactDOM.createRoot(document.getElementById('root')!).render(app);
 }
 
 startApp();
