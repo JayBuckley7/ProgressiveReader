@@ -21,9 +21,36 @@ type PopupState = {
   y: number; 
 } | null;
 
+// Global state for hover intent management
 let setPopup: (s: PopupState) => void = () => {};
+let hideTimeout: NodeJS.Timeout | null = null;
+let isPopupHovered = false;
+
+// Configuration for hover intent delays
+const HOVER_INTENT_CONFIG = {
+  hideDelay: 300, // ms to wait before hiding popup when mouse leaves word
+  showDelay: 100,  // ms to wait before showing popup when mouse enters word
+};
+
+function clearHideTimeout() {
+  if (hideTimeout) {
+    clearTimeout(hideTimeout);
+    hideTimeout = null;
+  }
+}
+
+function scheduleHide() {
+  clearHideTimeout();
+  hideTimeout = setTimeout(() => {
+    if (!isPopupHovered) {
+      setPopup(null);
+    }
+  }, HOVER_INTENT_CONFIG.hideDelay);
+}
 
 export function showDefinitionPopup(word: string, positionSource?: { x: number; y: number } | Element, wordData?: WordData) {
+  clearHideTimeout(); // Cancel any pending hide operation
+  
   let x = 0, y = 0;
   
   if (positionSource) {
@@ -42,10 +69,36 @@ export function showDefinitionPopup(word: string, positionSource?: { x: number; 
   setPopup({ word, wordData, x, y });
 }
 
+export function hideDefinitionPopup() {
+  scheduleHide();
+}
+
+export function cancelHideDefinitionPopup() {
+  clearHideTimeout();
+}
+
 export function JpdbPopupController() {
   const [popup, _setPopup] = useState<PopupState>(null);
   const [isLoading, setIsLoading] = useState(false);
   setPopup = _setPopup;
+
+  // Handle mouse enter/leave on the popup itself
+  const handlePopupMouseEnter = () => {
+    isPopupHovered = true;
+    clearHideTimeout();
+  };
+
+  const handlePopupMouseLeave = () => {
+    isPopupHovered = false;
+    scheduleHide();
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      clearHideTimeout();
+    };
+  }, []);
 
   if (!popup) return null;
 
@@ -53,6 +106,7 @@ export function JpdbPopupController() {
   const token = popup.wordData?.token;
   const isOfflineMode = shouldUseGoogleTranslate();
   const config = getCurrentConfig();
+
 
   const handleMineWord = async () => {
     if (!card || !config.apiKey) return;
@@ -96,6 +150,8 @@ export function JpdbPopupController() {
         maxWidth: '24em',
         maxHeight: '40vh'
       }}
+      onMouseEnter={handlePopupMouseEnter}
+      onMouseLeave={handlePopupMouseLeave}
     >
       {/* Header */}
       <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -105,7 +161,7 @@ export function JpdbPopupController() {
           </strong>
           {card && (
             <div className="flex flex-col text-xs text-gray-500 dark:text-gray-400">
-              {card.state.map(state => (
+              {card.state?.map(state => (
                 <span key={state} className={`state ${state}`}>{state}</span>
               ))}
             </div>
@@ -115,18 +171,18 @@ export function JpdbPopupController() {
         {/* Word information */}
         {token && (
           <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            {token.card.reading && <div>Reading: {token.card.reading}</div>}
-            {token.card.meanings && token.card.meanings.length > 0 && (
+            {token.card?.reading && <div>Reading: {token.card.reading}</div>}
+            {token.card?.meanings && token.card.meanings.length > 0 && (
               <div>
-                Part of speech: {token.card.meanings.map(m => m.partOfSpeech.join(', ')).join('; ')}
+                Part of speech: {token.card.meanings.map(m => m.partOfSpeech?.join(', ')).join('; ')}
               </div>
             )}
-            {token.card.meanings && token.card.meanings.length > 0 && (
+            {token.card?.meanings && token.card.meanings.length > 0 && (
               <div className="mt-1">
                 <strong>Meanings:</strong>
                 <ol className="list-decimal list-inside mt-1">
                   {token.card.meanings.map((meaning, idx) => (
-                    <li key={idx}>{meaning.glosses.join('; ')}</li>
+                    <li key={idx}>{meaning.glosses?.join('; ')}</li>
                   ))}
                 </ol>
               </div>

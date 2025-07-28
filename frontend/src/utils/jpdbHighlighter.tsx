@@ -1,5 +1,5 @@
 import React from "react";
-import { showDefinitionPopup } from "../components/JpdbPopup";
+import { showDefinitionPopup, hideDefinitionPopup } from "../components/JpdbPopup";
 
 /**
  * Very simple word highlighter that wraps individual words in spans. When a
@@ -13,6 +13,7 @@ export function highlightWithPopup(text: string): JSX.Element[] {
         className="jpdb-highlight"
         data-word={word}
         onMouseEnter={(e) => showDefinitionPopup(word, e.target as Element)}
+        onMouseLeave={() => hideDefinitionPopup()}
       >
         {word}
       </span>

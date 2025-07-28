@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback, useLayoutEffect } from "react";
 import { toast } from "sonner";
 import { useSettings } from "../contexts/SettingsContext";
 import { ReaderControls } from "./ReaderControls";
@@ -280,6 +280,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return parseHtmlToJsx(html);
   }, [currentChapterContent, translatedContent, isTranslated, jpdbHighlighted, contentVersion]);
 
+  const jsxContent = useMemo(() => {
+    const html = isTranslated ? translatedContent ?? '' : currentChapterContent ?? '';
+    if (!html) return null;
+    // Always use parseHtmlToJsx without the simple highlighter - let the proper JPDB system handle highlighting
+    return parseHtmlToJsx(html);
+  }, [currentChapterContent, translatedContent, isTranslated]);
+
   // Swipe control state
   const swipeRef = useRef({
     startX: null as number | null,
@@ -544,11 +551,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   }, []);
 
   // Apply JPDB highlighting when enabled or when content changes while enabled
-  // Highlighting is handled via JSX rendering. When jpdbHighlighted changes
-  // or contentVersion updates, jsxContent will be recomputed.
-
-  // Effect to trigger actual highlighting when jpdbHighlighted becomes true
-  useEffect(() => {
+  // Use useLayoutEffect to coordinate with React's rendering cycle and avoid DOM conflicts
+  useLayoutEffect(() => {
     console.log('🔍 JPDB highlighting effect triggered:', {
       jpdbHighlighted,
       hasContentRef: !!contentRef.current,
@@ -557,21 +561,28 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     });
     
     if (jpdbHighlighted && contentRef.current && currentChapterContent) {
-      console.log('🎯 CONDITIONS MET - Applying JPDB highlighting to content...');
-      console.log('🎯 Content element:', contentRef.current);
-      console.log('🎯 Content element children:', contentRef.current.children.length);
-      console.log('🎯 Content element text length:', contentRef.current.textContent?.length || 0);
+      // Use requestAnimationFrame to ensure React has finished updating the DOM
+      const frameId = requestAnimationFrame(() => {
+        if (!contentRef.current) return;
+        
+        console.log('🎯 CONDITIONS MET - Applying JPDB highlighting to content...');
+        console.log('🎯 Content element:', contentRef.current);
+        console.log('🎯 Content element children:', contentRef.current.children.length);
+        console.log('🎯 Content element text length:', contentRef.current.textContent?.length || 0);
+        
+        try {
+          console.log('🎯 Calling highlightContent function...');
+          highlightContent(contentRef.current).then(() => {
+            console.log('🎯 ✅ highlightContent completed successfully');
+          }).catch((error) => {
+            console.error('🎯 ❌ highlightContent failed:', error);
+          });
+        } catch (error) {
+          console.error('🎯 ❌ Error calling highlightContent:', error);
+        }
+      });
       
-      try {
-        console.log('🎯 Calling highlightContent function...');
-        highlightContent(contentRef.current).then(() => {
-          console.log('🎯 ✅ highlightContent completed successfully');
-        }).catch((error) => {
-          console.error('🎯 ❌ highlightContent failed:', error);
-        });
-      } catch (error) {
-        console.error('🎯 ❌ Error calling highlightContent:', error);
-      }
+      return () => cancelAnimationFrame(frameId);
     } else if (!jpdbHighlighted && contentRef.current) {
       // Clear highlighting when disabled
       console.log('🎯 Removing JPDB highlighting...');
@@ -1348,7 +1359,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
               {bookContent?.title}
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              {bookContent?.chapterTitles?.[chapter]?.label || `Chapter ${chapter + 1}`} of {bookContent?.totalChapters}
+              {bookContent?.chapterTitles?.[chapter]?.title || `Chapter ${chapter + 1}`} of {bookContent?.totalChapters}
               <span className="ml-2 space-x-2">
                 {isTranslated && (
                   <>
@@ -1480,7 +1491,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           onNextChapter={bookMetadata?.fileType === 'pdf' ? nextPdfPage : nextChapter}
           bookId={bookId}
           chapterTitles={bookMetadata?.fileType === 'pdf' ?
-            Array.from({ length: pdfPageCount }, (_, i) => ({ index: i, label: `Page ${i + 1}` })) :
+            Array.from({ length: pdfPageCount }, (_, i) => ({ index: i, title: `Page ${i + 1}`, href: '' })) :
             bookContent?.chapterTitles || []}
           onSelectChapter={bookMetadata?.fileType === 'pdf' ? (idx => {
             setPdfCurrentPage(idx + 1);
