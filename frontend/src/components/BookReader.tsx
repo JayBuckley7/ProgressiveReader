@@ -10,6 +10,7 @@ import { storageService } from "../services/storageService";
 import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
+import { parseHtmlToJsx } from "../utils/htmlToJsx";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -270,6 +271,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [isAutoloaded, setIsAutoloaded] = useState(false); // Track if translation was autoloaded
   // Track which translation mode (native or CEFR) was used last
   const [lastUseCefr, setLastUseCefr] = useState(false);
+  const [contentVersion, setContentVersion] = useState(0);
+
+  const jsxContent = useMemo(() => {
+    const html = isTranslated ? translatedContent ?? '' : currentChapterContent ?? '';
+    if (!html) return null;
+    // Always use parseHtmlToJsx without the simple highlighter - let the proper JPDB system handle highlighting
+    return parseHtmlToJsx(html);
+  }, [currentChapterContent, translatedContent, isTranslated, jpdbHighlighted, contentVersion]);
 
   // Swipe control state
   const swipeRef = useRef({
@@ -303,6 +312,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   useEffect(() => {
     updateChapterRef.current = updateChapter;
   }, [updateChapter]);
+
+  // Bump version when content changes so highlighting recalculates
+  useEffect(() => {
+    setContentVersion(v => v + 1);
+  }, [currentChapterContent, translatedContent]);
 
   // Stable link click handler that doesn't change with chapter updates
   const handleLinkClick = useCallback((e: Event) => {
@@ -501,7 +515,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (saveProgressTimeoutRef.current) {
       clearTimeout(saveProgressTimeoutRef.current);
     }
-    saveProgressTimeoutRef.current = setTimeout(() => saveProgressRef.current(), 2000);
+    // Increase timeout to 5 seconds to reduce frequency of saves
+    saveProgressTimeoutRef.current = setTimeout(() => saveProgressRef.current(), 5000);
   }, []); // No dependencies - stable handler
 
   // Handle scroll tracking (bind once when content is available)
@@ -529,93 +544,59 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   }, []);
 
   // Apply JPDB highlighting when enabled or when content changes while enabled
+  // Highlighting is handled via JSX rendering. When jpdbHighlighted changes
+  // or contentVersion updates, jsxContent will be recomputed.
+
+  // Effect to trigger actual highlighting when jpdbHighlighted becomes true
   useEffect(() => {
     console.log('🔍 JPDB highlighting effect triggered:', {
-      hasContentRef: !!contentRef.current,
       jpdbHighlighted,
-      hasChapterContent: !!currentChapterContent,
-      hasTranslatedContent: !!translatedContent,
-      isTranslated,
-      isTranslating
+      hasContentRef: !!contentRef.current,
+      hasCurrentChapterContent: !!currentChapterContent,
+      contentRefInnerHTML: contentRef.current?.innerHTML?.substring(0, 100) + '...'
     });
-
-    // Run highlighting when:
-    // 1. User toggles highlighting on (jpdbHighlighted becomes true)
-    // 2. Content changes while highlighting is already enabled
-    // 3. Translation state changes while highlighting is enabled
-    if (jpdbHighlighted && contentRef.current && !isTranslating) {
-      // Only proceed if we have actual content to highlight
-      const hasContent = isTranslated ? !!translatedContent : !!currentChapterContent;
-      if (!hasContent) {
-        console.log('🔍 No content available for highlighting yet');
-        return;
-      }
-
-      const contentElement = contentRef.current.querySelector('.prose');
-      console.log('🔍 Content element found:', !!contentElement);
-      console.log('🔍 Current content state:', { 
-        hasOriginal: !!currentChapterContent, 
-        hasTranslated: !!translatedContent, 
-        isTranslated 
-      });
+    
+    if (jpdbHighlighted && contentRef.current && currentChapterContent) {
+      console.log('🎯 CONDITIONS MET - Applying JPDB highlighting to content...');
+      console.log('🎯 Content element:', contentRef.current);
+      console.log('🎯 Content element children:', contentRef.current.children.length);
+      console.log('🎯 Content element text length:', contentRef.current.textContent?.length || 0);
       
-      if (contentElement) {
-        console.log('🔍 About to call highlightContent on', isTranslated ? 'translated' : 'original', 'content...');
-        
-        // Use requestAnimationFrame for more reliable DOM readiness instead of arbitrary timeout
-        const frameId = requestAnimationFrame(async () => {
-          try {
-            // Reload configuration to ensure latest settings are used
-            const config = loadJpdbConfig();
-            console.log('🔍 Reloaded JPDB config for highlighting:', { 
-              showPopupOnHover: config.showPopupOnHover,
-              apiKey: !!config.apiKey 
-            });
-            
-            // Double-check the element still exists and has content
-            const freshElement = contentRef.current?.querySelector('.prose') as HTMLElement;
-            if (freshElement && freshElement.textContent && freshElement.textContent.trim()) {
-              console.log('🔍 Proceeding with highlighting, element text length:', freshElement.textContent.length);
-              
-              // CRITICAL: Preserve the current content before highlighting
-              // This ensures we don't lose translations when highlighting is applied
-              const currentContent = freshElement.innerHTML;
-              
-              // Store the appropriate original content based on current state
-              if (isTranslated && translatedContent) {
-                // If we're highlighting translated content, store the translated content as "original"
-                // so that when highlighting is removed, we get back the translation, not the raw original
-                freshElement.setAttribute('data-original-content', translatedContent);
-              } else if (currentChapterContent) {
-                // If we're highlighting original content, store the original content
-                freshElement.setAttribute('data-original-content', currentChapterContent);
-              }
-              
-              await highlightContent(freshElement);
-              console.log('✅ highlightContent completed successfully');
-            } else {
-              console.warn('⚠️ Content element is empty or missing when trying to highlight');
-            }
-          } catch (error) {
-            console.error('❌ Error in highlightContent:', error);
-          }
+      try {
+        console.log('🎯 Calling highlightContent function...');
+        highlightContent(contentRef.current).then(() => {
+          console.log('🎯 ✅ highlightContent completed successfully');
+        }).catch((error) => {
+          console.error('🎯 ❌ highlightContent failed:', error);
         });
-        return () => cancelAnimationFrame(frameId);
-      } else {
-        console.warn('⚠️ Could not find .prose element in contentRef');
-        console.log('Available elements:', contentRef.current.querySelector('*'));
+      } catch (error) {
+        console.error('🎯 ❌ Error calling highlightContent:', error);
       }
-    }
-  }, [jpdbHighlighted, currentChapterContent, translatedContent, isTranslated, isTranslating]); // Respond to content changes when highlighting is enabled
-
-  useEffect(() => {
-    if (!jpdbHighlighted && contentRef.current) {
-      const el = contentRef.current.querySelector('.prose') as HTMLElement | null;
-      if (el?.dataset.originalContent) {
-        el.innerHTML = el.dataset.originalContent;
+    } else if (!jpdbHighlighted && contentRef.current) {
+      // Clear highlighting when disabled
+      console.log('🎯 Removing JPDB highlighting...');
+      const jpdbElements = contentRef.current.querySelectorAll('.jpdb-word');
+      console.log('🎯 Found', jpdbElements.length, 'jpdb-word elements to remove');
+      jpdbElements.forEach(el => {
+        const parent = el.parentNode;
+        if (parent) {
+          // Replace highlighted element with its text content
+          parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+        }
+      });
+      // Normalize text nodes after removing highlights
+      if (contentRef.current.normalize) {
+        contentRef.current.normalize();
       }
+      console.log('🎯 Highlighting removal completed');
+    } else {
+      console.log('🎯 ❌ CONDITIONS NOT MET:', {
+        jpdbHighlighted,
+        hasContentRef: !!contentRef.current,
+        hasCurrentChapterContent: !!currentChapterContent
+      });
     }
-  }, [jpdbHighlighted]);
+  }, [jpdbHighlighted, currentChapterContent]);
 
   // Restore scroll position from progress
   useEffect(() => {
@@ -1464,20 +1445,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           ) : (
             <div className="py-8 text-center">Loading PDF...</div>
           )
-        ) : isTranslated ? (
-          <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
-            <div
-              className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: translatedContent || '' }}
-            />
-          </div>
         ) : (
           <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
-            {currentChapterContent ? (
-              <div
-                className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: currentChapterContent }}
-              />
+            {jsxContent ? (
+              <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
+                {jsxContent}
+              </div>
             ) : error ? (
               <div className="text-center py-8">
                 <div className="text-red-600 dark:text-red-400 mb-4">

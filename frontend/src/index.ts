@@ -175,6 +175,11 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
 
 // Main function to apply JPDB highlighting to a content element
 export async function highlightContent(contentElement: HTMLElement): Promise<void> {
+    console.log('🟡 [highlightContent] Function called with element:', contentElement);
+    console.log('🟡 [highlightContent] Element tagName:', contentElement.tagName);
+    console.log('🟡 [highlightContent] Element innerHTML length:', contentElement.innerHTML.length);
+    console.log('🟡 [highlightContent] Element textContent length:', contentElement.textContent?.length || 0);
+    
     Logger.log('highlightContent called', contentElement);
     
     // CRITICAL: Set hover handlers FIRST, before any DOM processing
@@ -182,11 +187,17 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     setWordHoverHandlers(onWordHoverStart, onWordHoverStop);
     
     let currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
+    console.log('🟡 [highlightContent] Config loaded:', {
+        hasApiKey: !!currentConfig.apiKey,
+        apiKeyLength: currentConfig.apiKey?.length || 0
+    });
+    
     Logger.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));
     Logger.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
     Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
     
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
+        console.log('🟡 [highlightContent] No JPDB API Key - using offline/Google Translate mode');
         Logger.warn('JPDB API Key is not set. Falling back to offline parser if available.');
         // Do not abort here. parseText() will handle offline parsing when no API key
         // is configured or when the "Use Offline Parser" option is enabled.
@@ -205,24 +216,36 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     }
     
     try {
+        console.log('🟡 [highlightContent] Starting text processing...');
         const textSegments = extractCleanTextSegments(contentElement);
+        console.log('🟡 [highlightContent] Extracted text segments:', textSegments.length);
+        console.log('🟡 [highlightContent] First few segments:', textSegments.slice(0, 3));
+        
         Logger.log(`Extracted ${textSegments.length} text segments`);
         
         if (!textSegments || textSegments.length === 0) {
+            console.log('🟡 [highlightContent] ❌ No text segments found - early return');
             Logger.log('No text segments to highlight.');
             return;
         }
         
+        console.log('🟡 [highlightContent] Setting cursor to wait...');
         document.body.style.cursor = 'wait';
+        
+        console.log('🟡 [highlightContent] Creating paragraph fragments...');
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
+        console.log('🟡 [highlightContent] Created paragraphs:', paragraphs.length);
         Logger.log(`Created ${paragraphs.length} paragraph fragments`);
 
+        console.log('🟡 [highlightContent] Calling parseText...');
         let tokens = await parseText(textSegments); // Tokens have global offsets
+        console.log('🟡 [highlightContent] Received tokens:', tokens.length);
 
         Logger.log(`Received ${tokens.length} tokens from API`);
         
         for (const paragraph of paragraphs) { // A paragraph is a Fragment[]
             if (paragraph.length > 0) {
+                console.log('🟡 [highlightContent] Processing paragraph with', paragraph.length, 'fragments');
                 const globalParagraphStartOffset = paragraph[0].start;
                 const globalParagraphEndOffset = paragraph[paragraph.length - 1].end;
 
@@ -230,8 +253,11 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                 const relevantGlobalTokens = tokens.filter(token => {
                     return token.start < globalParagraphEndOffset && token.end > globalParagraphStartOffset;
                 });
+                
+                console.log('🟡 [highlightContent] Found', relevantGlobalTokens.length, 'relevant tokens for this paragraph');
 
                 if (relevantGlobalTokens.length > 0) {
+                    console.log('🟡 [highlightContent] Applying tokens to paragraph...');
                     // Make token offsets relative to this paragraph's start
                     const relativeTokens = relevantGlobalTokens.map(token => ({
                         ...token,
@@ -253,22 +279,30 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                     }));
                     
                     if (relativeFragments.length > 0 && relativeTokens.length > 0) {
+                        console.log('🟡 [highlightContent] Calling applyTokens with', relativeTokens.length, 'tokens and', relativeFragments.length, 'fragments');
                         applyTokens(relativeFragments, relativeTokens);
+                        console.log('🟡 [highlightContent] applyTokens completed for this paragraph');
                     }
-                                 }
-             }
-         }
+                } else {
+                    console.log('🟡 [highlightContent] No relevant tokens for this paragraph - skipping');
+                }
+            }
+        }
 
     } catch (error) {
+        console.error('🟡 [highlightContent] ❌ ERROR in highlightContent:', error);
         console.error('Error in highlightContent:', error);
         showError(error instanceof Error ? error : new Error(String(error)));
         // Restore original content if available
         const originalContent = contentElement.getAttribute('data-original-content');
         if (originalContent) {
+            console.log('🟡 [highlightContent] Restoring original content due to error');
             contentElement.innerHTML = originalContent;
         }
     } finally {
+        console.log('🟡 [highlightContent] Setting cursor back to default');
         document.body.style.cursor = 'default';
+        console.log('🟡 [highlightContent] ✅ Function completed');
     }
 }
 
@@ -303,31 +337,32 @@ function onWordHoverStart(event: MouseEvent): void {
 }
 
 function onWordHoverStop(event?: MouseEvent): void {
-    // Check if mouse is actually over the popup element
-    const popup = Popup.get();
-    const mouseX = event?.clientX || 0;
-    const mouseY = event?.clientY || 0;
-    const popupRect = popup.element.getBoundingClientRect();
-    const isMouseOverPopup = mouseX >= popupRect.left && mouseX <= popupRect.right && 
-                            mouseY >= popupRect.top && mouseY <= popupRect.bottom;
-    
-    // Update popup hover state based on actual mouse position
-    if (isMouseOverPopup && !popupHovered) {
-        popupHovered = true;
-    }
-    
     currentHover = null;
     
-    // Hide popup when hover stops, unless popup key is held or mouse is over popup
+    // Hide popup when hover stops, unless popup key is held
     const currentConfig = getCurrentConfig();
     if (currentConfig.showPopupOnHover && !popupKeyHeld) {
-        // Longer delay to allow moving between adjacent words and to popup
+        // Use a delay to allow moving between adjacent words and to popup
         setTimeout(() => {
-            // Only hide if we're still not hovering, key isn't held, and mouse isn't over popup
-            if (!currentHover && !popupKeyHeld && !popupHovered) {
-                Popup.get().fadeOut();
+            // Only hide if we're still not hovering and key isn't held
+            if (!currentHover && !popupKeyHeld) {
+                // Check if mouse is over popup before hiding
+                const popup = Popup.get();
+                if (event) {
+                    const mouseX = event.clientX;
+                    const mouseY = event.clientY;
+                    const popupRect = popup.element.getBoundingClientRect();
+                    const isMouseOverPopup = mouseX >= popupRect.left && mouseX <= popupRect.right && 
+                                            mouseY >= popupRect.top && mouseY <= popupRect.bottom;
+                    if (!isMouseOverPopup) {
+                        popup.fadeOut();
+                    }
+                } else {
+                    // No event data, hide popup
+                    popup.fadeOut();
+                }
             }
-        }, 300); // Increased delay to give more time to move to popup
+        }, 200); // Reduced delay for more responsive hiding
     }
 }
 
