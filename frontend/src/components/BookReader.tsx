@@ -271,6 +271,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [isAutoloaded, setIsAutoloaded] = useState(false); // Track if translation was autoloaded
   // Track which translation mode (native or CEFR) was used last
   const [lastUseCefr, setLastUseCefr] = useState(false);
+  const [contentVersion, setContentVersion] = useState(0);
+
+  const jsxContent = useMemo(() => {
+    const html = isTranslated ? translatedContent ?? '' : currentChapterContent ?? '';
+    if (!html) return null;
+    // Always use parseHtmlToJsx without the simple highlighter - let the proper JPDB system handle highlighting
+    return parseHtmlToJsx(html);
+  }, [currentChapterContent, translatedContent, isTranslated, jpdbHighlighted, contentVersion]);
 
   const jsxContent = useMemo(() => {
     const html = isTranslated ? translatedContent ?? '' : currentChapterContent ?? '';
@@ -311,6 +319,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   useEffect(() => {
     updateChapterRef.current = updateChapter;
   }, [updateChapter]);
+
+  // Bump version when content changes so highlighting recalculates
+  useEffect(() => {
+    setContentVersion(v => v + 1);
+  }, [currentChapterContent, translatedContent]);
 
   // Stable link click handler that doesn't change with chapter updates
   const handleLinkClick = useCallback((e: Event) => {

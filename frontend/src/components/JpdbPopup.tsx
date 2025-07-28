@@ -108,7 +108,6 @@ export function JpdbPopupController() {
   const config = getCurrentConfig();
 
 
-
   const handleMineWord = async () => {
     if (!card || !config.apiKey) return;
     setIsLoading(true);
