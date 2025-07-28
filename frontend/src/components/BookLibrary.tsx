@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { SettingsModal } from "./SettingsModal";
 import { BookCardHover } from "./BookCardHover";
 import { FolderManager } from "./FolderManager";
 import { FolderView } from "./FolderView";
 import { TokenStatusWarning } from "./TokenStatusWarning";
+import { MassUploadModal } from "./MassUploadModal";
 import { toast } from "sonner";
 import { useAppData } from "../contexts/AppDataContext";
 import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
@@ -102,61 +103,10 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
 
   // All book handling is delegated to the storage service.
 
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+
   const [showSettings, setShowSettings] = useState(false);
   const [showFolderManager, setShowFolderManager] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    const supportedFormats = ['epub', 'txt', 'docx', 'pdf'];
-    
-    if (!fileExtension || !supportedFormats.includes(fileExtension)) {
-      toast.error("Please select a supported file format (EPUB, TXT, DOCX, PDF)");
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(10);
-
-    try {
-      // Use the storage service's integrated upload function
-      const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-      
-      const meta = {
-        title: fileName,
-        fileType: fileExtension
-      };
-      
-      const uploadedBookMetadata = await uploadBook(file, meta);
-      
-      if (uploadedBookMetadata) {
-        // All metadata handling is performed in the storage service. Any future
-        // chapter processing will hook into that layer.
-
-        setUploadProgress(100);
-        toast.success(`"${uploadedBookMetadata.title}" uploaded successfully!`);
-        
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      } else {
-          throw new Error("Upload did not return metadata.");
-      }
-
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload book");
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
-  };
+  const [showMassUpload, setShowMassUpload] = useState(false);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -214,32 +164,14 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
               Sign In
             </button>
           )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".epub,.txt,.docx,.pdf"
-            onChange={handleFileUpload}
-            className="hidden"
-            disabled={isUploading}
-          />
           <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            onClick={() => setShowMassUpload(true)}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover flex items-center gap-2"
           >
-            {isUploading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Processing... {uploadProgress}%
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Book
-              </>
-            )}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Books
           </button>
           <button
             onClick={() => setShowSettings(true)}
@@ -256,19 +188,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
       {/* Token Status Warning */}
       <TokenStatusWarning />
 
-      {isUploading && (
-        <div className="mb-6">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Processing your book... This may take a moment.
-          </p>
-        </div>
-      )}
+
 
       {!isAuthenticated ? (
         <div className="text-center py-16">
@@ -320,9 +240,12 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             Supported formats: EPUB, TXT, DOCX, PDF
           </p>
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover"
+            onClick={() => setShowMassUpload(true)}
+            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover flex items-center gap-2"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Upload Your First Book
           </button>
         </div>
@@ -352,6 +275,16 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           onUpdateFolder={updateFolder}
           onDeleteFolder={deleteFolder}
           onClose={() => setShowFolderManager(false)}
+        />
+      )}
+
+      {showMassUpload && (
+        <MassUploadModal
+          onClose={() => setShowMassUpload(false)}
+          onUploadComplete={() => {
+            // Refresh the library after successful uploads
+            syncBooks();
+          }}
         />
       )}
     </div>
