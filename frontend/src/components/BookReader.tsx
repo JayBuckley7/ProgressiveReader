@@ -280,13 +280,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     return parseHtmlToJsx(html);
   }, [currentChapterContent, translatedContent, isTranslated, jpdbHighlighted, contentVersion]);
 
-  const jsxContent = useMemo(() => {
-    const html = isTranslated ? translatedContent ?? '' : currentChapterContent ?? '';
-    if (!html) return null;
-    // Always use parseHtmlToJsx without the simple highlighter - let the proper JPDB system handle highlighting
-    return parseHtmlToJsx(html);
-  }, [currentChapterContent, translatedContent, isTranslated]);
-
   // Swipe control state
   const swipeRef = useRef({
     startX: null as number | null,
