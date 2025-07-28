@@ -5,6 +5,7 @@ import { JpdbWord, getJpdbData } from './content/word';
 import { nonNull } from './utils/util';
 import { showError } from './components/toast';
 import { Popup } from './components/popup';
+import { showDefinitionPopup, hideDefinitionPopup, cancelHideDefinitionPopup } from './components/JpdbPopup';
 import { Keybind } from './types'; // Corrected import path for Keybind
 import Logger from './utils/logger';
 
@@ -321,16 +322,24 @@ function onWordHoverStart(event: MouseEvent): void {
         // Only show popup on hover if the setting is enabled OR the popup key is held
         const currentConfig = getCurrentConfig();
         
-        if (currentConfig.showPopupOnHover || popupKeyHeld) {
-            const jpdbData = getJpdbData(jpdbWordElement);
-            if (jpdbData) {
-                // Set jpdbData for compatibility with existing code
-                if (!('jpdbData' in jpdbWordElement)) {
-                    (jpdbWordElement as any).jpdbData = jpdbData;
-                }
-                Popup.get().showForWord(jpdbWordElement, event.clientX, event.clientY);
-            }
-        }
+                 if (currentConfig.showPopupOnHover || popupKeyHeld) {
+             const jpdbData = getJpdbData(jpdbWordElement);
+             if (jpdbData) {
+                 // Get word data for the new popup system
+                 // jpdbData has structure: { token: Token, context: string, contextOffset: number }
+                 const wordData = {
+                     token: jpdbData.token, // Extract the actual token from jpdbData
+                     position: jpdbData.contextOffset,
+                     sentence: jpdbWordElement.textContent || undefined
+                 };
+                 
+                 // Use the new JpdbPopup system with hover intent
+                 showDefinitionPopup(jpdbWordElement.textContent || '', {
+                     x: event.clientX,
+                     y: event.clientY
+                 }, wordData);
+             }
+         }
     } catch (error) {
         console.error('Error in onWordHoverStart:', error);
     }
@@ -342,27 +351,8 @@ function onWordHoverStop(event?: MouseEvent): void {
     // Hide popup when hover stops, unless popup key is held
     const currentConfig = getCurrentConfig();
     if (currentConfig.showPopupOnHover && !popupKeyHeld) {
-        // Use a delay to allow moving between adjacent words and to popup
-        setTimeout(() => {
-            // Only hide if we're still not hovering and key isn't held
-            if (!currentHover && !popupKeyHeld) {
-                // Check if mouse is over popup before hiding
-                const popup = Popup.get();
-                if (event) {
-                    const mouseX = event.clientX;
-                    const mouseY = event.clientY;
-                    const popupRect = popup.element.getBoundingClientRect();
-                    const isMouseOverPopup = mouseX >= popupRect.left && mouseX <= popupRect.right && 
-                                            mouseY >= popupRect.top && mouseY <= popupRect.bottom;
-                    if (!isMouseOverPopup) {
-                        popup.fadeOut();
-                    }
-                } else {
-                    // No event data, hide popup
-                    popup.fadeOut();
-                }
-            }
-        }, 200); // Reduced delay for more responsive hiding
+        // Use the new hover intent system with proper delays
+        hideDefinitionPopup();
     }
 }
 
@@ -371,23 +361,23 @@ function globalKeydownListener(event: KeyboardEvent) {
     const currentConfig = getCurrentConfig(); // Get latest config for keybinds
     // Check for the show popup key specifically
     if (matchesHotkey(event, currentConfig.showPopupKey)) {
-        event.preventDefault(); // Prevent default browser behavior
+                event.preventDefault(); // Prevent default browser behavior
         popupKeyHeld = true;
-        Popup.get().disablePointer(); // Disable pointer events on popup while key is held
 
-        // If a word is already hovered, show the popup immediately
-        if (currentHover) {
-            const [wordElement, x, y] = currentHover;
-            const jpdbData = getJpdbData(wordElement);
-        if (jpdbData) {
-            // Set jpdbData for compatibility with existing code
-            if (!('jpdbData' in wordElement)) {
-                (wordElement as any).jpdbData = jpdbData;
-            }
-                Logger.log('Showing popup because popup key was pressed while hovering a word');
-                Popup.get().showForWord(wordElement, x, y);
-            }
-        }
+                 // If a word is already hovered, show the popup immediately
+         if (currentHover) {
+             const [wordElement, x, y] = currentHover;
+             const jpdbData = getJpdbData(wordElement);
+             if (jpdbData) {
+                 Logger.log('Showing popup because popup key was pressed while hovering a word');
+                 const wordData = {
+                     token: jpdbData.token, // Extract the actual token from jpdbData
+                     position: jpdbData.contextOffset,
+                     sentence: wordElement.textContent || undefined
+                 };
+                 showDefinitionPopup(wordElement.textContent || '', { x, y }, wordData);
+             }
+         }
     }
     
     // Future: Add more hotkey handling here for other actions (like in the inspiration code)
@@ -406,18 +396,10 @@ function globalKeyupListener(event: KeyboardEvent) {
     if (matchesHotkey(event, currentConfig.showPopupKey)) {
         event.preventDefault();
         popupKeyHeld = false;
-        Popup.get().enablePointer(); // Re-enable pointer events
         
         // If hover popups are disabled, hide the popup when key is released
-        // Add a small delay to allow clicks within the popup after key release
-        if (!currentConfig.showPopupOnHover && Popup.get().isVisible) {
-            setTimeout(() => {
-                // Double check popupKeyHeld state hasn't changed during timeout
-                if (!popupKeyHeld) {
-                    Logger.log('Hiding popup because popup key was released and hover is disabled');
-                    Popup.get().fadeOut();
-                }
-            }, 100); // Small delay
+        if (!currentConfig.showPopupOnHover) {
+            hideDefinitionPopup();
         }
     }
 }

@@ -343,6 +343,6 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
         unparsedWrapper.className = 'jpdb-word unparsed';
         wrap(fragment.node, unparsedWrapper);
 
-        fragment = fragments[++fragmentIndex];
-    }
-} 
+                  fragment = fragments[++fragmentIndex];
+      }
+}  
