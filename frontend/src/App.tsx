@@ -11,6 +11,7 @@ import {
 
 import { SignInForm } from "./components/SignInForm";
 import { Toaster } from "sonner";
+import { JpdbPopupController } from "./components/JpdbPopup";
 import BookLibrary from "./components/BookLibrary";
 import { BookReader } from "./components/BookReader";
 import { SettingsProvider } from "./contexts/SettingsContext";
@@ -159,6 +160,7 @@ function AppContent() {
         <Footer />
         <DangerZone />
         <Toaster />
+        <JpdbPopupController />
       </div>
     </SettingsProvider>
   );

@@ -102,6 +102,12 @@
     font-weight: 500;
 }
 
+/* Lightweight highlight styling for the simple word highlighter */
+.jpdb-highlight {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
 .tts-highlight { background-color: yellow; }
 ::highlight(tts-current-word) { background-color: yellow; color: inherit; }
 
