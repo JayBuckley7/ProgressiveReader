@@ -38,19 +38,25 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     Pick<BookMetadata, 'title' | 'fileType' | 'driveFileId'> | null
   >(null);
 
-  // Add debug logging to track hook execution
-  console.log(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
+  // Add debug logging only in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
+  }
 
   // Memoize the book metadata to prevent unnecessary re-renders
   const bookMetadata = useMemo(() => {
     const metadata = books.find(book => book.id === bookId);
-    console.log(`📚 [useBookContent] Book metadata lookup result:`, metadata ? 'Found' : 'Not found');
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📚 [useBookContent] Book metadata lookup result:`, metadata ? 'Found' : 'Not found');
+    }
     return metadata;
   }, [books, bookId]);
 
   // Get the book processors (now directly imported)
   const getProcessors = () => {
-    console.log('Getting processor classes...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Getting processor classes...');
+    }
     return {
       EpubProcessorWrapper,
       TextProcessorWrapper
@@ -270,7 +276,9 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         }
 
         // Otherwise, load chapter on-demand
-        console.log('Loading chapter content on-demand:', currentChapter);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Loading chapter content on-demand:', currentChapter);
+        }
         const chapterHtml = await processorRef.current.getChapterHtml(currentChapter);
         setCurrentChapterContent(chapterHtml || '<p>Chapter content not available</p>');
       } catch (error) {

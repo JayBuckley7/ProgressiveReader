@@ -166,10 +166,30 @@ function getColorClass(token: Token): string {
             return 'common-word';
         }
         
-        // Check for JLPT level from the token data
-        const jlptLevel = (token as any).jlpt;
-        if (jlptLevel) {
+        // Check for JLPT level from the token data - try multiple possible locations
+        let jlptLevel = (token as any).jlpt || 
+                       (token.card as any).jlpt || 
+                       (token.rubies && token.rubies[0] && (token.rubies[0] as any).jlpt);
+        
+        // Also check if JLPT level is stored in the card spelling metadata
+        if (!jlptLevel && token.card && token.card.spelling) {
+            // For offline parsing, JLPT levels might be embedded in parsing results
+            // This is a fallback to ensure words get colored
+            const wordLength = word.length;
+            if (wordLength === 1 && SINGLE_PARTICLES.has(word)) {
+                return 'common-word';
+            }
+            // For now, assign a default level for unrecognized words
+            // This ensures words don't appear white
+            jlptLevel = 'unknown';
+        }
+        
+        if (jlptLevel && jlptLevel !== 'unknown') {
             // Convert JLPT level to CSS class (e.g., "5" -> "jlpt-n5")
+            // Handle special case for common particles
+            if (jlptLevel === 'common') {
+                return 'common-word';
+            }
             return `jlpt-n${jlptLevel}`;
         }
         
@@ -178,7 +198,7 @@ function getColorClass(token: Token): string {
             return 'common-word';
         }
         
-        // Unknown JLPT level
+        // Unknown JLPT level - but still give it a color so it's not white
         return 'jlpt-unknown';
     } else {
         // ONLINE MODE: Use JPDB state-based coloring
@@ -188,14 +208,29 @@ function getColorClass(token: Token): string {
 }
 
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
+    console.log('🔵 [applyTokens] Function called with', fragments.length, 'fragments and', tokens.length, 'tokens');
+    
     fragments = fragments.filter(f => f.length > 0);
     let fragmentIndex = 0;
     let curOffset = 0;
     let fragment = fragments[fragmentIndex];
     const text = fragments.map(x => x.node.data.replace(/\u00A0/g,' ')).join('');
+    
+    console.log('🔵 [applyTokens] Text length:', text.length);
+    console.log('🔵 [applyTokens] First 100 chars:', text.substring(0, 100));
 
     for (const token of tokens) {
-        if (!fragment) return;
+        console.log('🔵 [applyTokens] Processing token:', {
+            spelling: token.card.spelling,
+            start: token.start,
+            end: token.end,
+            length: token.length
+        });
+        
+        if (!fragment) {
+            console.log('🔵 [applyTokens] No fragment available - returning early');
+            return;
+        }
         
         // Wrap all unparsed fragments that appear before the token
         while (curOffset < token.start) {
@@ -225,6 +260,9 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             const additionalColorClass = getColorClass(token);
             const className = additionalColorClass ? `${baseClassName} ${additionalColorClass}` : baseClassName;
             
+            console.log('🔵 [applyTokens] Creating highlighted element for word:', token.card.spelling);
+            console.log('🔵 [applyTokens] Classes:', className);
+            
             const wrapper = (
                 token.rubies.length > 0 && !fragment.hasRuby ? 
                     document.createElement('ruby') : 
@@ -232,6 +270,8 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             ) as JpdbWord;
             
             wrapper.className = className;
+            
+            console.log('🔵 [applyTokens] Created wrapper element:', wrapper.tagName, 'with classes:', wrapper.className);
             
             // Add event handlers
             wrapper.addEventListener('mouseenter', (event: Event) => {
@@ -258,7 +298,9 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 contextOffset: curOffset,
             };
 
+            console.log('🔵 [applyTokens] About to wrap fragment with highlighted element');
             wrap(fragment.node, wrapper);
+            console.log('🔵 [applyTokens] ✅ Fragment wrapped successfully - element should now be in DOM');
 
             if (!fragment.hasRuby) {
                 for (const ruby of token.rubies) {

@@ -48,7 +48,9 @@ function useStorageService() {
 
     try {
       isRefreshingRef.current = true;
+      if (process.env.NODE_ENV === 'development') {
       console.log('[useStorageService] Silently refreshing books...');
+    }
 
       const previous = booksRef.current;
 
@@ -79,7 +81,9 @@ function useStorageService() {
         booksRef.current = userBooks;
       }
 
-      console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
+              if (process.env.NODE_ENV === 'development') {
+          console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
+        }
       
       // Show success feedback only
       if (userBooks.length > 0) {
@@ -201,7 +205,10 @@ function useStorageService() {
     // This prevents multiple parts of the app from trying to manage authentication
     // simultaneously and ensures proper state coordination.
     
-    console.log(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
+    // Only log auth status in development mode to reduce spam
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
+    }
     if (clerkLoaded) {
       setIsLoading(false);
       if (clerkUser) {

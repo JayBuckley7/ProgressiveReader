@@ -1031,7 +1031,10 @@ class StorageService {
     }
 
     async saveReadingProgress(progress: ReadingProgress): Promise<void> {
-        console.log('Saving reading progress:', progress);
+        // Only log in development mode to reduce spam
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Saving reading progress for book:', progress.bookId);
+        }
         try {
             // Always save to local storage first for immediate access
             const localKey = `reading_progress_${progress.bookId}`;
@@ -1070,7 +1073,10 @@ class StorageService {
                 }
             }
 
-            console.log('Reading progress saved successfully');
+            // Only log success in development mode
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Reading progress saved successfully');
+            }
         } catch (error) {
             console.error('Error saving reading progress:', error);
             throw error;

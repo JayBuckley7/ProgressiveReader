@@ -23,8 +23,21 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const requestUrl = event.request.url;
+  const url = new URL(requestUrl);
+  
+  // Skip service worker interception for special URLs
   if (requestUrl.startsWith('blob:') || requestUrl.startsWith('data:')) {
     // Let the browser handle blob and data requests without interception
+    return;
+  }
+
+  // Skip service worker for API endpoints that are proxied by Vite
+  if (url.pathname.startsWith('/api') || 
+      url.pathname.startsWith('/drive') || 
+      url.pathname.startsWith('/auth') || 
+      url.pathname.startsWith('/settings') || 
+      url.pathname.startsWith('/metadata')) {
+    // Let these requests go through the normal fetch pipeline (Vite proxy)
     return;
   }
 

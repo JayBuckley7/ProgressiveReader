@@ -8,10 +8,9 @@ import { PdfViewer, PdfViewerHandle } from "./PdfViewer";
 import { useAppData } from "../contexts/AppDataContext";
 import { storageService } from "../services/storageService";
 import { useBookContent } from "../hooks/useBookContent";
-import { initialize as initializeJpdb } from "~/index.ts";
+import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
 import { parseHtmlToJsx } from "../utils/htmlToJsx";
-import { highlightWithPopup } from "../utils/jpdbHighlighter";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -277,7 +276,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const jsxContent = useMemo(() => {
     const html = isTranslated ? translatedContent ?? '' : currentChapterContent ?? '';
     if (!html) return null;
-    return jpdbHighlighted ? parseHtmlToJsx(html, highlightWithPopup) : parseHtmlToJsx(html);
+    // Always use parseHtmlToJsx without the simple highlighter - let the proper JPDB system handle highlighting
+    return parseHtmlToJsx(html);
   }, [currentChapterContent, translatedContent, isTranslated, jpdbHighlighted, contentVersion]);
 
   // Swipe control state
@@ -515,7 +515,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (saveProgressTimeoutRef.current) {
       clearTimeout(saveProgressTimeoutRef.current);
     }
-    saveProgressTimeoutRef.current = setTimeout(() => saveProgressRef.current(), 2000);
+    // Increase timeout to 5 seconds to reduce frequency of saves
+    saveProgressTimeoutRef.current = setTimeout(() => saveProgressRef.current(), 5000);
   }, []); // No dependencies - stable handler
 
   // Handle scroll tracking (bind once when content is available)
@@ -545,6 +546,57 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Apply JPDB highlighting when enabled or when content changes while enabled
   // Highlighting is handled via JSX rendering. When jpdbHighlighted changes
   // or contentVersion updates, jsxContent will be recomputed.
+
+  // Effect to trigger actual highlighting when jpdbHighlighted becomes true
+  useEffect(() => {
+    console.log('🔍 JPDB highlighting effect triggered:', {
+      jpdbHighlighted,
+      hasContentRef: !!contentRef.current,
+      hasCurrentChapterContent: !!currentChapterContent,
+      contentRefInnerHTML: contentRef.current?.innerHTML?.substring(0, 100) + '...'
+    });
+    
+    if (jpdbHighlighted && contentRef.current && currentChapterContent) {
+      console.log('🎯 CONDITIONS MET - Applying JPDB highlighting to content...');
+      console.log('🎯 Content element:', contentRef.current);
+      console.log('🎯 Content element children:', contentRef.current.children.length);
+      console.log('🎯 Content element text length:', contentRef.current.textContent?.length || 0);
+      
+      try {
+        console.log('🎯 Calling highlightContent function...');
+        highlightContent(contentRef.current).then(() => {
+          console.log('🎯 ✅ highlightContent completed successfully');
+        }).catch((error) => {
+          console.error('🎯 ❌ highlightContent failed:', error);
+        });
+      } catch (error) {
+        console.error('🎯 ❌ Error calling highlightContent:', error);
+      }
+    } else if (!jpdbHighlighted && contentRef.current) {
+      // Clear highlighting when disabled
+      console.log('🎯 Removing JPDB highlighting...');
+      const jpdbElements = contentRef.current.querySelectorAll('.jpdb-word');
+      console.log('🎯 Found', jpdbElements.length, 'jpdb-word elements to remove');
+      jpdbElements.forEach(el => {
+        const parent = el.parentNode;
+        if (parent) {
+          // Replace highlighted element with its text content
+          parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+        }
+      });
+      // Normalize text nodes after removing highlights
+      if (contentRef.current.normalize) {
+        contentRef.current.normalize();
+      }
+      console.log('🎯 Highlighting removal completed');
+    } else {
+      console.log('🎯 ❌ CONDITIONS NOT MET:', {
+        jpdbHighlighted,
+        hasContentRef: !!contentRef.current,
+        hasCurrentChapterContent: !!currentChapterContent
+      });
+    }
+  }, [jpdbHighlighted, currentChapterContent]);
 
   // Restore scroll position from progress
   useEffect(() => {

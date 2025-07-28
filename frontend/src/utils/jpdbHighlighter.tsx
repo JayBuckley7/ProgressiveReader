@@ -12,7 +12,7 @@ export function highlightWithPopup(text: string): JSX.Element[] {
         key={i}
         className="jpdb-highlight"
         data-word={word}
-        onMouseEnter={() => showDefinitionPopup(word)}
+        onMouseEnter={(e) => showDefinitionPopup(word, e.target as Element)}
       >
         {word}
       </span>

@@ -339,6 +339,22 @@ export async function parseWithGoogleTranslate(text: string): Promise<Token[]> {
         rubies: [],
       };
       
+      // Simple heuristic for word coloring based on word characteristics
+      // Since we don't have JLPT data, use basic rules to avoid white text
+      if (word.length === 1 && /[はがをに的だと]/.test(word)) {
+        // Common particles - no special color (inherit)
+        (token as any).jlpt = 'common';
+      } else if (word.length <= 2) {
+        // Short words - likely easier
+        (token as any).jlpt = '5';
+      } else if (word.length <= 4) {
+        // Medium words
+        (token as any).jlpt = '4'; 
+      } else {
+        // Longer words - likely harder
+        (token as any).jlpt = '3';
+      }
+      
       tokens.push(token);
     }
     
