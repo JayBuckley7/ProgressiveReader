@@ -24,7 +24,7 @@ class Config:
     JPDB_REVIEW_URL = 'https://jpdb.io/api/v1/review'
     
     # Google Cloud Translation API
-    GOOGLE_TRANSLATE_API_KEY = os.environ.get('GOOGLE_TRANSLATE_API_KEY', 'AIzaSyD2KjB528FT_SEUFU5R98qvU23DGMCyfn4')
+    GOOGLE_TRANSLATE_API_KEY = os.environ.get('GOOGLE_TRANSLATE_API_KEY')
     GOOGLE_TRANSLATE_API_URL = 'https://translation.googleapis.com/language/translate/v2'
     
     # Allow large files (for dictionary files like jitendex-yomitan.zip)

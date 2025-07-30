@@ -182,3 +182,4 @@ setup-*
 userinput.py
 .cursor/rules/10x.mdc
 
+frontend/src/data/jlpt/kanjiapi_full.json.backup

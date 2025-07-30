@@ -4,6 +4,7 @@ from openai import OpenAI
 import requests
 import re
 import json
+import os
 from ..utils.clerk_auth import require_auth, optional_auth, require_admin
 from ..models import db, Bookmark
 from flask import g
@@ -115,6 +116,145 @@ def remove_openai_key():
 def list_openai_keys():
     """Return the list of stored OpenAI API keys."""
     return jsonify({'keys': openai_key_pool})
+
+
+# --- Kanji JLPT Level Management ---
+
+def get_kanji_data_path():
+    """Get the path to the kanjiapi_full.json file."""
+    # Get the project root directory (parent of backend/)
+    current_file = os.path.abspath(__file__)  # /path/to/backend/app/routes/api.py
+    routes_dir = os.path.dirname(current_file)  # /path/to/backend/app/routes
+    app_dir = os.path.dirname(routes_dir)  # /path/to/backend/app
+    backend_dir = os.path.dirname(app_dir)  # /path/to/backend
+    project_root = os.path.dirname(backend_dir)  # /path/to/project
+    return os.path.join(project_root, 'frontend', 'src', 'data', 'jlpt', 'kanjiapi_full.json')
+
+@api_bp.route('/kanji/search', methods=['POST'])
+@require_admin
+def search_kanji():
+    """Search for kanji by character or meaning."""
+    data = request.get_json() or {}
+    query = data.get('query', '').strip()
+    
+    if not query:
+        return jsonify({'error': 'Missing search query'}), 400
+    
+    try:
+        kanji_path = get_kanji_data_path()
+        if not os.path.exists(kanji_path):
+            return jsonify({'error': 'Kanji database not found'}), 404
+            
+        with open(kanji_path, 'r', encoding='utf-8') as f:
+            kanji_data = json.load(f)
+        
+        kanjis = kanji_data.get('kanjis', {})
+        results = []
+        
+        # Search by exact kanji match first
+        if query in kanjis:
+            kanji_info = kanjis[query].copy()
+            kanji_info['kanji'] = query
+            results.append(kanji_info)
+        
+        # Then search by meanings (limit to 20 results)
+        if len(results) == 0:
+            query_lower = query.lower()
+            for kanji_char, kanji_info in kanjis.items():
+                if len(results) >= 20:
+                    break
+                meanings = kanji_info.get('meanings', [])
+                if any(query_lower in meaning.lower() for meaning in meanings):
+                    result = kanji_info.copy()
+                    result['kanji'] = kanji_char
+                    results.append(result)
+        
+        return jsonify({'results': results})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error searching kanji: {e}")
+        return jsonify({'error': 'Failed to search kanji'}), 500
+
+@api_bp.route('/kanji/update', methods=['POST'])
+@require_admin
+def update_kanji_jlpt():
+    """Update the JLPT level of a kanji."""
+    data = request.get_json() or {}
+    kanji = data.get('kanji', '').strip()
+    jlpt_level = data.get('jlpt_level')
+    
+    if not kanji or len(kanji) != 1:
+        return jsonify({'error': 'Invalid kanji character'}), 400
+    
+    if jlpt_level is not None and (not isinstance(jlpt_level, int) or jlpt_level < 1 or jlpt_level > 5):
+        return jsonify({'error': 'JLPT level must be between 1-5 or null'}), 400
+    
+    try:
+        kanji_path = get_kanji_data_path()
+        if not os.path.exists(kanji_path):
+            return jsonify({'error': 'Kanji database not found'}), 404
+        
+        # Create backup
+        backup_path = kanji_path + '.backup'
+        with open(kanji_path, 'r', encoding='utf-8') as src:
+            with open(backup_path, 'w', encoding='utf-8') as dst:
+                dst.write(src.read())
+        
+        # Load and update data
+        with open(kanji_path, 'r', encoding='utf-8') as f:
+            kanji_data = json.load(f)
+        
+        if kanji not in kanji_data.get('kanjis', {}):
+            return jsonify({'error': 'Kanji not found in database'}), 404
+        
+        old_jlpt = kanji_data['kanjis'][kanji].get('jlpt')
+        kanji_data['kanjis'][kanji]['jlpt'] = jlpt_level
+        
+        # Save updated data
+        with open(kanji_path, 'w', encoding='utf-8') as f:
+            json.dump(kanji_data, f, ensure_ascii=False, separators=(',', ':'))
+        
+        current_app.logger.info(f'Updated kanji {kanji} JLPT level from {old_jlpt} to {jlpt_level}')
+        
+        return jsonify({
+            'success': True,
+            'kanji': kanji,
+            'old_jlpt': old_jlpt,
+            'new_jlpt': jlpt_level
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error updating kanji: {e}")
+        return jsonify({'error': 'Failed to update kanji'}), 500
+
+@api_bp.route('/kanji/info/<kanji_char>', methods=['GET'])
+@require_admin
+def get_kanji_info(kanji_char):
+    """Get detailed information about a specific kanji."""
+    if not kanji_char or len(kanji_char) != 1:
+        return jsonify({'error': 'Invalid kanji character'}), 400
+    
+    try:
+        kanji_path = get_kanji_data_path()
+        if not os.path.exists(kanji_path):
+            return jsonify({'error': 'Kanji database not found'}), 404
+            
+        with open(kanji_path, 'r', encoding='utf-8') as f:
+            kanji_data = json.load(f)
+        
+        kanjis = kanji_data.get('kanjis', {})
+        
+        if kanji_char not in kanjis:
+            return jsonify({'error': 'Kanji not found'}), 404
+        
+        kanji_info = kanjis[kanji_char].copy()
+        kanji_info['kanji'] = kanji_char
+        
+        return jsonify(kanji_info)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting kanji info: {e}")
+        return jsonify({'error': 'Failed to get kanji info'}), 500
 
 @api_bp.route('/translate', methods=['POST'])
 def translate_content():
