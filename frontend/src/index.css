@@ -346,3 +346,46 @@ html {
     @apply shadow-none border-0 bg-transparent !important;
   }
 }
+
+/* Pitch accent visualization styles */
+.pitch {
+  border: 1px solid #ddd;
+  padding: 0 3px;
+  border-radius: 3px;
+  margin-left: 5px;
+  display: inline-block;
+  font-family: monospace;
+}
+
+.pitch span {
+  padding: 1px 1px 1px 2px;
+  border-style: solid;
+  border-color: currentColor;
+  display: inline-block;
+}
+
+.pitch .low {
+  border-width: 0 2px 2px 0;
+}
+
+.pitch .high {
+  border-width: 2px 2px 0 0;
+}
+
+.pitch .low-final {
+  border-width: 0 0 2px 0;
+}
+
+.pitch .high-final {
+  border-width: 2px 0 2px 0; /* Heiban indicator */
+}
+
+.pitch-error {
+  color: red;
+  font-style: italic;
+}
+
+/* Dark mode support for pitch accent */
+.dark .pitch {
+  border-color: #555;
+}

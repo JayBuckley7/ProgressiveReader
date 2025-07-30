@@ -3,6 +3,44 @@ import { mineWord, updateWordState, reviewCard, getCurrentConfig } from "../cont
 import { Card, Token } from "../types";
 import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "../services/jlptService";
 
+// React version of the pitch renderer
+function renderPitchReact(reading: string, pitch: string): React.ReactElement {
+  if (reading.length !== pitch.length - 1) {
+    return <span className="pitch-error">Error: invalid pitch</span>;
+  }
+
+  try {
+    const parts: React.ReactElement[] = [];
+    let lastBorder = 0;
+    const borders = Array.from(pitch.matchAll(/L(?=H)|H(?=L)/g), x => x.index! + 1);
+    let low = pitch[0] === 'L';
+
+    for (const border of borders) {
+      parts.push(
+        <span key={`${lastBorder}-${border}`} className={low ? 'low' : 'high'}>
+          {reading.slice(lastBorder, border)}
+        </span>
+      );
+      lastBorder = border;
+      low = !low;
+    }
+
+    if (lastBorder !== reading.length) {
+      // No switch after last part
+      parts.push(
+        <span key={`final-${lastBorder}`} className={low ? 'low-final' : 'high-final'}>
+          {reading.slice(lastBorder)}
+        </span>
+      );
+    }
+
+    return <span className="pitch">{parts}</span>;
+  } catch (error) {
+    console.error(error);
+    return <span className="pitch-error">Error: invalid pitch</span>;
+  }
+}
+
 // Helper function to check if we should use local translation (no JPDB key available)
 function shouldUseLocalTranslation(): boolean {
     const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
@@ -29,7 +67,7 @@ let isPopupHovered = false;
 
 // Configuration for hover intent delays
 const HOVER_INTENT_CONFIG = {
-  hideDelay: 300, // ms to wait before hiding popup when mouse leaves word
+  hideDelay: 1500, // ms to wait before hiding popup when mouse leaves word
   showDelay: 100,  // ms to wait before showing popup when mouse enters word
 };
 
@@ -42,15 +80,21 @@ function clearHideTimeout() {
 
 function scheduleHide() {
   clearHideTimeout();
+  console.log(`Scheduling hide in ${HOVER_INTENT_CONFIG.hideDelay}ms, isPopupHovered: ${isPopupHovered}`);
   hideTimeout = setTimeout(() => {
+    console.log(`Hide timeout fired, isPopupHovered: ${isPopupHovered}`);
     if (!isPopupHovered) {
+      console.log('Hiding popup');
       setPopup(null);
+    } else {
+      console.log('Not hiding popup - still hovered');
     }
   }, HOVER_INTENT_CONFIG.hideDelay);
 }
 
 export function showDefinitionPopup(word: string, positionSource?: { x: number; y: number } | Element, wordData?: WordData) {
   clearHideTimeout(); // Cancel any pending hide operation
+  isPopupHovered = false; // Reset popup hover state
   
   let x = 0, y = 0;
   
@@ -85,11 +129,13 @@ export function JpdbPopupController() {
 
   // Handle mouse enter/leave on the popup itself
   const handlePopupMouseEnter = () => {
+    console.log('Popup mouse enter - clearing timeout');
     isPopupHovered = true;
     clearHideTimeout();
   };
 
   const handlePopupMouseLeave = () => {
+    console.log('Popup mouse leave - scheduling hide');
     isPopupHovered = false;
     scheduleHide();
   };
@@ -155,7 +201,7 @@ export function JpdbPopupController() {
     <div
       className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden cursor-pointer"
       style={{ 
-        top: popup.y + 20, 
+        top: popup.y + 2, 
         left: popup.x,
         maxWidth: '24em',
         maxHeight: '40vh'
@@ -164,159 +210,188 @@ export function JpdbPopupController() {
       onMouseLeave={handlePopupMouseLeave}
       onClick={handlePopupClick}
     >
-      {/* Header */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <strong className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {popup.word}
-          </strong>
-          {card && (
-            <div className="flex flex-col text-xs text-gray-500 dark:text-gray-400">
-              {card.state?.map(state => (
-                <span key={state} className={`state ${state}`}>{state}</span>
-              ))}
+      {/* JPDB-style compact layout */}
+      <div className="p-3">
+        {/* Action Buttons - FIRST THING IN POPUP */}
+        {!isOfflineMode && card && config.apiKey && (
+          <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+            {/* Mine Buttons */}
+            <div className="flex gap-2 text-xs mb-2">
+              <button
+                onClick={handleMineWord}
+                disabled={isLoading}
+                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
+                title="Add word to mining deck"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => handleUpdateWordState('blacklist', blacklisted)}
+                disabled={isLoading}
+                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded disabled:opacity-50"
+                title={blacklisted ? "Remove from blacklist" : "Add to blacklist"}
+              >
+                {blacklisted ? 'Remove blacklist' : 'Blacklist'}
+              </button>
+              <button
+                onClick={() => handleUpdateWordState('never-forget', neverForget)}
+                disabled={isLoading}
+                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
+                title={neverForget ? "Unmark as never forget" : "Mark as never forget"}
+              >
+                {neverForget ? 'Unmark never forget' : 'Never forget'}
+              </button>
             </div>
-          )}
-        </div>
-        
-        {/* Word information */}
-        {token && isOfflineMode && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            {/* Show JLPT readings and meanings when in offline mode */}
-            {(() => {
-              const kanjiInfos = getWordKanjiInfo(popup.word);
-              const jlptMeaning = getMeaning(popup.word);
-              const kunReading = getKunReading(popup.word);
-              const onReading = getOnReading(popup.word);
-              const jlptLevel = getJlptLevel(popup.word);
-              
-              if (kanjiInfos.length > 0 || jlptMeaning || kunReading || onReading) {
-                return (
-                  <div>
-                    {/* Readings */}
-                    {kunReading && <div className="mb-1"><span className="font-medium">Kun:</span> {kunReading}</div>}
-                    {onReading && <div className="mb-1"><span className="font-medium">On:</span> {onReading}</div>}
-                    
-                    {/* Meanings */}
-                    {jlptMeaning && (
-                      <div className="mb-2">
-                        <span className="font-medium">Meaning:</span> {jlptMeaning}
-                      </div>
-                    )}
-                    
-                    {/* JLPT Level */}
-                    {jlptLevel && (
-                      <div className="text-xs opacity-75 mt-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                        JLPT {jlptLevel}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              return <div className="text-xs opacity-75">No dictionary information available</div>;
-            })()}
-          </div>
-        )}
-        
-        {/* Online mode word information */}
-        {token && !isOfflineMode && (
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            {token.card?.meanings && token.card.meanings.length > 0 && (
-              <div className="mt-1">
-                <strong>Meanings:</strong>
-                <ol className="list-decimal list-inside mt-1">
-                  {token.card.meanings.map((meaning, idx) => (
-                    <li key={idx}>{meaning.glosses?.join('; ')}</li>
-                  ))}
-                </ol>
+
+            {/* Review Buttons */}
+            <div className="flex gap-2 text-xs">
+              <button
+                onClick={() => handleReviewCard('nothing')}
+                disabled={isLoading}
+                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50"
+                title="I don't know this word at all"
+              >
+                Nothing
+              </button>
+              <button
+                onClick={() => handleReviewCard('something')}
+                disabled={isLoading}
+                className="px-3 py-1 bg-red-400 hover:bg-red-500 text-white rounded disabled:opacity-50"
+                title="I recognize this word but don't know the meaning"
+              >
+                Something
+              </button>
+              <button
+                onClick={() => handleReviewCard('hard')}
+                disabled={isLoading}
+                className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded disabled:opacity-50"
+                title="I know this word but it was difficult"
+              >
+                Hard
+              </button>
+              <button
+                onClick={() => handleReviewCard('good')}
+                disabled={isLoading}
+                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
+                title="I know this word well"
+              >
+                Good
+              </button>
+              <button
+                onClick={() => handleReviewCard('easy')}
+                disabled={isLoading}
+                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
+                title="This word is very easy for me"
+              >
+                Easy
+              </button>
+            </div>
+
+            {isLoading && (
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400">
+                Processing...
               </div>
             )}
           </div>
         )}
+
+        {/* Header: Word + Reading */}
+        <div className="mb-2">
+          <strong className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            {popup.word}
+            {token?.card?.reading && token.card.reading !== popup.word && (
+              <span className="text-base font-normal text-gray-600 dark:text-gray-400">
+                ({token.card.reading})
+              </span>
+            )}
+          </strong>
+        </div>
+
+        {/* States on one line, compact */}
+        {card && card.state && card.state.length > 0 && (
+          <div className="mb-2 text-sm text-gray-600 dark:text-gray-400">
+            {card.state.join('')}
+          </div>
+        )}
+        
+        {/* Frequency + Pitch compact line */}
+        <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
+          <div className="flex items-center gap-2 flex-wrap">
+            {token?.card?.frequencyRank && (
+              <span>Top {token.card.frequencyRank.toLocaleString()}</span>
+            )}
+            {/* Pitch accent if available */}
+            {token && !isOfflineMode && token.card?.pitchAccent && token.card.pitchAccent.length > 0 && (
+              <>
+                {token.card.pitchAccent.map((pitch, index) => 
+                  <span key={index}>
+                    {renderPitchReact(token.card?.reading || popup.word, pitch)}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Parts of Speech - compact, comma separated */}
+        {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
+          <div className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+            {Array.from(new Set(
+              token.card.meanings.flatMap(m => m.partOfSpeech || [])
+            )).join(', ')}
+          </div>
+        )}
+        
+        {/* Offline mode: JLPT info compact */}
+        {token && isOfflineMode && (() => {
+          const jlptLevel = getJlptLevel(popup.word);
+          const kunReading = getKunReading(popup.word);
+          const onReading = getOnReading(popup.word);
+          
+          if (jlptLevel || kunReading || onReading) {
+            return (
+              <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
+                {jlptLevel && <>JLPT {jlptLevel}</>}
+                {kunReading && <>, Kun: {kunReading}</>}
+                {onReading && <>, On: {onReading}</>}
+              </div>
+            );
+          }
+          return null;
+        })()}
+        
+        {/* Meanings - clean numbered list */}
+        {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            <ol className="list-decimal list-inside space-y-1 ml-4">
+              {token.card.meanings.flatMap(meaning => 
+                meaning.glosses?.map((gloss, idx) => (
+                  <li key={`${meaning.partOfSpeech?.[0] || 'unknown'}-${idx}`}>
+                    {gloss}
+                  </li>
+                )) || []
+              )}
+            </ol>
+          </div>
+        )}
+        
+        {/* Offline mode meanings */}
+        {token && isOfflineMode && (() => {
+          const jlptMeaning = getMeaning(popup.word);
+          if (jlptMeaning) {
+            return (
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                <div className="ml-4">{jlptMeaning}</div>
+              </div>
+            );
+          }
+          return <div className="text-xs opacity-75 text-gray-500">No dictionary information available</div>;
+        })()}
+        
+
       </div>
 
-      {/* Action Buttons */}
-      {!isOfflineMode && card && config.apiKey && (
-        <div className="p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
-          {/* Mine Buttons */}
-          <div className="flex gap-2 text-xs">
-            <button
-              onClick={handleMineWord}
-              disabled={isLoading}
-              className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
-              title="Add word to mining deck"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => handleUpdateWordState('blacklist', blacklisted)}
-              disabled={isLoading}
-              className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded disabled:opacity-50"
-              title={blacklisted ? "Remove from blacklist" : "Add to blacklist"}
-            >
-              {blacklisted ? 'Remove blacklist' : 'Blacklist'}
-            </button>
-            <button
-              onClick={() => handleUpdateWordState('never-forget', neverForget)}
-              disabled={isLoading}
-              className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
-              title={neverForget ? "Unmark as never forget" : "Mark as never forget"}
-            >
-              {neverForget ? 'Unmark never forget' : 'Never forget'}
-            </button>
-          </div>
 
-          {/* Review Buttons */}
-          <div className="flex gap-2 text-xs">
-            <button
-              onClick={() => handleReviewCard('nothing')}
-              disabled={isLoading}
-              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50"
-              title="I don't know this word at all"
-            >
-              Nothing
-            </button>
-            <button
-              onClick={() => handleReviewCard('something')}
-              disabled={isLoading}
-              className="px-3 py-1 bg-red-400 hover:bg-red-500 text-white rounded disabled:opacity-50"
-              title="I recognize this word but don't know the meaning"
-            >
-              Something
-            </button>
-            <button
-              onClick={() => handleReviewCard('hard')}
-              disabled={isLoading}
-              className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded disabled:opacity-50"
-              title="I know this word but it was difficult"
-            >
-              Hard
-            </button>
-            <button
-              onClick={() => handleReviewCard('good')}
-              disabled={isLoading}
-              className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
-              title="I know this word well"
-            >
-              Good
-            </button>
-            <button
-              onClick={() => handleReviewCard('easy')}
-              disabled={isLoading}
-              className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
-              title="This word is very easy for me"
-            >
-              Easy
-            </button>
-          </div>
-
-          {isLoading && (
-            <div className="text-center text-xs text-gray-500 dark:text-gray-400">
-              Processing...
-            </div>
-          )}
-        </div>
-      )}
 
       {/* JPDB API key required message */}
       {isOfflineMode && (
