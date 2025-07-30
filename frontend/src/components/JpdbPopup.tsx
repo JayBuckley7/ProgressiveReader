@@ -3,8 +3,8 @@ import { mineWord, updateWordState, reviewCard, getCurrentConfig } from "../cont
 import { Card, Token } from "../types";
 import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "../services/jlptService";
 
-// Helper function to check if we should use Google Translate (no JPDB key available)
-function shouldUseGoogleTranslate(): boolean {
+// Helper function to check if we should use local translation (no JPDB key available)
+function shouldUseLocalTranslation(): boolean {
     const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
     return !jpdbApiKey;
 }
@@ -105,7 +105,7 @@ export function JpdbPopupController() {
 
   const card = popup.wordData?.token?.card;
   const token = popup.wordData?.token;
-  const isOfflineMode = shouldUseGoogleTranslate();
+  const isOfflineMode = shouldUseLocalTranslation();
   const config = getCurrentConfig();
 
 

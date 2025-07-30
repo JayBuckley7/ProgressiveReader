@@ -1,4 +1,4 @@
-// Google Translate Parser - combines TinySegmenter with Google Translate for definitions
+// Local Text Parser - combines TinySegmenter with local JLPT JSON lookup for offline parsing
 // @ts-ignore - tiny-segmenter doesn't have TypeScript definitions
 import TinySegmenter from 'tiny-segmenter';
 import { Token, Card } from '../types';
@@ -146,8 +146,8 @@ function shouldMergeCompound(current: string, next: string): boolean {
   return commonPairs.some(([first, second]) => current === first && next === second);
 }
 
-export async function parseWithGoogleTranslate(text: string): Promise<Token[]> {
-  console.log('🌐 Parsing text with TinySegmenter + Google Translate (optimized)');
+export async function parseWithLocalLookup(text: string): Promise<Token[]> {
+  console.log('📝 Parsing text with TinySegmenter (local lookup mode)');
   
   const startTime = performance.now();
   
@@ -162,12 +162,11 @@ export async function parseWithGoogleTranslate(text: string): Promise<Token[]> {
     const improvedSegments = await improveSegmentation(rawSegments);
     console.log(`✨ Improved segments: ${improvedSegments.length} (${(performance.now() - improveStart).toFixed(1)}ms)`);
     
-    // Generate tokens with optimized Google Translate calls
+    // Generate tokens for local JLPT lookup (no external API calls)
     const tokens: Token[] = [];
     let offset = 0;
     
-    // 1. Filter out empty/whitespace-only segments and track positions
-    const wordsToTranslate: Array<{word: string, start: number, end: number}> = [];
+    // Process each segment and create tokens
     for (const word of improvedSegments) {
       if (word.length === 0) continue;
       
@@ -175,158 +174,24 @@ export async function parseWithGoogleTranslate(text: string): Promise<Token[]> {
       const end = start + word.length;
       offset = end;
       
-      wordsToTranslate.push({ word: word.trim(), start, end });
-    }
-    
-    console.log(`🔄 Processing ${wordsToTranslate.length} words for translation`);
-    
-    // 2. Check cache and separate cached vs uncached words
-    const cachedTranslations = new Map<string, string>();
-    const wordsNeedingTranslation: string[] = [];
-    let cacheHits = 0;
-    
-    for (const { word } of wordsToTranslate) {
-      if (word.trim() === '' || /^[\s　、。！？．，]+$/.test(word)) {
-        // Skip punctuation/whitespace
-        cachedTranslations.set(word, '');
+      const trimmedWord = word.trim();
+      if (trimmedWord === '' || /^[\s　、。！？．，]+$/.test(trimmedWord)) {
+        // Skip pure punctuation/whitespace - don't create tokens for them
         continue;
       }
       
-      const cached = translationCache.get(word);
-      if (cached !== undefined) {
-        cachedTranslations.set(word, cached);
-        cacheHits++;
-      } else {
-        wordsNeedingTranslation.push(word);
-      }
-    }
-    
-    console.log(`💾 Cache hits: ${cacheHits}/${wordsToTranslate.length} (${((cacheHits/wordsToTranslate.length)*100).toFixed(1)}%)`);
-    
-    // 3. Batch translate uncached words
-    const newTranslations = new Map<string, string>();
-    if (wordsNeedingTranslation.length > 0) {
-      const translateStart = performance.now();
-      
-      // Split into smaller batches to avoid overwhelming the API (Google Translate has limits)
-      const BATCH_SIZE = 50; // Conservative batch size
-      const batches: string[][] = [];
-      for (let i = 0; i < wordsNeedingTranslation.length; i += BATCH_SIZE) {
-        batches.push(wordsNeedingTranslation.slice(i, i + BATCH_SIZE));
-      }
-      
-      console.log(`📦 Processing ${batches.length} batch(es) of max ${BATCH_SIZE} words each`);
-      
-      try {
-        // Process batches in parallel (but limited batches to avoid API rate limits)
-        const batchPromises = batches.map(async (batch, batchIndex) => {
-          try {
-            const response = await fetch('/api/translate/batch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                words: batch,
-                target_lang: 'English',
-                translation_service: 'google'
-              })
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              return { batchIndex, translations: data.translations || {}, success: true };
-            } else {
-              console.warn(`⚠️ Batch ${batchIndex + 1} failed:`, response.status);
-              return { batchIndex, translations: {}, success: false, batch };
-            }
-          } catch (error) {
-            console.warn(`⚠️ Batch ${batchIndex + 1} error:`, error);
-            return { batchIndex, translations: {}, success: false, batch };
-          }
-        });
-        
-        const batchResults = await Promise.all(batchPromises);
-        
-        // Process successful batch results
-        let successfulBatches = 0;
-        const failedWords: string[] = [];
-        
-        for (const result of batchResults) {
-          if (result.success) {
-            successfulBatches++;
-            for (const [word, translation] of Object.entries(result.translations)) {
-              newTranslations.set(word, translation as string);
-              translationCache.set(word, translation as string);
-            }
-          } else if (result.batch) {
-            failedWords.push(...result.batch);
-          }
-        }
-        
-        console.log(`🌐 Batch translated ${successfulBatches}/${batches.length} batches successfully (${(performance.now() - translateStart).toFixed(1)}ms)`);
-        
-                 // Handle failed words with individual parallel calls if needed
-         if (failedWords.length > 0) {
-           console.log(`🔄 Retrying ${failedWords.length} failed words individually`);
-           const fallbackStart = performance.now();
-           
-           // Fallback: parallel individual calls with Promise.all()
-           const translationPromises = failedWords.map(async (word) => {
-             try {
-               const response = await fetch('/api/translate/vocabulary', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                   content: word,
-                   target_lang: 'English',
-                   translation_service: 'google'
-                 })
-               });
-               
-               if (response.ok) {
-                 const data = await response.json();
-                 return { word, translation: data.translated_text || '' };
-               }
-             } catch (error) {
-               console.warn(`⚠️ Translation failed for "${word}":`, error);
-             }
-             return { word, translation: '' };
-           });
-           
-           const results = await Promise.all(translationPromises);
-           for (const { word, translation } of results) {
-             newTranslations.set(word, translation);
-             translationCache.set(word, translation);
-           }
-           
-           console.log(`🔄 Fallback translated ${failedWords.length} words (${(performance.now() - fallbackStart).toFixed(1)}ms)`);
-         }
-      } catch (error) {
-        console.error('❌ Translation batch failed:', error);
-        // Set empty translations for failed words
-        for (const word of wordsNeedingTranslation) {
-          newTranslations.set(word, '');
-        }
-      }
-    }
-    
-    // 4. Create tokens with translations (cached + new)
-    for (const { word, start, end } of wordsToTranslate) {
-      const translation = cachedTranslations.get(word) ?? newTranslations.get(word) ?? '';
-      
+      // Create basic token - the real JLPT data lookup happens later in getColorClass()
       const card: Card = {
         vid: 0,
         sid: 0,
         rid: 0,
         state: ['not-in-deck'],
-        spelling: word,
-        reading: word,
+        spelling: trimmedWord,
+        reading: trimmedWord,
         frequencyRank: null,
         pitchAccent: [],
-        meanings: translation ? [{
-          glosses: [translation],
-          partOfSpeech: ['unknown']
-        }] : [{
-          glosses: ['No translation available'],
+        meanings: [{
+          glosses: ['Local lookup pending'],
           partOfSpeech: ['unknown']
         }],
       };
@@ -339,37 +204,16 @@ export async function parseWithGoogleTranslate(text: string): Promise<Token[]> {
         rubies: [],
       };
       
-      // Simple heuristic for word coloring based on word characteristics
-      // Since we don't have JLPT data, use basic rules to avoid white text
-      if (word.length === 1 && /[はがをに的だと]/.test(word)) {
-        // Common particles - no special color (inherit)
-        (token as any).jlpt = 'common';
-      } else if (word.length <= 2) {
-        // Short words - likely easier
-        (token as any).jlpt = '5';
-      } else if (word.length <= 4) {
-        // Medium words
-        (token as any).jlpt = '4'; 
-      } else {
-        // Longer words - likely harder
-        (token as any).jlpt = '3';
-      }
-      
       tokens.push(token);
     }
     
     const totalTime = performance.now() - startTime;
-    const cacheStats = translationCache.getStats();
-    console.log(`✅ Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms`);
-    console.log(`📊 Cache: ${cacheStats.size}/${cacheStats.maxSize} entries`);
-    
-    // Check cache size and auto-clear if needed
-    checkCacheSize();
+    console.log(`✅ Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms (local lookup mode)`);
     
     return tokens;
     
   } catch (error) {
-    console.error('❌ Error in parseWithGoogleTranslate:', error);
+    console.error('❌ Error in parseWithLocalLookup:', error);
     
     // Basic fallback: split on whitespace and common punctuation
     const words = text.split(/[\s　、。！？]+/).filter(w => w.length > 0);

@@ -138,8 +138,6 @@ function AppContent() {
     }
   }, [isClerkLoaded, isClerkSignedIn]);
 
-  // Google Translate fallback functionality is handled directly by individual services as needed
-
   return (
     <SettingsProvider>
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">

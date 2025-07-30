@@ -129,10 +129,9 @@ def create_app(config_class=Config) -> Flask:
     # --- Load OpenAI API keys BEFORE importing blueprints ---
     with app.app_context():
         # Load OpenAI API keys into the key pool first
-        # and then get the googke translate api key
         # This must happen before importing the api blueprint to avoid empty pool issue
 
-        openai_keys, google_translate_api_key = None, None
+        openai_keys = None
         
         # Load from environment variable (works for both local dev and production)
         openai_keys_json = os.environ.get("OPENAI_API_KEYS")
@@ -142,7 +141,6 @@ def create_app(config_class=Config) -> Flask:
                 app.logger.info("Loaded OpenAI keys from environment variable")
             except json.JSONDecodeError as e:
                 app.logger.error(f"Failed to parse OPENAI_API_KEYS JSON: {e}")
-        google_translate_api_key = os.environ.get("GOOGLE_TRANSLATE_API_KEY")
         
         # --- Import parts of our application first ---
         from .routes import main  # Main UI blueprint
@@ -160,11 +158,7 @@ def create_app(config_class=Config) -> Flask:
             app.logger.info(f"Added {len(openai_keys)} OpenAI API keys to pool")
         else:
             app.logger.info("No valid OpenAI API keys found")
-        if google_translate_api_key:
-            api.google_translate_api_key = google_translate_api_key
-            app.logger.info("Google Translate API key loaded")
-        else:
-            app.logger.info("No Google Translate API key found")
+
         
         # Register Blueprints
         app.register_blueprint(main.main_bp)

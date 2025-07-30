@@ -2,82 +2,13 @@ import { jsxCreateElement as createElement } from '../utils/jsx';
 import { nonNull } from '../utils/util';
 import { getCurrentConfig, mineWord, reviewCard, updateWordState, JpHighlighterConfig } from '../content/api-adapter';
 import { getSentences, JpdbWord, JpdbWordData } from '../content/word';
-import { googleTranslateService } from '../services/googleTranslateService';
-import { lookupJitendexWord } from '../services/jitendexService';
 import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from '../services/jlptService';
 
-// Helper function to check if we should use Google Translate (no JPDB key available)
-function shouldUseGoogleTranslate(): boolean {
+// Helper function to check if we should use local translation (no JPDB key available)
+function shouldUseLocalTranslation(): boolean {
     const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
     return !jpdbApiKey;
 }
-
-// Parts of speech dictionary
-const PARTS_OF_SPEECH: { [k: string]: string } = {
-    n: 'Noun',
-    pn: 'Pronoun',
-    pref: 'Prefix',
-    suf: 'Suffix',
-    name: 'Name',
-    'name-fem': 'Name (Feminine)',
-    'name-male': 'Name (Masculine)',
-    'name-surname': 'Surname',
-    'name-person': 'Personal Name',
-    'name-place': 'Place Name',
-    'name-company': 'Company Name',
-    'name-product': 'Product Name',
-    'adj-i': 'Adjective',
-    'adj-na': 'な-Adjective',
-    'adj-no': 'の-Adjective',
-    'adj-pn': 'Adjectival',
-    'adj-nari': 'なり-Adjective (Archaic/Formal)',
-    'adj-ku': 'く-Adjective (Archaic)',
-    'adj-shiku': 'しく-Adjective (Archaic)',
-    adv: 'Adverb',
-    aux: 'Auxiliary',
-    'aux-v': 'Auxiliary Verb',
-    'aux-adj': 'Auxiliary Adjective',
-    conj: 'Conjunction',
-    cop: 'Copula',
-    ctr: 'Counter',
-    exp: 'Expression',
-    int: 'Interjection',
-    num: 'Numeric',
-    prt: 'Particle',
-    vt: 'Transitive Verb',
-    vi: 'Intransitive Verb',
-    v1: 'Ichidan Verb',
-    'v1-s': 'Ichidan Verb (くれる Irregular)',
-    v5: 'Godan Verb',
-    v5u: 'う Godan Verb',
-    'v5u-s': 'う Godan Verb (Irregular)',
-    v5k: 'く Godan Verb',
-    'v5k-s': 'く Godan Verb (いく/ゆく Irregular)',
-    v5g: 'ぐ Godan Verb',
-    v5s: 'す Godan Verb',
-    v5t: 'つ Godan Verb',
-    v5n: 'ぬ Godan Verb',
-    v5b: 'ぶ Godan Verb',
-    v5m: 'む Godan Verb',
-    v5r: 'る Godan Verb',
-    'v5r-i': 'る Godan Verb (Irregular)',
-    v5aru: 'る Godan Verb (-ある Irregular)',
-    vk: 'Irregular Verb (くる)',
-    vs: 'する Verb',
-    vz: 'ずる Verb',
-    'vs-c': 'す Verb (Archaic)',
-    v2: 'Nidan Verb (Archaic)',
-    v4: 'Yodan Verb (Archaic)',
-    v4k: '',
-    v4g: '',
-    v4s: '',
-    v4t: '',
-    v4h: '',
-    v4b: '',
-    v4m: '',
-    v4r: '',
-    va: 'Archaic',
-};
 
 function getClosestClientRect(elem: HTMLElement, x: number, y: number): DOMRect {
     const rects = elem.getClientRects();
@@ -383,7 +314,7 @@ export class Popup {
         this.#vocabSection = createElement('section', { id: 'vocab-content' }) as HTMLElement;
         
         // Only create review buttons if JPDB API key is available  
-        const reviewButtons = !shouldUseGoogleTranslate() ? createElement('section', { id: 'review-buttons' }, 
+        const reviewButtons = !shouldUseLocalTranslation() ? createElement('section', { id: 'review-buttons' }, 
             createElement('button', {
                 class: 'nothing',
                 onclick: demoMode ? undefined : async () => await reviewCard(this.#data.token.card, 'nothing')
@@ -492,13 +423,13 @@ export class Popup {
         this.#jpdbUrl = url;
 
         // Create header with word info
-        const kanjiInfos = shouldUseGoogleTranslate() ? getWordKanjiInfo(card.spelling) : [];
-        const jlptMeaning = shouldUseGoogleTranslate() ? getMeaning(card.spelling) : null;
-        const kunReading = shouldUseGoogleTranslate() ? getKunReading(card.spelling) : null;
-        const onReading = shouldUseGoogleTranslate() ? getOnReading(card.spelling) : null;
-        const jlptLevel = shouldUseGoogleTranslate() ? getJlptLevel(card.spelling) : null;
+        const kanjiInfos = shouldUseLocalTranslation() ? getWordKanjiInfo(card.spelling) : [];
+        const jlptMeaning = shouldUseLocalTranslation() ? getMeaning(card.spelling) : null;
+        const kunReading = shouldUseLocalTranslation() ? getKunReading(card.spelling) : null;
+        const onReading = shouldUseLocalTranslation() ? getOnReading(card.spelling) : null;
+        const jlptLevel = shouldUseLocalTranslation() ? getJlptLevel(card.spelling) : null;
         
-        const displayReading = shouldUseGoogleTranslate() && kunReading 
+        const displayReading = shouldUseLocalTranslation() && kunReading 
             ? kunReading 
             : card.reading;
             
@@ -516,28 +447,28 @@ export class Popup {
         const metainfo = createElement('div', { class: 'metainfo' },
             createElement('span', { class: 'freq' }, card.frequencyRank ? `Top ${card.frequencyRank}` : ''),
             // Show JLPT level when in offline mode
-            shouldUseGoogleTranslate() && jlptLevel ? 
+            shouldUseLocalTranslation() && jlptLevel ? 
                 createElement('span', { style: 'background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;' }, `JLPT ${jlptLevel}`) : 
                 null,
             // Show readings when in offline mode
-            shouldUseGoogleTranslate() && (kunReading || onReading) ?
+            shouldUseLocalTranslation() && (kunReading || onReading) ?
                 createElement('div', { style: 'margin-top: 4px; font-size: 0.75em; color: #666;' },
                     kunReading ? createElement('div', {}, `Kun: ${kunReading}`) : null,
                     onReading ? createElement('div', {}, `On: ${onReading}`) : null
                 ) : null,
             // Show pitch accent when available and in online mode
-            !shouldUseGoogleTranslate() ? card.pitchAccent.map(pitch => renderPitch(displayReading, pitch)) : []
+            !shouldUseLocalTranslation() ? card.pitchAccent.map(pitch => renderPitch(displayReading, pitch)) : []
         );
 
         // Create meanings list with JLPT support when in offline mode
         let meaningsList: HTMLElement | DocumentFragment;
         
-        if (shouldUseGoogleTranslate()) {
+        if (shouldUseLocalTranslation()) {
             // Check if card already has meanings from the parser
             if (card.meanings && card.meanings.length > 0 && card.meanings[0].glosses.length > 0 && card.meanings[0].glosses[0] !== 'No translation available') {
                 // Use pre-populated meanings from parser
                 meaningsList = createElement('div', {},
-                    createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
+                    createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Local Translate'),
                     createElement('ol', {},
                         ...card.meanings.map(meaning =>
                             createElement('li', {}, meaning.glosses.join('; '))
@@ -579,7 +510,7 @@ export class Popup {
         this.#vocabSection.replaceChildren(header, metainfo, meaningsList);
 
         // Only create and show mine buttons if JPDB API key is available
-        if (!shouldUseGoogleTranslate()) {
+        if (!shouldUseLocalTranslation()) {
             // Create mine buttons
             const blacklisted = card.state.includes('blacklisted');
             const neverForget = card.state.includes('never-forget');

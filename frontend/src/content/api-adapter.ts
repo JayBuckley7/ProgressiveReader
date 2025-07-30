@@ -3,7 +3,7 @@ import { showError, Canceled } from '../utils/util';
 import { reverseIndex } from './parse';
 import { Keybind } from '../types';
 import { vocabBank } from '../services/vocabBank';
-import { parseWithGoogleTranslate } from '../utils/googleTranslateParser';
+import { parseWithLocalLookup } from '../utils/localTextParser';
 
 
 
@@ -204,9 +204,9 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
         console.log('parseText called with', textSegments.length, 'segments');
 
         if (!currentConfig.apiKey) {
-            console.log('No JPDB API key available, using Google Translate parser');
+            console.log('No JPDB API key available, using local parser');
             const text = textSegments.join(' ');
-            const tokens = await parseWithGoogleTranslate(text);
+            const tokens = await parseWithLocalLookup(text);
             vocabBank.updateFromTokens(tokens);
             return tokens;
         }

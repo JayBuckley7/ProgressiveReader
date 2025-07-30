@@ -198,9 +198,9 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
     
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
-        console.log('🟡 [highlightContent] No JPDB API Key - using Google Translate fallback');
-        Logger.warn('JPDB API Key is not set. Falling back to Google Translate.');
-        // Do not abort here. parseText() will handle Google Translate fallback when no API key
+        console.log('🟡 [highlightContent] No JPDB API Key - using fallback');
+        Logger.warn('JPDB API Key is not set. Falling back to local translation');
+        // Do not abort here. parseText() will handle local translation fallback when no API key
         // is configured.
     }
     

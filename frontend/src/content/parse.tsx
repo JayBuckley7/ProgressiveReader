@@ -155,11 +155,11 @@ const SINGLE_PARTICLES = new Set(['は','が','を','に','で','と','の','へ
 function getColorClass(token: Token): string {
     const word = token.card.spelling;
     
-    // Check if we should use Google Translate (no JPDB key available)
+    // Check if we should use local Translate (no JPDB key available)
     const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
-    const shouldUseGoogleTranslate = !jpdbApiKey;
+    const shouldUseLocalTranslation = !jpdbApiKey;
     
-    if (shouldUseGoogleTranslate) {
+    if (shouldUseLocalTranslation) {
         // JLPT OFFLINE MODE: Use local JLPT database for coloring
         
         // Check if it's a super common word first
