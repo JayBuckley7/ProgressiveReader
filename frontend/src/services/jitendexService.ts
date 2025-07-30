@@ -17,7 +17,7 @@ export async function lookupJitendexWord(word: string): Promise<GoogleTranslateR
 
     // Check if Google Translate is available
     if (!googleTranslateService.isConfigured()) {
-      console.warn('⚠️ Google Translate not configured for offline parser');
+      console.warn('⚠️ Google Translate not configured for Jitendex lookup');
       return [];
     }
     
@@ -65,7 +65,7 @@ export async function lookupJitendexWordsBatch(words: string[]): Promise<{ [word
 
     // Check if Google Translate is available
     if (!googleTranslateService.isConfigured()) {
-      console.warn('⚠️ Google Translate not configured for offline parser');
+      console.warn('⚠️ Google Translate not configured for Jitendex lookup');
       return {};
     }
     

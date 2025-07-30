@@ -138,7 +138,7 @@ function AppContent() {
     }
   }, [isClerkLoaded, isClerkSignedIn]);
 
-  // Offline parser functionality is now handled directly by individual services as needed
+  // Google Translate fallback functionality is handled directly by individual services as needed
 
   return (
     <SettingsProvider>

@@ -198,10 +198,10 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
     
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
-        console.log('🟡 [highlightContent] No JPDB API Key - using offline/Google Translate mode');
-        Logger.warn('JPDB API Key is not set. Falling back to offline parser if available.');
-        // Do not abort here. parseText() will handle offline parsing when no API key
-        // is configured or when the "Use Offline Parser" option is enabled.
+        console.log('🟡 [highlightContent] No JPDB API Key - using Google Translate fallback');
+        Logger.warn('JPDB API Key is not set. Falling back to Google Translate.');
+        // Do not abort here. parseText() will handle Google Translate fallback when no API key
+        // is configured.
     }
     
     // Store original content for later restoration

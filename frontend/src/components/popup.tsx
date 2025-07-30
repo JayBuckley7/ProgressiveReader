@@ -4,6 +4,7 @@ import { getCurrentConfig, mineWord, reviewCard, updateWordState, JpHighlighterC
 import { getSentences, JpdbWord, JpdbWordData } from '../content/word';
 import { googleTranslateService } from '../services/googleTranslateService';
 import { lookupJitendexWord } from '../services/jitendexService';
+import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from '../services/jlptService';
 
 // Helper function to check if we should use Google Translate (no JPDB key available)
 function shouldUseGoogleTranslate(): boolean {
@@ -166,6 +167,7 @@ export class Popup {
     #vocabSection: HTMLElement;
     #mineButtons: HTMLElement;
     #data!: JpdbWordData;
+    #jpdbUrl: string = ''; // Store the JPDB URL for clicking
     isVisible: boolean = false;
 
     // Public getter for the element
@@ -200,11 +202,15 @@ export class Popup {
             },
             onclick: (event: MouseEvent) => {
                 event.stopPropagation();
+                // Open JPDB link when popup is clicked
+                if (this.#jpdbUrl) {
+                    window.open(this.#jpdbUrl, '_blank');
+                }
             },
             onwheel: (event: WheelEvent) => {
                 event.stopPropagation();
             },
-            style: `all:initial;z-index:2147483647;${
+            style: `all:initial;z-index:2147483647;cursor:pointer;${
                 demoMode ? '' : 'position:absolute;top:0;left:0;opacity:0;visibility:hidden;'
             };`
         }) as HTMLElement;
@@ -376,7 +382,7 @@ export class Popup {
         this.#mineButtons = createElement('section', { id: 'mine-buttons' }) as HTMLElement;
         this.#vocabSection = createElement('section', { id: 'vocab-content' }) as HTMLElement;
         
-        // Only create review buttons if not in offline mode  
+        // Only create review buttons if JPDB API key is available  
         const reviewButtons = !shouldUseGoogleTranslate() ? createElement('section', { id: 'review-buttons' }, 
             createElement('button', {
                 class: 'nothing',
@@ -482,82 +488,81 @@ export class Popup {
             ? `https://jpdb.io/vocabulary/${card.vid}/${encodeURIComponent(card.spelling)}/${encodeURIComponent(card.reading)}`
             : `https://jpdb.io/search?q=${encodeURIComponent(card.spelling)}`;
 
+        // Store the URL for click handling
+        this.#jpdbUrl = url;
+
         // Create header with word info
+        const kanjiInfos = shouldUseGoogleTranslate() ? getWordKanjiInfo(card.spelling) : [];
+        const jlptMeaning = shouldUseGoogleTranslate() ? getMeaning(card.spelling) : null;
+        const kunReading = shouldUseGoogleTranslate() ? getKunReading(card.spelling) : null;
+        const onReading = shouldUseGoogleTranslate() ? getOnReading(card.spelling) : null;
+        const jlptLevel = shouldUseGoogleTranslate() ? getJlptLevel(card.spelling) : null;
+        
+        const displayReading = shouldUseGoogleTranslate() && kunReading 
+            ? kunReading 
+            : card.reading;
+            
         const header = createElement('div', { id: 'header' },
             createElement('a', { lang: 'ja', href: url, target: '_blank' },
                 createElement('span', { class: 'spelling' }, card.spelling),
-                card.spelling !== card.reading ? createElement('span', { class: 'reading' }, ` (${card.reading})`) : ''
+                card.spelling !== displayReading && displayReading ? createElement('span', { class: 'reading' }, ` (${displayReading})`) : ''
             ),
             createElement('div', { class: 'state' },
                 ...card.state.map(s => createElement('span', { class: s }, s))
             )
         );
 
-        // Create metainfo
+        // Create metainfo with enhanced JLPT information
         const metainfo = createElement('div', { class: 'metainfo' },
             createElement('span', { class: 'freq' }, card.frequencyRank ? `Top ${card.frequencyRank}` : ''),
-            ...card.pitchAccent.map(pitch => renderPitch(card.reading, pitch))
+            // Show JLPT level when in offline mode
+            shouldUseGoogleTranslate() && jlptLevel ? 
+                createElement('span', { style: 'background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;' }, `JLPT ${jlptLevel}`) : 
+                null,
+            // Show readings when in offline mode
+            shouldUseGoogleTranslate() && (kunReading || onReading) ?
+                createElement('div', { style: 'margin-top: 4px; font-size: 0.75em; color: #666;' },
+                    kunReading ? createElement('div', {}, `Kun: ${kunReading}`) : null,
+                    onReading ? createElement('div', {}, `On: ${onReading}`) : null
+                ) : null,
+            // Show pitch accent when available and in online mode
+            !shouldUseGoogleTranslate() ? card.pitchAccent.map(pitch => renderPitch(displayReading, pitch)) : []
         );
 
-        // Create meanings list with Jitendx support in offline mode
+        // Create meanings list with JLPT support when in offline mode
         let meaningsList: HTMLElement | DocumentFragment;
         
         if (shouldUseGoogleTranslate()) {
-            // Check if card already has meanings from optimized Google Translate parser
+            // Check if card already has meanings from the parser
             if (card.meanings && card.meanings.length > 0 && card.meanings[0].glosses.length > 0 && card.meanings[0].glosses[0] !== 'No translation available') {
-                // Use pre-populated meanings from optimized parser
+                // Use pre-populated meanings from parser
                 meaningsList = createElement('div', {},
                     createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
                     createElement('ol', {},
                         ...card.meanings.map(meaning =>
-                            createElement('li', {}, 
-                                createElement('div', { style: 'margin-bottom: 0.5em;' },
-                                    createElement('strong', {}, `${card.spelling}${card.reading && card.reading !== card.spelling ? ` (${card.reading})` : ''}`),
-                                    createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em; color: #666;' },
-                                        meaning.glosses.join('; ')
-                                    )
-                                )
-                            )
+                            createElement('li', {}, meaning.glosses.join('; '))
                         )
-                    )
+                    ),
+                    // Add JLPT meanings if available
+                    jlptMeaning ? createElement('div', { style: 'margin-top: 1em;' },
+                        createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 0 0 0.5em 0;' }, 'JLPT Dictionary'),
+                        createElement('div', { style: 'font-size: 0.9em; color: #444;' }, jlptMeaning)
+                    ) : null
+                );
+            } else if (jlptMeaning) {
+                // Use JLPT meanings only
+                meaningsList = createElement('div', {},
+                    createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'JLPT Dictionary'),
+                    createElement('div', { style: 'font-size: 0.9em; color: #444;' }, jlptMeaning)
                 );
             } else {
-                // Fallback to Jitendex lookup for words not handled by optimized parser
-                try {
-                    const translateResults = await lookupJitendexWord(card.spelling);
-                    
-                    if (translateResults.length > 0) {
-                        // Create Google Translate definitions section
-                        const translationDefinitions = translateResults.slice(0, 3).map(entry =>
-                            createElement('li', {}, 
-                                createElement('div', { style: 'margin-bottom: 0.5em;' },
-                                    createElement('strong', {}, `${entry.original}${card.reading && card.reading !== entry.original ? ` (${card.reading})` : ''}`),
-                                    createElement('div', { style: 'font-size: 0.9em; margin-top: 0.25em; color: #666;' },
-                                        createElement('div', {}, entry.translation),
-                                        entry.confidence && createElement('div', { style: 'font-size: 0.8em; margin-top: 0.25em; opacity: 0.7;' }, 
-                                            `Confidence: ${Math.round(entry.confidence * 100)}%`
-                                        )
-                                    )
-                                )
-                            )
-                        );
-
-                        meaningsList = createElement('div', {},
-                            createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Google Translate'),
-                            createElement('ol', {}, ...translationDefinitions)
-                        );
-                    } else {
-                        // No translation results, show fallback
-                        meaningsList = createElement('ol', {},
-                            createElement('li', {}, 'No translation found')
-                        );
-                    }
-                } catch (error) {
-                    console.error('Failed to translate with Google Translate:', error);
-                    meaningsList = createElement('ol', {},
-                        createElement('li', {}, 'Translation failed')
-                    );
-                }
+                // No meanings found
+                meaningsList = createElement('div', {},
+                    createElement('h2', { style: 'font-size: 0.75em; opacity: 0.7; margin: 1em 0 0.5em 0;' }, 'Dictionary'),
+                    createElement('ol', {},
+                        createElement('li', {}, 'No definition available')
+                    )
+                );
             }
         } else {
             // Online mode - use regular JPDB meanings
@@ -573,7 +578,7 @@ export class Popup {
 
         this.#vocabSection.replaceChildren(header, metainfo, meaningsList);
 
-        // Only create and show mine buttons if not in offline mode
+        // Only create and show mine buttons if JPDB API key is available
         if (!shouldUseGoogleTranslate()) {
             // Create mine buttons
             const blacklisted = card.state.includes('blacklisted');
@@ -600,7 +605,7 @@ export class Popup {
 
             this.#mineButtons.replaceChildren(addButton, blacklistButton, neverForgetButton);
         } else {
-            // In offline mode, hide mine buttons by clearing all children
+            // When in offline mode, hide mine buttons by clearing all children
             this.#mineButtons.innerHTML = '';
         }
     }

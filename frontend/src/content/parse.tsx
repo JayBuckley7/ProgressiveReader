@@ -3,6 +3,7 @@ import { nonNull } from '../utils/util';
 import { jsxCreateElement as createElement } from '../utils/jsx';
 import { JpdbWord } from './word';
 import { getCurrentConfig } from '../content/api-adapter';
+import { getJlptLevel } from '../services/jlptService';
 
 // Global WeakMap for storing JPDB data when elements are not extensible
 declare global {
@@ -159,47 +160,28 @@ function getColorClass(token: Token): string {
     const shouldUseGoogleTranslate = !jpdbApiKey;
     
     if (shouldUseGoogleTranslate) {
-        // OFFLINE MODE: Use JLPT-based coloring
+        // JLPT OFFLINE MODE: Use local JLPT database for coloring
         
         // Check if it's a super common word first
         if (COMMON_WORDS.has(word)) {
             return 'common-word';
         }
         
-        // Check for JLPT level from the token data - try multiple possible locations
-        let jlptLevel = (token as any).jlpt || 
-                       (token.card as any).jlpt || 
-                       (token.rubies && token.rubies[0] && (token.rubies[0] as any).jlpt);
-        
-        // Also check if JLPT level is stored in the card spelling metadata
-        if (!jlptLevel && token.card && token.card.spelling) {
-            // For offline parsing, JLPT levels might be embedded in parsing results
-            // This is a fallback to ensure words get colored
-            const wordLength = word.length;
-            if (wordLength === 1 && SINGLE_PARTICLES.has(word)) {
-                return 'common-word';
-            }
-            // For now, assign a default level for unrecognized words
-            // This ensures words don't appear white
-            jlptLevel = 'unknown';
-        }
-        
-        if (jlptLevel && jlptLevel !== 'unknown') {
-            // Convert JLPT level to CSS class (e.g., "5" -> "jlpt-n5")
-            // Handle special case for common particles
-            if (jlptLevel === 'common') {
-                return 'common-word';
-            }
-            return `jlpt-n${jlptLevel}`;
-        }
-        
-        // Check word length for additional common word heuristics
+        // Check for single particles (common grammar elements)
         if (word.length === 1 && SINGLE_PARTICLES.has(word)) {
             return 'common-word';
         }
         
-        // Unknown JLPT level - but still give it a color so it's not white
-        return 'jlpt-unknown';
+        // Look up word in JLPT database
+        const jlptLevel = getJlptLevel(word);
+        
+        if (jlptLevel) {
+            // Convert JLPT level to CSS class (e.g., "N5" -> "jlpt-n5")
+            return `jlpt-${jlptLevel.toLowerCase()}`;
+        }
+        
+        // Word not found in JLPT database - make it red like N1 instead of gray
+        return 'jlpt-n1';
     } else {
         // ONLINE MODE: Use JPDB state-based coloring
         // Return empty string since state classes are already in baseClassName

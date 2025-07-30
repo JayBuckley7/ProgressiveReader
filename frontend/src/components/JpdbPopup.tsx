@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { mineWord, updateWordState, reviewCard, getCurrentConfig } from "../content/api-adapter";
 import { Card, Token } from "../types";
+import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "../services/jlptService";
 
 // Helper function to check if we should use Google Translate (no JPDB key available)
 function shouldUseGoogleTranslate(): boolean {
@@ -141,9 +142,18 @@ export function JpdbPopupController() {
   const blacklisted = card?.state?.includes('blacklisted') || false;
   const neverForget = card?.state?.includes('never-forget') || false;
 
+  // Create JPDB URL for clicking
+  const jpdbUrl = card?.vid && card.vid !== 0
+    ? `https://jpdb.io/vocabulary/${card.vid}/${encodeURIComponent(card.spelling)}/${encodeURIComponent(card.reading)}`
+    : `https://jpdb.io/search?q=${encodeURIComponent(popup.word)}`;
+
+  const handlePopupClick = () => {
+    window.open(jpdbUrl, '_blank');
+  };
+
   return (
     <div
-      className="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden"
+      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden cursor-pointer"
       style={{ 
         top: popup.y + 20, 
         left: popup.x,
@@ -152,6 +162,7 @@ export function JpdbPopupController() {
       }}
       onMouseEnter={handlePopupMouseEnter}
       onMouseLeave={handlePopupMouseLeave}
+      onClick={handlePopupClick}
     >
       {/* Header */}
       <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -169,14 +180,47 @@ export function JpdbPopupController() {
         </div>
         
         {/* Word information */}
-        {token && (
+        {token && isOfflineMode && (
           <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            {token.card?.reading && <div>Reading: {token.card.reading}</div>}
-            {token.card?.meanings && token.card.meanings.length > 0 && (
-              <div>
-                Part of speech: {token.card.meanings.map(m => m.partOfSpeech?.join(', ')).join('; ')}
-              </div>
-            )}
+            {/* Show JLPT readings and meanings when in offline mode */}
+            {(() => {
+              const kanjiInfos = getWordKanjiInfo(popup.word);
+              const jlptMeaning = getMeaning(popup.word);
+              const kunReading = getKunReading(popup.word);
+              const onReading = getOnReading(popup.word);
+              const jlptLevel = getJlptLevel(popup.word);
+              
+              if (kanjiInfos.length > 0 || jlptMeaning || kunReading || onReading) {
+                return (
+                  <div>
+                    {/* Readings */}
+                    {kunReading && <div className="mb-1"><span className="font-medium">Kun:</span> {kunReading}</div>}
+                    {onReading && <div className="mb-1"><span className="font-medium">On:</span> {onReading}</div>}
+                    
+                    {/* Meanings */}
+                    {jlptMeaning && (
+                      <div className="mb-2">
+                        <span className="font-medium">Meaning:</span> {jlptMeaning}
+                      </div>
+                    )}
+                    
+                    {/* JLPT Level */}
+                    {jlptLevel && (
+                      <div className="text-xs opacity-75 mt-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                        JLPT {jlptLevel}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return <div className="text-xs opacity-75">No dictionary information available</div>;
+            })()}
+          </div>
+        )}
+        
+        {/* Online mode word information */}
+        {token && !isOfflineMode && (
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
             {token.card?.meanings && token.card.meanings.length > 0 && (
               <div className="mt-1">
                 <strong>Meanings:</strong>
@@ -193,7 +237,7 @@ export function JpdbPopupController() {
 
       {/* Action Buttons */}
       {!isOfflineMode && card && config.apiKey && (
-        <div className="p-3 space-y-3">
+        <div className="p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
           {/* Mine Buttons */}
           <div className="flex gap-2 text-xs">
             <button
@@ -274,10 +318,10 @@ export function JpdbPopupController() {
         </div>
       )}
 
-      {/* Offline mode message */}
+      {/* JPDB API key required message */}
       {isOfflineMode && (
-        <div className="p-3 text-sm text-gray-600 dark:text-gray-300">
-          JPDB features unavailable in offline mode
+        <div className="p-3 text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400">
+          enter you JPDB key to save vocab as you go.
         </div>
       )}
 
@@ -290,7 +334,10 @@ export function JpdbPopupController() {
 
       {/* Close button */}
       <button
-        onClick={() => setPopup(null)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setPopup(null);
+        }}
         className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
         title="Close popup"
       >

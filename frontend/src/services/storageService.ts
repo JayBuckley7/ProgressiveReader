@@ -1108,21 +1108,7 @@ class StorageService {
         return this.saveReadingProgress(progress);
     }
 
-    // Legacy methods for compatibility - these now do nothing since we use Clerk
-    getCurrentUser(): null {
-        console.log('getCurrentUser() is deprecated - use Clerk user instead');
-        return null;
-    }
 
-    onAuthStateChange(callback: (user: null) => void): () => void {
-        console.log('onAuthStateChange() is deprecated - use Clerk\'s useUser hook instead');
-        callback(null);
-        return () => {}; // Return empty unsubscribe function
-    }
-
-    async ensureUserDocument(): Promise<void> {
-        console.log('ensureUserDocument() is deprecated - backend handles user creation');
-    }
 
     /**
      * Clean up blob URLs to prevent memory leaks
