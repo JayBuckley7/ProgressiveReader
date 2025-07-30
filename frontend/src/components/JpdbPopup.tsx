@@ -80,16 +80,42 @@ function clearHideTimeout() {
 
 function scheduleHide() {
   clearHideTimeout();
-  console.log(`Scheduling hide in ${HOVER_INTENT_CONFIG.hideDelay}ms, isPopupHovered: ${isPopupHovered}`);
   hideTimeout = setTimeout(() => {
-    console.log(`Hide timeout fired, isPopupHovered: ${isPopupHovered}`);
     if (!isPopupHovered) {
-      console.log('Hiding popup');
       setPopup(null);
-    } else {
-      console.log('Not hiding popup - still hovered');
     }
   }, HOVER_INTENT_CONFIG.hideDelay);
+}
+
+function calculatePopupPosition(x: number, y: number) {
+  const popupWidth = 384; // 24em * 16px = 384px (approximate)
+  const popupHeight = 300; // Approximate height
+  const margin = 10; // Margin from screen edges
+  
+  let adjustedX = x;
+  let adjustedY = y + 2; // Small offset from word
+  
+  // Check right boundary
+  if (adjustedX + popupWidth > window.innerWidth - margin) {
+    adjustedX = window.innerWidth - popupWidth - margin;
+  }
+  
+  // Check left boundary
+  if (adjustedX < margin) {
+    adjustedX = margin;
+  }
+  
+  // Check bottom boundary
+  if (adjustedY + popupHeight > window.innerHeight - margin) {
+    adjustedY = y - popupHeight - 5; // Position above the word instead
+  }
+  
+  // Check top boundary
+  if (adjustedY < margin) {
+    adjustedY = margin;
+  }
+  
+  return { x: adjustedX, y: adjustedY };
 }
 
 export function showDefinitionPopup(word: string, positionSource?: { x: number; y: number } | Element, wordData?: WordData) {
@@ -111,7 +137,10 @@ export function showDefinitionPopup(word: string, positionSource?: { x: number; 
     }
   }
   
-  setPopup({ word, wordData, x, y });
+  // Calculate position that respects window boundaries
+  const adjustedPosition = calculatePopupPosition(x, y);
+  
+  setPopup({ word, wordData, x: adjustedPosition.x, y: adjustedPosition.y });
 }
 
 export function hideDefinitionPopup() {
@@ -129,16 +158,38 @@ export function JpdbPopupController() {
 
   // Handle mouse enter/leave on the popup itself
   const handlePopupMouseEnter = () => {
-    console.log('Popup mouse enter - clearing timeout');
     isPopupHovered = true;
     clearHideTimeout();
   };
 
   const handlePopupMouseLeave = () => {
-    console.log('Popup mouse leave - scheduling hide');
     isPopupHovered = false;
     scheduleHide();
   };
+
+  // Handle click outside to close popup
+  useEffect(() => {
+    if (!popup) return;
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      // Check if click is outside the popup
+      const target = event.target as Element;
+      const popupElement = document.querySelector('[data-jpdb-popup]');
+      
+      if (popupElement && !popupElement.contains(target)) {
+        setPopup(null);
+      }
+    };
+    
+    // Add event listener with a small delay to avoid immediate closure
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 100);
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [popup]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -199,9 +250,10 @@ export function JpdbPopupController() {
 
   return (
     <div
+      data-jpdb-popup
       className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden cursor-pointer"
       style={{ 
-        top: popup.y + 2, 
+        top: popup.y, 
         left: popup.x,
         maxWidth: '24em',
         maxHeight: '40vh'
