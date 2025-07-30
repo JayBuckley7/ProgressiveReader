@@ -611,7 +611,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   // Swipe controls implementation
   useEffect(() => {
-    if (swipeInitRef.current || !contentRef.current) return;
+    // Reset when settings change
+    swipeInitRef.current = false;
+    
+    if (!contentRef.current || !settings?.touchscreenSupport) return;
     swipeInitRef.current = true;
 
     const contentEl = contentRef.current;
@@ -688,7 +691,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       contentEl.removeEventListener('pointermove', handlePointerMove);
       contentEl.removeEventListener('pointerup', handlePointerUp);
     };
-  }, []);
+  }, [settings?.touchscreenSupport]);
 
   // Translate using the user's personal OpenAI key entirely in the browser
   const translateWithOpenAI = async (html: string, useCefr: boolean): Promise<string> => {
@@ -1433,8 +1436,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {/* Reader Content */}
       <div 
         ref={contentRef}
-        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
+        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16"
         style={{
+          touchAction: settings?.touchscreenSupport ? 'pan-y' : 'auto',
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
         }}

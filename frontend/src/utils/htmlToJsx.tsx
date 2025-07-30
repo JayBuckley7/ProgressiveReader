@@ -4,6 +4,24 @@ import { parseDocument, Element, Text, Node } from "htmlparser2";
 export type HighlightFn = (text: string) => JSX.Element[];
 
 /**
+ * Convert HTML attributes to JSX-compatible attributes
+ */
+const convertAttribs = (attribs: Record<string, string>) => {
+  const converted: Record<string, string> = {};
+  
+  for (const [key, value] of Object.entries(attribs)) {
+    // Convert 'class' to 'className' for JSX compatibility
+    if (key === 'class') {
+      converted.className = value;
+    } else {
+      converted[key] = value;
+    }
+  }
+  
+  return converted;
+};
+
+/**
  * Parse arbitrary HTML into a JSX tree. Optionally run a highlighting
  * function on text nodes.
  */
@@ -25,7 +43,7 @@ export function parseHtmlToJsx(html: string, highlightFn?: HighlightFn): JSX.Ele
 
       return React.createElement(
         el.name,
-        { key, ...el.attribs },
+        { key, ...convertAttribs(el.attribs) },
         children.length > 0 ? children : null
       );
     }
