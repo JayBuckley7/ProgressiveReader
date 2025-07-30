@@ -400,7 +400,16 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB API Key</h3>
                 <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                  Optional: Enter your JPDB API key to use JPDB parsing, otherwise Google Translate will be used automatically.
+                  Optional: Enter your JPDB API key to use JPDB parsing, otherwise vocab and known words cannot be saved.
+                  <br />
+                  Visit <a 
+                    href="https://jpdb.io/settings#:~:text=in%20the%20future.-,Account%20information,-Username" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-purple-800 dark:hover:text-purple-200"
+                  >
+                    Settings
+                  </a> on JPDB.io to find your API key after logging in.
                 </p>
                 <TextInput
                   label="JPDB API Key"

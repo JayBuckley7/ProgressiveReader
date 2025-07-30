@@ -3,7 +3,7 @@ import { nonNull } from '../utils/util';
 import { jsxCreateElement as createElement } from '../utils/jsx';
 import { JpdbWord } from './word';
 import { getCurrentConfig } from '../content/api-adapter';
-import { getJlptLevel } from '../services/jlptService';
+import { getJlptLevel, getWordKanjiInfo } from '../services/jlptService';
 
 // Global WeakMap for storing JPDB data when elements are not extensible
 declare global {
@@ -180,8 +180,15 @@ function getColorClass(token: Token): string {
             return `jlpt-${jlptLevel.toLowerCase()}`;
         }
         
-        // Word not found in JLPT database - make it red like N1 instead of gray
-        return 'jlpt-n1';
+        // Check if word has kanji that exist in database but no JLPT level
+        const kanjiInfo = getWordKanjiInfo(word);
+        if (kanjiInfo.length > 0) {
+            // Word has kanji in database but no JLPT level - give it gray highlighting
+            return 'jlpt-unknown';
+        }
+        
+        // Word not found in JLPT database at all - don't highlight
+        return 'common-word';
     } else {
         // ONLINE MODE: Use JPDB state-based coloring
         // Return empty string since state classes are already in baseClassName

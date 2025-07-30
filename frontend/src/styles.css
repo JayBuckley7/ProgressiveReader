@@ -90,9 +90,12 @@
     color: rgb(239, 68, 68);    /* Red - hardest level */
 }
 
-/* Unknown JLPT level - subtle gray */
+/* Unknown JLPT level - subtle gray with background highlight */
 :where(.jpdb-word.jlpt-unknown) {
-    color: rgba(75, 141, 255, 0.6);   /* Light blue, similar to not-in-deck */
+    color: rgba(119, 119, 119, 1);   /* Gray text */
+    background-color: rgba(119, 119, 119, 0.15);   /* Light gray background highlight */
+    border-radius: 2px;   /* Slight rounding for better appearance */
+    padding: 1px 2px;   /* Small padding for background visibility */
 }
 
 /* Hover effects for JLPT words */
