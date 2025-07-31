@@ -226,14 +226,6 @@ html {
   touch-action: pan-y pinch-zoom;
 }
 
-/* Prevent text selection during swipe */
-.swiping {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
 /* Smooth transitions for page changes */
 .reader-content-transition {
   transition: opacity 0.2s ease-in-out;

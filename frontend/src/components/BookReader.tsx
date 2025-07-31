@@ -252,6 +252,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // TODO: Progress tracking - replace with real API calls
 
   const { settings } = useSettings();
+  
+
 
   // PDF page navigation state
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
@@ -279,18 +281,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     // Always use parseHtmlToJsx without the simple highlighter - let the proper JPDB system handle highlighting
     return parseHtmlToJsx(html);
   }, [currentChapterContent, translatedContent, isTranslated, jpdbHighlighted, contentVersion]);
-
-  // Swipe control state
-  const swipeRef = useRef({
-    startX: null as number | null,
-    startY: null as number | null,
-    startTime: null as number | null,
-    isSwiping: false
-  });
-
-  const swipeInitRef = useRef(false);
-  const nextChapterRef = useRef<() => void>(() => {});
-  const prevChapterRef = useRef<() => void>(() => {});
 
   const progress = useMemo(
     () => ({ currentChapter: chapter, currentPosition: scrollPositionRef.current }),
@@ -608,90 +598,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       contentRef.current.scrollTop = progress.currentPosition;
     }
   }, [progress, chapter]);
-
-  // Swipe controls implementation
-  useEffect(() => {
-    // Reset when settings change
-    swipeInitRef.current = false;
-    
-    if (!contentRef.current || !settings?.touchscreenSupport) return;
-    swipeInitRef.current = true;
-
-    const contentEl = contentRef.current;
-    if (!contentEl) return;
-
-    const minLockDistance = 10;
-    const minSwipeDistance = 60;
-    const minVelocity = 0.3;
-
-    const handlePointerDown = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch') return;
-      
-      // Ignore swipes on interactive elements
-      const target = e.target as HTMLElement;
-      if (target.closest('a, button, input, textarea, select, [contenteditable="true"]')) {
-        return;
-      }
-
-      swipeRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        startTime: e.timeStamp,
-        isSwiping: false
-      };
-    };
-
-    const handlePointerMove = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch' || swipeRef.current.startX === null) return;
-
-      const dx = e.clientX - swipeRef.current.startX;
-      const dy = e.clientY - swipeRef.current.startY!;
-
-      if (!swipeRef.current.isSwiping) {
-        if (Math.abs(dx) > minLockDistance && Math.abs(dx) > Math.abs(dy)) {
-          swipeRef.current.isSwiping = true;
-          if (e.cancelable) e.preventDefault();
-        } else if (Math.abs(dy) > minLockDistance && Math.abs(dy) > Math.abs(dx)) {
-          swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
-        }
-      } else {
-        if (e.cancelable) e.preventDefault();
-      }
-    };
-
-    const handlePointerUp = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch' || swipeRef.current.startX === null || !swipeRef.current.isSwiping) {
-        swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
-        return;
-      }
-
-      const dx = e.clientX - swipeRef.current.startX;
-      const dt = e.timeStamp - swipeRef.current.startTime!;
-      const velocity = dt > 0 ? Math.abs(dx) / dt : 0;
-
-      if (Math.abs(dx) > minSwipeDistance && velocity > minVelocity) {
-        if (dx < 0) {
-          // Swipe left - next chapter
-          nextChapterRef.current();
-        } else {
-          // Swipe right - previous chapter
-          prevChapterRef.current();
-        }
-      }
-
-      swipeRef.current = { startX: null, startY: null, startTime: null, isSwiping: false };
-    };
-
-    contentEl.addEventListener('pointerdown', handlePointerDown);
-    contentEl.addEventListener('pointermove', handlePointerMove);
-    contentEl.addEventListener('pointerup', handlePointerUp);
-
-    return () => {
-      contentEl.removeEventListener('pointerdown', handlePointerDown);
-      contentEl.removeEventListener('pointermove', handlePointerMove);
-      contentEl.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [settings?.touchscreenSupport]);
 
   // Translate using the user's personal OpenAI key entirely in the browser
   const translateWithOpenAI = async (html: string, useCefr: boolean): Promise<string> => {
@@ -1244,15 +1150,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, [chapter, updateChapter]);
 
-  // Update refs after functions are declared
-  useEffect(() => {
-    nextChapterRef.current = nextChapter;
-  }, [nextChapter]);
-
-  useEffect(() => {
-    prevChapterRef.current = prevChapter;
-  }, [prevChapter]);
-
   // PDF page navigation handlers
   const nextPdfPage = useCallback(() => {
     if (pdfPageCount && pdfCurrentPage < pdfPageCount) {
@@ -1406,6 +1303,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           </div>
         </div>
         
+        
         <button
           onClick={() => setShowSettings(true)}
           className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -1438,7 +1336,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         ref={contentRef}
         className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16"
         style={{
-          touchAction: settings?.touchscreenSupport ? 'pan-y' : 'auto',
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
         }}

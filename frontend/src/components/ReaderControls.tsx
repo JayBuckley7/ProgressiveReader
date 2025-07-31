@@ -77,7 +77,7 @@ function ReaderControlsComponent({
     "hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700";
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-t px-2 sm:px-4 py-2 shadow-inner fixed bottom-0 inset-x-0 z-30">
+    <div className="bg-white dark:bg-gray-800 border-t px-2 sm:px-4 py-2 shadow-inner fixed bottom-0 inset-x-0 z-30" style={{ pointerEvents: 'auto' }}>
       <div className="max-w-4xl mx-auto">
         
         {/* Mobile layout: Navigation always visible, actions in scrollable row */}
