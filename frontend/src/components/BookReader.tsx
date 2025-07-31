@@ -1192,6 +1192,50 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     }
   }, [pdfCurrentPage, pdfPageCount, bookMetadata, progressLoaded, saveBookProgress, bookId]);
 
+  // Touch swipe navigation for chapter/page turns
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    let startX = 0;
+    let startY = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.changedTouches.length === 1) {
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 50 && Math.abs(dy) < 30) {
+          if (dx < 0) {
+            if (bookMetadata?.fileType === 'pdf') {
+              nextPdfPage();
+            } else {
+              nextChapter();
+            }
+          } else {
+            if (bookMetadata?.fileType === 'pdf') {
+              prevPdfPage();
+            } else {
+              prevChapter();
+            }
+          }
+        }
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart);
+    el.addEventListener('touchend', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [bookMetadata?.fileType, nextChapter, prevChapter, nextPdfPage, prevPdfPage]);
+
 
   const clearTranslation = () => {
     if (isTranslated) {
