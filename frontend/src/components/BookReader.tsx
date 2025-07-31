@@ -11,6 +11,7 @@ import { useBookContent } from "../hooks/useBookContent";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { loadConfig as loadJpdbConfig } from "~/content/api-adapter.ts";
 import { parseHtmlToJsx } from "../utils/htmlToJsx";
+import { useSwipe } from "../hooks/useSwipe";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -1220,6 +1221,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     });
   }, [jpdbHighlighted]);
 
+  useSwipe(
+    contentRef,
+    bookMetadata?.fileType === 'pdf' ? nextPdfPage : nextChapter,
+    bookMetadata?.fileType === 'pdf' ? prevPdfPage : prevChapter
+  );
+
   // ✅ ALL HOOKS ARE NOW CALLED - Conditional rendering can happen after this point
   
   if (isLoading) {
@@ -1334,7 +1341,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {/* Reader Content */}
       <div 
         ref={contentRef}
-        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16"
+        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y reader-content-transition"
         style={{
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
