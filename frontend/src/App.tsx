@@ -24,6 +24,7 @@ import { LoginModal } from "./components/LoginModal";
 import { AppDataProvider, useAppData } from "./contexts/AppDataContext";
 import { gDriveService } from "./services/gdriveService";
 import { AdminPage } from "./components/AdminPage";
+import { ClipboardReader } from "./components/ClipboardReader";
 
 
 // Get Clerk publishable key from environment variable
@@ -31,34 +32,22 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 console.log('🔐 [APP CLERK DEBUG] App component Clerk key check:', clerkPubKey ? `${clerkPubKey.substring(0, 10)}...${clerkPubKey.substring(clerkPubKey.length - 5)}` : 'UNDEFINED')
 console.log('🔐 [APP CLERK DEBUG] Environment mode:', import.meta.env.MODE)
-console.log('🔐 [APP CLERK DEBUG] Available VITE_ vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')))
+
 
 export default function App() {
-  if (!clerkPubKey) {
-    console.error('❌ [APP CLERK DEBUG] Missing VITE_CLERK_PUBLISHABLE_KEY in App component!')
-    console.error('❌ [APP CLERK DEBUG] Available env vars:', import.meta.env)
-    throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in environment variables");
-  }
-  
-  console.log('✅ [APP CLERK DEBUG] Clerk key available for ClerkProvider')
+  if (!clerkPubKey) throw new Error("Missing Clerk publishable key");
 
   return (
-    <ClerkProvider 
+    <ClerkProvider
       publishableKey={clerkPubKey}
       appearance={{
+        layout: {
+          // tidy up defaults
+        },
         variables: {
-          colorPrimary: "#3b82f6",
-          colorDanger: "#ef4444",
-          colorSuccess: "#10b981",
-          colorWarning: "#f59e0b",
-          colorNeutral: "#6b7280",
-          colorText: "#1f2937",
-          colorTextSecondary: "#6b7280",
-          colorTextOnPrimaryBackground: "#ffffff",
+          colorPrimary: "#2563eb",
           colorBackground: "#ffffff",
-          colorInputBackground: "#ffffff",
-          colorInputText: "#1f2937",
-          borderRadius: "0.5rem",
+          colorText: "#111827",
           fontFamily: "system-ui, -apple-system, sans-serif"
         },
         elements: {
@@ -89,6 +78,7 @@ export default function App() {
     </ClerkProvider>
   );
 }
+
 
 function AppContent() {
   // Clerk hooks
@@ -134,7 +124,7 @@ function AppContent() {
       localStorage.getItem('preferDueCards') === 'true'
     ) {
       // Removed automatic prefetching - due cards are now fetched manually only
-    // prefetchDueCards();
+      // prefetchDueCards();
     }
   }, [isClerkLoaded, isClerkSignedIn]);
 
@@ -146,7 +136,7 @@ function AppContent() {
             <Route path="/" element={<MainLayout />}>
               <Route index element={<BookLibrary />} />
               <Route path="vocabulary" element={<VocabularyPage />} />
-              <Route path="stats" element={<StatsPlaceholder />} />
+              <Route path="clipboard" element={<ClipboardReader />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>
             <Route path="book/:bookId" element={<BookReaderRoute />} />
@@ -166,44 +156,31 @@ function AppContent() {
 
 function MainLayout() {
   const location = useLocation();
-  const currentPage = location.pathname.startsWith('/vocabulary')
-    ? 'vocabulary'
-    : location.pathname.startsWith('/stats')
-    ? 'stats'
-    : location.pathname.startsWith('/admin')
-    ? 'admin'
-    : 'library';
 
   return (
-    <div className="flex flex-col flex-1">
-      <TopActions currentPage={currentPage} />
+    <div>
+      <TopActions
+        currentPage={
+          location.pathname.startsWith('/vocabulary') ? 'vocabulary' :
+          location.pathname.startsWith('/clipboard') ? 'stats' :
+          location.pathname.startsWith('/admin') ? 'admin' : 'library'
+        }
+      />
       <HeroBanner />
-      <div className="flex-1 overflow-y-auto">
+      <main className="flex-1">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 }
 
 function SignedOutLayout() {
-  const scrollToSignIn = () => {
-    const signInSection = document.getElementById('sign-in-section');
-    if (signInSection) {
-      signInSection.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'center'
-      });
-    }
-  };
-
   return (
-    <div className="flex flex-col flex-1">
-      <TopActions currentPage="library" onShowLogin={scrollToSignIn} />
-      <HeroBanner />
-      <div id="sign-in-section" className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-md mx-auto">
-          <SignInForm />
-        </div>
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Welcome to Progressive Reader</h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-4">Sign in to continue</p>
+        <SignInForm />
       </div>
     </div>
   );
@@ -213,13 +190,4 @@ function BookReaderRoute() {
   const { bookId } = useParams<{ bookId: string }>();
   if (!bookId) return null;
   return <BookReader bookId={bookId} />;
-}
-
-function StatsPlaceholder() {
-  return (
-    <div className="p-8 text-center">
-      <h2 className="text-2xl font-bold mb-4">Reading Statistics</h2>
-      <p className="text-gray-600">Stats page coming soon...</p>
-    </div>
-  );
 }

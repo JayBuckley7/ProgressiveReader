@@ -416,12 +416,12 @@ export function JpdbPopupController() {
         {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
           <div className="text-sm text-gray-700 dark:text-gray-300">
             <ol className="list-decimal list-inside space-y-1 ml-4">
-              {token.card.meanings.flatMap(meaning => 
-                meaning.glosses?.map((gloss, idx) => (
-                  <li key={`${meaning.partOfSpeech?.[0] || 'unknown'}-${idx}`}>
+              {token.card.meanings.flatMap((meaning, meaningIndex) =>
+                (meaning.glosses || []).map((gloss, glossIndex) => (
+                  <li key={`m${meaningIndex}-g${glossIndex}`}>
                     {gloss}
                   </li>
-                )) || []
+                ))
               )}
             </ol>
           </div>
