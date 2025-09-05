@@ -168,6 +168,37 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
               localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
               console.log('🔔 Auto-synced all accessibility settings to localStorage');
+
+              // Also set JPDB API key cookies if present in cloud settings
+              try {
+                const cloudJpdbKey = (data as any).jpdb_api_key;
+                if (typeof cloudJpdbKey === 'string' && cloudJpdbKey.length > 0) {
+                  document.cookie = `jpdbApiKey=${cloudJpdbKey}; path=/;`;
+                  document.cookie = `jpdb_api_key=${cloudJpdbKey}; path=/;`;
+                  console.log('🔑 JPDB API key synced from cloud into cookies');
+                }
+              } catch (e) {
+                console.warn('Failed to sync JPDB key from cloud settings');
+              }
+
+              // Additionally, sync JPDB-related prefs into localStorage for the highlighter
+              try {
+                const mapPairs: Array<[string, any]> = [
+                  ['jpdbMiningDeckId', (data as any).jpdbMiningDeckId],
+                  ['forqDeckId', (data as any).forqDeckId],
+                  ['blacklistDeckId', (data as any).blacklistDeckId],
+                  ['neverForgetDeckId', (data as any).neverForgetDeckId],
+                  ['contextWidth', (data as any).contextWidth],
+                  ['forqOnMine', (data as any).forqOnMine],
+                  ['customWordCSS', (data as any).customWordCSS],
+                  ['customPopupCSS', (data as any).customPopupCSS],
+                ];
+                for (const [k, v] of mapPairs) {
+                  if (v !== undefined && v !== null) {
+                    localStorage.setItem(k, String(v));
+                  }
+                }
+              } catch {}
               
               return updated;
             });
@@ -258,12 +289,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             console.log('🔄 Auto-saving settings to cloud...');
             
             // First, load existing comprehensive settings to preserve API keys and other fields
-            const existingSettings = await loadSettings();
+            const existingSettingsRaw = await loadSettings();
+            const existingSettings = (existingSettingsRaw && typeof existingSettingsRaw === 'object') ? existingSettingsRaw : {};
             console.log('🔍 [SettingsContext] Existing settings loaded for merge:', existingSettings);
             
             // Merge the basic settings with existing comprehensive settings
+            const preserved = { ...existingSettings } as any;
+            // Ensure JPDB API key is preserved from cookies if not yet saved in cloud
+            if (!preserved.jpdb_api_key) {
+              try {
+                const m1 = document.cookie.match(/(?:^|;\s*)jpdbApiKey=([^;]+)/);
+                const m2 = document.cookie.match(/(?:^|;\s*)jpdb_api_key=([^;]+)/);
+                const cookieKey = m1?.[1] || m2?.[1];
+                if (cookieKey) preserved.jpdb_api_key = cookieKey;
+              } catch {}
+            }
+
             const settingsToSave = {
-              ...existingSettings, // Preserve existing comprehensive settings
+              ...preserved, // Preserve existing comprehensive settings and keys like jpdb_api_key
               // Map basic settings to the expected comprehensive format
               userTheme: updated.theme,
               fontSize: String(updated.fontSize),

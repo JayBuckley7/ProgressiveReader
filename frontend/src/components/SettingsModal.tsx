@@ -59,7 +59,11 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     customPopupCSS: localStorage.getItem(localKeys.customPopupCSS) || "",
   }));
 
-  const [jpdbApiKey, setJpdbApiKey] = useState(() => document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "");
+  const [jpdbApiKey, setJpdbApiKey] = useState(() => {
+    const m1 = document.cookie.match(/(?:^|;\s*)jpdbApiKey=([^;]+)/);
+    const m2 = document.cookie.match(/(?:^|;\s*)jpdb_api_key=([^;]+)/);
+    return (m1?.[1] || m2?.[1] || "");
+  });
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -73,10 +77,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     localStorage.removeItem("useServerKey");
     localStorage.removeItem("useOfflineParser");
     
-    // Store JPDB API key in both cookie formats for compatibility
+    // Store JPDB API key in both cookie formats for compatibility, or clear if empty
     if (jpdbApiKey) {
       document.cookie = `jpdbApiKey=${jpdbApiKey}; path=/;`;
       document.cookie = `jpdb_api_key=${jpdbApiKey}; path=/;`;
+    } else {
+      // Clear cookies when key is removed to avoid stale values
+      document.cookie = `jpdbApiKey=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+      document.cookie = `jpdb_api_key=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
     }
     
     console.log('🔔 Synced all settings to localStorage and cookies');
@@ -416,7 +424,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   value={jpdbApiKey}
                   onChange={setJpdbApiKey}
                   placeholder="Enter your JPDB API key"
-                  type="password"
+                  type="text"
                 />
               </div>
 
