@@ -4,20 +4,53 @@ import { parseDocument, Element, Text, Node } from "htmlparser2";
 export type HighlightFn = (text: string) => JSX.Element[];
 
 /**
+ * Convert a CSS inline style string into a React style object
+ */
+const cssStringToStyleObject = (styleText: string): React.CSSProperties => {
+  const style: React.CSSProperties = {};
+  // Split on semicolons, but keep values that might contain colons (split only on the first colon per rule)
+  for (const rule of styleText.split(';')) {
+    if (!rule) continue;
+    const idx = rule.indexOf(':');
+    if (idx === -1) continue;
+    const rawProp = rule.slice(0, idx).trim();
+    const rawVal = rule.slice(idx + 1).trim();
+    if (!rawProp || !rawVal) continue;
+
+    // Convert kebab-case to camelCase for React
+    let camelProp = rawProp.toLowerCase().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    // Vendor prefixes
+    if (camelProp.startsWith('webkit')) camelProp = 'Webkit' + camelProp.slice(6);
+    if (camelProp.startsWith('moz')) camelProp = 'Moz' + camelProp.slice(3);
+    // 'ms' stays lowercase per React ('msOverflowStyle')
+    if (camelProp.startsWith('o')) camelProp = 'O' + camelProp.slice(1);
+
+    // Keep value as string to preserve units; React will handle it
+    (style as any)[camelProp] = rawVal;
+  }
+  return style;
+};
+
+/**
  * Convert HTML attributes to JSX-compatible attributes
  */
 const convertAttribs = (attribs: Record<string, string>) => {
-  const converted: Record<string, string> = {};
-  
+  const converted: Record<string, any> = {};
+
   for (const [key, value] of Object.entries(attribs)) {
     // Convert 'class' to 'className' for JSX compatibility
     if (key === 'class') {
       converted.className = value;
-    } else {
-      converted[key] = value;
+      continue;
     }
+    // Convert inline style strings to a React style object
+    if (key === 'style') {
+      converted.style = cssStringToStyleObject(value);
+      continue;
+    }
+    converted[key] = value;
   }
-  
+
   return converted;
 };
 
