@@ -103,28 +103,68 @@ function waitForCSS(): Promise<void> {
 
 // Extract text segments from a DOM element - ALIGNED with fragment extraction
 function extractCleanTextSegments(rootElement: HTMLElement): string[] {
-    let allText = '';
-    
+    const MAX_SEGMENT_CHARS = 3000; // keep segments safely below JPDB byte limit
+    const segments: string[] = [];
+    let current = '';
+
+    function pushCurrentIfAny(): void {
+        if (current.length === 0) return;
+        if (current.length <= MAX_SEGMENT_CHARS) {
+            segments.push(current);
+        } else {
+            let start = 0;
+            while (start < current.length) {
+                const end = Math.min(current.length, start + MAX_SEGMENT_CHARS);
+                segments.push(current.slice(start, end));
+                start = end;
+            }
+        }
+        current = '';
+    }
+
+    function appendText(text: string): void {
+        if (text.length === 0) return;
+        let remaining = text;
+        while (remaining.length > 0) {
+            const spaceLeft = MAX_SEGMENT_CHARS - current.length;
+            if (spaceLeft <= 0) {
+                segments.push(current);
+                current = '';
+                continue;
+            }
+            if (remaining.length <= spaceLeft) {
+                current += remaining;
+                break;
+            } else {
+                current += remaining.slice(0, spaceLeft);
+                segments.push(current);
+                current = '';
+                remaining = remaining.slice(spaceLeft);
+            }
+        }
+    }
+
     function processNode(node: Node) {
         const category = displayCategory(node);
-        
         if (category === 'text') {
             const textContent = node.textContent || '';
-            // Include ALL text content, including spaces - same as fragment creation
             if (textContent.trim() !== '') {
-                allText += textContent;
+                appendText(textContent);
             }
         } else if (category === 'inline' || category === 'ruby') {
             Array.from(node.childNodes).forEach(processNode);
         } else if (category === 'block') {
+            // Flush before and after blocks to create paragraph-like segments
+            pushCurrentIfAny();
             Array.from(node.childNodes).forEach(processNode);
+            pushCurrentIfAny();
         }
     }
-    
+
     processNode(rootElement);
-    
-    // Return as single segment that matches the concatenated fragment text
-    return allText.length > 0 ? [allText] : [];
+    pushCurrentIfAny();
+
+    return segments;
 }
 
 // Create paragraph fragments from DOM element

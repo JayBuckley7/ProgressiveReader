@@ -574,6 +574,75 @@ def get_jpdb_data():
         if normalized_segment:
             all_clean_segments.append(normalized_segment)
 
+    # If any segment exceeds the JPDB batch byte limit, split it into smaller chunks
+    def _utf8_len(s: str) -> int:
+        return len(s.encode('utf-8'))
+
+    def _split_by_bytes(s: str, max_bytes: int) -> list[str]:
+        chunks: list[str] = []
+        start = 0
+        while start < len(s):
+            cur_bytes = 0
+            end = start
+            while end < len(s):
+                ch = s[end]
+                ch_b = len(ch.encode('utf-8'))
+                if cur_bytes + ch_b > max_bytes:
+                    break
+                cur_bytes += ch_b
+                end += 1
+            if end == start:  # single character larger than max_bytes (extremely unlikely)
+                # Fallback: force include this character to avoid infinite loop
+                end = start + 1
+            chunks.append(s[start:end])
+            start = end
+        return chunks
+
+    def _split_segment_to_limit(s: str, max_bytes: int) -> list[str]:
+        # Prefer sentence-aware splitting first, then fall back to byte slicing
+        if _utf8_len(s) <= max_bytes:
+            return [s]
+        # Split on Japanese/Latin punctuation boundaries while keeping punctuation attached
+        sentence_parts = re.split(r'(?<=[。！？!?])', s)
+        if len(sentence_parts) > 1:
+            acc = ''
+            out: list[str] = []
+            for part in sentence_parts:
+                if not part:
+                    continue
+                if _utf8_len(acc) + _utf8_len(part) <= max_bytes:
+                    acc += part
+                else:
+                    if acc:
+                        out.append(acc)
+                        acc = ''
+                    if _utf8_len(part) <= max_bytes:
+                        acc = part
+                    else:
+                        out.extend(_split_by_bytes(part, max_bytes))
+                        acc = ''
+            if acc:
+                out.append(acc)
+            return out
+        # Fallback: raw byte-based slicing
+        return _split_by_bytes(s, max_bytes)
+
+    # Expand any over-limit segments
+    if all_clean_segments:
+        MAX_BYTES_PER_API_BATCH = current_app.config['MAX_BYTES_PER_API_BATCH']
+        expanded_segments: list[str] = []
+        for seg in all_clean_segments:
+            if _utf8_len(seg) > MAX_BYTES_PER_API_BATCH:
+                current_app.logger.info(
+                    "Splitting oversized JPDB segment exceeding byte limit"
+                )
+                expanded_segments.extend(
+                    _split_segment_to_limit(seg, MAX_BYTES_PER_API_BATCH)
+                )
+            else:
+                expanded_segments.append(seg)
+        all_clean_segments = expanded_segments
+
     if not all_clean_segments:
         current_app.logger.info("No non-empty segments to process for JPDB.")
         return jsonify([])
@@ -684,7 +753,28 @@ def get_jpdb_data():
 
         response_from_jpdb = None
         try:
-            response_from_jpdb = requests.post(jpdb_api_url, headers=headers, json=payload)
+            # Add timeout and simple retries with exponential backoff
+            max_attempts = 3
+            last_exc = None
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    response_from_jpdb = requests.post(
+                        jpdb_api_url,
+                        headers=headers,
+                        json=payload,
+                        timeout=(5, 30)  # (connect timeout, read timeout)
+                    )
+                    break
+                except requests.exceptions.Timeout as e:
+                    last_exc = e
+                    current_app.logger.warning(
+                        f"JPDB request timed out on attempt {attempt}/{max_attempts}. Retrying..."
+                    )
+                    if attempt == max_attempts:
+                        raise
+                    # basic exponential backoff: 0.5s, 1s
+                    import time
+                    time.sleep(0.5 * attempt)
 
             # --- Start Enhanced Logging ---
             current_app.logger.info(f"JPDB API response status: {response_from_jpdb.status_code}")
