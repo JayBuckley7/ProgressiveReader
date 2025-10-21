@@ -2,6 +2,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAppData } from "../contexts/AppDataContext";
+import { useTranslation } from "react-i18next";
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -27,9 +28,9 @@ const cookieKeys = {
 
 // Tab configuration with icons
 const tabs = [
-  { id: "general", label: "General", icon: "⚙️" },
-  { id: "highlight", label: "Highlighter", icon: "🎌" },
-  { id: "accessibility", label: "Accessibility", icon: "♿" },
+  { id: "general", icon: "⚙️" },
+  { id: "highlight", icon: "🎌" },
+  { id: "accessibility", icon: "♿" },
 ] as const;
 
 export function SettingsModal({ onClose, onTranslate, translating }: {
@@ -39,6 +40,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 }) {
     const { settings, updateSettings } = useSettings();
     const { saveSettings, loadSettings, isAuthenticated } = useAppData();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"general" | "highlight" | "accessibility">("general");
     const [isCloudLoading, setIsCloudLoading] = useState(false);
     const [isApiConfigExpanded, setIsApiConfigExpanded] = useState(false);
@@ -107,6 +109,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     jpdb_api_key: jpdbApiKey,
     openai_model: localState.openaiModel,
     target_language: settings.targetLanguage,
+    uiLanguage: settings.uiLanguage,
     cefr_index: String(localState.cefrLevel),
     
     // Display settings
@@ -173,6 +176,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     // Update settings through context
     const settingsUpdates: any = {};
     if (importedSettings.target_language !== undefined) settingsUpdates.targetLanguage = importedSettings.target_language;
+    if (importedSettings.uiLanguage !== undefined) settingsUpdates.uiLanguage = importedSettings.uiLanguage;
     if (importedSettings.userTheme !== undefined) settingsUpdates.theme = importedSettings.userTheme;
     if (importedSettings.fontSize !== undefined) settingsUpdates.fontSize = parseInt(importedSettings.fontSize) || 16;
     if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
@@ -187,7 +191,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   // Manual cloud save functionality (force save current state)
   const handleCloudSave = async () => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to save settings to cloud storage');
+      toast.error(t('settings.toasts.save.signInRequired'));
       return;
     }
     
@@ -197,13 +201,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       console.log('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
       const success = await saveSettings(settingsToSave);
       if (success) {
-        toast.success('Settings manually saved to Google Drive successfully!');
+        toast.success(t('settings.toasts.save.success'));
       } else {
-        toast.error('Failed to save settings to Google Drive');
+        toast.error(t('settings.toasts.save.failure'));
       }
     } catch (error) {
       console.error('Cloud save error:', error);
-      toast.error('Error saving settings to Google Drive');
+      toast.error(t('settings.toasts.save.failure'));
     } finally {
       setIsCloudLoading(false);
     }
@@ -212,7 +216,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
   // Manual cloud load functionality (overwrite current settings)
   const handleCloudLoad = async () => {
     if (!isAuthenticated) {
-      toast.error('Please sign in to load settings from cloud storage');
+      toast.error(t('settings.toasts.load.signInRequired'));
       return;
     }
     
@@ -222,14 +226,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       console.log('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
       if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
-        toast.success('Settings loaded from Google Drive successfully!');
+        toast.success(t('settings.toasts.load.success'));
       } else {
-        toast.info('No settings.json file found in Google Drive');
+        toast.info(t('settings.toasts.load.missing'));
       }
     } catch (error: any) {
       if (error.message !== 'UNAUTHORIZED') {
         console.error('Cloud load error:', error);
-        toast.error('Failed to load settings from Google Drive');
+        toast.error(t('settings.toasts.load.failure'));
       }
     } finally {
       setIsCloudLoading(false);
@@ -244,17 +248,17 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 sm:p-4 md:p-6 flex-shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Settings</h2>
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{t("settings.title")}</h2>
             <button
               onClick={onClose}
               className="text-white/80 hover:text-white transition-colors duration-200 hover:rotate-90 transform p-1"
             >
               <svg className="w-5 sm:w-6 h-5 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    </div>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
         {/* Tab Navigation */}
         <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -263,7 +267,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
               <button
                 key={tab.id}
                 className={`
-                  flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 
+                  flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5
                   rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap
                   transition-all duration-200 transform flex-shrink-0
                   ${activeTab === tab.id
@@ -274,7 +278,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 onClick={() => setActiveTab(tab.id as any)}
               >
                 <span className="text-sm sm:text-base md:text-lg">{tab.icon}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden sm:inline">{t(`settings.tabs.${tab.id}`)}</span>
               </button>
             ))}
                             </div>
@@ -290,9 +294,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   className="w-full flex items-center justify-between p-4 text-left hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors"
                 >
                   <div>
-                    <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">🔑 API Configuration</h3>
+                    <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">{t("settings.general.api.title")}</h3>
                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      Optional: Bring your own OpenAI API key for unlimited translations
+                      {t("settings.general.api.description")}
                     </p>
                   </div>
                   <svg 
@@ -310,16 +314,15 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                     <div className="pt-4 space-y-4">
                       <div className="bg-blue-100 dark:bg-blue-800/40 rounded-lg p-3">
                         <p className="text-xs text-blue-700 dark:text-blue-300">
-                          <strong>💡 Note:</strong> The server provides free translations with shared API keys. 
-                          You can add your own OpenAI API key here for unlimited personal usage and faster responses.
+                          {t("settings.general.api.note")}
                         </p>
                       </div>
-                      
+
                       <TextInput
-                        label="OpenAI API Key (Optional)"
+                        label={t("settings.general.api.inputLabel")}
                         value={localState.openaiKey}
                         onChange={v => handleChange("openaiKey", v)}
-                        placeholder="sk-... (leave empty to use server key)"
+                        placeholder={t("settings.general.api.placeholder")}
                         type="password"
                       />
                     </div>
@@ -329,62 +332,79 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput
-                  label="Theme"
+                  label={t("settings.general.theme.label")}
                   value={settings.theme}
                   onChange={v => updateSettings({ theme: v as any })}
                   options={[
-                    { value: "system", label: "🌓 System Default" },
-                    { value: "light", label: "☀️ Light" },
-                    { value: "dark", label: "🌙 Dark" }
+                    { value: "system", label: t("settings.general.theme.options.system") },
+                    { value: "light", label: t("settings.general.theme.options.light") },
+                    { value: "dark", label: t("settings.general.theme.options.dark") }
                   ]}
                 />
                 <SelectInput
-                  label="Preferred Model"
+                  label={t("settings.general.model.label")}
                   value={localState.openaiModel}
                   onChange={v => handleChange("openaiModel", v)}
                   options={[
-                    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast)" },
-                    { value: "gpt-4", label: "GPT-4 (Powerful)" },
-                    { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Legacy)" }
+                    { value: "gpt-4o-mini", label: t("settings.general.model.options.gpt-4o-mini") },
+                    { value: "gpt-4", label: t("settings.general.model.options.gpt-4") },
+                    { value: "gpt-3.5-turbo", label: t("settings.general.model.options.gpt-3.5-turbo") }
                   ]}
                 />
                             </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput
-                  label="Target Language"
+                  label={t("settings.general.targetLanguage.label")}
                   value={settings.targetLanguage}
                   onChange={v => updateSettings({ targetLanguage: v })}
                   options={[
-                    { value: "English", label: "🇬🇧 English" },
-                    { value: "Japanese", label: "🇯🇵 Japanese" }
+                    { value: "English", label: t("settings.general.targetLanguage.options.English") },
+                    { value: "Japanese", label: t("settings.general.targetLanguage.options.Japanese") }
                   ]}
                 />
+                <div className="space-y-1.5">
+                  <SelectInput
+                    label={t("settings.general.uiLanguage.label")}
+                    value={settings.uiLanguage}
+                    onChange={v => updateSettings({ uiLanguage: v })}
+                    options={[
+                      { value: "en", label: t("settings.general.uiLanguage.options.en") },
+                      { value: "ja", label: t("settings.general.uiLanguage.options.ja") }
+                    ]}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t("settings.general.uiLanguage.description")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput
-                  label="Target CEFR Level"
+                  label={t("settings.general.cefr.label")}
                   value={String(localState.cefrLevel)}
                   onChange={v => handleChange("cefrLevel", parseInt(v))}
                   options={[
-                    { value: "0", label: "A1 (Beginner)" },
-                    { value: "1", label: "A2 (Elementary)" },
-                    { value: "2", label: "B1 (Intermediate)" },
-                    { value: "3", label: "B2 (Upper Intermediate)" },
-                    { value: "4", label: "C1 (Advanced)" },
-                    { value: "5", label: "C2 (Proficient)" }
+                    { value: "0", label: t("settings.general.cefr.options.0") },
+                    { value: "1", label: t("settings.general.cefr.options.1") },
+                    { value: "2", label: t("settings.general.cefr.options.2") },
+                    { value: "3", label: t("settings.general.cefr.options.3") },
+                    { value: "4", label: t("settings.general.cefr.options.4") },
+                    { value: "5", label: t("settings.general.cefr.options.5") }
                   ]}
                 />
-                            </div>
+              </div>
 
               <CheckboxInput
-                label="Autoload Translations"
-                description="Automatically load translations when opening a book"
+                label={t("settings.general.autoload.label")}
+                description={t("settings.general.autoload.description")}
                 checked={localState.autoload}
                 onChange={v => handleChange("autoload", v)}
               />
 
               <CheckboxInput
-                label="Cache Translations"
-                description="Store last translation per chapter for offline use"
+                label={t("settings.general.cacheTranslations.label")}
+                description={t("settings.general.cacheTranslations.description")}
                 checked={settings.cacheTranslations ?? true}
                 onChange={v => updateSettings({ cacheTranslations: v })}
               />
@@ -392,7 +412,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
 
               <SliderInput
-                label="Font Size"
+                label={t("settings.general.fontSize.label")}
                 value={settings.fontSize}
                 onChange={v => updateSettings({ fontSize: v })}
                 min={12}
@@ -406,24 +426,26 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
             <div className="space-y-6 animate-fade-in">
               {/* JPDB API key section - always visible */}
               <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">JPDB API Key</h3>
+                <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">{t("settings.highlight.jpdb.title")}</h3>
                 <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                  Optional: Enter your JPDB API key to use JPDB parsing, otherwise vocab and known words cannot be saved.
+                  {t("settings.highlight.jpdb.description")}
                   <br />
-                  Visit <a 
-                    href="https://jpdb.io/settings#:~:text=in%20the%20future.-,Account%20information,-Username" 
-                    target="_blank" 
+                  {t("settings.highlight.jpdb.linkPrefix")}
+                  <a
+                    href="https://jpdb.io/settings#:~:text=in%20the%20future.-,Account%20information,-Username"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-purple-800 dark:hover:text-purple-200"
                   >
-                    Settings
-                  </a> on JPDB.io to find your API key after logging in.
+                    {t("settings.highlight.jpdb.linkText")}
+                  </a>
+                  {t("settings.highlight.jpdb.linkSuffix")}
                 </p>
                 <TextInput
-                  label="JPDB API Key"
+                  label={t("settings.highlight.jpdb.inputLabel")}
                   value={jpdbApiKey}
                   onChange={setJpdbApiKey}
-                  placeholder="Enter your JPDB API key"
+                  placeholder={t("settings.highlight.jpdb.placeholder")}
                   type="text"
                 />
               </div>
@@ -432,33 +454,33 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <TextInput
-                      label="Mining Deck ID"
+                      label={t("settings.highlight.deck.mining")}
                       value={localState.jpdbDeckId}
                       onChange={v => handleChange('jpdbDeckId', v)}
-                      placeholder="e.g., 12345"
+                      placeholder={t("settings.highlight.deck.placeholder")}
                     />
                     <TextInput
-                      label="FORQ Deck ID"
+                      label={t("settings.highlight.deck.forq")}
                       value={localState.forqDeckId}
                       onChange={v => handleChange('forqDeckId', v)}
-                      placeholder="e.g., 67890"
+                      placeholder={t("settings.highlight.deck.placeholder")}
                     />
                     <TextInput
-                      label="Blacklist Deck ID"
+                      label={t("settings.highlight.deck.blacklist")}
                       value={localState.blacklistDeckId}
                       onChange={v => handleChange('blacklistDeckId', v)}
-                      placeholder="e.g., 11111"
+                      placeholder={t("settings.highlight.deck.placeholder")}
                     />
                     <TextInput
-                      label="Never Forget Deck ID"
+                      label={t("settings.highlight.deck.neverForget")}
                       value={localState.neverForgetDeckId}
                       onChange={v => handleChange('neverForgetDeckId', v)}
-                      placeholder="e.g., 22222"
+                      placeholder={t("settings.highlight.deck.placeholder")}
                     />
                   </div>
 
                   <TextInput
-                    label="Context Sentences"
+                    label={t("settings.highlight.context.label")}
                     type="number"
                     value={String(localState.contextSentenceCount)}
                     onChange={v => handleChange('contextSentenceCount', parseInt(v) || 1)}
@@ -468,14 +490,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 
                   <div className="space-y-3">
                     <CheckboxInput
-                      label="Add to FORQ When Mining"
-                      description="Automatically add mined cards to your FORQ deck"
+                      label={t("settings.highlight.options.autoAdd.label")}
+                      description={t("settings.highlight.options.autoAdd.description")}
                       checked={localState.autoAddToFORQ}
                       onChange={v => handleChange('autoAddToFORQ', v)}
                     />
                     <CheckboxInput
-                      label="Prefer Due Cards"
-                      description="Prioritize due cards in translation suggestions"
+                      label={t("settings.highlight.options.preferDueCards.label")}
+                      description={t("settings.highlight.options.preferDueCards.description")}
                       checked={localState.preferDueCards}
                       onChange={v => handleChange('preferDueCards', v)}
                     />
@@ -489,39 +511,39 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-3">
                 <CheckboxInput
-                  label="Show Popup on Hover"
-                  description="Display word information when hovering"
+                  label={t("settings.accessibility.popup.label")}
+                  description={t("settings.accessibility.popup.description")}
                   checked={settings.showPopupOnHover ?? true}
                   onChange={v => updateSettings({ showPopupOnHover: v })}
                 />
                 <CheckboxInput
-                  label="Touchscreen Support"
-                  description="Enable touch interactions for mobile devices"
+                  label={t("settings.accessibility.touchscreen.label")}
+                  description={t("settings.accessibility.touchscreen.description")}
                   checked={settings.touchscreenSupport ?? false}
                   onChange={v => updateSettings({ touchscreenSupport: v })}
                 />
                 <CheckboxInput
-                  label="Disable Fade Animation"
-                  description="Remove fade effects for better performance"
+                  label={t("settings.accessibility.disableFade.label")}
+                  description={t("settings.accessibility.disableFade.description")}
                   checked={settings.disableFadeAnimation ?? false}
                   onChange={v => updateSettings({ disableFadeAnimation: v })}
                 />
               </div>
 
-                        <div className="space-y-4">
+              <div className="space-y-4">
                 <TextInput
-                  label="Custom Word CSS"
+                  label={t("settings.accessibility.customWordCss.label")}
                   value={localState.customWordCSS}
                   onChange={v => handleChange("customWordCSS", v)}
                   multiline
-                  placeholder=".word { color: blue; }"
+                  placeholder={t("settings.accessibility.customWordCss.placeholder")}
                 />
                 <TextInput
-                  label="Custom Popup CSS"
+                  label={t("settings.accessibility.customPopupCss.label")}
                   value={localState.customPopupCSS}
                   onChange={v => handleChange("customPopupCSS", v)}
                   multiline
-                  placeholder=".popup { background: white; }"
+                  placeholder={t("settings.accessibility.customPopupCss.placeholder")}
                 />
               </div>
 
@@ -530,12 +552,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-blue-600 dark:text-blue-400">🔄</span>
-                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Cloud Sync Active</span>
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t("settings.accessibility.cloudStatus.title")}</span>
                   </div>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Settings automatically load from Google Drive when you sign in and save when changed.
-                    Manual buttons below can force sync if needed.
-                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">{t("settings.accessibility.cloudStatus.description")}</p>
                 </div>
               )}
 
@@ -551,12 +570,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       {isCloudLoading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                          <span>Saving...</span>
+                          <span>{t("settings.accessibility.buttons.saving")}</span>
                         </>
                       ) : (
                         <>
                           <span>☁️</span>
-                          Force Save Now
+                          {t("settings.accessibility.buttons.forceSave")}
                         </>
                       )}
                     </button>
@@ -568,12 +587,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       {isCloudLoading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                          <span>Loading...</span>
+                          <span>{t("settings.accessibility.buttons.loading")}</span>
                         </>
                       ) : (
                         <>
                           <span>📥</span>
-                          Reload from Cloud
+                          {t("settings.accessibility.buttons.reload")}
                         </>
                       )}
                     </button>
@@ -598,12 +617,12 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                     URL.revokeObjectURL(url);
                     
                     // Show success message
-                    toast.success('Settings exported successfully!');
+                    toast.success(t('settings.toasts.export.success'));
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                 >
                   <span>📋</span>
-                  Export to File
+                  {t("settings.accessibility.buttons.export")}
                 </button>
                 <button
                   onClick={() => {
@@ -623,13 +642,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                             applyImportedSettings(importedSettings);
                             
                             // Show success message
-                            toast.success('Settings imported from file successfully!');
+                            toast.success(t('settings.toasts.import.success'));
                             
                             // Optional: Force a page reload to ensure all settings are applied
                             // window.location.reload();
                           } catch (error) {
                             console.error('Error importing settings:', error);
-                            toast.error('Failed to import settings. Please check the file format.');
+                            toast.error(t('settings.toasts.import.failure'));
                           }
                         };
                         reader.readAsText(file);
@@ -640,7 +659,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
                 >
                   <span>📁</span>
-                  Import from File
+                  {t("settings.accessibility.buttons.import")}
                 </button>
               </div>
             </div>
@@ -655,8 +674,8 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 onClick={() => onTranslate(false)}
                 disabled={translating}
                 className="
-                  flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
-                  bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium 
+                  flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5
+                  bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium
                   rounded-lg text-xs sm:text-sm md:text-base whitespace-nowrap
                   hover:from-blue-600 hover:to-blue-700 focus:ring-4 focus:ring-blue-500/30
                   disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
@@ -669,10 +688,10 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <span className="hidden sm:inline">Translating...</span>
+                    <span className="hidden sm:inline">{t("settings.footer.translating")}</span>
                     <span className="sm:hidden">...</span>
                   </span>
-                ) : 'Translate'}
+                ) : t("settings.footer.translate")}
               </button>
               <button
                 onClick={() => onTranslate(true)}
@@ -692,24 +711,24 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <span className="hidden sm:inline">Translating...</span>
+                    <span className="hidden sm:inline">{t("settings.footer.translating")}</span>
                     <span className="sm:hidden">...</span>
                   </span>
-                ) : <span className="hidden sm:inline">Translate (CEFR)</span>}
-                {!translating && <span className="sm:hidden">CEFR</span>}
+                ) : <span className="hidden sm:inline">{t("settings.footer.translateCefr")}</span>}
+                {!translating && <span className="sm:hidden">{t("settings.footer.translateShort")}</span>}
               </button>
             </div>
             <button
               onClick={onClose}
               className="
-                px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
-                bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 
+                px-3 sm:px-4 md:px-6 py-2 sm:py-2.5
+                bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300
                 font-medium rounded-lg text-xs sm:text-sm md:text-base
                 hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-4 focus:ring-gray-500/30
                 transition-all duration-200 transform hover:scale-105 active:scale-95
               "
             >
-              Close
+              {t("settings.footer.close")}
             </button>
           </div>
         </div>

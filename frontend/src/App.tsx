@@ -5,9 +5,9 @@ import {
   Route,
   useParams,
   Outlet,
-  useNavigate,
   useLocation,
 } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { SignInForm } from "./components/SignInForm";
 import { Toaster } from "sonner";
@@ -175,11 +175,14 @@ function MainLayout() {
 }
 
 function SignedOutLayout() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Welcome to Progressive Reader</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">Sign in to continue</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          {t("app.signedOut.title")}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-4">{t("app.signedOut.description")}</p>
         <SignInForm />
       </div>
     </div>

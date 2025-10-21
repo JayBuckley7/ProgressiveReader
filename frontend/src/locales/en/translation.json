@@ -1,0 +1,236 @@
+{
+  "app": {
+    "signedOut": {
+      "title": "Welcome to Progressive Reader",
+      "description": "Sign in to continue"
+    }
+  },
+  "hero": {
+    "defaultName": "Reader",
+    "signedIn": {
+      "welcome": "Welcome back, {{name}}! 📖",
+      "journey": "Continue your language learning journey",
+      "stats": {
+        "books": "Books",
+        "wordsSaved": "Words Saved",
+        "wordsMastered": "Words Mastered"
+      }
+    },
+    "signedOut": {
+      "animationAlt": "Animation",
+      "title": "Your Digital Bookshelf, Reimagined.",
+      "description": "Upload books in EPUB, PDF, MOBI, DOCX, or TXT format, read anywhere, and enhance your language learning.",
+      "features": {
+        "smartReading": {
+          "title": "Smart Reading",
+          "description": "Upload your books and read with built-in language learning tools"
+        },
+        "vocabTracking": {
+          "title": "Vocabulary Tracking",
+          "description": "Save and review new words with context and translations"
+        },
+        "analytics": {
+          "title": "Progress Analytics",
+          "description": "Track your reading progress and vocabulary growth"
+        }
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "highlight": "Highlighter",
+      "accessibility": "Accessibility"
+    },
+    "general": {
+      "api": {
+        "title": "🔑 API Configuration",
+        "description": "Optional: Bring your own OpenAI API key for unlimited translations",
+        "note": "💡 Note: The server provides free translations with shared API keys. You can add your own OpenAI API key here for unlimited personal usage and faster responses.",
+        "inputLabel": "OpenAI API Key (Optional)",
+        "placeholder": "sk-... (leave empty to use server key)"
+      },
+      "theme": {
+        "label": "Theme",
+        "options": {
+          "system": "🌓 System Default",
+          "light": "☀️ Light",
+          "dark": "🌙 Dark"
+        }
+      },
+      "model": {
+        "label": "Preferred Model",
+        "options": {
+          "gpt-4o-mini": "GPT-4o Mini (Fast)",
+          "gpt-4": "GPT-4 (Powerful)",
+          "gpt-3.5-turbo": "GPT-3.5 Turbo (Legacy)"
+        }
+      },
+      "targetLanguage": {
+        "label": "Target Language",
+        "options": {
+          "English": "🇬🇧 English",
+          "Japanese": "🇯🇵 Japanese"
+        }
+      },
+      "uiLanguage": {
+        "label": "UI Language",
+        "description": "Choose the language for the interface",
+        "options": {
+          "en": "🇺🇸 English",
+          "ja": "🇯🇵 日本語"
+        }
+      },
+      "cefr": {
+        "label": "Target CEFR Level",
+        "options": {
+          "0": "A1 (Beginner)",
+          "1": "A2 (Elementary)",
+          "2": "B1 (Intermediate)",
+          "3": "B2 (Upper Intermediate)",
+          "4": "C1 (Advanced)",
+          "5": "C2 (Proficient)"
+        }
+      },
+      "autoload": {
+        "label": "Autoload Translations",
+        "description": "Automatically load translations when opening a book"
+      },
+      "cacheTranslations": {
+        "label": "Cache Translations",
+        "description": "Store last translation per chapter for offline use"
+      },
+      "fontSize": {
+        "label": "Font Size"
+      }
+    },
+    "highlight": {
+      "jpdb": {
+        "title": "JPDB API Key",
+        "description": "Optional: Enter your JPDB API key to use JPDB parsing, otherwise vocab and known words cannot be saved.",
+        "linkText": "Settings",
+        "linkPrefix": "Visit ",
+        "linkSuffix": " on JPDB.io to find your API key after logging in.",
+        "inputLabel": "JPDB API Key",
+        "placeholder": "Enter your JPDB API key"
+      },
+      "deck": {
+        "mining": "Mining Deck ID",
+        "forq": "FORQ Deck ID",
+        "blacklist": "Blacklist Deck ID",
+        "neverForget": "Never Forget Deck ID",
+        "placeholder": "e.g., 12345"
+      },
+      "context": {
+        "label": "Context Sentences"
+      },
+      "options": {
+        "autoAdd": {
+          "label": "Add to FORQ When Mining",
+          "description": "Automatically add mined cards to your FORQ deck"
+        },
+        "preferDueCards": {
+          "label": "Prefer Due Cards",
+          "description": "Prioritize due cards in translation suggestions"
+        }
+      }
+    },
+    "accessibility": {
+      "popup": {
+        "label": "Show Popup on Hover",
+        "description": "Display word information when hovering"
+      },
+      "touchscreen": {
+        "label": "Touchscreen Support",
+        "description": "Enable touch interactions for mobile devices"
+      },
+      "disableFade": {
+        "label": "Disable Fade Animation",
+        "description": "Remove fade effects for better performance"
+      },
+      "customWordCss": {
+        "label": "Custom Word CSS",
+        "placeholder": ".word { color: blue; }"
+      },
+      "customPopupCss": {
+        "label": "Custom Popup CSS",
+        "placeholder": ".popup { background: white; }"
+      },
+      "cloudStatus": {
+        "title": "Cloud Sync Active",
+        "description": "Settings automatically load from Google Drive when you sign in and save when changed. Manual buttons below can force sync if needed."
+      },
+      "buttons": {
+        "forceSave": "Force Save Now",
+        "reload": "Reload from Cloud",
+        "export": "Export to File",
+        "import": "Import from File",
+        "saving": "Saving...",
+        "loading": "Loading..."
+      }
+    },
+    "footer": {
+      "translate": "Translate",
+      "translateCefr": "Translate (CEFR)",
+      "translateShort": "CEFR",
+      "translating": "Translating...",
+      "close": "Close"
+    },
+    "toasts": {
+      "save": {
+        "signInRequired": "Please sign in to save settings to cloud storage",
+        "success": "Settings manually saved to Google Drive successfully!",
+        "failure": "Failed to save settings to Google Drive"
+      },
+      "load": {
+        "signInRequired": "Please sign in to load settings from cloud storage",
+        "success": "Settings loaded from Google Drive successfully!",
+        "missing": "No settings.json file found in Google Drive",
+        "failure": "Failed to load settings from Google Drive"
+      },
+      "export": {
+        "success": "Settings exported successfully!"
+      },
+      "import": {
+        "success": "Settings imported from file successfully!",
+        "failure": "Failed to import settings. Please check the file format."
+      }
+    }
+  },
+  "bookLibrary": {
+    "title": "My Library",
+    "buttons": {
+      "openCloud": "Open cloud storage folder",
+      "sync": "Sync library",
+      "manageFolders": "Manage folders",
+      "signIn": "Sign In",
+      "addBooks": "Add Books",
+      "uploadFirst": "Upload Your First Book"
+    },
+    "signInPrompt": {
+      "title": "Sign in to access your library",
+      "description": "Sign in to view and manage your books"
+    },
+    "googleConnecting": {
+      "title": "Connecting to Google Drive",
+      "description": "Since you signed in with Google, we're automatically connecting to your Google Drive to load your books.",
+      "takingTooLong": "Taking too long?",
+      "manualButton": "Connect Manually"
+    },
+    "localMode": {
+      "title": "Local Library Mode",
+      "description": "You're using local storage. To sync your books across devices, sign in with Google next time.",
+      "info": "You can still upload and read books - they'll be stored locally on this device."
+    },
+    "loading": {
+      "title": "Loading your books...",
+      "description": "We're fetching your library from Google Drive"
+    },
+    "empty": {
+      "title": "No books yet",
+      "description": "Upload your first book file to get started",
+      "supportedFormats": "Supported formats: EPUB, TXT, DOCX, PDF"
+    }
+  }
+}
