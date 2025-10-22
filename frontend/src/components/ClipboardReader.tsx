@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { initialize as initializeJpdb, highlightContent } from "~/index.ts";
 import { useSettings } from "../contexts/SettingsContext";
 import { useAppData } from "../contexts/AppDataContext";
+import { useTranslation } from "react-i18next";
 
 // Simple sanitizer to wrap plain text in paragraphs
 function textToHtml(text: string): string {
@@ -32,6 +33,7 @@ function sanitizeClipboardText(input: string): string {
 }
 
 export function ClipboardReader() {
+  const { t } = useTranslation();
   const [rawText, setRawText] = useState<string>("");
   const [html, setHtml] = useState<string>("");
   const [entries, setEntries] = useState<Array<{ id: string; html: string; raw: string }>>([]);
@@ -181,24 +183,24 @@ export function ClipboardReader() {
       if (text) {
         const changed = ingestText(text);
         if (changed) {
-          toast.success("Pasted from clipboard");
+          toast.success(t('clipboard.toasts.pasted'));
         }
       }
     };
     window.addEventListener('paste', handlePaste as unknown as EventListener);
     return () => window.removeEventListener('paste', handlePaste as unknown as EventListener);
-  }, [ingestText]);
+  }, [ingestText, t]);
 
   const enableClipboardSync = async () => {
     // Trigger a permission prompt (when possible) by reading in direct response to a user gesture
     try {
       const text = await navigator.clipboard.readText();
       const changed = ingestText(text);
-      toast.success(changed ? 'Clipboard permission granted' : 'Clipboard already up to date');
+      toast.success(changed ? t('clipboard.toasts.permissionGranted') : t('clipboard.toasts.permissionUpToDate'));
     } catch (e: any) {
       // Fallback to manual paste area
       pasteAreaRef.current?.focus();
-      toast.error('Clipboard blocked. Press Ctrl+V to paste into the box below.');
+      toast.error(t('clipboard.toasts.blocked'));
     }
   };
 
@@ -207,10 +209,10 @@ export function ClipboardReader() {
       const text = await navigator.clipboard.readText();
       const changed = ingestText(text);
       if (changed) {
-        toast.success("Pasted from clipboard");
+        toast.success(t('clipboard.toasts.pasted'));
       }
     } catch (e) {
-      toast.error("Clipboard access denied. Click the page and try again.");
+      toast.error(t('clipboard.toasts.denied'));
     }
   };
 
@@ -254,11 +256,11 @@ export function ClipboardReader() {
       const text = appendMode ? (sortAscending ? [...entries].reverse() : entries).map(e => e.raw).join('\n\n') : rawText;
       const cleaned = sanitizeClipboardText(text);
       if (!cleaned) {
-        toast.error('Nothing to save');
+        toast.error(t('clipboard.toasts.nothingToSave'));
         return;
       }
       if (!isAuthenticated) {
-        try { await signIn(); } catch { toast.error('Please sign in to upload books'); return; }
+        try { await signIn(); } catch { toast.error(t('clipboard.toasts.signInRequired')); return; }
       }
       const title = buildTitleFromText(cleaned);
       const fileName = `${title}.txt`;
@@ -266,11 +268,11 @@ export function ClipboardReader() {
       const meta = { title, fileType: 'txt' } as any;
       const result = await uploadBook(file, meta);
       if (result) {
-        toast.success('Saved to your library');
+        toast.success(t('clipboard.toasts.saved'));
       }
     } catch (e: any) {
       console.error('Save to library failed:', e);
-      toast.error('Failed to save to library');
+      toast.error(t('clipboard.toasts.saveFailed'));
     }
   };
 
@@ -279,16 +281,16 @@ export function ClipboardReader() {
       <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           <h1 className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
-            Clipboard Reader
+            {t('clipboard.title')}
           </h1>
           <span className="text-xs text-gray-500 ml-2 truncate">
-            {rawText ? `${rawText.length} chars` : "No clipboard text yet"}
+            {rawText ? t('clipboard.chars', { count: rawText.length }) : t('clipboard.noText')}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {!isSecure && (
-            <span className="text-xs text-red-600 dark:text-red-400" title="Clipboard requires HTTPS or localhost">
-              Insecure context
+            <span className="text-xs text-red-600 dark:text-red-400" title={t('clipboard.insecureTitle')}>
+              {t('clipboard.insecure')}
             </span>
           )}
           {(permissionState === 'denied' || permissionState === 'unknown') && isSecure && (
@@ -296,33 +298,33 @@ export function ClipboardReader() {
               onClick={enableClipboardSync}
               className="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
             >
-              Enable Clipboard
+              {t('clipboard.enable')}
             </button>
           )}
           <button
             onClick={handlePasteClick}
             className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
           >
-            Paste Now
+            {t('clipboard.pasteNow')}
           </button>
           <button
             onClick={saveToLibrary}
             className="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700"
-            title="Save current clipboard text as a .txt book in your library"
+            title={t('clipboard.saveTitle')}
           >
-            Save to Library
+            {t('clipboard.save')}
           </button>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={!canAutoRefresh ? 'Grant clipboard permission to enable auto-refresh' : ''}>
+          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={!canAutoRefresh ? t('clipboard.grantTip') : ''}>
             <input
               type="checkbox"
               checked={enabled && canAutoRefresh}
               onChange={(e) => setEnabled(e.target.checked)}
               disabled={!canAutoRefresh}
             />
-            Auto-refresh
+            {t('clipboard.autoRefresh')}
           </label>
           <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
-            Interval
+            {t('clipboard.interval')}
             <select
               value={pollMs}
               onChange={(e) => setPollMs(Number(e.target.value))}
@@ -334,28 +336,28 @@ export function ClipboardReader() {
               <option value={5000}>5s</option>
             </select>
           </label>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Prepend new pastes at the top">
+          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={t('clipboard.stack')}>
             <input
               type="checkbox"
               checked={appendMode}
               onChange={(e) => handleToggleAppend(e.target.checked)}
             />
-            Stack pastes
+            {t('clipboard.stack')}
           </label>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Display oldest entries first">
+          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={t('clipboard.oldestFirst')}>
             <input
               type="checkbox"
               checked={sortAscending}
               onChange={(e) => setSortAscending(e.target.checked)}
               disabled={!appendMode}
             />
-            Oldest first
+            {t('clipboard.oldestFirst')}
           </label>
           <button
             onClick={handleClearContent}
             className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
           >
-            Clear
+            {t('clipboard.clear')}
           </button>
           <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
             <input
@@ -363,7 +365,7 @@ export function ClipboardReader() {
               checked={jpdbHighlighted}
               onChange={(e) => setJpdbHighlighted(e.target.checked)}
             />
-            JPDB highlight
+            {t('clipboard.highlight')}
           </label>
         </div>
       </div>
@@ -390,15 +392,15 @@ export function ClipboardReader() {
             <div className="text-sm text-gray-500 dark:text-gray-400 py-8">
               {(permissionState === 'denied' || !isSecure || permissionState === 'unknown') ? (
                 <>
-                  <div className="mb-2">Browser blocked clipboard access.</div>
+                  <div className="mb-2">{t('clipboard.blockedTitle')}</div>
                   <ol className="list-decimal ml-5 space-y-1">
-                    <li>Ensure you're on HTTPS or localhost.</li>
-                    {isSecure && <li>Click "Enable Clipboard" and allow the prompt.</li>}
-                    <li>Or click the area below and press Ctrl+V.</li>
+                    <li>{t('clipboard.blockedSteps.https')}</li>
+                    {isSecure && <li>{t('clipboard.blockedSteps.enable')}</li>}
+                    <li>{t('clipboard.blockedSteps.paste')}</li>
                   </ol>
                 </>
               ) : (
-                <>Click "Paste Now" to load clipboard text, or press Ctrl+V.</>
+                <>{t('clipboard.hint')}</>
               )}
             </div>
           )}
@@ -406,7 +408,7 @@ export function ClipboardReader() {
             ref={pasteAreaRef}
             className="w-full mt-4 p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100"
             rows={3}
-            placeholder="Or focus here and press Ctrl+V..."
+            placeholder={t('clipboard.blockedSteps.paste')}
             onPaste={(e) => {
               const text = e.clipboardData?.getData('text') || '';
               if (text) {

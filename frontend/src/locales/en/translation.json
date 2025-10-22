@@ -385,5 +385,45 @@
       "noJlpt": "No JLPT",
       "none": "None"
     }
+  },
+  "clipboard": {
+    "title": "Clipboard Reader",
+    "chars": "{{count}} chars",
+    "noText": "No clipboard text yet",
+    "insecure": "Insecure context",
+    "insecureTitle": "Clipboard requires HTTPS or localhost",
+    "enable": "Enable Clipboard",
+    "pasteNow": "Paste Now",
+    "save": "Save to Library",
+    "saveTitle": "Save current clipboard text as a .txt book in your library",
+    "autoRefresh": "Auto-refresh",
+    "grantTip": "Grant clipboard permission to enable auto-refresh",
+    "interval": "Interval",
+    "stack": "Stack pastes",
+    "oldestFirst": "Oldest first",
+    "clear": "Clear",
+    "highlight": "JPDB highlight",
+    "entry": "Entry",
+    "removeEntry": "Remove this entry",
+    "remove": "Remove",
+    "blockedTitle": "Browser blocked clipboard access.",
+    "blockedSteps": {
+      "https": "Ensure you're on HTTPS or localhost.",
+      "enable": "Click \"Enable Clipboard\" and allow the prompt.",
+      "paste": "Or click the area below and press Ctrl+V."
+    },
+    "hint": "Click \"Paste Now\" to load clipboard text, or press Ctrl+V.",
+    "toasts": {
+      "pasted": "Pasted from clipboard",
+      "permissionGranted": "Clipboard permission granted",
+      "permissionUpToDate": "Clipboard already up to date",
+      "blocked": "Clipboard blocked. Press Ctrl+V to paste into the box below.",
+      "denied": "Clipboard access denied. Click the page and try again.",
+      "nothingToSave": "Nothing to save",
+      "signInRequired": "Please sign in to upload books",
+      "saved": "Saved to your library",
+      "saveFailed": "Failed to save to library"
+    },
+    "titleFrom": "Clipboard Paste"
   }
 }

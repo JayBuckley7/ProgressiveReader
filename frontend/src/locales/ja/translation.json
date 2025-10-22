@@ -385,5 +385,45 @@
       "noJlpt": "JLPT なし",
       "none": "なし"
     }
+  },
+  "clipboard": {
+    "title": "クリップボードリーダー",
+    "chars": "{{count}} 文字",
+    "noText": "クリップボードにまだテキストがありません",
+    "insecure": "安全でないコンテキスト",
+    "insecureTitle": "クリップボードには HTTPS または localhost が必要です",
+    "enable": "クリップボードを有効化",
+    "pasteNow": "今すぐ貼り付け",
+    "save": "ライブラリに保存",
+    "saveTitle": "現在のクリップボードを .txt としてライブラリに保存",
+    "autoRefresh": "自動更新",
+    "grantTip": "自動更新を有効にするには権限を付与してください",
+    "interval": "間隔",
+    "stack": "上に積む",
+    "oldestFirst": "古い順",
+    "clear": "クリア",
+    "highlight": "JPDB ハイライト",
+    "entry": "項目",
+    "removeEntry": "この項目を削除",
+    "remove": "削除",
+    "blockedTitle": "ブラウザーがクリップボードアクセスをブロックしました。",
+    "blockedSteps": {
+      "https": "HTTPS または localhost を使用してください。",
+      "enable": "「クリップボードを有効化」をクリックして許可してください。",
+      "paste": "下のエリアをクリックして Ctrl+V を押してください。"
+    },
+    "hint": "「今すぐ貼り付け」をクリックするか、Ctrl+V を押してください。",
+    "toasts": {
+      "pasted": "クリップボードから貼り付けました",
+      "permissionGranted": "クリップボードの権限が付与されました",
+      "permissionUpToDate": "最新の内容です",
+      "blocked": "クリップボードがブロックされました。下のボックスに Ctrl+V で貼り付けてください。",
+      "denied": "クリップボードへのアクセスが拒否されました。ページをクリックして再試行してください。",
+      "nothingToSave": "保存するものがありません",
+      "signInRequired": "本をアップロードするにはサインインしてください",
+      "saved": "ライブラリに保存しました",
+      "saveFailed": "ライブラリへの保存に失敗しました"
+    },
+    "titleFrom": "クリップボード貼り付け"
   }
 }
