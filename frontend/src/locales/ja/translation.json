@@ -1,0 +1,236 @@
+{
+  "app": {
+    "signedOut": {
+      "title": "プログレッシブリーダーへようこそ",
+      "description": "続行するにはサインインしてください"
+    }
+  },
+  "hero": {
+    "defaultName": "読者",
+    "signedIn": {
+      "welcome": "お帰りなさい、{{name}} さん！📖",
+      "journey": "言語学習の旅を続けましょう",
+      "stats": {
+        "books": "蔵書",
+        "wordsSaved": "保存した単語",
+        "wordsMastered": "習得した単語"
+      }
+    },
+    "signedOut": {
+      "animationAlt": "アニメーション",
+      "title": "あなたのデジタル本棚を再発明",
+      "description": "EPUB・PDF・MOBI・DOCX・TXT 形式の本をアップロードして、どこでも読書しながら言語学習を強化できます。",
+      "features": {
+        "smartReading": {
+          "title": "スマートリーディング",
+          "description": "本をアップロードして、学習向けのツール付きで読むことができます"
+        },
+        "vocabTracking": {
+          "title": "語彙トラッキング",
+          "description": "新しい単語を保存し、文脈と訳付きで復習しましょう"
+        },
+        "analytics": {
+          "title": "進捗分析",
+          "description": "読書の進捗と語彙の増加を追跡します"
+        }
+      }
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "tabs": {
+      "general": "全般",
+      "highlight": "ハイライト",
+      "accessibility": "アクセシビリティ"
+    },
+    "general": {
+      "api": {
+        "title": "🔑 API 設定",
+        "description": "無制限に翻訳するために、OpenAI API キーを追加できます",
+        "note": "💡 メモ: サーバーは共有 API キーで無料翻訳を提供します。ここに自身の OpenAI API キーを追加すると、個人利用で無制限かつ高速になります。",
+        "inputLabel": "OpenAI API キー（任意）",
+        "placeholder": "sk-...（空欄でサーバーキーを使用）"
+      },
+      "theme": {
+        "label": "テーマ",
+        "options": {
+          "system": "🌓 システム設定",
+          "light": "☀️ ライト",
+          "dark": "🌙 ダーク"
+        }
+      },
+      "model": {
+        "label": "推奨モデル",
+        "options": {
+          "gpt-4o-mini": "GPT-4o Mini（高速）",
+          "gpt-4": "GPT-4（高性能）",
+          "gpt-3.5-turbo": "GPT-3.5 Turbo（レガシー）"
+        }
+      },
+      "targetLanguage": {
+        "label": "学習対象言語",
+        "options": {
+          "English": "🇬🇧 英語",
+          "Japanese": "🇯🇵 日本語"
+        }
+      },
+      "uiLanguage": {
+        "label": "UI 言語",
+        "description": "インターフェースの表示言語を選択",
+        "options": {
+          "en": "🇺🇸 English",
+          "ja": "🇯🇵 日本語"
+        }
+      },
+      "cefr": {
+        "label": "目標 CEFR レベル",
+        "options": {
+          "0": "A1（初心者）",
+          "1": "A2（初級）",
+          "2": "B1（中級）",
+          "3": "B2（中上級）",
+          "4": "C1（上級）",
+          "5": "C2（熟達）"
+        }
+      },
+      "autoload": {
+        "label": "翻訳を自動読み込み",
+        "description": "本を開いたときに自動で翻訳を取得します"
+      },
+      "cacheTranslations": {
+        "label": "翻訳をキャッシュ",
+        "description": "各章の最新翻訳を保存してオフラインでも利用"
+      },
+      "fontSize": {
+        "label": "フォントサイズ"
+      }
+    },
+    "highlight": {
+      "jpdb": {
+        "title": "JPDB API キー",
+        "description": "任意: JPDB 解析を利用するには API キーを入力してください。入力しない場合は語彙や既知語を保存できません。",
+        "linkText": "設定",
+        "linkPrefix": "次のリンク",
+        "linkSuffix": " を開き、ログイン後に API キーを確認してください。",
+        "inputLabel": "JPDB API キー",
+        "placeholder": "JPDB API キーを入力"
+      },
+      "deck": {
+        "mining": "マイニングデッキ ID",
+        "forq": "FORQ デッキ ID",
+        "blacklist": "ブラックリスト デッキ ID",
+        "neverForget": "Never Forget デッキ ID",
+        "placeholder": "例: 12345"
+      },
+      "context": {
+        "label": "文脈の文数"
+      },
+      "options": {
+        "autoAdd": {
+          "label": "マイニング時に FORQ へ追加",
+          "description": "抽出したカードを自動的に FORQ デッキへ追加します"
+        },
+        "preferDueCards": {
+          "label": "期限のカードを優先",
+          "description": "翻訳候補で期限が来たカードを優先します"
+        }
+      }
+    },
+    "accessibility": {
+      "popup": {
+        "label": "ホバーでポップアップ表示",
+        "description": "ホバー時に単語情報を表示します"
+      },
+      "touchscreen": {
+        "label": "タッチスクリーン対応",
+        "description": "モバイル向けのタッチ操作を有効にします"
+      },
+      "disableFade": {
+        "label": "フェード演出を無効化",
+        "description": "パフォーマンス向上のためフェード効果を外します"
+      },
+      "customWordCss": {
+        "label": "カスタム単語 CSS",
+        "placeholder": ".word { color: blue; }"
+      },
+      "customPopupCss": {
+        "label": "カスタムポップアップ CSS",
+        "placeholder": ".popup { background: white; }"
+      },
+      "cloudStatus": {
+        "title": "クラウド同期が有効",
+        "description": "サインインすると Google Drive から自動で設定を読み込み、変更時に保存します。必要に応じて下のボタンで手動同期できます。"
+      },
+      "buttons": {
+        "forceSave": "今すぐ保存",
+        "reload": "クラウドから再読み込み",
+        "export": "ファイルに書き出す",
+        "import": "ファイルから読み込む",
+        "saving": "保存中...",
+        "loading": "読み込み中..."
+      }
+    },
+    "footer": {
+      "translate": "翻訳",
+      "translateCefr": "翻訳（CEFR）",
+      "translateShort": "CEFR",
+      "translating": "翻訳中...",
+      "close": "閉じる"
+    },
+    "toasts": {
+      "save": {
+        "signInRequired": "クラウドに保存するにはサインインしてください",
+        "success": "Google Drive に手動保存しました！",
+        "failure": "Google Drive への保存に失敗しました"
+      },
+      "load": {
+        "signInRequired": "クラウドから読み込むにはサインインしてください",
+        "success": "Google Drive から設定を読み込みました！",
+        "missing": "Google Drive に settings.json が見つかりません",
+        "failure": "Google Drive からの読み込みに失敗しました"
+      },
+      "export": {
+        "success": "設定をファイルに書き出しました！"
+      },
+      "import": {
+        "success": "設定ファイルの読み込みに成功しました！",
+        "failure": "設定の読み込みに失敗しました。ファイル形式を確認してください。"
+      }
+    }
+  },
+  "bookLibrary": {
+    "title": "マイライブラリ",
+    "buttons": {
+      "openCloud": "クラウドフォルダーを開く",
+      "sync": "ライブラリを同期",
+      "manageFolders": "フォルダーを管理",
+      "signIn": "サインイン",
+      "addBooks": "本を追加",
+      "uploadFirst": "最初の本をアップロード"
+    },
+    "signInPrompt": {
+      "title": "ライブラリにアクセスするにはサインイン",
+      "description": "本を表示・管理するにはサインインしてください"
+    },
+    "googleConnecting": {
+      "title": "Google Drive に接続中",
+      "description": "Google でサインインしたため、自動的に Google Drive に接続して本を読み込んでいます。",
+      "takingTooLong": "時間がかかっていますか？",
+      "manualButton": "手動で接続"
+    },
+    "localMode": {
+      "title": "ローカルライブラリモード",
+      "description": "現在はローカルストレージを使用しています。端末間で同期するには、次回 Google でサインインしてください。",
+      "info": "本をアップロードして読むことは可能で、端末内に保存されます。"
+    },
+    "loading": {
+      "title": "本を読み込み中...",
+      "description": "Google Drive からライブラリを取得しています"
+    },
+    "empty": {
+      "title": "まだ本がありません",
+      "description": "最初の本をアップロードして始めましょう",
+      "supportedFormats": "対応形式: EPUB・TXT・DOCX・PDF"
+    }
+  }
+}

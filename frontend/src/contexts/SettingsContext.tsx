@@ -3,6 +3,7 @@ import { useAppData } from "./AppDataContext";
 import { authManager } from "../services/authManager";
 import { storageService } from "../services/storageService";
 import { toast } from "sonner";
+import i18n from "../i18n";
 
 type Theme = "light" | "dark" | "system";
 
@@ -14,6 +15,7 @@ interface Settings {
   jlptEnabled: boolean;
   autoTranslate: boolean;
   targetLanguage: string;
+  uiLanguage: string;
   customCss?: string;
   showPopupOnHover?: boolean;
   touchscreenSupport?: boolean;
@@ -37,6 +39,7 @@ const defaultSettings: Settings = {
   jlptEnabled: false,
   autoTranslate: false,
   targetLanguage: "English",
+  uiLanguage: "en",
   customCss: "",
   showPopupOnHover: true,
   touchscreenSupport: true,
@@ -108,7 +111,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (stored) {
       setCurrentSettings(prev => {
         const updated = { ...prev, ...stored };
-        
+
+        if (!updated.uiLanguage) {
+          updated.uiLanguage = defaultSettings.uiLanguage;
+        }
+
         // Sync accessibility settings to localStorage for JPDB integration
         localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
@@ -117,7 +124,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 Initial sync of accessibility settings to localStorage');
 
         setSettingsStorage(updated);
-        
+
+        if (updated.uiLanguage) {
+          i18n.changeLanguage(updated.uiLanguage);
+        }
+
         return updated;
       });
     } else {
@@ -128,6 +139,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
       console.log('🔔 Initial sync of default accessibility settings to localStorage');
       setSettingsStorage(defaultSettings);
+      i18n.changeLanguage(defaultSettings.uiLanguage);
     }
   }, []);
 
@@ -154,10 +166,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               if (data.userTheme !== undefined) basicSettingsUpdates.theme = data.userTheme;
               if (data.fontSize !== undefined) basicSettingsUpdates.fontSize = parseInt(data.fontSize) || prev.fontSize;
               if (data.target_language !== undefined) basicSettingsUpdates.targetLanguage = data.target_language;
+              if ((data as any).uiLanguage !== undefined) basicSettingsUpdates.uiLanguage = (data as any).uiLanguage;
               if (data.showPopupOnHover !== undefined) basicSettingsUpdates.showPopupOnHover = data.showPopupOnHover;
               if (data.touchscreenSupport !== undefined) basicSettingsUpdates.touchscreenSupport = data.touchscreenSupport;
               if (data.disableFadeAnimation !== undefined) basicSettingsUpdates.disableFadeAnimation = data.disableFadeAnimation;
-              
+
               const updated = { ...prev, ...basicSettingsUpdates };
               setSettingsCookie(updated);
               setSettingsStorage(updated);
@@ -168,6 +181,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
               localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
               console.log('🔔 Auto-synced all accessibility settings to localStorage');
+
+              if (updated.uiLanguage) {
+                i18n.changeLanguage(updated.uiLanguage);
+              }
 
               // Also set JPDB API key cookies if present in cloud settings
               try {
@@ -276,6 +293,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
       }
 
+      if ('uiLanguage' in updates && updated.uiLanguage) {
+        i18n.changeLanguage(updated.uiLanguage);
+      }
+
       // Auto-save to cloud with debouncing
       if (isAuthenticated && loadedFromCloudRef.current) {
         // Clear any existing timeout
@@ -311,6 +332,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               userTheme: updated.theme,
               fontSize: String(updated.fontSize),
               target_language: updated.targetLanguage,
+              uiLanguage: updated.uiLanguage,
               showPopupOnHover: updated.showPopupOnHover,
               touchscreenSupport: updated.touchscreenSupport,
               disableFadeAnimation: updated.disableFadeAnimation,
@@ -377,6 +399,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (!settings) return;
     document.documentElement.style.setProperty('--reader-font-size', `${settings.fontSize}px`);
   }, [settings?.fontSize]);
+
+  useEffect(() => {
+    if (settings?.uiLanguage) {
+      i18n.changeLanguage(settings.uiLanguage);
+    }
+  }, [settings?.uiLanguage]);
 
   // Apply custom CSS
   useEffect(() => {
