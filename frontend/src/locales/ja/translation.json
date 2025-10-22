@@ -232,5 +232,158 @@
       "description": "最初の本をアップロードして始めましょう",
       "supportedFormats": "対応形式: EPUB・TXT・DOCX・PDF"
     }
+  },
+  "nav": {
+    "appNameShort": "ProgReader",
+    "appNameFull": "Progressive Reader",
+    "appIconAlt": "アプリのアイコン",
+    "library": "ライブラリ",
+    "vocabulary": "語彙",
+    "clipboard": "クリップボード",
+    "signIn": "サインイン",
+    "goLibraryAria": "ライブラリへ移動",
+    "libraryPageAria": "ライブラリページ",
+    "vocabularyPageAria": "語彙ページ",
+    "clipboardPageAria": "クリップボードページ"
+  },
+  "reader": {
+    "chapterNumber": "第{{number}}章",
+    "pdf": {
+      "loading": "PDF を読み込み中..."
+    },
+    "error": {
+      "loading": "本の読み込みエラー:",
+      "back": "ライブラリへ戻る"
+    },
+    "badges": {
+      "translated": "翻訳済み",
+      "autoloaded": "自動読み込み",
+      "native": "原文"
+    },
+    "header": {
+      "back": "ライブラリへ戻る",
+      "settings": "設定",
+      "clearTranslationTitle": "原文を表示"
+    },
+    "controls": {
+      "prev": "前の章",
+      "next": "次の章",
+      "translate": "この章を翻訳",
+      "ttsStart": "読み上げ開始",
+      "ttsStop": "読み上げ停止",
+      "bookmarkAdd": "しおりを追加",
+      "toc": "目次としおり"
+    },
+    "toc": {
+      "menu": "メニュー",
+      "tab": {
+        "toc": "目次",
+        "bookmarks": "しおり"
+      },
+      "empty": "しおりはまだありません。"
+    }
+  },
+  "vocabulary": {
+    "header": {
+      "title": "📝 語彙",
+      "subtitle": "学習の進捗を記録・復習しましょう"
+    },
+    "stats": {
+      "total": "総単語数",
+      "mastered": "習得",
+      "learning": "学習中"
+    },
+    "dueCards": {
+      "title": "JPDB 期限カード",
+      "none": "期限カードは読み込まれていません。",
+      "fetch": "期限カードを取得",
+      "fetched": "{{count}} 件の期限カードを取得"
+    },
+    "decks": {
+      "title": "📚 語彙デッキ",
+      "description": "JPDB のデッキを選択してカードを管理します。"
+    },
+    "controls": {
+      "searchPlaceholder": "単語を検索...",
+      "allLanguages": "すべての言語",
+      "filterAll": "すべての単語",
+      "filterLearning": "学習中",
+      "filterMastered": "習得",
+      "addWord": "+ 単語を追加"
+    },
+    "empty": {
+      "noneYet": "まだ語彙がありません",
+      "noneFound": "単語が見つかりません",
+      "promptAdd": "読書しながら単語を追加して語彙を増やしましょう"
+    },
+    "card": {
+      "mastered": "✓ 習得",
+      "learning": "学習中"
+    },
+    "addModal": {
+      "title": "新しい単語を追加",
+      "labels": {
+        "word": "単語 *",
+        "translation": "訳 *",
+        "language": "言語",
+        "book": "本（任意）",
+        "difficulty": "難易度",
+        "context": "文脈（任意）"
+      },
+      "placeholders": {
+        "word": "単語を入力",
+        "translation": "訳を入力",
+        "context": "その単語を見つけた文や文脈",
+        "selectBook": "本を選択",
+        "selectDifficulty": "難易度を選択"
+      },
+      "difficultyOptions": {
+        "easy": "易しい",
+        "medium": "普通",
+        "hard": "難しい"
+      },
+      "buttons": {
+        "cancel": "キャンセル",
+        "submit": "単語を追加",
+        "submitting": "追加中..."
+      }
+    }
+  },
+  "admin": {
+    "header": "管理パネル",
+    "loading": {
+      "checking": "管理者権限を確認中..."
+    },
+    "unauthorized": {
+      "title": "アクセス拒否",
+      "message": "このページにアクセスする管理者権限がありません。",
+      "message2": "管理者のみが API キーやシステム設定を管理できます。",
+      "back": "ライブラリへ戻る"
+    },
+    "keys": {
+      "title": "🔑 OpenAI API キー",
+      "addLabel": "OpenAI API キーを追加",
+      "placeholder": "sk-...",
+      "addButton": "キーを追加",
+      "current": "現在のキー（{{count}} 件）",
+      "none": "設定されている API キーはありません",
+      "remove": "削除"
+    },
+    "kanji": {
+      "title": "🔥 漢字 JLPT レベル編集",
+      "searchLabel": "漢字を検索",
+      "placeholder": "漢字または意味を入力（例: 誰 / who）",
+      "search": "検索",
+      "results": "検索結果",
+      "editTitle": "編集: {{kanji}}",
+      "meanings": "意味:",
+      "kun": "訓読み:",
+      "on": "音読み:",
+      "currentJlpt": "現在の JLPT:",
+      "newJlpt": "新しい JLPT レベル:",
+      "update": "更新",
+      "noJlpt": "JLPT なし",
+      "none": "なし"
+    }
   }
 }

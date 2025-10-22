@@ -232,5 +232,158 @@
       "description": "Upload your first book file to get started",
       "supportedFormats": "Supported formats: EPUB, TXT, DOCX, PDF"
     }
+  },
+  "nav": {
+    "appNameShort": "ProgReader",
+    "appNameFull": "Progressive Reader",
+    "appIconAlt": "App icon",
+    "library": "Library",
+    "vocabulary": "Vocabulary",
+    "clipboard": "Clipboard",
+    "signIn": "Sign in",
+    "goLibraryAria": "Go to library",
+    "libraryPageAria": "Library page",
+    "vocabularyPageAria": "Vocabulary page",
+    "clipboardPageAria": "Clipboard page"
+  },
+  "reader": {
+    "chapterNumber": "Chapter {{number}}",
+    "pdf": {
+      "loading": "Loading PDF..."
+    },
+    "error": {
+      "loading": "Error loading book:",
+      "back": "Back to Library"
+    },
+    "badges": {
+      "translated": "Translated",
+      "autoloaded": "Auto-loaded",
+      "native": "Native"
+    },
+    "header": {
+      "back": "Back to Library",
+      "settings": "Settings",
+      "clearTranslationTitle": "Show original text"
+    },
+    "controls": {
+      "prev": "Previous chapter",
+      "next": "Next chapter",
+      "translate": "Translate current chapter",
+      "ttsStart": "Start text to speech",
+      "ttsStop": "Stop text to speech",
+      "bookmarkAdd": "Add bookmark",
+      "toc": "Table of contents and bookmarks"
+    },
+    "toc": {
+      "menu": "Menu",
+      "tab": {
+        "toc": "Table of Contents",
+        "bookmarks": "Bookmarks"
+      },
+      "empty": "No bookmarks yet."
+    }
+  },
+  "vocabulary": {
+    "header": {
+      "title": "📝 Vocabulary",
+      "subtitle": "Track and review your language learning progress"
+    },
+    "stats": {
+      "total": "Total Words",
+      "mastered": "Mastered",
+      "learning": "Learning"
+    },
+    "dueCards": {
+      "title": "JPDB Due Cards",
+      "none": "No due cards loaded.",
+      "fetch": "Fetch Due Cards",
+      "fetched": "Fetched {{count}} due cards"
+    },
+    "decks": {
+      "title": "📚 Vocabulary Decks",
+      "description": "Select a JPDB deck to view and manage your vocabulary cards."
+    },
+    "controls": {
+      "searchPlaceholder": "Search words...",
+      "allLanguages": "All Languages",
+      "filterAll": "All Words",
+      "filterLearning": "Learning",
+      "filterMastered": "Mastered",
+      "addWord": "+ Add Word"
+    },
+    "empty": {
+      "noneYet": "No vocabulary yet",
+      "noneFound": "No words found",
+      "promptAdd": "Start adding words as you read to build your vocabulary"
+    },
+    "card": {
+      "mastered": "✓ Mastered",
+      "learning": "Learning"
+    },
+    "addModal": {
+      "title": "Add New Word",
+      "labels": {
+        "word": "Word *",
+        "translation": "Translation *",
+        "language": "Language",
+        "book": "Book (Optional)",
+        "difficulty": "Difficulty",
+        "context": "Context (Optional)"
+      },
+      "placeholders": {
+        "word": "Enter the word",
+        "translation": "Enter the translation",
+        "context": "Sentence or context where you found this word",
+        "selectBook": "Select a book",
+        "selectDifficulty": "Select difficulty"
+      },
+      "difficultyOptions": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "submit": "Add Word",
+        "submitting": "Adding..."
+      }
+    }
+  },
+  "admin": {
+    "header": "Admin Panel",
+    "loading": {
+      "checking": "Checking admin permissions..."
+    },
+    "unauthorized": {
+      "title": "Access Denied",
+      "message": "You do not have admin privileges to access this page.",
+      "message2": "Only administrators can manage API keys and system settings.",
+      "back": "Return to Library"
+    },
+    "keys": {
+      "title": "🔑 OpenAI API Keys",
+      "addLabel": "Add OpenAI API Key",
+      "placeholder": "sk-...",
+      "addButton": "Add Key",
+      "current": "Current Keys ({{count}})",
+      "none": "No API keys configured",
+      "remove": "Remove"
+    },
+    "kanji": {
+      "title": "🔥 Kanji JLPT Level Editor",
+      "searchLabel": "Search Kanji",
+      "placeholder": "Enter kanji or meaning (e.g., 誰 or 'who')",
+      "search": "Search",
+      "results": "Search Results",
+      "editTitle": "Edit Kanji: {{kanji}}",
+      "meanings": "Meanings:",
+      "kun": "Kun:",
+      "on": "On:",
+      "currentJlpt": "Current JLPT:",
+      "newJlpt": "New JLPT Level:",
+      "update": "Update",
+      "noJlpt": "No JLPT",
+      "none": "None"
+    }
   }
 }

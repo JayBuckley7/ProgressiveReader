@@ -8,10 +8,12 @@ interface TopActionsProps {
 }
 
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
   const navigate = useNavigate();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -22,8 +24,8 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
             onClick={() => navigate("/")}
             className="flex items-center"
           >
-            <img src="/icon.png" alt="App icon" className="w-5 h-5 mr-1.5" />
-            <span className="text-sm font-bold text-gray-900">ProgReader</span>
+            <img src="/icon.png" alt={t('nav.appIconAlt')} className="w-5 h-5 mr-1.5" />
+            <span className="text-sm font-bold text-gray-900">{t('nav.appNameShort')}</span>
           </button>
           
           <div className="flex items-center gap-2">
@@ -48,7 +50,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   currentPage === "library" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
               >
-                📚 Library
+                📚 {t('nav.library')}
               </button>
               <button
                 onClick={() => { navigate("/vocabulary"); setShowMobileMenu(false); }}
@@ -56,7 +58,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   currentPage === "vocabulary" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
               >
-                📝 Vocabulary
+                📝 {t('nav.vocabulary')}
               </button>
               <button
                 onClick={() => { navigate("/clipboard"); setShowMobileMenu(false); }}
@@ -64,7 +66,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   currentPage === "stats" ? "bg-blue-100 text-blue-700" : "text-gray-600"
                 }`}
               >
-                📋 Clipboard
+                📋 {t('nav.clipboard')}
               </button>
               <div className="pt-2 border-t">
                 <SignOutButton className="w-full text-left px-3 py-2 text-gray-600 rounded text-sm hover:bg-gray-100" />
@@ -76,7 +78,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   onClick={() => { onShowLogin(); setShowMobileMenu(false); }}
                   className="w-full text-left px-3 py-2 bg-blue-600 text-white rounded text-sm"
                 >
-                  📧 Sign in
+                  📧 {t('nav.signIn')}
                 </button>
               )}
             </SignedOut>
@@ -88,11 +90,11 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate("/")}
-              aria-label="Go to library"
+              aria-label={t('nav.goLibraryAria')}
               className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors flex items-center"
             >
-              <img src="/icon.png" alt="App icon" className="w-6 h-6 mr-2" />
-              Progressive Reader
+              <img src="/icon.png" alt={t('nav.appIconAlt')} className="w-6 h-6 mr-2" />
+              {t('nav.appNameFull')}
             </button>
             
           </div>
@@ -102,36 +104,36 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
               <nav className="flex items-center space-x-1">
                 <button
                   onClick={() => navigate("/")}
-                  aria-label="Library page"
+                  aria-label={t('nav.libraryPageAria')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === "library"
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  📚 Library
+                  📚 {t('nav.library')}
                 </button>
                 <button
                   onClick={() => navigate("/vocabulary")}
-                  aria-label="Vocabulary page"
+                  aria-label={t('nav.vocabularyPageAria')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === "vocabulary"
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  📝 Vocabulary
+                  📝 {t('nav.vocabulary')}
                 </button>
                 <button
                   onClick={() => navigate("/clipboard")}
-                  aria-label="Clipboard page"
+                  aria-label={t('nav.clipboardPageAria')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === "stats"
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  📋 Clipboard
+                  📋 {t('nav.clipboard')}
                 </button>
               </nav>
               <SignOutButton className="px-3 py-2 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100" />

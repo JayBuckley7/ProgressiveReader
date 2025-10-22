@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ContentsDrawer } from "./ContentsDrawer";
 import { api } from "~/utils/api.ts";
 import type { ChapterTitle } from "../types";
@@ -35,6 +36,7 @@ function ReaderControlsComponent({
   jpdbHighlighted,
 }: ReaderControlsProps) {
   const [showDrawer, setShowDrawer] = useState(false);
+  const { t } = useTranslation();
 
   const maxLabelLength = useMemo(() => {
     let max = 8; // minimum width in characters
@@ -88,8 +90,8 @@ function ReaderControlsComponent({
               onClick={onPrevChapter}
               disabled={currentChapter === 0}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-              aria-label="Previous chapter"
-              title="Previous chapter"
+              aria-label={t('reader.controls.prev')}
+              title={t('reader.controls.prev')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -104,8 +106,8 @@ function ReaderControlsComponent({
               onClick={onNextChapter}
               disabled={currentChapter + 1 >= totalChapters}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-              aria-label="Next chapter"
-              title="Next chapter"
+              aria-label={t('reader.controls.next')}
+              title={t('reader.controls.next')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -133,8 +135,8 @@ function ReaderControlsComponent({
               onClick={onTranslate}
               disabled={translating}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
-              aria-label="Translate current chapter"
-              title="Translate current chapter"
+              aria-label={t('reader.controls.translate')}
+              title={t('reader.controls.translate')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
@@ -144,8 +146,8 @@ function ReaderControlsComponent({
             <button
               onClick={onToggleTts}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
-              aria-label={ttsActive ? "Stop text to speech" : "Start text to speech"}
-              title={ttsActive ? "Stop text to speech" : "Start text to speech"}
+              aria-label={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
+              title={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5L6 9H2v6h4l5 4V5z" />
@@ -158,8 +160,8 @@ function ReaderControlsComponent({
               onClick={handleAddBookmark}
               disabled={addBookmarkMutation.isLoading}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
-              aria-label="Add bookmark"
-              title="Add bookmark"
+              aria-label={t('reader.controls.bookmarkAdd')}
+              title={t('reader.controls.bookmarkAdd')}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M5 3a2 2 0 00-2 2v13l7-3 7 3V5a2 2 0 00-2-2H5z" />
@@ -169,8 +171,8 @@ function ReaderControlsComponent({
             <button
               onClick={() => setShowDrawer(true)}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
-              aria-label="Table of contents and bookmarks"
-              title="Table of contents and bookmarks"
+              aria-label={t('reader.controls.toc')}
+              title={t('reader.controls.toc')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -187,8 +189,8 @@ function ReaderControlsComponent({
             onClick={onPrevChapter}
             disabled={currentChapter === 0}
             className={`${bigBtn} disabled:opacity-50`}
-            aria-label="Previous chapter"
-            title="Previous chapter"
+            aria-label={t('reader.controls.prev')}
+            title={t('reader.controls.prev')}
           >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -206,8 +208,8 @@ function ReaderControlsComponent({
             onClick={onNextChapter}
             disabled={currentChapter + 1 >= totalChapters}
             className={`${bigBtn} disabled:opacity-50`}
-            aria-label="Next chapter"
-            title="Next chapter"
+            aria-label={t('reader.controls.next')}
+            title={t('reader.controls.next')}
           >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -239,8 +241,8 @@ function ReaderControlsComponent({
             onClick={onTranslate}
             disabled={translating}
             className={`${bigBtn} disabled:opacity-50`}
-            aria-label="Translate current chapter"
-            title="Translate current chapter"
+            aria-label={t('reader.controls.translate')}
+            title={t('reader.controls.translate')}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
@@ -251,8 +253,8 @@ function ReaderControlsComponent({
             <button
             onClick={onToggleTts}
             className={bigBtn}
-            aria-label={ttsActive ? "Stop text to speech" : "Start text to speech"}
-            title={ttsActive ? "Stop text to speech" : "Start text to speech"}
+            aria-label={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
+            title={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
           >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5L6 9H2v6h4l5 4V5z" />
@@ -266,8 +268,8 @@ function ReaderControlsComponent({
             onClick={handleAddBookmark}
             disabled={addBookmarkMutation.isLoading}
             className={`${bigBtn} disabled:opacity-50`}
-            aria-label="Add bookmark"
-            title="Add bookmark"
+            aria-label={t('reader.controls.bookmarkAdd')}
+            title={t('reader.controls.bookmarkAdd')}
           >
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M5 3a2 2 0 00-2 2v13l7-3 7 3V5a2 2 0 00-2-2H5z" />
@@ -278,8 +280,8 @@ function ReaderControlsComponent({
             <button
             onClick={() => setShowDrawer(true)}
             className={bigBtn}
-            aria-label="Table of contents and bookmarks"
-            title="Table of contents and bookmarks"
+            aria-label={t('reader.controls.toc')}
+            title={t('reader.controls.toc')}
           >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

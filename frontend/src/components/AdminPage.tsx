@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthHeaders } from "../utils/auth";
+import { useTranslation } from "react-i18next";
 
 interface KanjiInfo {
   kanji: string;
@@ -14,6 +15,7 @@ interface KanjiInfo {
 
 export function AdminPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [keys, setKeys] = useState<string[]>([]);
   const [newKey, setNewKey] = useState("");
   const [unauthorized, setUnauthorized] = useState(false);
@@ -53,7 +55,7 @@ export function AdminPage() {
       <div className="p-4 max-w-xl mx-auto">
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Checking admin permissions...</span>
+          <span className="ml-3 text-gray-600">{t('admin.loading.checking')}</span>
         </div>
       </div>
     );
@@ -65,16 +67,14 @@ export function AdminPage() {
       <div className="p-4 max-w-xl mx-auto">
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🚫</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h1>
-          <p className="text-red-600 mb-6">You do not have admin privileges to access this page.</p>
-          <p className="text-gray-600 mb-8">
-            Only administrators can manage API keys and system settings.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">{t('admin.unauthorized.title')}</h1>
+          <p className="text-red-600 mb-6">{t('admin.unauthorized.message')}</p>
+          <p className="text-gray-600 mb-8">{t('admin.unauthorized.message2')}</p>
           <button
             onClick={() => navigate("/")}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Return to Library
+            {t('admin.unauthorized.back')}
           </button>
         </div>
       </div>
@@ -187,15 +187,15 @@ export function AdminPage() {
   // Only render admin interface for authorized users
   return (
     <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('admin.header')}</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* OpenAI Key Management */}
         <div className="space-y-6">
-          <h2 className="text-xl font-semibold">🔑 OpenAI API Keys</h2>
+          <h2 className="text-xl font-semibold">{t('admin.keys.title')}</h2>
           
           <div>
-            <label className="block font-medium mb-2">Add OpenAI API Key</label>
+            <label className="block font-medium mb-2">{t('admin.keys.addLabel')}</label>
             <input
               type="text"
               value={newKey}
@@ -207,14 +207,14 @@ export function AdminPage() {
               onClick={addKey}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
-              Add Key
+              {t('admin.keys.addButton')}
             </button>
           </div>
           
           <div>
-            <h3 className="font-medium mb-2">Current Keys ({keys.length})</h3>
+            <h3 className="font-medium mb-2">{t('admin.keys.current', { count: keys.length })}</h3>
             {keys.length === 0 ? (
-              <p className="text-gray-500 text-sm">No API keys configured</p>
+              <p className="text-gray-500 text-sm">{t('admin.keys.none')}</p>
             ) : (
               <ul className="space-y-2">
                 {keys.map((k) => (
@@ -227,7 +227,7 @@ export function AdminPage() {
                       onClick={() => removeKey(k)}
                       className="text-red-600 text-sm hover:text-red-800 transition-colors"
                     >
-                      Remove
+                      {t('admin.keys.remove')}
                     </button>
                   </li>
                 ))}
@@ -238,18 +238,18 @@ export function AdminPage() {
 
         {/* Kanji Management */}
         <div className="space-y-6">
-          <h2 className="text-xl font-semibold">🔥 Kanji JLPT Level Editor</h2>
+          <h2 className="text-xl font-semibold">{t('admin.kanji.title')}</h2>
           
           {/* Search Section */}
           <div>
-            <label className="block font-medium mb-2">Search Kanji</label>
+            <label className="block font-medium mb-2">{t('admin.kanji.searchLabel')}</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={kanjiQuery}
                 onChange={(e) => setKanjiQuery(e.target.value)}
                 className="border rounded flex-1 p-2 bg-white text-gray-900 border-gray-300"
-                placeholder="Enter kanji or meaning (e.g., 誰 or 'who')"
+                placeholder={t('admin.kanji.placeholder')}
                 onKeyPress={(e) => e.key === 'Enter' && searchKanji()}
               />
               <button
@@ -257,7 +257,7 @@ export function AdminPage() {
                 disabled={kanjiLoading}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                {kanjiLoading ? "..." : "Search"}
+                {kanjiLoading ? "..." : t('admin.kanji.search')}
               </button>
             </div>
           </div>
@@ -265,7 +265,7 @@ export function AdminPage() {
           {/* Search Results */}
           {kanjiResults.length > 0 && (
             <div>
-              <h3 className="font-medium mb-2">Search Results</h3>
+              <h3 className="font-medium mb-2">{t('admin.kanji.results')}</h3>
               <div className="max-h-48 overflow-y-auto border rounded">
                 {kanjiResults.map((kanji) => (
                   <div
@@ -288,7 +288,7 @@ export function AdminPage() {
                       <span className={`text-xs px-2 py-1 rounded ${
                         kanji.jlpt ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
                       }`}>
-                        {kanji.jlpt ? `N${kanji.jlpt}` : 'No JLPT'}
+                        {kanji.jlpt ? `N${kanji.jlpt}` : t('admin.kanji.noJlpt')}
                       </span>
                     </div>
                   </div>
@@ -300,23 +300,23 @@ export function AdminPage() {
           {/* Edit Section */}
           {selectedKanji && (
             <div className="border rounded p-4 bg-gray-50">
-              <h3 className="font-medium mb-3 text-gray-900">Edit Kanji: {selectedKanji.kanji}</h3>
+              <h3 className="font-medium mb-3 text-gray-900">{t('admin.kanji.editTitle', { kanji: selectedKanji.kanji })}</h3>
               
               <div className="mb-3 text-sm text-gray-800">
-                <div><strong>Meanings:</strong> {selectedKanji.meanings.join(', ')}</div>
-                <div><strong>Kun:</strong> {selectedKanji.kun_readings.join(', ')}</div>
-                <div><strong>On:</strong> {selectedKanji.on_readings.join(', ')}</div>
-                <div><strong>Current JLPT:</strong> {selectedKanji.jlpt ? `N${selectedKanji.jlpt}` : 'None'}</div>
+                <div><strong>{t('admin.kanji.meanings')}</strong> {selectedKanji.meanings.join(', ')}</div>
+                <div><strong>{t('admin.kanji.kun')}</strong> {selectedKanji.kun_readings.join(', ')}</div>
+                <div><strong>{t('admin.kanji.on')}</strong> {selectedKanji.on_readings.join(', ')}</div>
+                <div><strong>{t('admin.kanji.currentJlpt')}</strong> {selectedKanji.jlpt ? `N${selectedKanji.jlpt}` : t('admin.kanji.none')}</div>
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="font-medium text-gray-900">New JLPT Level:</label>
+                <label className="font-medium text-gray-900">{t('admin.kanji.newJlpt')}</label>
                 <select
                   value={newJlptLevel || ''}
                   onChange={(e) => setNewJlptLevel(e.target.value ? parseInt(e.target.value) : null)}
                   className="border rounded p-1 bg-white text-gray-900 border-gray-300"
                 >
-                  <option value="">None</option>
+                  <option value="">{t('admin.kanji.none')}</option>
                   <option value="1">N1</option>
                   <option value="2">N2</option>
                   <option value="3">N3</option>
@@ -329,7 +329,7 @@ export function AdminPage() {
                   disabled={kanjiLoading || newJlptLevel === selectedKanji.jlpt}
                   className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors disabled:opacity-50"
                 >
-                  {kanjiLoading ? "..." : "Update"}
+                  {kanjiLoading ? "..." : t('admin.kanji.update')}
                 </button>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { ChapterTitle } from "../types";
 
 interface ContentsDrawerProps {
@@ -19,6 +20,7 @@ export function ContentsDrawer({
   bookmarks,
 }: ContentsDrawerProps) {
   const [activeTab, setActiveTab] = useState<"toc" | "bookmarks">("toc");
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (visible) setActiveTab("toc");
@@ -41,7 +43,7 @@ export function ContentsDrawer({
         className={`absolute left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-xl transform transition-transform ${visible ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Menu</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('reader.toc.menu')}</h3>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -50,8 +52,8 @@ export function ContentsDrawer({
           </button>
         </div>
         <div className="flex">
-          <button className={tabClass("toc")} onClick={() => setActiveTab("toc")}>Table of Contents</button>
-          <button className={tabClass("bookmarks")} onClick={() => setActiveTab("bookmarks")}>Bookmarks</button>
+          <button className={tabClass("toc")} onClick={() => setActiveTab("toc")}>{t('reader.toc.tab.toc')}</button>
+          <button className={tabClass("bookmarks")} onClick={() => setActiveTab("bookmarks")}>{t('reader.toc.tab.bookmarks')}</button>
         </div>
         <div className="overflow-y-auto h-[calc(100%-96px)] p-3 space-y-2">
           {activeTab === "toc" && (
@@ -65,7 +67,7 @@ export function ContentsDrawer({
                     }}
                     className={`block w-full text-left px-2 py-1 rounded ${ch.index === currentChapter ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" : "hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                   >
-                    {ch.label || `Chapter ${ch.index + 1}`}
+                    {ch.label || t('reader.chapterNumber', { number: ch.index + 1 })}
                   </button>
                 </li>
               ))}
@@ -77,7 +79,7 @@ export function ContentsDrawer({
                 <ul className="space-y-2">
                   {bookmarks.map((bookmark: any) => (
                     <li key={bookmark._id || bookmark.id} className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <div className="text-sm font-medium">{chapterTitles?.[bookmark.chapterIndex]?.label || `Chapter ${bookmark.chapterIndex + 1}`}</div>
+                      <div className="text-sm font-medium">{chapterTitles?.[bookmark.chapterIndex]?.label || t('reader.chapterNumber', { number: bookmark.chapterIndex + 1 })}</div>
                       {bookmark.note && (
                         <div className="text-xs text-gray-600 dark:text-gray-400">{bookmark.note}</div>
                       )}
@@ -85,7 +87,7 @@ export function ContentsDrawer({
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400">No bookmarks yet.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('reader.toc.empty')}</p>
               )}
             </div>
           )}
