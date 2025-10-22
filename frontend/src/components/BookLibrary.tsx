@@ -5,12 +5,11 @@ import { FolderManager } from "./FolderManager";
 import { FolderView } from "./FolderView";
 import { TokenStatusWarning } from "./TokenStatusWarning";
 import { MassUploadModal } from "./MassUploadModal";
-import { toast } from "sonner";
 import { useAppData } from "../contexts/AppDataContext";
-import { GoogleDriveConnectButton } from "./GoogleDriveConnectButton";
 import { useUser } from "@clerk/clerk-react";
 
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface BookLibraryProps {
   onSelectBook?: (bookId: string) => void;
@@ -19,6 +18,7 @@ interface BookLibraryProps {
 function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   const navigate = useNavigate();
   const { user: clerkUser } = useUser();
+  const { t } = useTranslation();
 
   const handleSelectBook = (id: string) => {
     if (onSelectBook) {
@@ -41,15 +41,15 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🔄</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Connecting to Google Drive
+            {t("bookLibrary.googleConnecting.title")}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Since you signed in with Google, we're automatically connecting to your Google Drive to load your books.
+            {t("bookLibrary.googleConnecting.description")}
           </p>
           <div className="flex justify-center mb-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-          <p className="text-sm text-gray-400 mb-4">Taking too long?</p>
+          <p className="text-sm text-gray-400 mb-4">{t("bookLibrary.googleConnecting.takingTooLong")}</p>
           <button
             onClick={async () => {
               console.log('Manual Google Drive connection requested');
@@ -57,7 +57,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Connect Manually
+            {t("bookLibrary.googleConnecting.manualButton")}
           </button>
         </div>
       );
@@ -67,13 +67,13 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📱</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Local Library Mode
+            {t("bookLibrary.localMode.title")}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            You're using local storage. To sync your books across devices, sign in with Google next time.
+            {t("bookLibrary.localMode.description")}
           </p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
-            You can still upload and read books - they'll be stored locally on this device.
+            {t("bookLibrary.localMode.info")}
           </p>
         </div>
       );
@@ -112,13 +112,13 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Library</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("bookLibrary.title")}</h1>
           {isAuthenticated && (
             <>
               <button
                 onClick={openCloudFolder}
                 className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Open cloud storage folder"
+                title={t("bookLibrary.buttons.openCloud")}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -130,7 +130,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                   syncBooks();
                 }}
                 className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Sync library"
+                title={t("bookLibrary.buttons.sync")}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M5 15a9 9 0 0014-3m0-4a9 9 0 00-14-3" />
@@ -139,7 +139,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
               <button
                 onClick={() => setShowFolderManager(true)}
                 className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="Manage folders"
+                title={t("bookLibrary.buttons.manageFolders")}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -148,7 +148,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             </>
           )}
         </div>
-        
+
         <div className="flex gap-4 items-center">
           {!isAuthenticated && (
             <button
@@ -161,7 +161,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Sign In
+              {t("bookLibrary.buttons.signIn")}
             </button>
           )}
           <button
@@ -171,7 +171,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add Books
+            {t("bookLibrary.buttons.addBooks")}
           </button>
           <button
             onClick={() => setShowSettings(true)}
@@ -194,10 +194,10 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🔐</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Sign in to access your library
+            {t("bookLibrary.signInPrompt.title")}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Sign in to view and manage your books
+            {t("bookLibrary.signInPrompt.description")}
           </p>
           <button
             onClick={signIn}
@@ -209,7 +209,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Sign In
+            {t("bookLibrary.buttons.signIn")}
           </button>
         </div>
       ) : !isDriveConnected ? (
@@ -218,10 +218,10 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Loading your books...
+            {t("bookLibrary.loading.title")}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            We're fetching your library from Google Drive
+            {t("bookLibrary.loading.description")}
           </p>
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -231,13 +231,13 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            No books yet
+            {t("bookLibrary.empty.title")}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Upload your first book file to get started
+            {t("bookLibrary.empty.description")}
           </p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
-            Supported formats: EPUB, TXT, DOCX, PDF
+            {t("bookLibrary.empty.supportedFormats")}
           </p>
           <button
             onClick={() => setShowMassUpload(true)}
@@ -246,7 +246,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Upload Your First Book
+            {t("bookLibrary.buttons.uploadFirst")}
           </button>
         </div>
       ) : (
