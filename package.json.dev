@@ -1,0 +1,49 @@
+{
+  "name": "progressive-reader",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --open --host",
+    "build": "vite build",
+    "lint": "tsc -p . --noEmit --pretty false && vite build"
+  },
+  "dependencies": {
+    "@clerk/clerk-react": "^5.31.8",
+    "@zip.js/zip.js": "^2.7.68",
+    "clsx": "^2.1.1",
+    "epubjs": "^0.3.93",
+    "firebase": "^12.0.0",
+    "htmlparser2": "^10.0.0",
+    "i18next": "^23.16.8",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "jszip": "^3.10.1",
+    "kuromoji": "^0.1.2",
+    "pdfjs-dist": "^5.4.54",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.7.4",
+    "react-router-dom": "^6.22.3",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^3.1.0",
+    "tiny-segmenter": "^0.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "~10",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "globals": "^15.15.0",
+    "postcss": "~8",
+    "tailwindcss": "~3",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.24.1",
+    "vite": "^6.2.0"
+  }
+}
