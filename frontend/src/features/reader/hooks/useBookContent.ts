@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { BookMetadata } from '~/types';
 import { bookStorageService } from '@features/books/services/bookStorage';
 import { useAppData } from '@shared/contexts/AppDataContext';
-import { EpubProcessorWrapper } from '@shared/lib/epubProcessor';
-import { TextProcessorWrapper } from '@shared/lib/textProcessor';
+import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
+import { TextProcessorWrapper } from '@shared/lib/textProcessor.ts';
 
 import type { ChapterTitle } from '~/types/index.ts';
 
@@ -213,7 +213,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         // Mark this book as loaded
         loadedBookIdRef.current = bookId;
 
-        console.log('✅ Book loading complete!');
+        console.log('✁EBook loading complete!');
 
         prevMetadataRef.current = {
           title: bookMetadata.title,
@@ -222,7 +222,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         };
 
       } catch (error) {
-        console.error('❌ Error loading book content:', error);
+        console.error('❁EError loading book content:', error);
         if (activeLoadRef.current?.requestId === requestId) {
           setError(error instanceof Error ? error.message : 'Failed to load book');
           setIsLoading(false); // Exit loading state on failure

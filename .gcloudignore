@@ -37,6 +37,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/src/shared/lib/
+!frontend/src/shared/lib/**
 lib64/
 parts/
 sdist/

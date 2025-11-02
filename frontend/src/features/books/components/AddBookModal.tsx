@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { EpubProcessorWrapper } from '@shared/lib/epubProcessor';
+import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 import { useAppData } from "@shared/contexts/AppDataContext";
 
 interface AddBookModalProps {
@@ -170,7 +170,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              ✕
+              ✁E
             </button>
           </div>
           

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAppData } from '@shared/contexts/AppDataContext';
-import { EpubProcessorWrapper } from '@shared/lib/epubProcessor';
+import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 
 interface BookFileData {
   id: string;
