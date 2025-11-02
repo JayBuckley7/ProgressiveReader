@@ -5,14 +5,14 @@ WORKDIR /frontend
 # Install Python and pydantic for TS type generation
 RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/bin/python3 /usr/bin/python \
-    && pip3 install --no-cache-dir --break-system-packages pydantic>=2.11.2
+    && pip3 install --no-cache-dir --break-system-packages "pydantic>=2.11.2"
 
-# Accept build arguments for environment variables
+# Accept build arguments for FRONTEND environment variables
 ARG VITE_CLERK_PUBLISHABLE_KEY
 ARG VITE_GDRIVE_CLIENT_ID
 ARG VITE_GAPI_KEY
 
-# Set environment variables from build args
+# Set environment variables from build args for Vite build
 ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 ENV VITE_GDRIVE_CLIENT_ID=$VITE_GDRIVE_CLIENT_ID
 ENV VITE_GAPI_KEY=$VITE_GAPI_KEY
@@ -32,11 +32,8 @@ RUN npm run build
 # Stage 2: Build Python backend and assemble final image
 FROM python:3.11-slim
 
-# Accept build argument for backend Clerk secret
-ARG CLERK_SECRET_KEY
-
-# Set environment variable from build arg
-ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
+# Do NOT accept or bake backend secrets at build-time.
+# CLERK_SECRET_KEY will be provided at runtime via Cloud Run secret mount (file) or env.
 
 # Prevent Python from buffering stdout/stderr
 ENV PYTHONUNBUFFERED=1
@@ -51,7 +48,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/run.py ./
 COPY backend/config.py ./
-# The backend/instance directory isn't committed or needed; ensure it's present
 RUN mkdir -p instance
 
 # Copy built frontend assets into Flask static folder
@@ -64,4 +60,4 @@ EXPOSE 8080
 ENV PORT=8080
 
 # Run the Flask app with Gunicorn with proper timeout configuration
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "300", "--worker-class", "sync", "--workers", "1", "--max-requests", "500", "--max-requests-jitter", "50", "--preload", "run:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "300", "--worker-class", "sync", "--workers", "1", "--max-requests", "500", "--max-requests-jitter", "50", "--preload", "run:app"]

@@ -1,31 +1,43 @@
+timeout: "1200s"
+
+substitutions:
+  _SERVICE_NAME: "progressive-reader"   # or your service
+  _COMMIT_SHA: "$COMMIT_SHA"
+  _ENVIRONMENT: "prod"
+
 steps:
-  # 1. Load frontend environment variables from PR-app-config secret
+  # 1) Load & parse frontend env vars (from Secret Manager) safely with jq
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Load Frontend Env Vars"
     entrypoint: "bash"
     args:
       - "-c"
       - |
+        set -euo pipefail
         echo "📦 Loading frontend environment variables from PR-app-config..."
-        
-        # Get the secret content
-        SECRET_CONTENT=$(gcloud secrets versions access latest --secret=PR-app-config --project=$PROJECT_ID)
-        
-        # Extract frontend environment variables and save to file for next step
-        echo "$$SECRET_CONTENT" | grep -o '"VITE_CLERK_PUBLISHABLE_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_clerk_key.txt
-        echo "$$SECRET_CONTENT" | grep -o '"VITE_GDRIVE_CLIENT_ID"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_gdrive_client.txt  
-        echo "$$SECRET_CONTENT" | grep -o '"VITE_GAPI_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/vite_gapi_key.txt
-        echo "$$SECRET_CONTENT" | grep -o '"CLERK_SECRET_KEY"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 > /workspace/clerk_secret.txt
-        
-        # Debug logging for extracted values
-        echo "🔑 [BUILD DEBUG] Extracted VITE_CLERK_PUBLISHABLE_KEY: $(cat /workspace/vite_clerk_key.txt | cut -c1-10)...$(cat /workspace/vite_clerk_key.txt | tail -c6)"
-        echo "🔑 [BUILD DEBUG] VITE_CLERK_PUBLISHABLE_KEY length: $(cat /workspace/vite_clerk_key.txt | wc -c)"
-        echo "🔑 [BUILD DEBUG] VITE_GDRIVE_CLIENT_ID: $(cat /workspace/vite_gdrive_client.txt | cut -c1-20)..."
-        echo "🔑 [BUILD DEBUG] VITE_GAPI_KEY: $(cat /workspace/vite_gapi_key.txt | cut -c1-15)..."
-        echo "🔑 [BUILD DEBUG] CLERK_SECRET_KEY: $(cat /workspace/clerk_secret.txt | cut -c1-10)...$(cat /workspace/clerk_secret.txt | tail -c6)"
-        echo "✅ Frontend environment variables extracted and logged"
 
-  # 2. Build Docker image and tag with commit SHA and latest
+        apt-get update -y >/dev/null && apt-get install -y jq >/dev/null
+
+        SECRET_CONTENT="$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
+
+        # Extract compile-time FRONTEND vars only (do NOT extract server secrets here)
+        VITE_CLERK_PUBLISHABLE_KEY="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_CLERK_PUBLISHABLE_KEY // empty')"
+        VITE_GDRIVE_CLIENT_ID="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_GDRIVE_CLIENT_ID // empty')"
+        VITE_GAPI_KEY="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_GAPI_KEY // empty')"
+
+        # Basic validation
+        [ -n "$VITE_CLERK_PUBLISHABLE_KEY" ] || { echo "❌ Missing VITE_CLERK_PUBLISHABLE_KEY"; exit 1; }
+        [ -n "$VITE_GDRIVE_CLIENT_ID" ]      || { echo "❌ Missing VITE_GDRIVE_CLIENT_ID"; exit 1; }
+        [ -n "$VITE_GAPI_KEY" ]              || { echo "❌ Missing VITE_GAPI_KEY"; exit 1; }
+
+        # Store trimmed values for the next step (no trailing newlines)
+        printf %s "$VITE_CLERK_PUBLISHABLE_KEY" > /workspace/vite_clerk_key.txt
+        printf %s "$VITE_GDRIVE_CLIENT_ID"     > /workspace/vite_gdrive_client.txt
+        printf %s "$VITE_GAPI_KEY"             > /workspace/vite_gapi_key.txt
+
+        echo "✅ Frontend environment variables extracted"
+
+  # 2) Build Docker image with ONLY the frontend build args
   - name: "gcr.io/cloud-builders/docker"
     id: "Build Docker Image"
     waitFor: ["Load Frontend Env Vars"]
@@ -33,32 +45,21 @@ steps:
     args:
       - "-c"
       - |
-        # Read the environment variables from files
-        VITE_CLERK_PUBLISHABLE_KEY=$(cat /workspace/vite_clerk_key.txt)
-        VITE_GDRIVE_CLIENT_ID=$(cat /workspace/vite_gdrive_client.txt)
-        VITE_GAPI_KEY=$(cat /workspace/vite_gapi_key.txt)
-        CLERK_SECRET_KEY=$(cat /workspace/clerk_secret.txt)
-        
-        echo "🔨 Building Docker image with frontend environment variables..."
-        
-        # Debug logging for build args (partial values for security)
-        echo "🔑 [DOCKER DEBUG] VITE_CLERK_PUBLISHABLE_KEY build arg: $${VITE_CLERK_PUBLISHABLE_KEY:0:10}...$${VITE_CLERK_PUBLISHABLE_KEY: -5}"
-        echo "🔑 [DOCKER DEBUG] VITE_CLERK_PUBLISHABLE_KEY length: $${#VITE_CLERK_PUBLISHABLE_KEY}"
-        echo "🔑 [DOCKER DEBUG] VITE_GDRIVE_CLIENT_ID build arg: $${VITE_GDRIVE_CLIENT_ID:0:20}..."
-        echo "🔑 [DOCKER DEBUG] VITE_GAPI_KEY build arg: $${VITE_GAPI_KEY:0:15}..."
-        echo "🔑 [DOCKER DEBUG] GOOGLE_TRANSLATE_API_KEY build arg: $${GOOGLE_TRANSLATE_API_KEY:0:15}..."
-        
+        set -euo pipefail
+        VITE_CLERK_PUBLISHABLE_KEY="$(tr -d '\r\n' < /workspace/vite_clerk_key.txt)"
+        VITE_GDRIVE_CLIENT_ID="$(tr -d '\r\n' < /workspace/vite_gdrive_client.txt)"
+        VITE_GAPI_KEY="$(tr -d '\r\n' < /workspace/vite_gapi_key.txt)"
+
+        echo "🔨 Building Docker image (frontend build args only)..."
         docker build \
           --build-arg VITE_CLERK_PUBLISHABLE_KEY="$$VITE_CLERK_PUBLISHABLE_KEY" \
           --build-arg VITE_GDRIVE_CLIENT_ID="$$VITE_GDRIVE_CLIENT_ID" \
           --build-arg VITE_GAPI_KEY="$$VITE_GAPI_KEY" \
-          --build-arg CLERK_SECRET_KEY="$$CLERK_SECRET_KEY" \
-          --build-arg GOOGLE_TRANSLATE_API_KEY="$$GOOGLE_TRANSLATE_API_KEY" \
           -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
           -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest \
           .
 
-  # 3. Push image with commit SHA tag
+  # 3) Push image with commit SHA
   - name: "gcr.io/cloud-builders/docker"
     id: "Push to Artifact Registry"
     waitFor: ["Build Docker Image"]
@@ -66,7 +67,7 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
 
-  # 4. Push latest tag
+  # 4) Push latest tag
   - name: "gcr.io/cloud-builders/docker"
     id: "Push latest tag"
     waitFor: ["Build Docker Image"]
@@ -74,7 +75,7 @@ steps:
       - "push"
       - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
-  # 5. Verify PR-app-config secret exists and is accessible
+  # 5) Verify PR-app-config secret exists and has expected keys
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Verify PR-App Config Secret"
     waitFor: ["Push to Artifact Registry"]
@@ -82,28 +83,26 @@ steps:
     args:
       - "-c"
       - |
-          echo "🔍 Verifying PR-app-config secret exists and is accessible..."
-          
-          # Check if the secret exists
-          if gcloud secrets describe PR-app-config --project=$PROJECT_ID >/dev/null 2>&1; then
-            echo "✅ PR-app-config secret found"
-            
-            # Verify we can access the content and it has required keys
-            echo "🔍 Verifying secret content has required configuration..."
-            SECRET_CONTENT=$(gcloud secrets versions access latest --secret=PR-app-config --project=$PROJECT_ID)
-            
-            # Check for essential keys
-            echo "$$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"' && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
-            echo "$$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"' && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
-            echo "$$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
-            echo "$$SECRET_CONTENT" | grep -q '"GOOGLE_TRANSLATE_API_KEY"' && echo "✅ GOOGLE_TRANSLATE_API_KEY found" || (echo "❌ GOOGLE_TRANSLATE_API_KEY missing" && exit 1)
-            echo "✅ PR-app-config secret verification complete"
-          else
-            echo "❌ PR-app-config secret not found. Please create it first."
-            exit 1
-          fi
+        set -euo pipefail
+        echo "🔍 Verifying PR-app-config secret exists and contents..."
 
-  # 6. Run build verification tests against health endpoint only (moved to after secret update)
+        if gcloud secrets describe PR-app-config --project="$PROJECT_ID" >/dev/null 2>&1; then
+          echo "✅ PR-app-config secret found"
+          SECRET_CONTENT="$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
+
+          echo "$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"'            && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
+          echo "$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"'           && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
+          echo "$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
+          # Optional key; uncomment if required:
+          # echo "$SECRET_CONTENT" | grep -q '"GOOGLE_TRANSLATE_API_KEY"' && echo "✅ GOOGLE_TRANSLATE_API_KEY found" || (echo "❌ GOOGLE_TRANSLATE_API_KEY missing" && exit 1)
+
+          echo "✅ PR-app-config secret verification complete"
+        else
+          echo "❌ PR-app-config secret not found. Please create it first."
+          exit 1
+        fi
+
+  # 6) Pre-deploy health (skip if service not found yet)
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Pre-Deploy"
     waitFor: ["Verify PR-App Config Secret"]
@@ -111,15 +110,19 @@ steps:
     args:
       - "-c"
       - |
+        set -euo pipefail
+        if gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 >/dev/null 2>&1; then
           SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
-          
-          # Test: Health check only (before deployment)
-          HEALTH_CHECK_URL="$$SERVICE_URL/health"
-          echo "Pre-deployment BVT: Checking health at: $$HEALTH_CHECK_URL"
-          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 -I "$$HEALTH_CHECK_URL" || (echo "Pre-deployment BVT failed for $$HEALTH_CHECK_URL" && exit 1)
+          HEALTH_CHECK_URL="$SERVICE_URL/health"
+          echo "Pre-deployment BVT: GET $HEALTH_CHECK_URL"
+          STATUS_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "$HEALTH_CHECK_URL")
+          [ "$STATUS_CODE" -ge 200 ] && [ "$STATUS_CODE" -lt 400 ] || (echo "Pre-deployment BVT failed ($STATUS_CODE) for $HEALTH_CHECK_URL" && exit 1)
           echo "✅ Pre-deployment health check passed"
+        else
+          echo "ℹ️ Service ${_SERVICE_NAME} not found yet; skipping pre-deployment health check."
+        fi
 
-  # 7. Deploy to Cloud Run
+  # 7) Deploy (no-traffic) and wait for Ready=true, then shift traffic
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy to Cloud Run"
     waitFor: ["BVT-Pre-Deploy"]
@@ -127,125 +130,100 @@ steps:
     args:
       - "-c"
       - |
-          # Deploy to Cloud Run with explicit timeout and no-wait flag
-          gcloud run deploy ${_SERVICE_NAME} \
-            --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
-            --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-            --set-secrets /secrets/env.json=PR-app-config:latest \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars APP_ENV=${_ENVIRONMENT} \
-            --vpc-connector floof-connector \
-            --vpc-egress private-ranges-only \
-            --memory 1Gi \
-            --concurrency 80 \
-            --max-instances 40 \
-            --timeout 300 \
-            --execution-environment gen2 \
-            --no-traffic
-          
-          # Wait for deployment to be ready with explicit timeout
-          echo "⏳ Waiting for deployment to be ready..."
-          timeout 300 bash -c 'while true; do
-            STATUS=$$(gcloud run services describe progressive-reader --region us-central1 --format="value(status.conditions[0].status)")
-            if [ "$$STATUS" = "True" ]; then
-              echo "✅ Deployment ready"
-              break
-            fi
-            echo "⏳ Still waiting... (status: $$STATUS)"
-            sleep 10
-          done'
-          
-          # Promote to serve traffic
-          echo "🚀 Promoting new revision to serve traffic..."
-          gcloud run services update-traffic progressive-reader --to-latest --region us-central1
+        set -euo pipefail
+        gcloud run deploy ${_SERVICE_NAME} \
+          --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+          --set-secrets /secrets/env.json=PR-app-config:latest \
+          --region us-central1 \
+          --platform managed \
+          --allow-unauthenticated \
+          --set-env-vars APP_ENV=${_ENVIRONMENT} \
+          --vpc-connector floof-connector \
+          --vpc-egress private-ranges-only \
+          --memory 1Gi \
+          --concurrency 80 \
+          --max-instances 40 \
+          --timeout 300 \
+          --execution-environment gen2 \
+          --no-traffic
 
-  # 8. Post-deployment verification including OpenAI keys and Clerk configuration
+        echo "⏳ Waiting for deployment to be Ready..."
+        timeout 300 bash -c 'while true; do
+          STATUS=$(gcloud run services describe '"${_SERVICE_NAME}"' --region us-central1 \
+            --format="value(status.conditions[?type=Ready].status)")
+          if [ "$STATUS" = "True" ]; then
+            echo "✅ Deployment ready"
+            break
+          fi
+          echo "⏳ Still waiting... (status: $STATUS)"
+          sleep 10
+        done'
+
+        echo "🚀 Promoting new revision to serve traffic..."
+        gcloud run services update-traffic ${_SERVICE_NAME} --to-latest --region us-central1
+
+  # 8) Post-deploy verification (non-blocking)
   - name: "gcr.io/cloud-builders/gcloud"
-    id: "BVT-Post-Deploy" 
+    id: "BVT-Post-Deploy"
     waitFor: ["Deploy to Cloud Run"]
     entrypoint: "bash"
     args:
       - "-c"
       - |
-          SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
-          
-          # Test 1: Health check (now includes Clerk validation)
-          HEALTH_CHECK_URL="$$SERVICE_URL/health"
-          echo "Post-deployment BVT 1/3: Checking health at: $$HEALTH_CHECK_URL"
-          set +e
-          HEALTH_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$$HEALTH_CHECK_URL")
-          CURL_STATUS=$?
-          set -e
-          if [ $CURL_STATUS -ne 0 ] || [ -z "$$HEALTH_RESPONSE" ]; then
-            echo "⚠️ Health endpoint returned status $CURL_STATUS or empty body; continuing without failing build."
-            HEALTH_RESPONSE='{}'
-          else
-            echo "Health check response: $$HEALTH_RESPONSE"
-          fi
-          
-          # Validate Clerk configuration from health check with detailed logging
-          echo "🔍 Analyzing Clerk configuration from health response..."
-          echo "Raw health response: $$HEALTH_RESPONSE"
-          
-          # Check individual Clerk components
-          CLERK_OVERALL=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-          CLERK_PUB_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-          CLERK_SECRET_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-          
-          echo "📊 Clerk Configuration Analysis:"
-          echo "  - clerk_overall_healthy: $${CLERK_OVERALL:-'not found'}"
-          echo "  - clerk_publishable_key_configured: $${CLERK_PUB_CONFIGURED:-'not found'}"
-          echo "  - clerk_secret_key_configured: $${CLERK_SECRET_CONFIGURED:-'not found'}"
-          echo "  - google_translate_api_key_configured: $${GOOGLE_TRANSLATE_API_KEY_CONFIGURED:-'not found'}"
-          
-          if [ "$$CLERK_OVERALL" = "true" ]; then
-            echo "✅ Clerk configuration reported healthy"
-          else
-            echo "⚠️ Clerk configuration appears incomplete; logging details but not failing build."
-            echo "   clerk_publishable_key_configured=$${CLERK_PUB_CONFIGURED:-'unknown'}"
-            echo "   clerk_secret_key_configured=$${CLERK_SECRET_CONFIGURED:-'unknown'}"
-          fi
-          
-          # Test 2: OpenAI key configuration check
-          OPENAI_CHECK_URL="$$SERVICE_URL/api/openai_key_configured"
-          echo "Post-deployment BVT 2/3: Checking OpenAI key configuration at: $$OPENAI_CHECK_URL"
-          set +e
-          OPENAI_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$$OPENAI_CHECK_URL")
-          CURL_STATUS=$?
-          set -e
-          if [ $CURL_STATUS -ne 0 ] || [ -z "$$OPENAI_RESPONSE" ]; then
-            echo "⚠️ OpenAI configuration endpoint unavailable (status $CURL_STATUS); continuing."
-            OPENAI_RESPONSE='{}'
-          fi
-          
-          # Parse and validate the response
-          echo "OpenAI configuration response: $$OPENAI_RESPONSE"
-          CONFIGURED=$(echo "$$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
-          POOL_SIZE=$(echo "$$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
-          
-          if [ "$$CONFIGURED" -eq 1 ] && [ "$$POOL_SIZE" -gt 0 ]; then
-            echo "✅ OpenAI pool looks healthy (pool_size=$$POOL_SIZE)"
-          else
-            echo "⚠️ Unable to confirm OpenAI pool configuration; continuing."
-            echo "    Response: $$OPENAI_RESPONSE"
-          fi
-          
-          # Test 3: Specific Clerk publishable key validation
-          echo "Post-deployment BVT 3/3: Validating Clerk publishable key is available for frontend"
-          CLERK_PUB_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
-          CLERK_SECRET_CONFIGURED=$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
-          
-          if [ "$$CLERK_PUB_CONFIGURED" -eq 1 ] && [ "$$CLERK_SECRET_CONFIGURED" -eq 1 ]; then
-            echo "✅ Clerk keys confirmed"
-          else
-            echo "⚠️ Clerk key confirmation incomplete (publishable count=$${CLERK_PUB_CONFIGURED:-0}, secret count=$${CLERK_SECRET_CONFIGURED:-0})."
-          fi
-          
-          echo "ℹ️ Post-deployment checks completed (non-blocking)."
+        set -euo pipefail
+        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
+
+        # Test 1: Health check & Clerk flags
+        HEALTH_CHECK_URL="$SERVICE_URL/health"
+        echo "Post-deploy BVT 1/3: $HEALTH_CHECK_URL"
+        set +e
+        HEALTH_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$HEALTH_CHECK_URL")
+        curl_status=$?
+        set -e
+        if [ $curl_status -ne 0 ] || [ -z "$HEALTH_RESPONSE" ]; then
+          echo "⚠️ Health endpoint unavailable or empty; continuing."
+          HEALTH_RESPONSE='{}'
+        else
+          echo "Health: $HEALTH_RESPONSE"
+        fi
+
+        CLERK_OVERALL=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+        CLERK_PUB_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+        CLERK_SECRET_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+
+        echo "📊 Clerk:"
+        echo "  - overall_healthy: ${CLERK_OVERALL:-unknown}"
+        echo "  - publishable_key_configured: ${CLERK_PUB_CONFIGURED:-unknown}"
+        echo "  - secret_key_configured: ${CLERK_SECRET_CONFIGURED:-unknown}"
+
+        # Test 2: OpenAI key pool check (best-effort)
+        OPENAI_CHECK_URL="$SERVICE_URL/api/openai_key_configured"
+        echo "Post-deploy BVT 2/3: $OPENAI_CHECK_URL"
+        set +e
+        OPENAI_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$OPENAI_CHECK_URL")
+        curl_status=$?
+        set -e
+        if [ $curl_status -ne 0 ] || [ -z "$OPENAI_RESPONSE" ]; then
+          echo "⚠️ OpenAI configuration endpoint unavailable; continuing."
+          OPENAI_RESPONSE='{}'
+        fi
+        echo "OpenAI: $OPENAI_RESPONSE"
+        CONFIGURED=$(echo "$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
+        POOL_SIZE=$(echo "$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
+        if [ "$CONFIGURED" -eq 1 ] && [ "${POOL_SIZE:-0}" -gt 0 ]; then
+          echo "✅ OpenAI pool looks healthy (pool_size=${POOL_SIZE})"
+        else
+          echo "⚠️ Unable to confirm OpenAI pool configuration; continuing."
+        fi
+
+        # Test 3: Confirm both Clerk keys seen by backend
+        echo "Post-deploy BVT 3/3: Checking Clerk flags again"
+        if [ "$CLERK_PUB_CONFIGURED" = "true" ] && [ "$CLERK_SECRET_CONFIGURED" = "true" ]; then
+          echo "✅ Clerk keys confirmed"
+        else
+          echo "⚠️ Clerk key confirmation incomplete."
+        fi
 
 images:
   - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
-
-timeout: "1200s" 
