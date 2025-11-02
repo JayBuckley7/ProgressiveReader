@@ -1,5 +1,8 @@
 timeout: "1200s"
 
+options:
+  substitutionOption: ALLOW_LOOSE   # Prevents unknown $VARS from erroring at parse time
+
 substitutions:
   _SERVICE_NAME: "progressive-reader"   # or your service
   _COMMIT_SHA: "$COMMIT_SHA"
@@ -18,22 +21,22 @@ steps:
 
         apt-get update -y >/dev/null && apt-get install -y jq >/dev/null
 
-        SECRET_CONTENT="$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
+        # Built-in is fine to use with a single $
+        SECRET_CONTENT="$$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
 
-        # Extract compile-time FRONTEND vars only (do NOT extract server secrets here)
-        VITE_CLERK_PUBLISHABLE_KEY="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_CLERK_PUBLISHABLE_KEY // empty')"
-        VITE_GDRIVE_CLIENT_ID="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_GDRIVE_CLIENT_ID // empty')"
-        VITE_GAPI_KEY="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_GAPI_KEY // empty')"
+        # Use $$ for any runtime shell variable references so Cloud Build won't try to substitute them
+        VITE_CLERK_PUBLISHABLE_KEY="$$(printf %s "$$SECRET_CONTENT" | jq -r '.VITE_CLERK_PUBLISHABLE_KEY // empty')"
+        VITE_GDRIVE_CLIENT_ID="$$(printf %s "$$SECRET_CONTENT" | jq -r '.VITE_GDRIVE_CLIENT_ID // empty')"
+        VITE_GAPI_KEY="$$(printf %s "$$SECRET_CONTENT" | jq -r '.VITE_GAPI_KEY // empty')"
 
-        # Basic validation
-        [ -n "$VITE_CLERK_PUBLISHABLE_KEY" ] || { echo "❌ Missing VITE_CLERK_PUBLISHABLE_KEY"; exit 1; }
-        [ -n "$VITE_GDRIVE_CLIENT_ID" ]      || { echo "❌ Missing VITE_GDRIVE_CLIENT_ID"; exit 1; }
-        [ -n "$VITE_GAPI_KEY" ]              || { echo "❌ Missing VITE_GAPI_KEY"; exit 1; }
+        [ -n "$$VITE_CLERK_PUBLISHABLE_KEY" ] || { echo "❌ Missing VITE_CLERK_PUBLISHABLE_KEY"; exit 1; }
+        [ -n "$$VITE_GDRIVE_CLIENT_ID" ]      || { echo "❌ Missing VITE_GDRIVE_CLIENT_ID"; exit 1; }
+        [ -n "$$VITE_GAPI_KEY" ]              || { echo "❌ Missing VITE_GAPI_KEY"; exit 1; }
 
         # Store trimmed values for the next step (no trailing newlines)
-        printf %s "$VITE_CLERK_PUBLISHABLE_KEY" > /workspace/vite_clerk_key.txt
-        printf %s "$VITE_GDRIVE_CLIENT_ID"     > /workspace/vite_gdrive_client.txt
-        printf %s "$VITE_GAPI_KEY"             > /workspace/vite_gapi_key.txt
+        printf %s "$$VITE_CLERK_PUBLISHABLE_KEY" > /workspace/vite_clerk_key.txt
+        printf %s "$$VITE_GDRIVE_CLIENT_ID"     > /workspace/vite_gdrive_client.txt
+        printf %s "$$VITE_GAPI_KEY"             > /workspace/vite_gapi_key.txt
 
         echo "✅ Frontend environment variables extracted"
 
@@ -46,9 +49,9 @@ steps:
       - "-c"
       - |
         set -euo pipefail
-        VITE_CLERK_PUBLISHABLE_KEY="$(tr -d '\r\n' < /workspace/vite_clerk_key.txt)"
-        VITE_GDRIVE_CLIENT_ID="$(tr -d '\r\n' < /workspace/vite_gdrive_client.txt)"
-        VITE_GAPI_KEY="$(tr -d '\r\n' < /workspace/vite_gapi_key.txt)"
+        VITE_CLERK_PUBLISHABLE_KEY="$$(tr -d '\r\n' < /workspace/vite_clerk_key.txt)"
+        VITE_GDRIVE_CLIENT_ID="$$(tr -d '\r\n' < /workspace/vite_gdrive_client.txt)"
+        VITE_GAPI_KEY="$$(tr -d '\r\n' < /workspace/vite_gapi_key.txt)"
 
         echo "🔨 Building Docker image (frontend build args only)..."
         docker build \
@@ -88,13 +91,13 @@ steps:
 
         if gcloud secrets describe PR-app-config --project="$PROJECT_ID" >/dev/null 2>&1; then
           echo "✅ PR-app-config secret found"
-          SECRET_CONTENT="$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
+          SECRET_CONTENT="$$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
 
-          echo "$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"'            && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
-          echo "$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"'           && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
-          echo "$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
-          # Optional key; uncomment if required:
-          # echo "$SECRET_CONTENT" | grep -q '"GOOGLE_TRANSLATE_API_KEY"' && echo "✅ GOOGLE_TRANSLATE_API_KEY found" || (echo "❌ GOOGLE_TRANSLATE_API_KEY missing" && exit 1)
+          echo "$$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"'            && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
+          echo "$$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"'           && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
+          echo "$$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
+          # Optional; uncomment if required:
+          # echo "$$SECRET_CONTENT" | grep -q '"GOOGLE_TRANSLATE_API_KEY"' && echo "✅ GOOGLE_TRANSLATE_API_KEY found" || (echo "❌ GOOGLE_TRANSLATE_API_KEY missing" && exit 1)
 
           echo "✅ PR-app-config secret verification complete"
         else
@@ -112,11 +115,11 @@ steps:
       - |
         set -euo pipefail
         if gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 >/dev/null 2>&1; then
-          SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
-          HEALTH_CHECK_URL="$SERVICE_URL/health"
-          echo "Pre-deployment BVT: GET $HEALTH_CHECK_URL"
-          STATUS_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "$HEALTH_CHECK_URL")
-          [ "$STATUS_CODE" -ge 200 ] && [ "$STATUS_CODE" -lt 400 ] || (echo "Pre-deployment BVT failed ($STATUS_CODE) for $HEALTH_CHECK_URL" && exit 1)
+          SERVICE_URL=$$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
+          HEALTH_CHECK_URL="$$SERVICE_URL/health"
+          echo "Pre-deployment BVT: GET $$HEALTH_CHECK_URL"
+          STATUS_CODE=$$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "$$HEALTH_CHECK_URL")
+          [ "$$STATUS_CODE" -ge 200 ] && [ "$$STATUS_CODE" -lt 400 ] || (echo "Pre-deployment BVT failed ($$STATUS_CODE) for $$HEALTH_CHECK_URL" && exit 1)
           echo "✅ Pre-deployment health check passed"
         else
           echo "ℹ️ Service ${_SERVICE_NAME} not found yet; skipping pre-deployment health check."
@@ -150,13 +153,13 @@ steps:
 
         echo "⏳ Waiting for deployment to be Ready..."
         timeout 300 bash -c 'while true; do
-          STATUS=$(gcloud run services describe '"${_SERVICE_NAME}"' --region us-central1 \
+          STATUS=$$(gcloud run services describe '"${_SERVICE_NAME}"' --region us-central1 \
             --format="value(status.conditions[?type=Ready].status)")
-          if [ "$STATUS" = "True" ]; then
+          if [ "$$STATUS" = "True" ]; then
             echo "✅ Deployment ready"
             break
           fi
-          echo "⏳ Still waiting... (status: $STATUS)"
+          echo "⏳ Still waiting... (status: $$STATUS)"
           sleep 10
         done'
 
@@ -172,54 +175,54 @@ steps:
       - "-c"
       - |
         set -euo pipefail
-        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
+        SERVICE_URL=$$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format 'value(status.url)')
 
         # Test 1: Health check & Clerk flags
-        HEALTH_CHECK_URL="$SERVICE_URL/health"
-        echo "Post-deploy BVT 1/3: $HEALTH_CHECK_URL"
+        HEALTH_CHECK_URL="$$SERVICE_URL/health"
+        echo "Post-deploy BVT 1/3: $$HEALTH_CHECK_URL"
         set +e
-        HEALTH_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$HEALTH_CHECK_URL")
-        curl_status=$?
+        HEALTH_RESPONSE=$$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$$HEALTH_CHECK_URL")
+        curl_status=$$?
         set -e
-        if [ $curl_status -ne 0 ] || [ -z "$HEALTH_RESPONSE" ]; then
+        if [ $$curl_status -ne 0 ] || [ -z "$$HEALTH_RESPONSE" ]; then
           echo "⚠️ Health endpoint unavailable or empty; continuing."
           HEALTH_RESPONSE='{}'
         else
-          echo "Health: $HEALTH_RESPONSE"
+          echo "Health: $$HEALTH_RESPONSE"
         fi
 
-        CLERK_OVERALL=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-        CLERK_PUB_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-        CLERK_SECRET_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+        CLERK_OVERALL=$$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+        CLERK_PUB_CONFIGURED=$$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+        CLERK_SECRET_CONFIGURED=$$(echo "$$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
 
         echo "📊 Clerk:"
-        echo "  - overall_healthy: ${CLERK_OVERALL:-unknown}"
-        echo "  - publishable_key_configured: ${CLERK_PUB_CONFIGURED:-unknown}"
-        echo "  - secret_key_configured: ${CLERK_SECRET_CONFIGURED:-unknown}"
+        echo "  - overall_healthy: $${CLERK_OVERALL:-unknown}"
+        echo "  - publishable_key_configured: $${CLERK_PUB_CONFIGURED:-unknown}"
+        echo "  - secret_key_configured: $${CLERK_SECRET_CONFIGURED:-unknown}"
 
         # Test 2: OpenAI key pool check (best-effort)
-        OPENAI_CHECK_URL="$SERVICE_URL/api/openai_key_configured"
-        echo "Post-deploy BVT 2/3: $OPENAI_CHECK_URL"
+        OPENAI_CHECK_URL="$$SERVICE_URL/api/openai_key_configured"
+        echo "Post-deploy BVT 2/3: $$OPENAI_CHECK_URL"
         set +e
-        OPENAI_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$OPENAI_CHECK_URL")
-        curl_status=$?
+        OPENAI_RESPONSE=$$(curl --silent --show-error --connect-timeout 10 --max-time 20 "$$OPENAI_CHECK_URL")
+        curl_status=$$?
         set -e
-        if [ $curl_status -ne 0 ] || [ -z "$OPENAI_RESPONSE" ]; then
+        if [ $$curl_status -ne 0 ] || [ -z "$$OPENAI_RESPONSE" ]; then
           echo "⚠️ OpenAI configuration endpoint unavailable; continuing."
           OPENAI_RESPONSE='{}'
         fi
-        echo "OpenAI: $OPENAI_RESPONSE"
-        CONFIGURED=$(echo "$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
-        POOL_SIZE=$(echo "$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
-        if [ "$CONFIGURED" -eq 1 ] && [ "${POOL_SIZE:-0}" -gt 0 ]; then
-          echo "✅ OpenAI pool looks healthy (pool_size=${POOL_SIZE})"
+        echo "OpenAI: $$OPENAI_RESPONSE"
+        CONFIGURED=$$(echo "$$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
+        POOL_SIZE=$$(echo "$$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
+        if [ "$$CONFIGURED" -eq 1 ] && [ "$${POOL_SIZE:-0}" -gt 0 ]; then
+          echo "✅ OpenAI pool looks healthy (pool_size=$$POOL_SIZE)"
         else
           echo "⚠️ Unable to confirm OpenAI pool configuration; continuing."
         fi
 
         # Test 3: Confirm both Clerk keys seen by backend
         echo "Post-deploy BVT 3/3: Checking Clerk flags again"
-        if [ "$CLERK_PUB_CONFIGURED" = "true" ] && [ "$CLERK_SECRET_CONFIGURED" = "true" ]; then
+        if [ "$$CLERK_PUB_CONFIGURED" = "true" ] && [ "$$CLERK_SECRET_CONFIGURED" = "true" ]; then
           echo "✅ Clerk keys confirmed"
         else
           echo "⚠️ Clerk key confirmation incomplete."
