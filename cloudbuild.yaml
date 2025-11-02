@@ -1,10 +1,10 @@
 timeout: "1200s"
 
 options:
-  substitutionOption: ALLOW_LOOSE   # Prevents unknown $VARS from erroring at parse time
+  substitutionOption: ALLOW_LOOSE
 
 substitutions:
-  _SERVICE_NAME: "progressive-reader"   # or your service
+  _SERVICE_NAME: "progressive-reader"     # change if needed
   _COMMIT_SHA: "$COMMIT_SHA"
   _ENVIRONMENT: "prod"
 
@@ -21,10 +21,8 @@ steps:
 
         apt-get update -y >/dev/null && apt-get install -y jq >/dev/null
 
-        # Built-in is fine to use with a single $
-        SECRET_CONTENT="$$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
+        SECRET_CONTENT="$$(gcloud secrets versions access latest --secret=PR-app-config --project="$$PROJECT_ID")"
 
-        # Use $$ for any runtime shell variable references so Cloud Build won't try to substitute them
         VITE_CLERK_PUBLISHABLE_KEY="$$(printf %s "$$SECRET_CONTENT" | jq -r '.VITE_CLERK_PUBLISHABLE_KEY // empty')"
         VITE_GDRIVE_CLIENT_ID="$$(printf %s "$$SECRET_CONTENT" | jq -r '.VITE_GDRIVE_CLIENT_ID // empty')"
         VITE_GAPI_KEY="$$(printf %s "$$SECRET_CONTENT" | jq -r '.VITE_GAPI_KEY // empty')"
@@ -33,7 +31,6 @@ steps:
         [ -n "$$VITE_GDRIVE_CLIENT_ID" ]      || { echo "❌ Missing VITE_GDRIVE_CLIENT_ID"; exit 1; }
         [ -n "$$VITE_GAPI_KEY" ]              || { echo "❌ Missing VITE_GAPI_KEY"; exit 1; }
 
-        # Store trimmed values for the next step (no trailing newlines)
         printf %s "$$VITE_CLERK_PUBLISHABLE_KEY" > /workspace/vite_clerk_key.txt
         printf %s "$$VITE_GDRIVE_CLIENT_ID"     > /workspace/vite_gdrive_client.txt
         printf %s "$$VITE_GAPI_KEY"             > /workspace/vite_gapi_key.txt
@@ -58,17 +55,17 @@ steps:
           --build-arg VITE_CLERK_PUBLISHABLE_KEY="$$VITE_CLERK_PUBLISHABLE_KEY" \
           --build-arg VITE_GDRIVE_CLIENT_ID="$$VITE_GDRIVE_CLIENT_ID" \
           --build-arg VITE_GAPI_KEY="$$VITE_GAPI_KEY" \
-          -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
-          -t us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest \
+          -t us-central1-docker.pkg.dev/$$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          -t us-central1-docker.pkg.dev/$$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest \
           .
 
-  # 3) Push image with commit SHA
+  # 3) Push image with commit SHA tag
   - name: "gcr.io/cloud-builders/docker"
     id: "Push to Artifact Registry"
     waitFor: ["Build Docker Image"]
     args:
       - "push"
-      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
+      - "us-central1-docker.pkg.dev/$$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
 
   # 4) Push latest tag
   - name: "gcr.io/cloud-builders/docker"
@@ -76,7 +73,7 @@ steps:
     waitFor: ["Build Docker Image"]
     args:
       - "push"
-      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
+      - "us-central1-docker.pkg.dev/$$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
 
   # 5) Verify PR-app-config secret exists and has expected keys
   - name: "gcr.io/cloud-builders/gcloud"
@@ -89,16 +86,13 @@ steps:
         set -euo pipefail
         echo "🔍 Verifying PR-app-config secret exists and contents..."
 
-        if gcloud secrets describe PR-app-config --project="$PROJECT_ID" >/dev/null 2>&1; then
+        if gcloud secrets describe PR-app-config --project="$$PROJECT_ID" >/dev/null 2>&1; then
           echo "✅ PR-app-config secret found"
-          SECRET_CONTENT="$$(gcloud secrets versions access latest --secret=PR-app-config --project="$PROJECT_ID")"
+          SECRET_CONTENT="$$(gcloud secrets versions access latest --secret=PR-app-config --project="$$PROJECT_ID")"
 
           echo "$$SECRET_CONTENT" | grep -q '"OPENAI_API_KEYS"'            && echo "✅ OPENAI_API_KEYS found" || (echo "❌ OPENAI_API_KEYS missing" && exit 1)
           echo "$$SECRET_CONTENT" | grep -q '"CLERK_SECRET_KEY"'           && echo "✅ CLERK_SECRET_KEY found" || (echo "❌ CLERK_SECRET_KEY missing" && exit 1)
           echo "$$SECRET_CONTENT" | grep -q '"VITE_CLERK_PUBLISHABLE_KEY"' && echo "✅ VITE_CLERK_PUBLISHABLE_KEY found" || (echo "❌ VITE_CLERK_PUBLISHABLE_KEY missing" && exit 1)
-          # Optional; uncomment if required:
-          # echo "$$SECRET_CONTENT" | grep -q '"GOOGLE_TRANSLATE_API_KEY"' && echo "✅ GOOGLE_TRANSLATE_API_KEY found" || (echo "❌ GOOGLE_TRANSLATE_API_KEY missing" && exit 1)
-
           echo "✅ PR-app-config secret verification complete"
         else
           echo "❌ PR-app-config secret not found. Please create it first."
@@ -125,7 +119,7 @@ steps:
           echo "ℹ️ Service ${_SERVICE_NAME} not found yet; skipping pre-deployment health check."
         fi
 
-  # 7) Deploy (no-traffic) and wait for Ready=true, then shift traffic
+  # 7) Deploy (no-traffic), wait for the newly created REVISION to be Ready, then route traffic
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy to Cloud Run"
     waitFor: ["BVT-Pre-Deploy"]
@@ -134,9 +128,11 @@ steps:
       - "-c"
       - |
         set -euo pipefail
+
+        # Deploy new revision with NO traffic
         gcloud run deploy ${_SERVICE_NAME} \
-          --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
-          --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+          --image us-central1-docker.pkg.dev/$$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          --service-account progressive-reader-bvt-sa@$$PROJECT_ID.iam.gserviceaccount.com \
           --set-secrets /secrets/env.json=PR-app-config:latest \
           --region us-central1 \
           --platform managed \
@@ -151,20 +147,53 @@ steps:
           --execution-environment gen2 \
           --no-traffic
 
-        echo "⏳ Waiting for deployment to be Ready..."
-        timeout 300 bash -c 'while true; do
-          STATUS=$$(gcloud run services describe '"${_SERVICE_NAME}"' --region us-central1 \
-            --format="value(status.conditions[?type=Ready].status)")
-          if [ "$$STATUS" = "True" ]; then
-            echo "✅ Deployment ready"
+        # Figure out the latest created revision name (v2/v1 compatible)
+        CREATED="$$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format='value(status.latestCreatedRevision)')"
+        if [ -z "$$CREATED" ]; then
+          CREATED="$$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --format='value(status.latestCreatedRevisionName)')"
+        fi
+        if [ -z "$$CREATED" ]; then
+          echo "❌ Unable to determine latest created revision name"
+          exit 1
+        fi
+        echo "🆕 Latest created revision: $$CREATED"
+
+        echo "⏳ Waiting for revision $$CREATED to become Ready..."
+        READY_OK=0
+        # Wait up to ~8 minutes (48 * 10s)
+        for i in $$(seq 1 48); do
+          # Try terminalCondition.state (v2), then conditions[].status (v1), then conditions[].state (alt)
+          READY_STATE="$$(gcloud run revisions describe "$$CREATED" --platform managed --region us-central1 --format='value(status.terminalCondition.state)')"
+          if [ -z "$$READY_STATE" ]; then
+            READY_STATE="$$(gcloud run revisions describe "$$CREATED" --platform managed --region us-central1 --format='value(status.conditions[?type=Ready].status)')"
+          fi
+          if [ -z "$$READY_STATE" ]; then
+            READY_STATE="$$(gcloud run revisions describe "$$CREATED" --platform managed --region us-central1 --format='value(status.conditions[?type=Ready].state)')"
+          fi
+
+          if [ "$$READY_STATE" = "True" ]; then
+            echo "✅ Revision $$CREATED is Ready"
+            READY_OK=1
             break
           fi
-          echo "⏳ Still waiting... (status: $$STATUS)"
+
+          REASON="$$(gcloud run revisions describe "$$CREATED" --platform managed --region us-central1 --format='value(status.terminalCondition.reason)')"
+          MESSAGE="$$(gcloud run revisions describe "$$CREATED" --platform managed --region us-central1 --format='value(status.terminalCondition.message)')"
+          echo "⏳ Still waiting... (state=$${READY_STATE:-unknown} reason=$${REASON:-''})"
+          if [ -n "$$MESSAGE" ]; then echo "   ↳ $$MESSAGE"; fi
           sleep 10
-        done'
+        done
+
+        if [ "$$READY_OK" -ne 1 ]; then
+          echo "❌ Revision $$CREATED did not become Ready in time."
+          # Show the last conditions to aid debugging
+          gcloud run revisions describe "$$CREATED" --platform managed --region us-central1 --format='yaml(status)'
+          exit 1
+        fi
 
         echo "🚀 Promoting new revision to serve traffic..."
-        gcloud run services update-traffic ${_SERVICE_NAME} --to-latest --region us-central1
+        # You can pin to the created revision explicitly to avoid races:
+        gcloud run services update-traffic ${_SERVICE_NAME} --region us-central1 --to-revisions "$$CREATED=100"
 
   # 8) Post-deploy verification (non-blocking)
   - name: "gcr.io/cloud-builders/gcloud"
