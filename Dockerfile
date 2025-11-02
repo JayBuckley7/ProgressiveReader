@@ -2,6 +2,11 @@
 FROM node:20 AS frontend-builder
 WORKDIR /frontend
 
+# Install Python and pydantic for TS type generation
+RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && pip3 install --no-cache-dir pydantic==2.10.5
+
 # Accept build arguments for environment variables
 ARG VITE_CLERK_PUBLISHABLE_KEY
 ARG VITE_GDRIVE_CLIENT_ID
@@ -15,6 +20,10 @@ ENV VITE_GAPI_KEY=$VITE_GAPI_KEY
 # Copy package files and install dependencies
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
+
+# Bring in schema generator and backend schemas used for type generation
+COPY scripts/ /scripts/
+COPY backend/app /backend/app
 
 # Copy entire frontend directory and build
 COPY frontend/ ./
