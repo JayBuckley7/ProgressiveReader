@@ -9,22 +9,22 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { SignInForm } from "./components/SignInForm";
+import { SignInForm } from "@shared/components/SignInForm";
 import { Toaster } from "sonner";
-import { JpdbPopupController } from "./components/JpdbPopup";
-import BookLibrary from "./components/BookLibrary";
-import { BookReader } from "./components/BookReader";
-import { SettingsProvider } from "./contexts/SettingsContext";
-import { TopActions } from "./components/TopActions";
-import { HeroBanner } from "./components/HeroBanner";
-import { DangerZone } from "./components/DangerZone";
-import { Footer } from "./components/Footer";
-import { VocabularyPage } from "./components/VocabularyPage";
-import { LoginModal } from "./components/LoginModal";
-import { AppDataProvider, useAppData } from "./contexts/AppDataContext";
-import { gDriveService } from "./services/gdriveService";
-import { AdminPage } from "./components/AdminPage";
-import { ClipboardReader } from "./components/ClipboardReader";
+import { JpdbPopupController } from "./features/reader/components/JpdbPopup";
+import BookLibrary from "./features/books/components/BookLibrary";
+import { BookReader } from "./features/reader/components/BookReader";
+import { SettingsProvider } from "@shared/contexts/SettingsContext";
+import { TopActions } from "@shared/components/TopActions";
+import { HeroBanner } from "@shared/components/HeroBanner";
+import { DangerZone } from "@shared/components/DangerZone";
+import { Footer } from "@shared/components/Footer";
+import { VocabularyPage } from "./features/vocabulary/components/VocabularyPage";
+import { LoginModal } from "@shared/components/LoginModal";
+import { AppDataProvider, useAppData } from "@shared/contexts/AppDataContext";
+import { gDriveService } from "@integrations/googleDrive/gdriveService";
+import { AdminPage } from "./features/admin/components/AdminPage";
+import ClipboardReader from "./features/clipboard/components/ClipboardReader";
 
 
 // Get Clerk publishable key from environment variable
@@ -35,7 +35,15 @@ console.log('🔐 [APP CLERK DEBUG] Environment mode:', import.meta.env.MODE)
 
 
 export default function App() {
-  if (!clerkPubKey) throw new Error("Missing Clerk publishable key");
+  if (!clerkPubKey) {
+    console.error('Missing Clerk publishable key')
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h1>Configuration Error</h1>
+        <p>Missing Clerk publishable key. Please check your .env file.</p>
+      </div>
+    )
+  }
 
   return (
     <ClerkProvider

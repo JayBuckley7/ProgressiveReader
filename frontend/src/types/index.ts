@@ -104,5 +104,16 @@ export interface LibraryStructure {
   books: BookMetadata[];
 }
 
+export interface ReadingProgress {
+  bookId: string;
+  userId: string;
+  currentChapter: number;
+  currentPosition: number;
+  currentPage?: number; // For PDF files
+  totalPages?: number; // For PDFs
+  lastUpdated: Date;
+  fileType?: string; // Track whether it's pdf, epub, etc.
+}
+
 // Required to make this a module
 export {}; 

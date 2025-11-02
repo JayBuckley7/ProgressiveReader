@@ -1,6 +1,11 @@
 """Blueprint routes for main pages and index handling."""
 from flask import Blueprint, render_template, request, current_app, jsonify
 import os
+from pathlib import Path
+
+from app.domains.books.integrations import LocalDemoStorageProvider
+from app.domains.books.repository import BooksRepository
+from app.domains.books.service import BooksService
 
 # Use a more descriptive name like 'main_bp' or similar
 main_bp = Blueprint('main', __name__)
@@ -51,10 +56,11 @@ def delete_book(filename):
 @main_bp.route('/demo', strict_slashes=False)
 def demo():
     """Render the demo page by including index.html"""
-    demo_books_dir = os.path.join(current_app.root_path, 'static', 'demo_books')
-    demo_book_files = []
-    if os.path.exists(demo_books_dir):
-        demo_book_files = [f for f in os.listdir(demo_books_dir) if f.endswith('.epub')]
+    demo_books_dir = Path(current_app.root_path) / 'static' / 'demo_books'
+    service = BooksService(BooksRepository(), LocalDemoStorageProvider(demo_books_dir))
+    demo_books = service.list_books()
+    demo_book_files = [book.filename or book.title for book in demo_books]
+    if demo_book_files:
         current_app.logger.info(f"Found demo books: {demo_book_files}")
 
     return render_template('demo.html', is_demo=True, demo_books=demo_book_files, openai_key_configured=True)

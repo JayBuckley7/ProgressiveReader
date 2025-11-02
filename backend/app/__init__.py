@@ -22,17 +22,105 @@ def create_app(config_class=Config) -> Flask:
     load_dotenv()
 
     # Load additional configuration from a mounted secret if available
-    secret_path = os.environ.get("APP_CONFIG_PATH", "/secrets/env.json")
-    if os.path.exists(secret_path):
+    # Prefer env_dev.json in development, fall back to env.json
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    backend_dir = os.path.dirname(os.path.dirname(__file__))
+    is_dev = os.getenv("FLASK_ENV") == "development" or os.getenv("FLASK_DEBUG") == "1"
+
+    possible_paths = [
+        os.environ.get("APP_CONFIG_PATH"),  # Explicitly configured path takes precedence
+    ]
+
+    if is_dev:
+        possible_paths += [
+            os.path.join(root_dir, "env_dev.json"),   # Project root dev config
+            os.path.join(backend_dir, "env_dev.json"),  # Backend dir dev config
+        ]
+
+    possible_paths += [
+        "/secrets/env.json",  # Production path (Linux secrets mount)
+        os.path.join(root_dir, "env.json"),  # Project root
+        os.path.join(backend_dir, "env.json"),  # Backend directory
+    ]
+    
+    secret_path = None
+    for path in possible_paths:
+        if path and os.path.exists(path):
+            secret_path = path
+            break
+    
+    if secret_path:
         try:
             with open(secret_path, "r") as f:
                 config_data = json.load(f)
+
+            # Override env vars if explicitly loading via APP_CONFIG_PATH or using env_dev.json
+            override_env = bool(os.environ.get("APP_CONFIG_PATH")) or (
+                os.path.basename(secret_path).lower() == "env_dev.json"
+            )
+
             for key, value in config_data.items():
                 # Special handling for OPENAI_API_KEYS to preserve JSON array format
                 if key == "OPENAI_API_KEYS" and isinstance(value, list):
-                    os.environ.setdefault(key, json.dumps(value))
+                    if override_env:
+                        os.environ[key] = json.dumps(value)
+                    else:
+                        os.environ.setdefault(key, json.dumps(value))
                 else:
-                    os.environ.setdefault(key, str(value))
+                    if override_env:
+                        os.environ[key] = str(value)
+                    else:
+                        os.environ.setdefault(key, str(value))
+
+            logging.info(f"Loaded configuration from {secret_path} (override_env={override_env})")
+
+            # Auto-resolve Clerk test/live mismatch to prevent 401s in dev
+            try:
+                clerk_pub = os.environ.get("VITE_CLERK_PUBLISHABLE_KEY", "")
+                clerk_sec = os.environ.get("CLERK_SECRET_KEY", "")
+
+                def _load_secret_from(path: str, expected_prefix: str) -> str | None:
+                    if not os.path.exists(path):
+                        return None
+                    try:
+                        with open(path, "r") as fh:
+                            data = json.load(fh)
+                        cand = data.get("CLERK_SECRET_KEY")
+                        if isinstance(cand, str) and cand.startswith(expected_prefix):
+                            return cand
+                    except Exception as ex:
+                        logging.warning(f"Failed reading {path} for Clerk secret alignment: {ex}")
+                    return None
+
+                # If frontend uses pk_test but backend loaded sk_live, switch to test secret when available
+                if clerk_pub.startswith("pk_test_") and clerk_sec.startswith("sk_live_"):
+                    dev_candidates = [
+                        os.path.join(root_dir, "env_dev.json"),
+                        os.path.join(backend_dir, "env_dev.json"),
+                    ]
+                    for cand_path in dev_candidates:
+                        new_secret = _load_secret_from(cand_path, "sk_test_")
+                        if new_secret:
+                            os.environ["CLERK_SECRET_KEY"] = new_secret
+                            logging.warning("Adjusted CLERK_SECRET_KEY to test key to match publishable key (dev alignment)")
+                            break
+
+                # If frontend uses pk_live but backend loaded sk_test, switch to live secret when available
+                if clerk_pub.startswith("pk_live_") and clerk_sec.startswith("sk_test_"):
+                    prod_candidates = [
+                        "/secrets/env.json",
+                        os.path.join(root_dir, "env.json"),
+                        os.path.join(backend_dir, "env.json"),
+                    ]
+                    for cand_path in prod_candidates:
+                        new_secret = _load_secret_from(cand_path, "sk_live_")
+                        if new_secret:
+                            os.environ["CLERK_SECRET_KEY"] = new_secret
+                            logging.warning("Adjusted CLERK_SECRET_KEY to live key to match publishable key (prod alignment)")
+                            break
+            except Exception as align_ex:
+                logging.warning(f"Clerk key alignment step skipped due to error: {align_ex}")
+
         except Exception as e:
             logging.warning(f"Failed to load secrets from {secret_path}: {e}")
     app = Flask(
@@ -41,8 +129,8 @@ def create_app(config_class=Config) -> Flask:
         static_url_path=""           # serve at /
     )
     
-    # Initialize CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Initialize CORS - allow all routes for development
+    CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
     
     app.config.from_object(config_class)
 
@@ -145,16 +233,22 @@ def create_app(config_class=Config) -> Flask:
         # --- Import parts of our application first ---
         from .routes import main  # Main UI blueprint
         from .routes import reader  # Reader blueprint
-        from .routes import api  # API blueprint - this initializes the empty openai_key_pool
-        from .routes import settings  # User settings endpoints
-        from .routes import auth  # Authentication routes
-        from .routes import drive  # Google Drive proxy routes
-        from .routes import due_cards_google  # JPDB due cards with Google OAuth
+        
+        # Import domain routes
+        from .domains.translation.routes import translation_bp
+        from .domains.vocabulary.routes import vocabulary_bp
+        from .domains.kanji.routes import kanji_bp
+        from .domains.books.routes import books_bp
+        from .domains.admin.routes import admin_bp
+        from .domains.auth.routes import auth_bp
+        from .domains.drive import drive_bp as drive_domain_bp
 
         # Add keys to the pool after importing but before registering blueprints
+        from .utils.openai_key_pool import get_openai_key_pool
+        key_pool = get_openai_key_pool()
         if openai_keys and isinstance(openai_keys, list):
-            # Now that api module is imported, populate the pool
-            api.openai_key_pool.extend(openai_keys)
+            for key in openai_keys:
+                key_pool.add_key(key)
             app.logger.info(f"Added {len(openai_keys)} OpenAI API keys to pool")
         else:
             app.logger.info("No valid OpenAI API keys found")
@@ -163,11 +257,15 @@ def create_app(config_class=Config) -> Flask:
         # Register Blueprints
         app.register_blueprint(main.main_bp)
         app.register_blueprint(reader.reader_bp)
-        app.register_blueprint(api.api_bp)
-        app.register_blueprint(settings.settings_bp)
-        app.register_blueprint(auth.auth_bp)
-        app.register_blueprint(drive.drive_bp)
-        app.register_blueprint(due_cards_google.due_cards_google_bp)
+        
+        # Register domain blueprints
+        app.register_blueprint(translation_bp)
+        app.register_blueprint(vocabulary_bp)
+        app.register_blueprint(kanji_bp)
+        app.register_blueprint(books_bp)
+        app.register_blueprint(admin_bp)
+        app.register_blueprint(auth_bp)
+        app.register_blueprint(drive_domain_bp)
 
         db.create_all()
 

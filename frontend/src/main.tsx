@@ -15,26 +15,62 @@ console.log('🔑 [CLERK DEBUG] All env vars:', Object.keys(import.meta.env).fil
 
 if (!PUBLISHABLE_KEY) {
   console.error('❌ [CLERK DEBUG] Missing Publishable Key!')
+  // Show error in UI instead of throwing
+  const root = document.getElementById('root')
+  if (root) {
+    root.innerHTML = `
+      <div style="padding: 20px; text-align: center;">
+        <h1>Configuration Error</h1>
+        <p>Missing Clerk publishable key. Please check your .env file.</p>
+        <pre style="background: #f5f5f5; padding: 10px; margin: 20px 0; text-align: left;">
+VITE_CLERK_PUBLISHABLE_KEY should be set in .env file
+        </pre>
+      </div>
+    `
+  }
   throw new Error('Missing Publishable Key')
 }
 
 console.log('✅ [CLERK DEBUG] Publishable key validation passed')
 
 async function startApp() {
-  const app = (
-    <React.StrictMode>
-      <I18nextProvider i18n={i18n}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </I18nextProvider>
-    </React.StrictMode>
-  );
+  try {
+    const app = (
+      <React.StrictMode>
+        <I18nextProvider i18n={i18n}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </I18nextProvider>
+      </React.StrictMode>
+    );
 
-  ReactDOM.createRoot(document.getElementById('root')!).render(app);
+    const rootElement = document.getElementById('root')
+    if (!rootElement) {
+      throw new Error('Root element not found')
+    }
+
+    ReactDOM.createRoot(rootElement).render(app);
+  } catch (error) {
+    console.error('Failed to start app:', error)
+    const root = document.getElementById('root')
+    if (root) {
+      root.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+          <h1>App Error</h1>
+          <p>Failed to start application. Check console for details.</p>
+          <pre style="background: #f5f5f5; padding: 10px; margin: 20px 0; text-align: left;">
+${error instanceof Error ? error.message : String(error)}
+          </pre>
+        </div>
+      `
+    }
+  }
 }
 
-startApp();
+startApp().catch((error) => {
+  console.error('Fatal error starting app:', error)
+})
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

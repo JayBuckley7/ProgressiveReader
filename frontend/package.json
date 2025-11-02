@@ -5,8 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --open --host",
+    "prebuild": "npm run types:generate",
     "build": "vite build",
-    "lint": "tsc -p . --noEmit --pretty false && vite build"
+    "lint": "tsc -p . --noEmit --pretty false && vite build",
+    "types:generate": "python ../scripts/generate_ts_types.py",
+    "test": "npm run -s test:part1 && npm run -s test:part2",
+    "test:part1": "node --max-old-space-size=4096 ./node_modules/vitest/vitest.mjs --run --exclude src/test/integration/reader.translate.test.tsx --exclude src/test/smoke/BookReader.test.tsx",
+    "test:part2": "node --max-old-space-size=4096 ./node_modules/vitest/vitest.mjs --run src/test/smoke/BookReader.test.tsx src/test/integration/reader.translate.test.tsx",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.31.8",
@@ -44,6 +50,14 @@
     "tailwindcss": "~3",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^2.1.5",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "msw": "^2.6.4",
+    "zod": "^3.23.8",
+    "jsdom": "^24.1.3",
+    "happy-dom": "^15.11.7"
   }
 }

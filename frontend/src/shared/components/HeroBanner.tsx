@@ -1,0 +1,105 @@
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useAppData } from "@shared/contexts/AppDataContext";
+import { authManager } from "@shared/services/authManager";
+import { vocabBank } from "@features/vocabulary/services/vocabBank";
+
+export function HeroBanner() {
+  const { user, isSignedIn, isLoaded } = useUser();
+  // Pull the user's library from the storage service so counts reflect
+  // the current library after Drive sync completes.
+  const { books } = useAppData();
+  const { t } = useTranslation();
+
+  const [stats, setStats] = useState({ saved: 0, mastered: 0 });
+
+  useEffect(() => {
+    // Only load vocabulary if user is authenticated with Clerk
+    if (isLoaded && isSignedIn) {
+      // Wait for the centralized auth manager to confirm authentication
+      // instead of immediately calling vocabBank.load()
+      let hasLoaded = false;
+      const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
+        if (isAuthenticated && !hasLoaded) {
+          hasLoaded = true;
+          vocabBank.load().then(() => {
+            setStats(vocabBank.getStats());
+          });
+        }
+      });
+      
+      return unsubscribe;
+    }
+  }, [isLoaded, isSignedIn]);
+
+  return (
+    <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <SignedIn>
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">
+              {t("hero.signedIn.welcome", {
+                name: user?.firstName || user?.username || t("hero.defaultName"),
+              })}
+            </h1>
+            <p className="text-xl text-blue-100 mb-6">
+              {t("hero.signedIn.journey")}
+            </p>
+            <div className="flex justify-center space-x-8 text-center">
+              <div>
+                <div className="text-3xl font-bold">{books.length}</div>
+                <div className="text-blue-200">{t("hero.signedIn.stats.books")}</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold">{stats.saved}</div>
+                <div className="text-blue-200">{t("hero.signedIn.stats.wordsSaved")}</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold">{stats.mastered}</div>
+                <div className="text-blue-200">{t("hero.signedIn.stats.wordsMastered")}</div>
+              </div>
+            </div>
+          </div>
+        </SignedIn>
+
+        <SignedOut>
+          <div className="text-center">
+
+          <img src="/slow.gif" alt={t("hero.signedOut.animationAlt")} className="w-16 h-16 mb-4 rounded-lg shadow mx-auto" />
+            <h1 className="text-5xl font-bold mb-4 flex items-center justify-center">
+              {t("hero.signedOut.title")}
+            </h1>
+            <p className="text-xl text-blue-100 mb-8">
+              {t("hero.signedOut.description")}
+            </p>
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+                <div className="text-3xl mb-3">📖</div>
+                <h3 className="font-semibold mb-2">{t("hero.signedOut.features.smartReading.title")}</h3>
+                <p className="text-blue-100 text-sm">
+                  {t("hero.signedOut.features.smartReading.description")}
+                </p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+                <div className="text-3xl mb-3">📝</div>
+                <h3 className="font-semibold mb-2">{t("hero.signedOut.features.vocabTracking.title")}</h3>
+                <p className="text-blue-100 text-sm">
+                  {t("hero.signedOut.features.vocabTracking.description")}
+                </p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+                <div className="text-3xl mb-3">📊</div>
+                <h3 className="font-semibold mb-2">{t("hero.signedOut.features.analytics.title")}</h3>
+                <p className="text-blue-100 text-sm">
+                  {t("hero.signedOut.features.analytics.description")}
+                </p>
+              </div>
+            </div>
+          </div>
+        </SignedOut>
+      </div>
+    </div>
+  );
+}
+
