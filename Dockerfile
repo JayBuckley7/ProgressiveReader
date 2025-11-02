@@ -5,7 +5,7 @@ WORKDIR /frontend
 # Install Python and pydantic for TS type generation
 RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/* \
     && ln -s /usr/bin/python3 /usr/bin/python \
-    && pip3 install --no-cache-dir pydantic==2.10.5
+    && pip3 install --no-cache-dir --break-system-packages pydantic>=2.11.2
 
 # Accept build arguments for environment variables
 ARG VITE_CLERK_PUBLISHABLE_KEY

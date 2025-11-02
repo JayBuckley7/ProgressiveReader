@@ -81,7 +81,7 @@ const defaultAppData = {
 // @ts-ignore
 globalThis.__APP_DATA_MOCK__ = defaultAppData;
 
-vi.mock('../contexts/AppDataContext', async (orig) => {
+vi.mock('@shared/contexts/AppDataContext', async (orig) => {
   return {
     ...(await orig()),
     useAppData: () => {
