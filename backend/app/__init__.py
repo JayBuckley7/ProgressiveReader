@@ -51,7 +51,7 @@ def create_app(config_class=Config) -> Flask:
     
     if secret_path:
         try:
-            with open(secret_path, "r") as f:
+            with open(secret_path, "r", encoding="utf-8-sig") as f:
                 config_data = json.load(f)
 
             # Override env vars if explicitly loading via APP_CONFIG_PATH or using env_dev.json
@@ -83,7 +83,7 @@ def create_app(config_class=Config) -> Flask:
                     if not os.path.exists(path):
                         return None
                     try:
-                        with open(path, "r") as fh:
+                        with open(path, "r", encoding="utf-8-sig") as fh:
                             data = json.load(fh)
                         cand = data.get("CLERK_SECRET_KEY")
                         if isinstance(cand, str) and cand.startswith(expected_prefix):
@@ -195,7 +195,7 @@ def create_app(config_class=Config) -> Flask:
         
         if secrets_file_exists:
             try:
-                with open(secrets_path, "r") as f:
+                with open(secrets_path, "r", encoding="utf-8-sig") as f:
                     secrets_data = json.load(f)
                     
                 # Reload secrets into environment if they're not already there
