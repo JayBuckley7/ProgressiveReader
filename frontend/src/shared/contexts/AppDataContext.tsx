@@ -13,7 +13,7 @@ type AppDataContextType = {
   isDriveBookLoading: boolean;
   isAuthenticated: boolean;
   syncBooks: () => Promise<void>;
-  uploadBook: (file: File, meta: { title: string; fileType: string; cover?: Blob }) => Promise<BookMetadata | null>;
+  uploadBook: (file: File, meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean }, onOCRProgress?: (progress: { page?: number; total?: number; percent?: number }) => void) => Promise<BookMetadata | null>;
   deleteBook: (bookId: string) => Promise<void>;
   updateBookCover: (bookId: string, coverFile: File) => Promise<string | undefined>;
   openCloudFolder: () => Promise<void>;

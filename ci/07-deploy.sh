@@ -7,7 +7,7 @@ set -euo pipefail
 gcloud run deploy $_SERVICE_NAME \
   --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/$_SERVICE_NAME:$_COMMIT_SHA \
   --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-  --set-secrets /secrets/env.json=PR-app-config:latest \
+  --set-secrets /secrets/env.json=PR-app-config:latest,/secrets/pdf-ocr-credentials.json=pdf-ocr-credentials:latest \
   --region us-central1 \
   --platform managed \
   --allow-unauthenticated \

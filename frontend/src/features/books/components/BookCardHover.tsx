@@ -138,9 +138,9 @@ export function BookCardHover({
             className={`
               btn-change-cover absolute bottom-2 right-2 z-30
               bg-gray-600 hover:bg-gray-500 text-white border-none
-              px-2 py-1 rounded-full text-sm cursor-pointer
+              w-8 h-8 rounded-full flex items-center justify-center
               opacity-80 hover:opacity-100 transition-all duration-200
-              ${isHovered ? 'flex items-center justify-center' : 'hidden'}
+              ${isHovered ? '' : 'hidden'}
               disabled:opacity-50 disabled:cursor-not-allowed
             `}
             title={`Change cover for "${book.title}"`}
@@ -148,8 +148,25 @@ export function BookCardHover({
             {isUpdatingCover ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
             ) : (
-              '📷'
+              <span className="text-sm">📷</span>
             )}
+          </button>
+
+          {/* Edit Book Button - appears on hover, aligned with cover button */}
+          <button
+            onClick={handleEditClick}
+            className={`
+              absolute bottom-2 left-2 z-30
+              bg-gray-600 hover:bg-gray-500 text-white border-none
+              w-8 h-8 rounded-full flex items-center justify-center
+              opacity-80 hover:opacity-100 transition-all duration-200
+              ${isHovered ? '' : 'hidden'}
+            `}
+            title={`Edit details for "${book.title}"`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
           </button>
 
           {/* Hidden file input */}
@@ -186,7 +203,7 @@ export function BookCardHover({
             bg-red-500 hover:bg-red-600 text-white border-none
             px-2 py-1 rounded-full text-sm cursor-pointer
             opacity-80 hover:opacity-100 transition-all duration-200
-            ${isHovered ? 'block' : 'hidden'}
+            ${isHovered ? 'flex items-center justify-center' : 'hidden'}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
           title={`Delete "${book.title}"`}
@@ -194,7 +211,9 @@ export function BookCardHover({
           {isDeleting ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           ) : (
-            '✕'
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           )}
         </button>
 
@@ -264,22 +283,6 @@ export function BookCardHover({
           </div>
         )}
 
-        {/* Edit Book Button - appears on hover, bottom left */}
-        <button
-          onClick={handleEditClick}
-          className={`
-            absolute bottom-2 left-2 z-10
-            bg-gray-600 hover:bg-gray-500 text-white border-none
-            px-2 py-1 rounded-full text-sm cursor-pointer
-            opacity-80 hover:opacity-100 transition-all duration-200
-            ${isHovered ? 'flex items-center justify-center' : 'hidden'}
-          `}
-          title={`Edit details for "${book.title}"`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        </button>
       </div>
 
       {showEditModal && (

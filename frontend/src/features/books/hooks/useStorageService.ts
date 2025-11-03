@@ -306,14 +306,18 @@ function useStorageService() {
     };
   }, [books]);
 
-  const uploadBook = async (file: File, meta: {title: string; fileType: string; cover?: Blob}) => {
+  const uploadBook = async (
+    file: File, 
+    meta: {title: string; fileType: string; cover?: Blob; processOCR?: boolean},
+    onOCRProgress?: (progress: { page?: number; total?: number; percent?: number }) => void
+  ) => {
     if (!clerkUser) {
       toast.error('Please sign in to upload books');
       return null;
     }
 
     try {
-      const book = await bookMetadataService.uploadBook(file, meta, clerkUser);
+      const book = await bookMetadataService.uploadBook(file, meta, clerkUser, onOCRProgress);
       await loadUserBooks(); // Refresh the list
       toast.success('Book uploaded successfully to your cloud storage!');
       return book;

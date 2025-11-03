@@ -188,28 +188,62 @@ def create_app(config_class=Config) -> Flask:
     # --- Health Check Endpoint ---
     @app.route('/health')
     def health_check():
+        # Check if secrets file exists and try to load secrets if not already in environment
+        secrets_path = "/secrets/env.json"
+        secrets_file_exists = os.path.exists(secrets_path)
+        secrets_data = {}
+        
+        if secrets_file_exists:
+            try:
+                with open(secrets_path, "r") as f:
+                    secrets_data = json.load(f)
+                    
+                # Reload secrets into environment if they're not already there
+                # This ensures secrets are available even if they weren't loaded during initialization
+                for key, value in secrets_data.items():
+                    if key == "OPENAI_API_KEYS" and isinstance(value, list):
+                        if not os.environ.get(key):
+                            os.environ[key] = json.dumps(value)
+                    else:
+                        if not os.environ.get(key):
+                            os.environ[key] = str(value)
+                            
+                logging.info(f"Reloaded secrets from {secrets_path} in health check")
+            except Exception as e:
+                logging.warning(f"Failed to read secrets file: {e}")
+        
+        # Check for required keys (both in environment and in secrets file)
+        clerk_secret_key_env = os.environ.get("CLERK_SECRET_KEY")
+        clerk_publishable_key_env = os.environ.get("VITE_CLERK_PUBLISHABLE_KEY")
+        clerk_secret_key_in_file = "CLERK_SECRET_KEY" in secrets_data
+        clerk_publishable_key_in_file = "VITE_CLERK_PUBLISHABLE_KEY" in secrets_data
+        
         health_status = {
             "status": "healthy",
-            "clerk_secret_key_configured": bool(os.environ.get("CLERK_SECRET_KEY")),
-            "clerk_publishable_key_configured": bool(os.environ.get("VITE_CLERK_PUBLISHABLE_KEY"))
+            "clerk_secret_key_configured": bool(clerk_secret_key_env),
+            "clerk_publishable_key_configured": bool(clerk_publishable_key_env),
+            "secrets_file_exists": secrets_file_exists,
+            "secrets_file_has_clerk_secret": clerk_secret_key_in_file if secrets_file_exists else None,
+            "secrets_file_has_clerk_publishable": clerk_publishable_key_in_file if secrets_file_exists else None,
         }
         
         # Add more details for debugging
-        if os.environ.get("CLERK_SECRET_KEY"):
-            clerk_secret = os.environ.get("CLERK_SECRET_KEY")
-            health_status["clerk_secret_key_length"] = len(clerk_secret)
-            health_status["clerk_secret_key_prefix"] = clerk_secret[:8] + "..." if len(clerk_secret) > 8 else clerk_secret
+        if clerk_secret_key_env:
+            health_status["clerk_secret_key_length"] = len(clerk_secret_key_env)
+            health_status["clerk_secret_key_prefix"] = clerk_secret_key_env[:8] + "..." if len(clerk_secret_key_env) > 8 else clerk_secret_key_env
         
-        if os.environ.get("VITE_CLERK_PUBLISHABLE_KEY"):
-            clerk_pub = os.environ.get("VITE_CLERK_PUBLISHABLE_KEY")
-            health_status["clerk_publishable_key_length"] = len(clerk_pub)
-            health_status["clerk_publishable_key_prefix"] = clerk_pub[:8] + "..." if len(clerk_pub) > 8 else clerk_pub
+        if clerk_publishable_key_env:
+            health_status["clerk_publishable_key_length"] = len(clerk_publishable_key_env)
+            health_status["clerk_publishable_key_prefix"] = clerk_publishable_key_env[:8] + "..." if len(clerk_publishable_key_env) > 8 else clerk_publishable_key_env
         
-        # Overall Clerk health status
-        clerk_healthy = health_status["clerk_secret_key_configured"] and health_status["clerk_publishable_key_configured"]
+        # Overall health: Both keys should be configured (either from env or from secrets file)
+        clerk_healthy = (
+            (bool(clerk_secret_key_env) or clerk_secret_key_in_file) and
+            (bool(clerk_publishable_key_env) or clerk_publishable_key_in_file)
+        )
         health_status["clerk_overall_healthy"] = clerk_healthy
         
-        # Return 500 if Clerk is not properly configured
+        # Return 500 only if required keys are completely missing
         status_code = 200 if clerk_healthy else 500
         return jsonify(health_status), status_code
     # --- End Health Check Endpoint ---
@@ -242,6 +276,7 @@ def create_app(config_class=Config) -> Flask:
         from .domains.admin.routes import admin_bp
         from .domains.auth.routes import auth_bp
         from .domains.drive import drive_bp as drive_domain_bp
+        from .domains.ocr.routes import ocr_bp
 
         # Add keys to the pool after importing but before registering blueprints
         from .utils.openai_key_pool import get_openai_key_pool
@@ -266,6 +301,7 @@ def create_app(config_class=Config) -> Flask:
         app.register_blueprint(admin_bp)
         app.register_blueprint(auth_bp)
         app.register_blueprint(drive_domain_bp)
+        app.register_blueprint(ocr_bp)
 
         db.create_all()
 

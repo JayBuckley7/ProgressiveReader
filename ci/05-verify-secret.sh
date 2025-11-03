@@ -16,3 +16,12 @@ else
   exit 1
 fi
 
+echo "🔍 Verifying pdf-ocr-credentials secret exists..."
+
+if gcloud secrets describe pdf-ocr-credentials --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo "✅ pdf-ocr-credentials secret found"
+else
+  echo "❌ pdf-ocr-credentials secret not found. Please create it first."
+  exit 1
+fi
+

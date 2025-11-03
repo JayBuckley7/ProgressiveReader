@@ -4,6 +4,8 @@ import { authManager } from '@shared/services/authManager';
 import { removeCachedCover, removeCoverForFile } from '@integrations/googleDrive/services/driveCache';
 import { bookCacheService } from './bookCache';
 import { bookStorageService } from './bookStorage';
+import { processPDFWithOCR, OCRProgressCallback } from './ocrApi';
+import { toast } from 'sonner';
 
 declare global {
     interface Window {
@@ -44,7 +46,12 @@ class BookMetadataService {
      * Upload book to user's cloud storage - NEVER to our servers
      * Only metadata pointers are stored in our backend
      */
-    async uploadBook(file: File, meta: {title: string; fileType: string; cover?: Blob}, clerkUser?: any): Promise<BookMetadata> {
+    async uploadBook(
+        file: File, 
+        meta: {title: string; fileType: string; cover?: Blob; processOCR?: boolean}, 
+        clerkUser?: any,
+        onOCRProgress?: OCRProgressCallback
+    ): Promise<BookMetadata> {
         console.log('Uploading book to user\'s cloud storage. Privacy-first: no content stored in our backend.');
         
         const provider = this.detectProviderFromClerkUser(clerkUser);
@@ -79,11 +86,25 @@ class BookMetadataService {
                         if (extracted) coverBlob = extracted;
                     }
 
+                    // Process PDF with OCR if requested
+                    let fileToUpload = file;
+                    if (meta.processOCR && meta.fileType === 'pdf') {
+                        try {
+                            console.log('Processing PDF with OCR...');
+                            fileToUpload = await processPDFWithOCR(file, onOCRProgress);
+                            console.log('✅ PDF processed with OCR successfully');
+                        } catch (error) {
+                            console.error('OCR processing failed:', error);
+                            toast.error('OCR processing failed. Uploading original PDF.');
+                            // Fallback: continue with original file
+                        }
+                    }
+
                     // Upload the book file
                     const bookResult = await gDriveService.uploadFile(
-                        file.name,
-                        file,
-                        file.type || 'application/epub+zip'
+                        fileToUpload.name,
+                        fileToUpload,
+                        fileToUpload.type || 'application/epub+zip'
                     );
                     
                     if (!bookResult) {
@@ -112,7 +133,7 @@ class BookMetadataService {
                     // Add metadata to the metadata.json file
                     const metadataSuccess = await gDriveService.addBookMetadata(bookResult.id, {
                         title: meta.title,
-                        fileName: file.name,
+                        fileName: fileToUpload.name,
                         fileType: meta.fileType,
                         coverImageId: coverImageId,
                         uploadedAt: new Date().toISOString()

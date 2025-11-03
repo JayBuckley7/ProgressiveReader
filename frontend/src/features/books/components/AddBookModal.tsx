@@ -16,6 +16,8 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processOCR, setProcessOCR] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState<{ page?: number; total?: number; percent?: number } | null>(null);
   const { uploadBook } = useAppData();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,11 +142,22 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
       }
 
       // Use existing upload flow via AppDataContext
-      const bookMetadata = await uploadBook(file, {
-        title: title.trim(),
-        fileType,
-        cover: coverBlob,
-      });
+      const bookMetadata = await uploadBook(
+        file, 
+        {
+          title: title.trim(),
+          fileType,
+          cover: coverBlob,
+          processOCR: processOCR && fileType === 'pdf',
+        },
+        // OCR progress callback
+        processOCR && fileType === 'pdf' 
+          ? (progress) => {
+              setOcrProgress(progress);
+              setIsProcessing(true); // Show processing state during OCR
+            }
+          : undefined
+      );
 
       if (bookMetadata) {
         toast.success(`Book "${bookMetadata.title}" uploaded successfully!`);
@@ -157,6 +170,8 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
       toast.error("Failed to upload book. Please try again.");
     } finally {
       setIsSubmitting(false);
+      setIsProcessing(false);
+      setOcrProgress(null);
     }
   };
 
@@ -189,11 +204,43 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               <p className="text-xs text-gray-500 mt-1">
                 Supported formats: EPUB, PDF, MOBI, TXT
               </p>
-              {isProcessing && (
+              {isProcessing && !ocrProgress && (
                 <p className="text-xs text-blue-600 mt-1 flex items-center">
                   <span className="animate-spin mr-2">⏳</span>
                   Processing EPUB metadata...
                 </p>
+              )}
+              {ocrProgress && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-blue-700">
+                      Processing OCR: Page {ocrProgress.page} of {ocrProgress.total}
+                    </span>
+                    <span className="text-xs font-medium text-blue-700">
+                      {ocrProgress.percent}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${ocrProgress.percent || 0}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {file && file.name.toLowerCase().endsWith('.pdf') && (
+                <div className="flex items-center mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="processOCR"
+                    checked={processOCR}
+                    onChange={(e) => setProcessOCR(e.target.checked)}
+                    className="mr-2 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="processOCR" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Process with OCR (makes PDF searchable)
+                  </label>
+                </div>
               )}
             </div>
 
@@ -287,7 +334,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
                 disabled={isSubmitting || isProcessing}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Uploading..." : isProcessing ? "Processing..." : "Upload Book"}
+                {isSubmitting ? "Uploading..." : ocrProgress ? `Processing OCR (${ocrProgress.percent}%)...` : isProcessing ? "Processing..." : "Upload Book"}
               </button>
             </div>
           </form>

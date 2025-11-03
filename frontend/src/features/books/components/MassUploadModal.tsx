@@ -12,6 +12,7 @@ interface BookFileData {
   description: string;
   totalPages: string;
   fileType: string;
+  processOCR?: boolean;
   status: 'pending' | 'processing' | 'uploading' | 'completed' | 'error';
   error?: string;
   progress: number;
@@ -130,6 +131,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         description: metadata.description || '',
         totalPages: metadata.totalPages || '',
         fileType: fileExtension,
+        processOCR: false,
         status: 'pending',
         progress: 0
       });
@@ -200,12 +202,25 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
 
       const meta = {
         title: book.title.trim(),
-        fileType: book.fileType
+        fileType: book.fileType,
+        processOCR: book.processOCR && book.fileType === 'pdf'
       };
 
       updateBookFile(bookId, { progress: 50 });
       
-      const result = await uploadBook(book.file, meta);
+      const result = await uploadBook(
+        book.file, 
+        meta,
+        // OCR progress callback for PDFs
+        book.processOCR && book.fileType === 'pdf'
+          ? (progress) => {
+              if (progress.percent !== undefined) {
+                // OCR progress is 0-90%, upload is 90-100%
+                updateBookFile(bookId, { progress: Math.min(90, progress.percent || 0) });
+              }
+            }
+          : undefined
+      );
       
       if (result) {
         updateBookFile(bookId, { status: 'completed', progress: 100 });
@@ -262,12 +277,25 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
 
         const meta = {
           title: book.title.trim(),
-          fileType: book.fileType
+          fileType: book.fileType,
+          processOCR: book.processOCR && book.fileType === 'pdf'
         };
 
         updateBookFile(book.id, { progress: 50 });
         
-        const result = await uploadBook(book.file, meta);
+        const result = await uploadBook(
+          book.file, 
+          meta,
+          // OCR progress callback for PDFs
+          book.processOCR && book.fileType === 'pdf'
+            ? (progress) => {
+                if (progress.percent !== undefined) {
+                  // OCR progress is 0-90%, upload is 90-100%
+                  updateBookFile(book.id, { progress: Math.min(90, progress.percent || 0) });
+                }
+              }
+            : undefined
+        );
         
         if (result) {
           updateBookFile(book.id, { status: 'completed', progress: 100 });
@@ -497,6 +525,24 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                           min="1"
                         />
                       </div>
+                      
+                      {book.fileType === 'pdf' && (
+                        <div className="md:col-span-2">
+                          <div className="flex items-center p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <input
+                              type="checkbox"
+                              id={`processOCR-${book.id}`}
+                              checked={book.processOCR || false}
+                              onChange={(e) => updateBookFile(book.id, { processOCR: e.target.checked })}
+                              className="mr-2 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              disabled={book.status !== 'pending'}
+                            />
+                            <label htmlFor={`processOCR-${book.id}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                              Process with OCR (makes PDF searchable)
+                            </label>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

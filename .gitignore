@@ -168,6 +168,8 @@ pr-ghactions-sa-key.json
 
 # Service account key files
 firebase-adminsdk-credentials.json
+credentials.json
+backend/credentials.json
 
 # Vite build output
 frontend/dist/
