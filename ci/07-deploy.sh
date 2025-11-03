@@ -35,7 +35,7 @@ echo "🆕 Latest created revision: $CREATED"
 
 echo "⏳ Waiting for revision $CREATED to become ContainerReady..."
 READY_OK=0
-for i in $(seq 1 30); do
+for i in $(seq 1 5); do
   # Get the status and check for ContainerReady=True
   # Use a simple pattern that matches 'True' or True
   STATUS_CHECK=$(gcloud run revisions describe "$CREATED" --platform managed --region us-central1 --project="$PROJECT_ID" --format='yaml(status.conditions)' 2>/dev/null || echo '')
@@ -47,11 +47,11 @@ for i in $(seq 1 30); do
     break
   fi
   
-  echo "⏳ Still waiting... (attempt $i/30)"
+  echo "⏳ Still waiting... (attempt $i/5)"
   sleep 5
 done
 
-# If still not ready after 2.5 minutes, continue anyway - Cloud Run will handle it
+# If still not ready after 25 seconds, continue anyway - Cloud Run will handle it
 if [ "$READY_OK" -ne 1 ]; then
   echo "⚠️ Revision $CREATED readiness check timed out, but continuing with traffic promotion..."
   echo "Cloud Run will handle traffic routing appropriately."
