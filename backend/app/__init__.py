@@ -49,6 +49,13 @@ def create_app(config_class=Config) -> Flask:
             secret_path = path
             break
     
+    # In production, require secrets file to exist
+    is_production = os.getenv("APP_ENV") == "prod" or (not os.getenv("FLASK_ENV") == "development" and not os.getenv("FLASK_DEBUG") == "1")
+    if is_production and not secret_path:
+        logging.critical("❌ CRITICAL: Production secrets file not found at /secrets/env.json. Application cannot start.")
+        import sys
+        sys.exit(1)
+    
     if secret_path:
         try:
             with open(secret_path, "r", encoding="utf-8-sig") as f:
@@ -127,6 +134,13 @@ def create_app(config_class=Config) -> Flask:
             logging.error(f"Exception type: {type(e).__name__}, Exception details: {str(e)}")
             import traceback
             logging.error(f"Traceback: {traceback.format_exc()}")
+            
+            # In production, fail hard if secrets can't be loaded
+            is_production = os.getenv("APP_ENV") == "prod" or not os.getenv("FLASK_ENV") == "development"
+            if is_production and secret_path == "/secrets/env.json":
+                logging.critical("❌ CRITICAL: Failed to load production secrets. Application cannot start.")
+                import sys
+                sys.exit(1)
     app = Flask(
         __name__,
         static_folder="static",      # points at backend/app/static

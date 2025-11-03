@@ -52,11 +52,20 @@ steps:
     args: ["ci/05-verify-secret.sh"]
     env:
       - "PROJECT_ID=${PROJECT_ID}"
+  
+  # 5b) Verify secret can be parsed as JSON (handles UTF-8 BOM)
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Verify Secret Parsing"
+    waitFor: ["Verify PR-App Config Secret"]
+    entrypoint: "bash"
+    args: ["ci/05-verify-secret-parsing.sh"]
+    env:
+      - "PROJECT_ID=${PROJECT_ID}"
 
   # 6) Pre-deploy health (skip if service not found yet)
   - name: "gcr.io/cloud-builders/gcloud"
     id: "BVT-Pre-Deploy"
-    waitFor: ["Verify PR-App Config Secret"]
+    waitFor: ["Verify Secret Parsing"]
     entrypoint: "bash"
     args: ["ci/06-pre-deploy-bvt.sh"]
     env:
