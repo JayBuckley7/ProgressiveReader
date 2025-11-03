@@ -1,0 +1,31 @@
+# Build locally, then push and deploy to Cloud Run (no Cloud Build pipeline)
+
+# First, build locally (see test-local-docker.ps1 for build command)
+
+# Tag and push your local image
+docker tag progressive-reader:local us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local
+
+gcloud auth configure-docker us-central1-docker.pkg.dev
+
+docker push us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local
+
+# Deploy to Cloud Run (no traffic initially)
+gcloud run deploy progressive-reader `
+  --image us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local `
+  --region us-central1 --platform managed --allow-unauthenticated `
+  --set-secrets /secrets/env.json=PR-app-config:latest `
+  --set-env-vars APP_ENV=dev `
+  --service-account progressive-reader-bvt-sa@floofgg.iam.gserviceaccount.com `
+  --vpc-connector floof-connector `
+  --vpc-egress private-ranges-only `
+  --memory 1Gi `
+  --concurrency 80 `
+  --max-instances 40 `
+  --timeout 300 `
+  --execution-environment gen2 `
+  --no-traffic
+
+# Promote to serve traffic when ready
+gcloud run services update-traffic progressive-reader `
+  --region us-central1 --to-latest
+

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Cloud Build substitution: ${_SERVICE_NAME} will be replaced by Cloud Build
-SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --platform managed --region us-central1 --project="$PROJECT_ID" --format 'value(status.url)')
+# Cloud Build substitution passed as environment variable
+SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME --platform managed --region us-central1 --project="$PROJECT_ID" --format 'value(status.url)')
 
 # Test 1: Health check & Clerk flags
 HEALTH_CHECK_URL="$SERVICE_URL/health"
