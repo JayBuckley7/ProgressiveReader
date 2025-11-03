@@ -4,9 +4,11 @@ set -euo pipefail
 # Cloud Build substitutions passed as environment variables
 
 # Deploy new revision with NO traffic
+# Use --clear-secrets first to remove old secret mounts, then set new ones
 gcloud run deploy $_SERVICE_NAME \
   --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/$_SERVICE_NAME:$_COMMIT_SHA \
   --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
+  --clear-secrets \
   --set-secrets /secrets/env.json=PR-app-config:latest,/secrets/pdf-ocr-credentials.json=pdf-ocr-credentials:latest \
   --region us-central1 \
   --platform managed \
