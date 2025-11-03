@@ -4,16 +4,22 @@ set -euo pipefail
 # Cloud Build substitutions passed as environment variables
 
 # Deploy new revision with NO traffic
-# First, remove any existing secrets that might conflict
-# Then use --update-secrets to set the new secret mounts
-echo "🗑️ Removing any conflicting secrets..."
-gcloud run services update $_SERVICE_NAME \
-  --remove-secrets /secrets/env.json,/secrets/pdf-ocr-credentials.json \
-  --region us-central1 \
-  --platform managed \
-  --project="$PROJECT_ID" \
-  2>/dev/null || echo "⚠️ No existing secrets to remove (or service doesn't exist yet)"
+# Step A: Clear all existing secrets to avoid conflicts
+# This must complete before Step B starts
+echo "🗑️ Clearing any existing secrets..."
+if gcloud run services describe $_SERVICE_NAME --region us-central1 --platform managed --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo "Service exists, clearing secrets..."
+  gcloud run services update $_SERVICE_NAME \
+    --region us-central1 \
+    --platform managed \
+    --clear-secrets \
+    --project="$PROJECT_ID"
+  echo "✅ Secrets cleared"
+else
+  echo "ℹ️ Service doesn't exist yet, skipping clear-secrets"
+fi
 
+# Step B: Deploy with exact secret mounts we want
 echo "🔐 Deploying with secrets..."
 gcloud run deploy $_SERVICE_NAME \
   --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/$_SERVICE_NAME:$_COMMIT_SHA \
@@ -73,4 +79,11 @@ fi
 
 echo "🚀 Promoting new revision to serve traffic..."
 gcloud run services update-traffic $_SERVICE_NAME --region us-central1 --project="$PROJECT_ID" --to-revisions "$CREATED=100"
+
+# Optional: Verify secret mounts and env vars are correctly configured
+echo "🔍 Verifying secret mounts and environment variables..."
+gcloud run services describe $_SERVICE_NAME \
+  --region us-central1 --platform managed --project="$PROJECT_ID" \
+  --format='yaml(spec.template.volumes, spec.template.containers[0].volumeMounts, spec.template.containers[0].env)' \
+  2>/dev/null | grep -E "(name:|mountPath:|value:)" || echo "⚠️ Could not verify mounts (this is non-critical)"
 

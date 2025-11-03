@@ -10,12 +10,27 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 docker push us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local
 
 # Deploy to Cloud Run (no traffic initially)
-# Remove any existing secrets first to avoid conflicts
-gcloud run services update progressive-reader `
-  --remove-secrets /secrets/env.json,/secrets/pdf-ocr-credentials.json `
-  --region us-central1 --platform managed `
-  --project floofgg `
-  2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "⚠️ No existing secrets to remove (or service doesn't exist yet)" }
+# Step A: Clear all existing secrets to avoid conflicts
+# This must complete before Step B starts
+Write-Host "🗑️ Clearing any existing secrets..."
+$serviceExists = gcloud run services describe progressive-reader --region us-central1 --platform managed --project floofgg 2>$null
+if ($LASTEXITCODE -eq 0) {
+  Write-Host "Service exists, clearing secrets..."
+  gcloud run services update progressive-reader `
+    --region us-central1 --platform managed `
+    --clear-secrets `
+    --project floofgg
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "✅ Secrets cleared"
+  } else {
+    Write-Host "⚠️ Failed to clear secrets, but continuing..."
+  }
+} else {
+  Write-Host "ℹ️ Service doesn't exist yet, skipping clear-secrets"
+}
+
+# Step B: Deploy with exact secret mounts we want
+Write-Host "🔐 Deploying with secrets..."
 
 gcloud run deploy progressive-reader `
   --image us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local `
