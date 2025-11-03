@@ -3,21 +3,22 @@ set -euo pipefail
 
 echo "🔍 Verifying PR-app-config secret can be parsed as JSON..."
 
-# Get the secret content
-SECRET_CONTENT="$(gcloud secrets versions access latest --secret=PR-app-config --project="${PROJECT_ID}")"
+# Get the secret content and save to temp file to preserve BOM
+TEMP_FILE=$(mktemp)
+gcloud secrets versions access latest --secret=PR-app-config --project="${PROJECT_ID}" > "$TEMP_FILE"
 
 # Try to parse it as JSON with Python (handling UTF-8 BOM)
-echo "$SECRET_CONTENT" | python3 << 'PYTHON_SCRIPT'
+python3 << 'PYTHON_SCRIPT'
 import sys
 import json
 
 try:
-    # Read from stdin
-    content = sys.stdin.read()
+    # Read from the temp file
+    with open(sys.argv[1], 'rb') as f:
+        raw_content = f.read()
     
-    # Try with utf-8-sig to handle BOM
-    if content.startswith('\ufeff'):
-        content = content[1:]  # Remove BOM if present
+    # Decode with utf-8-sig to handle BOM automatically
+    content = raw_content.decode('utf-8-sig')
     
     # Parse JSON
     data = json.loads(content)
@@ -44,16 +45,21 @@ try:
     
 except json.JSONDecodeError as e:
     print(f"❌ Failed to parse secret as JSON: {e}")
-    print(f"First 200 chars: {content[:200] if 'content' in locals() else 'N/A'}")
+    if 'content' in locals():
+        print(f"First 200 chars: {content[:200]}")
+        print(f"Raw bytes (first 20): {raw_content[:20]}")
     sys.exit(1)
 except Exception as e:
     print(f"❌ Unexpected error: {type(e).__name__}: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
-PYTHON_SCRIPT
+PYTHON_SCRIPT "$TEMP_FILE"
 
 PYTHON_EXIT=$?
+
+# Clean up temp file
+rm -f "$TEMP_FILE"
 
 if [ $PYTHON_EXIT -ne 0 ]; then
     echo "❌ Secret validation failed - build will not proceed"
