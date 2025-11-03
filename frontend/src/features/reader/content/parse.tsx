@@ -263,6 +263,9 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             console.log('🔵 [applyTokens] Creating highlighted element for word:', token.card.spelling);
             console.log('🔵 [applyTokens] Classes:', className);
             
+            // Check if we're in a PDF text layer (invisible text)
+            const isPdfTextLayer = fragment.node.parentElement?.closest('.textLayer') !== null;
+            
             const wrapper = (
                 token.rubies.length > 0 && !fragment.hasRuby ? 
                     document.createElement('ruby') : 
@@ -271,7 +274,13 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             
             wrapper.className = className;
             
-            console.log('🔵 [applyTokens] Created wrapper element:', wrapper.tagName, 'with classes:', wrapper.className);
+            // If PDF text layer, ensure text stays transparent even after highlighting
+            if (isPdfTextLayer) {
+                wrapper.style.color = 'transparent';
+                wrapper.style.setProperty('color', 'transparent', 'important');
+            }
+            
+            console.log('🔵 [applyTokens] Created wrapper element:', wrapper.tagName, 'with classes:', wrapper.className, 'isPdfTextLayer:', isPdfTextLayer);
             
             // Add event handlers
             wrapper.addEventListener('mouseenter', (event: Event) => {

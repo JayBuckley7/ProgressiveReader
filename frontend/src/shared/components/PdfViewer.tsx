@@ -79,10 +79,11 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
         textLayerDiv.className = 'textLayer absolute top-0 left-0';
         textLayerDiv.style.width = `${viewport.width}px`;
         textLayerDiv.style.height = `${viewport.height}px`;
+        textLayerDiv.style.zIndex = '2';
         pageContainer.appendChild(textLayerDiv);
 
-          const textContent = await page.getTextContent();
-          pdfjsLib.renderTextLayer({ textContent, container: textLayerDiv, viewport, textDivs: [] });
+        const textContent = await page.getTextContent();
+        pdfjsLib.renderTextLayer({ textContent, container: textLayerDiv, viewport, textDivs: [] });
 
           containerRef.current!.appendChild(pageContainer);
           pageRefs.current.push(pageContainer);
