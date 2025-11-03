@@ -8,12 +8,12 @@ TEMP_FILE=$(mktemp)
 gcloud secrets versions access latest --secret=PR-app-config --project="${PROJECT_ID}" > "$TEMP_FILE"
 
 # Try to parse it as JSON with Python (handling UTF-8 BOM)
-python3 << 'PYTHON_SCRIPT'
+python3 - "$TEMP_FILE" << 'PYTHON_SCRIPT'
 import sys
 import json
 
 try:
-    # Read from the temp file
+    # Read from the temp file (passed as command line argument)
     with open(sys.argv[1], 'rb') as f:
         raw_content = f.read()
     
@@ -54,7 +54,7 @@ except Exception as e:
     import traceback
     traceback.print_exc()
     sys.exit(1)
-PYTHON_SCRIPT "$TEMP_FILE"
+PYTHON_SCRIPT
 
 PYTHON_EXIT=$?
 
