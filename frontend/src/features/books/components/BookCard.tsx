@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { BookMetadata, ReadingProgress } from '~/types';
+import { EditBookModal } from './EditBookModal';
+import { bookMetadataService } from '@features/books/services/bookMetadata';
 
 interface Book {
   _id: string;
@@ -18,13 +20,15 @@ interface BookCardProps {
   onSelectBook?: (bookId: string) => void;
   onDeleteBook?: (bookId: string) => Promise<void>;
   onUpdateCover?: (bookId: string, coverFile: File) => Promise<void>;
+  onBookUpdated?: () => void;
 }
 
-export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: BookCardProps) {
+export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBookUpdated }: BookCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getReadingProgress, downloadBookForOffline } = useAppData();
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
@@ -144,6 +148,19 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
       console.error('Error updating cover:', error);
     } finally {
       setIsUpdatingCover(false);
+    }
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowEditModal(true);
+  };
+
+  const handleSaveBook = async (bookId: string, updates: { title?: string; author?: string }) => {
+    await bookMetadataService.updateBookMetadata(bookId, updates);
+    if (onBookUpdated) {
+      onBookUpdated();
     }
   };
 
@@ -278,7 +295,24 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
           )}
         </button>
 
-        {/* Offline Download Button - appears on hover */}
+        {/* Edit Book Button - appears on hover, bottom left */}
+        <button
+          onClick={handleEditClick}
+          className={`
+            absolute bottom-2 left-2 z-10
+            bg-gray-600 hover:bg-gray-500 text-white border-none
+            px-2 py-1 rounded-full text-sm cursor-pointer
+            opacity-80 hover:opacity-100 transition-all duration-200
+            ${isHovered ? 'flex items-center justify-center' : 'hidden'}
+          `}
+          title={`Edit details for "${book.title}"`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+
+        {/* Offline Download Button - appears on hover, bottom left stacked */}
         <button
           onClick={async (e) => {
             e.preventDefault();
@@ -292,11 +326,11 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
           }}
           disabled={isDownloading}
           className={`
-            absolute bottom-2 left-2 z-10
+            absolute bottom-10 left-2 z-10
             bg-blue-600 hover:bg-blue-500 text-white border-none
             px-2 py-1 rounded-full text-sm cursor-pointer
             opacity-80 hover:opacity-100 transition-all duration-200
-            ${isHovered ? 'block' : 'hidden'}
+            ${isHovered ? 'flex items-center justify-center' : 'hidden'}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
           title="Save for offline"
@@ -308,6 +342,14 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover }: Bo
           )}
         </button>
       </div>
+
+      {showEditModal && (
+        <EditBookModal
+          book={book}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveBook}
+        />
+      )}
     </div>
   );
 }

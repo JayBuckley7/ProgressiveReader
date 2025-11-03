@@ -21,6 +21,7 @@ interface Settings {
   touchscreenSupport?: boolean;
   disableFadeAnimation?: boolean;
   cacheTranslations?: boolean;
+  hideFurigana?: boolean;
 }
 
 interface SettingsContextType {
@@ -45,6 +46,7 @@ const defaultSettings: Settings = {
   touchscreenSupport: true,
   disableFadeAnimation: false,
   cacheTranslations: true,
+  hideFurigana: false,
 };
 
 const SETTINGS_COOKIE = "prSettings";
@@ -121,6 +123,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
+        localStorage.setItem('hideFurigana', String(updated.hideFurigana ?? false));
         console.log('🔔 Initial sync of accessibility settings to localStorage');
 
         setSettingsStorage(updated);
@@ -135,8 +138,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // If no cookie settings, sync defaults to localStorage
       localStorage.setItem('showPopupOnHover', String(defaultSettings.showPopupOnHover));
       localStorage.setItem('touchscreenSupport', String(defaultSettings.touchscreenSupport));
-              localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
-        localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
+      localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
+      localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
+      localStorage.setItem('hideFurigana', String(defaultSettings.hideFurigana));
       console.log('🔔 Initial sync of default accessibility settings to localStorage');
       setSettingsStorage(defaultSettings);
       i18n.changeLanguage(defaultSettings.uiLanguage);
@@ -170,6 +174,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               if (data.showPopupOnHover !== undefined) basicSettingsUpdates.showPopupOnHover = data.showPopupOnHover;
               if (data.touchscreenSupport !== undefined) basicSettingsUpdates.touchscreenSupport = data.touchscreenSupport;
               if (data.disableFadeAnimation !== undefined) basicSettingsUpdates.disableFadeAnimation = data.disableFadeAnimation;
+              if (data.hideFurigana !== undefined) basicSettingsUpdates.hideFurigana = data.hideFurigana;
+              if (data.cacheTranslations !== undefined) basicSettingsUpdates.cacheTranslations = data.cacheTranslations;
 
               const updated = { ...prev, ...basicSettingsUpdates };
               setSettingsCookie(updated);
@@ -180,6 +186,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
               localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
               localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
+              localStorage.setItem('hideFurigana', String(updated.hideFurigana ?? false));
               console.log('🔔 Auto-synced all accessibility settings to localStorage');
 
               if (updated.uiLanguage) {
@@ -292,6 +299,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if ('cacheTranslations' in updates) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
       }
+      if ('hideFurigana' in updates) {
+        localStorage.setItem('hideFurigana', String(updated.hideFurigana));
+        console.log('🔔 Synced hideFurigana to localStorage:', updated.hideFurigana);
+      }
 
       if ('uiLanguage' in updates && updated.uiLanguage) {
         i18n.changeLanguage(updated.uiLanguage);
@@ -336,6 +347,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               showPopupOnHover: updated.showPopupOnHover,
               touchscreenSupport: updated.touchscreenSupport,
               disableFadeAnimation: updated.disableFadeAnimation,
+              hideFurigana: updated.hideFurigana,
               // Add timestamp and version
               lastUpdated: new Date().toISOString(),
               version: '1.0'
@@ -418,6 +430,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
     styleElement.textContent = settings.customCss;
   }, [settings?.customCss]);
+
+  // Apply furigana hiding CSS
+  useEffect(() => {
+    let styleElement = document.getElementById('furigana-hide-styles') as HTMLStyleElement;
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = 'furigana-hide-styles';
+      document.head.appendChild(styleElement);
+    }
+    
+    if (settings?.hideFurigana) {
+      styleElement.textContent = `
+        .jpdb-furi,
+        rt.jpdb-furi,
+        ruby rt {
+          display: none !important;
+        }
+      `;
+    } else {
+      styleElement.textContent = '';
+    }
+  }, [settings?.hideFurigana]);
 
 
 

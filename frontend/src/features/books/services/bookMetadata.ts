@@ -453,6 +453,55 @@ class BookMetadataService {
     }
 
     /**
+     * Update book metadata (title, author, etc.)
+     */
+    async updateBookMetadata(bookId: string, updates: { title?: string; author?: string }): Promise<void> {
+        console.log('updateBookMetadata: Updating metadata for book:', bookId, updates);
+        
+        try {
+            // Check if user is signed in to Google Drive
+            if (!gDriveService.isSignedIn()) {
+                throw new Error('User not signed in to Google Drive');
+            }
+
+            // Get current metadata
+            const metadataInfo = await gDriveService.getMetadataFile();
+            if (!metadataInfo) {
+                throw new Error('Could not access metadata file');
+            }
+
+            const { fileId, data } = metadataInfo;
+            const existingBookData = data.books?.[bookId];
+
+            if (!existingBookData) {
+                throw new Error('Book not found in metadata');
+            }
+
+            // Update the book data with new values
+            data.books[bookId] = {
+                ...existingBookData,
+                ...(updates.title && { title: updates.title }),
+                ...(updates.author && { author: updates.author }),
+            };
+
+            // Save updated metadata
+            const metadataUpdateSuccess = await gDriveService.updateMetadataFile(fileId, data);
+
+            if (!metadataUpdateSuccess) {
+                throw new Error('Failed to update book metadata');
+            }
+
+            console.log('✅ Book metadata updated successfully');
+
+            // Clear book list cache since metadata has changed
+            bookCacheService.clearBookListCache();
+        } catch (error) {
+            console.error('Error updating book metadata:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Sync the user's books with their connected cloud provider.
      * Currently implemented for Google Drive only.
      */

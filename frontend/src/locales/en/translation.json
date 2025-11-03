@@ -133,6 +133,10 @@
         "preferDueCards": {
           "label": "Prefer Due Cards",
           "description": "Prioritize due cards in translation suggestions"
+        },
+        "hideFurigana": {
+          "label": "Hide Furigana",
+          "description": "Hide pronunciation readings above kanji characters"
         }
       }
     },

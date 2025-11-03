@@ -143,6 +143,8 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     showPopupOnHover: settings.showPopupOnHover ?? true,
     touchscreenSupport: settings.touchscreenSupport ?? false,
     disableFadeAnimation: settings.disableFadeAnimation ?? false,
+    hideFurigana: settings.hideFurigana ?? false,
+    cacheTranslations: settings.cacheTranslations ?? true,
     customPopupCSS: localState.customPopupCSS,
   });
 
@@ -182,6 +184,8 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     if (importedSettings.showPopupOnHover !== undefined) settingsUpdates.showPopupOnHover = importedSettings.showPopupOnHover;
     if (importedSettings.touchscreenSupport !== undefined) settingsUpdates.touchscreenSupport = importedSettings.touchscreenSupport;
     if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
+    if (importedSettings.hideFurigana !== undefined) settingsUpdates.hideFurigana = importedSettings.hideFurigana;
+    if (importedSettings.cacheTranslations !== undefined) settingsUpdates.cacheTranslations = importedSettings.cacheTranslations;
     
     if (Object.keys(settingsUpdates).length > 0) {
       updateSettings(settingsUpdates);
@@ -449,6 +453,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   type="text"
                 />
               </div>
+
+              {/* Hide Furigana setting - available to all users, not just JPDB users */}
+              <CheckboxInput
+                label={t("settings.highlight.options.hideFurigana.label")}
+                description={t("settings.highlight.options.hideFurigana.description")}
+                checked={settings.hideFurigana ?? false}
+                onChange={v => updateSettings({ hideFurigana: v })}
+              />
 
               {jpdbApiKey && (
                 <>

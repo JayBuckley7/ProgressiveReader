@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { BookMetadata, Folder } from '~/types';
+import { EditBookModal } from './EditBookModal';
+import { bookMetadataService } from '@features/books/services/bookMetadata';
 
 interface BookCardHoverProps {
   book: BookMetadata;
@@ -9,6 +11,7 @@ interface BookCardHoverProps {
   onMoveToFolder?: (bookId: string, folderId: string | null) => void;
   availableFolders?: Folder[];
   currentFolderId?: string | null;
+  onBookUpdated?: () => void;
 }
 
 export function BookCardHover({ 
@@ -18,12 +21,14 @@ export function BookCardHover({
   onUpdateCover, 
   onMoveToFolder,
   availableFolders = [],
-  currentFolderId
+  currentFolderId,
+  onBookUpdated
 }: BookCardHoverProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
@@ -77,6 +82,19 @@ export function BookCardHover({
 
   const handleCardClick = () => {
     onSelectBook(book.id as string);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowEditModal(true);
+  };
+
+  const handleSaveBook = async (bookId: string, updates: { title?: string; author?: string }) => {
+    await bookMetadataService.updateBookMetadata(bookId, updates);
+    if (onBookUpdated) {
+      onBookUpdated();
+    }
   };
 
   const handleMoveToFolder = (folderId: string | null) => {
@@ -245,7 +263,32 @@ export function BookCardHover({
           )}
           </div>
         )}
+
+        {/* Edit Book Button - appears on hover, bottom left */}
+        <button
+          onClick={handleEditClick}
+          className={`
+            absolute bottom-2 left-2 z-10
+            bg-gray-600 hover:bg-gray-500 text-white border-none
+            px-2 py-1 rounded-full text-sm cursor-pointer
+            opacity-80 hover:opacity-100 transition-all duration-200
+            ${isHovered ? 'flex items-center justify-center' : 'hidden'}
+          `}
+          title={`Edit details for "${book.title}"`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
       </div>
+
+      {showEditModal && (
+        <EditBookModal
+          book={book}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveBook}
+        />
+      )}
     </div>
   );
 }
