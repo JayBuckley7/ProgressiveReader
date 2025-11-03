@@ -206,73 +206,12 @@ def create_app(config_class=Config) -> Flask:
     # --- Health Check Endpoint ---
     @app.route('/health')
     def health_check():
-        # Check if secrets file exists and try to load secrets if not already in environment
-        secrets_path = "/secrets/env.json"
-        secrets_file_exists = os.path.exists(secrets_path)
-        secrets_data = {}
-        
-        logging.info(f"🏥 Health check: secrets_file_exists={secrets_file_exists}, path={secrets_path}")
-        
-        if secrets_file_exists:
-            try:
-                with open(secrets_path, "r", encoding="utf-8-sig") as f:
-                    secrets_data = json.load(f)
-                    
-                logging.info(f"🏥 Health check: Successfully read secrets file, keys: {list(secrets_data.keys())}")
-                    
-                # Reload secrets into environment if they're not already there
-                # This ensures secrets are available even if they weren't loaded during initialization
-                for key, value in secrets_data.items():
-                    if key == "OPENAI_API_KEYS" and isinstance(value, list):
-                        if not os.environ.get(key):
-                            os.environ[key] = json.dumps(value)
-                            logging.info(f"🏥 Health check: Set {key} from secrets file")
-                    else:
-                        if not os.environ.get(key):
-                            os.environ[key] = str(value)
-                            logging.info(f"🏥 Health check: Set {key} from secrets file")
-                            
-                logging.info(f"Reloaded secrets from {secrets_path} in health check")
-            except Exception as e:
-                logging.error(f"🏥 Health check: Failed to read secrets file: {e}")
-                logging.error(f"Exception type: {type(e).__name__}")
-                import traceback
-                logging.error(f"Traceback: {traceback.format_exc()}")
-        
-        # Check for required keys (both in environment and in secrets file)
-        clerk_secret_key_env = os.environ.get("CLERK_SECRET_KEY")
-        clerk_publishable_key_env = os.environ.get("VITE_CLERK_PUBLISHABLE_KEY")
-        clerk_secret_key_in_file = "CLERK_SECRET_KEY" in secrets_data
-        clerk_publishable_key_in_file = "VITE_CLERK_PUBLISHABLE_KEY" in secrets_data
-        
-        health_status = {
-            "status": "healthy",
-            "clerk_secret_key_configured": bool(clerk_secret_key_env),
-            "clerk_publishable_key_configured": bool(clerk_publishable_key_env),
-            "secrets_file_exists": secrets_file_exists,
-            "secrets_file_has_clerk_secret": clerk_secret_key_in_file if secrets_file_exists else None,
-            "secrets_file_has_clerk_publishable": clerk_publishable_key_in_file if secrets_file_exists else None,
-        }
-        
-        # Add more details for debugging
-        if clerk_secret_key_env:
-            health_status["clerk_secret_key_length"] = len(clerk_secret_key_env)
-            health_status["clerk_secret_key_prefix"] = clerk_secret_key_env[:8] + "..." if len(clerk_secret_key_env) > 8 else clerk_secret_key_env
-        
-        if clerk_publishable_key_env:
-            health_status["clerk_publishable_key_length"] = len(clerk_publishable_key_env)
-            health_status["clerk_publishable_key_prefix"] = clerk_publishable_key_env[:8] + "..." if len(clerk_publishable_key_env) > 8 else clerk_publishable_key_env
-        
-        # Overall health: Both keys should be configured (either from env or from secrets file)
-        clerk_healthy = (
-            (bool(clerk_secret_key_env) or clerk_secret_key_in_file) and
-            (bool(clerk_publishable_key_env) or clerk_publishable_key_in_file)
-        )
-        health_status["clerk_overall_healthy"] = clerk_healthy
-        
-        # Return 500 only if required keys are completely missing
-        status_code = 200 if clerk_healthy else 500
-        return jsonify(health_status), status_code
+        """
+        Simple health check endpoint. Always returns 200.
+        This endpoint should be fast and not depend on external services.
+        For deeper readiness checks, use /ready endpoint.
+        """
+        return jsonify({"status": "healthy"}), 200
     # --- End Health Check Endpoint ---
 
     # --- Load OpenAI API keys BEFORE importing blueprints ---

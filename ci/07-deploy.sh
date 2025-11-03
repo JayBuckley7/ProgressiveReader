@@ -4,17 +4,17 @@ set -euo pipefail
 # Cloud Build substitutions passed as environment variables
 
 # Deploy new revision with NO traffic
-# First, remove all existing secrets, then set new ones
-# We need to do this in two steps because Cloud Run doesn't allow mixing secret flags
-echo "🗑️ Removing existing secrets..."
+# First, remove any existing secrets that might conflict
+# Then use --update-secrets to set the new secret mounts
+echo "🗑️ Removing any conflicting secrets..."
 gcloud run services update $_SERVICE_NAME \
   --remove-secrets /secrets/env.json,/secrets/pdf-ocr-credentials.json \
   --region us-central1 \
   --platform managed \
   --project="$PROJECT_ID" \
-  2>/dev/null || echo "⚠️ No secrets to remove (or service doesn't exist yet)"
+  2>/dev/null || echo "⚠️ No existing secrets to remove (or service doesn't exist yet)"
 
-echo "🔐 Setting new secrets..."
+echo "🔐 Deploying with secrets..."
 gcloud run deploy $_SERVICE_NAME \
   --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/$_SERVICE_NAME:$_COMMIT_SHA \
   --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
@@ -22,7 +22,7 @@ gcloud run deploy $_SERVICE_NAME \
   --region us-central1 \
   --platform managed \
   --allow-unauthenticated \
-  --set-env-vars APP_ENV=$_ENVIRONMENT \
+  --set-env-vars APP_ENV=$_ENVIRONMENT,GOOGLE_APPLICATION_CREDENTIALS=/secrets/pdf-ocr-credentials.json \
   --vpc-connector floof-connector \
   --vpc-egress private-ranges-only \
   --memory 1Gi \

@@ -10,11 +10,18 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 docker push us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local
 
 # Deploy to Cloud Run (no traffic initially)
+# Remove any existing secrets first to avoid conflicts
+gcloud run services update progressive-reader `
+  --remove-secrets /secrets/env.json,/secrets/pdf-ocr-credentials.json `
+  --region us-central1 --platform managed `
+  --project floofgg `
+  2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "⚠️ No existing secrets to remove (or service doesn't exist yet)" }
+
 gcloud run deploy progressive-reader `
   --image us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local `
   --region us-central1 --platform managed --allow-unauthenticated `
-  --set-secrets /secrets/env.json=PR-app-config:latest `
-  --set-env-vars APP_ENV=dev `
+  --set-secrets /secrets/env.json=PR-app-config:latest,/secrets/pdf-ocr-credentials.json=pdf-ocr-credentials:latest `
+  --set-env-vars APP_ENV=dev,GOOGLE_APPLICATION_CREDENTIALS=/secrets/pdf-ocr-credentials.json `
   --service-account progressive-reader-bvt-sa@floofgg.iam.gserviceaccount.com `
   --vpc-connector floof-connector `
   --vpc-egress private-ranges-only `
