@@ -40,8 +40,11 @@ for i in $(seq 1 5); do
   # Use a simple pattern that matches 'True' or True
   STATUS_CHECK=$(gcloud run revisions describe "$CREATED" --platform managed --region us-central1 --project="$PROJECT_ID" --format='yaml(status.conditions)' 2>/dev/null || echo '')
   
+  # Extract the ContainerReady block once and check it
+  CONTAINER_READY_BLOCK=$(echo "$STATUS_CHECK" | grep -B 2 "type: ContainerReady" || echo '')
+  
   # Check if ContainerReady status is True (handle both quoted and unquoted)
-  if echo "$STATUS_CHECK" | grep -B 2 "type: ContainerReady" | grep -q "status:" && echo "$STATUS_CHECK" | grep -B 2 "type: ContainerReady" | grep -q "True"; then
+  if echo "$CONTAINER_READY_BLOCK" | grep -q "status:" && echo "$CONTAINER_READY_BLOCK" | grep -q "True"; then
     echo "✅ Revision $CREATED is ContainerReady"
     READY_OK=1
     break
