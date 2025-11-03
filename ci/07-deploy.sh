@@ -4,11 +4,21 @@ set -euo pipefail
 # Cloud Build substitutions passed as environment variables
 
 # Deploy new revision with NO traffic
-# Use --update-secrets to update existing secrets (replaces all secrets)
+# First, remove all existing secrets, then set new ones
+# We need to do this in two steps because Cloud Run doesn't allow mixing secret flags
+echo "🗑️ Removing existing secrets..."
+gcloud run services update $_SERVICE_NAME \
+  --remove-secrets /secrets/env.json,/secrets/pdf-ocr-credentials.json \
+  --region us-central1 \
+  --platform managed \
+  --project="$PROJECT_ID" \
+  2>/dev/null || echo "⚠️ No secrets to remove (or service doesn't exist yet)"
+
+echo "🔐 Setting new secrets..."
 gcloud run deploy $_SERVICE_NAME \
   --image us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/$_SERVICE_NAME:$_COMMIT_SHA \
   --service-account progressive-reader-bvt-sa@$PROJECT_ID.iam.gserviceaccount.com \
-  --update-secrets /secrets/env.json=PR-app-config:latest,/secrets/pdf-ocr-credentials.json=pdf-ocr-credentials:latest \
+  --set-secrets /secrets/env.json=PR-app-config:latest,/secrets/pdf-ocr-credentials.json=pdf-ocr-credentials:latest \
   --region us-central1 \
   --platform managed \
   --allow-unauthenticated \
