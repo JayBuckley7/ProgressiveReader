@@ -40,14 +40,15 @@ for i in $(seq 1 48); do
   STATUS_YAML=$(gcloud run revisions describe "$CREATED" --platform managed --region us-central1 --project="$PROJECT_ID" --format='yaml(status.conditions)' 2>/dev/null || echo '')
   
   # Check if ContainerReady condition exists and is True
-  if echo "$STATUS_YAML" | grep -q "type: ContainerReady" && echo "$STATUS_YAML" | grep -A 2 "type: ContainerReady" | grep -q "status: True"; then
+  # In YAML, status comes before type, so we check for the block containing both
+  if echo "$STATUS_YAML" | grep -B 2 "type: ContainerReady" | grep -q "status:.*True"; then
     echo "✅ Revision $CREATED is ContainerReady"
     READY_OK=1
     break
   fi
   
   # Also check Ready condition as fallback
-  if echo "$STATUS_YAML" | grep -q "type: Ready" && echo "$STATUS_YAML" | grep -A 2 "type: Ready" | grep -q "status: True"; then
+  if echo "$STATUS_YAML" | grep -B 2 "type: Ready" | grep -q "status:.*True"; then
     echo "✅ Revision $CREATED is Ready"
     READY_OK=1
     break
