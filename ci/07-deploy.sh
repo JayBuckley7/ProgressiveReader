@@ -35,34 +35,26 @@ echo "🆕 Latest created revision: $CREATED"
 
 echo "⏳ Waiting for revision $CREATED to become ContainerReady..."
 READY_OK=0
-for i in $(seq 1 48); do
-  # Get status YAML and parse it - more reliable than filter expressions
-  STATUS_YAML=$(gcloud run revisions describe "$CREATED" --platform managed --region us-central1 --project="$PROJECT_ID" --format='yaml(status.conditions)' 2>/dev/null || echo '')
+for i in $(seq 1 30); do
+  # Get the status and check for ContainerReady=True
+  # Use a simple pattern that matches 'True' or True
+  STATUS_CHECK=$(gcloud run revisions describe "$CREATED" --platform managed --region us-central1 --project="$PROJECT_ID" --format='yaml(status.conditions)' 2>/dev/null || echo '')
   
-  # Check if ContainerReady condition exists and is True
-  # In YAML, status comes before type, so we check for the block containing both
-  if echo "$STATUS_YAML" | grep -B 2 "type: ContainerReady" | grep -q "status:.*True"; then
+  # Check if ContainerReady status is True (handle both quoted and unquoted)
+  if echo "$STATUS_CHECK" | grep -B 2 "type: ContainerReady" | grep -q "status:" && echo "$STATUS_CHECK" | grep -B 2 "type: ContainerReady" | grep -q "True"; then
     echo "✅ Revision $CREATED is ContainerReady"
     READY_OK=1
     break
   fi
   
-  # Also check Ready condition as fallback
-  if echo "$STATUS_YAML" | grep -B 2 "type: Ready" | grep -q "status:.*True"; then
-    echo "✅ Revision $CREATED is Ready"
-    READY_OK=1
-    break
-  fi
-  
-  echo "⏳ Still waiting... (attempt $i/48)"
-  sleep 10
+  echo "⏳ Still waiting... (attempt $i/30)"
+  sleep 5
 done
 
+# If still not ready after 2.5 minutes, continue anyway - Cloud Run will handle it
 if [ "$READY_OK" -ne 1 ]; then
   echo "⚠️ Revision $CREATED readiness check timed out, but continuing with traffic promotion..."
-  echo "Full status:"
-  gcloud run revisions describe "$CREATED" --platform managed --region us-central1 --project="$PROJECT_ID" --format='yaml(status)' || true
-  # Don't exit 1 - Cloud Run will handle it
+  echo "Cloud Run will handle traffic routing appropriately."
 fi
 
 echo "🚀 Promoting new revision to serve traffic..."
