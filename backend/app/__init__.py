@@ -72,7 +72,8 @@ def create_app(config_class=Config) -> Flask:
                     else:
                         os.environ.setdefault(key, str(value))
 
-            logging.info(f"Loaded configuration from {secret_path} (override_env={override_env})")
+            logging.info(f"✅ Loaded configuration from {secret_path} (override_env={override_env})")
+            logging.info(f"Loaded keys: {list(config_data.keys())}")
 
             # Auto-resolve Clerk test/live mismatch to prevent 401s in dev
             try:
@@ -122,7 +123,10 @@ def create_app(config_class=Config) -> Flask:
                 logging.warning(f"Clerk key alignment step skipped due to error: {align_ex}")
 
         except Exception as e:
-            logging.warning(f"Failed to load secrets from {secret_path}: {e}")
+            logging.error(f"Failed to load secrets from {secret_path}: {e}")
+            logging.error(f"Exception type: {type(e).__name__}, Exception details: {str(e)}")
+            import traceback
+            logging.error(f"Traceback: {traceback.format_exc()}")
     app = Flask(
         __name__,
         static_folder="static",      # points at backend/app/static
@@ -193,10 +197,14 @@ def create_app(config_class=Config) -> Flask:
         secrets_file_exists = os.path.exists(secrets_path)
         secrets_data = {}
         
+        logging.info(f"🏥 Health check: secrets_file_exists={secrets_file_exists}, path={secrets_path}")
+        
         if secrets_file_exists:
             try:
                 with open(secrets_path, "r", encoding="utf-8-sig") as f:
                     secrets_data = json.load(f)
+                    
+                logging.info(f"🏥 Health check: Successfully read secrets file, keys: {list(secrets_data.keys())}")
                     
                 # Reload secrets into environment if they're not already there
                 # This ensures secrets are available even if they weren't loaded during initialization
@@ -204,13 +212,18 @@ def create_app(config_class=Config) -> Flask:
                     if key == "OPENAI_API_KEYS" and isinstance(value, list):
                         if not os.environ.get(key):
                             os.environ[key] = json.dumps(value)
+                            logging.info(f"🏥 Health check: Set {key} from secrets file")
                     else:
                         if not os.environ.get(key):
                             os.environ[key] = str(value)
+                            logging.info(f"🏥 Health check: Set {key} from secrets file")
                             
                 logging.info(f"Reloaded secrets from {secrets_path} in health check")
             except Exception as e:
-                logging.warning(f"Failed to read secrets file: {e}")
+                logging.error(f"🏥 Health check: Failed to read secrets file: {e}")
+                logging.error(f"Exception type: {type(e).__name__}")
+                import traceback
+                logging.error(f"Traceback: {traceback.format_exc()}")
         
         # Check for required keys (both in environment and in secrets file)
         clerk_secret_key_env = os.environ.get("CLERK_SECRET_KEY")
