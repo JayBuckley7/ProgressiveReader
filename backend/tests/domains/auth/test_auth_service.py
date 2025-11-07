@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
+
 from app.domains.auth.integrations import AuthProvider
 from app.domains.auth.service import AuthService
 from app.domains.auth.schemas import SessionInfo
@@ -10,6 +11,7 @@ class _MockProvider(AuthProvider):
     def __init__(self, user: Optional[dict] = None, admin_ids: Optional[set[str]] = None) -> None:
         self._user = user
         self._admin_ids = admin_ids or set()
+        self._settings: dict[str, Any] = {}
 
     def verify_token(self, token: str) -> Optional[SessionInfo]:
         if token == "ok":
@@ -24,6 +26,12 @@ class _MockProvider(AuthProvider):
 
     def is_admin(self, user_id: str) -> bool:
         return user_id in self._admin_ids
+
+    def get_settings(self, user_id: str) -> Dict[str, Any]:
+        return self._settings.get(user_id, {})
+
+    def save_settings(self, user_id: str, settings: Dict[str, Any]) -> None:
+        self._settings[user_id] = settings
 
 
 def test_get_current_user_from_headers_present():

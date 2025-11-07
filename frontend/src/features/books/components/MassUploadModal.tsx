@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 
@@ -24,6 +25,7 @@ interface MassUploadModalProps {
 }
 
 export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalProps) {
+  const { t } = useTranslation();
   const { isAuthenticated, signIn, uploadBook } = useAppData();
   const [bookFiles, setBookFiles] = useState<BookFileData[]>([]);
   const [isProcessingMetadata, setIsProcessingMetadata] = useState(false);
@@ -32,7 +34,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const supportedFormats = ['epub', 'txt', 'docx', 'pdf', 'mobi'];
+  const supportedFormats = ['epub', 'txt', 'docx', 'pdf', 'mobi', 'json'];
   const languageOptions = [
     'English', 'Spanish', 'French', 'German', 'Italian', 
     'Portuguese', 'Japanese', 'Korean', 'Chinese', 'Other'
@@ -43,7 +45,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
   const validateFile = (file: File): boolean => {
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
     if (!fileExtension || !supportedFormats.includes(fileExtension)) {
-      toast.error(`Unsupported file format: ${file.name}. Please use EPUB, TXT, DOCX, PDF, or MOBI files.`);
+      toast.error(t('massUpload.toasts.unsupportedFormat', { fileName: file.name }));
       return false;
     }
     return true;
@@ -59,9 +61,9 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         const metadata = epubProcessor.metadata;
         return {
           title: metadata?.title || file.name.replace(/\.[^/.]+$/, ''),
-          author: Array.isArray(metadata?.creator) ? metadata.creator[0] : metadata?.creator || 'Unknown Author',
+          author: Array.isArray(metadata?.creator) ? metadata.creator[0] : metadata?.creator || t('massUpload.defaults.unknownAuthor'),
           description: metadata?.description || '',
-          language: getLanguageFromCode(metadata?.language) || 'English',
+          language: getLanguageFromCode(metadata?.language) || t('massUpload.defaults.defaultLanguage'),
           totalPages: epubProcessor.getTotalChapters()?.toString() || ''
         };
       }
@@ -71,15 +73,15 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
     
     return {
       title: file.name.replace(/\.[^/.]+$/, ''),
-      author: 'Unknown Author',
+      author: t('massUpload.defaults.unknownAuthor'),
       description: '',
-      language: 'English',
+      language: t('massUpload.defaults.defaultLanguage'),
       totalPages: ''
     };
   };
 
   const getLanguageFromCode = (code?: string): string => {
-    if (!code) return 'English';
+    if (!code) return t('massUpload.defaults.defaultLanguage');
     const lang = code.toLowerCase();
     const languageMap: Record<string, string> = {
       'en': 'English',
@@ -115,9 +117,9 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
       } else {
         metadata = {
           title: file.name.replace(/\.[^/.]+$/, ''),
-          author: 'Unknown Author',
+          author: t('massUpload.defaults.unknownAuthor'),
           description: '',
-          language: 'English',
+          language: t('massUpload.defaults.defaultLanguage'),
           totalPages: ''
         };
       }
@@ -126,8 +128,8 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         id: generateId(),
         file,
         title: metadata.title || file.name.replace(/\.[^/.]+$/, ''),
-        author: metadata.author || 'Unknown Author',
-        language: metadata.language || 'English',
+        author: metadata.author || t('massUpload.defaults.unknownAuthor'),
+        language: metadata.language || t('massUpload.defaults.defaultLanguage'),
         description: metadata.description || '',
         totalPages: metadata.totalPages || '',
         fileType: fileExtension,
@@ -141,7 +143,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
     setIsProcessingMetadata(false);
     
     if (newBookFiles.length > 0) {
-      toast.success(`Added ${newBookFiles.length} book(s) for upload. Review and edit metadata as needed.`);
+      toast.success(t('massUpload.toasts.addedBooks', { count: newBookFiles.length }));
     }
   };
 
@@ -224,18 +226,18 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
       
       if (result) {
         updateBookFile(bookId, { status: 'completed', progress: 100 });
-        toast.success(`Successfully retried upload for "${book.title}"`);
+        toast.success(t('massUpload.toasts.retrySuccess', { title: book.title }));
       } else {
-        throw new Error('Upload failed');
+        throw new Error(t('massUpload.toasts.uploadFailed'));
       }
     } catch (error: any) {
       console.error(`Retry failed for ${book.title}:`, error);
       updateBookFile(bookId, { 
         status: 'error', 
-        error: error.message || 'Upload failed',
+        error: error.message || t('massUpload.toasts.uploadFailed'),
         progress: 0 
       });
-             toast.error(`Retry failed for "${book.title}"`);
+             toast.error(t('massUpload.toasts.retryFailed', { title: book.title }));
      }
    };
 
@@ -243,7 +245,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
      const failedBooks = bookFiles.filter(book => book.status === 'error');
      if (failedBooks.length === 0) return;
 
-     toast.info(`Retrying ${failedBooks.length} failed upload(s)...`);
+     toast.info(t('massUpload.toasts.retrying', { count: failedBooks.length }));
      
      for (const book of failedBooks) {
        await retryFailedUpload(book.id);
@@ -255,14 +257,14 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
       try {
         await signIn();
       } catch (error) {
-        toast.error('Please sign in to upload books');
+        toast.error(t('massUpload.toasts.signInRequired'));
         return;
       }
     }
 
     const booksToUpload = bookFiles.filter(book => book.status !== 'completed');
     if (booksToUpload.length === 0) {
-      toast.info('No books to upload');
+      toast.info(t('massUpload.toasts.noBooks'));
       return;
     }
 
@@ -301,13 +303,13 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
           updateBookFile(book.id, { status: 'completed', progress: 100 });
           completed++;
         } else {
-          throw new Error('Upload failed');
+          throw new Error(t('massUpload.toasts.uploadFailed'));
         }
       } catch (error: any) {
         console.error(`Failed to upload ${book.title}:`, error);
         updateBookFile(book.id, { 
           status: 'error', 
-          error: error.message || 'Upload failed',
+          error: error.message || t('massUpload.toasts.uploadFailed'),
           progress: 0 
         });
       }
@@ -318,7 +320,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
     setIsUploading(false);
     
     if (completed > 0) {
-      toast.success(`Successfully uploaded ${completed} book(s)!`);
+      toast.success(t('massUpload.toasts.uploadSuccess', { count: completed }));
       onUploadComplete?.();
     }
     
@@ -328,6 +330,10 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         onClose();
       }, 1500);
     }
+  };
+
+  const getStatusLabel = (status: BookFileData['status']): string => {
+    return t(`massUpload.bookList.status.${status}`);
   };
 
   const getStatusColor = (status: BookFileData['status']) => {
@@ -357,7 +363,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Mass Upload Books</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('massUpload.title')}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -366,7 +372,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
             </button>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Upload multiple books at once. Drag & drop files or click to select.
+            {t('massUpload.description')}
           </p>
         </div>
 
@@ -387,20 +393,20 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
               <div className="text-6xl">📚</div>
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {isProcessingMetadata ? 'Processing files...' : 'Drop your books here'}
+                  {isProcessingMetadata ? t('massUpload.dropZone.processing') : t('massUpload.dropZone.dropHere')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  or{' '}
+                  {t('massUpload.dropZone.or')}{' '}
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="text-blue-600 hover:text-blue-700 font-medium"
                     disabled={isProcessingMetadata}
                   >
-                    browse to select files
+                    {t('massUpload.dropZone.browse')}
                   </button>
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Supports: {supportedFormats.map(f => f.toUpperCase()).join(', ')}
+                  {t('massUpload.dropZone.supports')} {supportedFormats.map(f => f.toUpperCase()).join(', ')}
                 </p>
               </div>
             </div>
@@ -421,11 +427,11 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
             <div className="mt-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Books to Upload ({bookFiles.length})
+                  {t('massUpload.bookList.title')} ({bookFiles.length})
                 </h3>
                 {isUploading && (
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Progress: {uploadProgress.completed}/{uploadProgress.total}
+                    {t('massUpload.bookList.progress')} {uploadProgress.completed}/{uploadProgress.total}
                   </div>
                 )}
               </div>
@@ -439,7 +445,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                         <div>
                           <h4 className="font-medium text-gray-900 dark:text-white">{book.file.name}</h4>
                           <p className={`text-sm ${getStatusColor(book.status)}`}>
-                            {book.status === 'error' ? book.error : book.status}
+                            {book.status === 'error' ? book.error : getStatusLabel(book.status)}
                           </p>
                         </div>
                       </div>
@@ -449,7 +455,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                           onClick={() => removeBookFile(book.id)}
                           className="text-red-500 hover:text-red-700 text-sm"
                         >
-                          Remove
+                          {t('massUpload.bookList.actions.remove')}
                         </button>
                       )}
                       
@@ -461,7 +467,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M5 15a9 9 0 0014-3m0-4a9 9 0 00-14-3" />
                           </svg>
-                          Retry
+                          {t('massUpload.bookList.actions.retry')}
                         </button>
                       )}
                     </div>
@@ -479,7 +485,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-1">{t('massUpload.bookList.labels.title')}</label>
                         <input
                           type="text"
                           value={book.title}
@@ -490,7 +496,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-1">Author</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-1">{t('massUpload.bookList.labels.author')}</label>
                         <input
                           type="text"
                           value={book.author}
@@ -501,7 +507,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-1">Language</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-1">{t('massUpload.bookList.labels.language')}</label>
                         <select
                           value={book.language}
                           onChange={(e) => updateBookFile(book.id, { language: e.target.value })}
@@ -515,7 +521,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-300 mb-1">Pages/Chapters</label>
+                        <label className="block text-gray-700 dark:text-gray-300 mb-1">{t('massUpload.bookList.labels.pagesChapters')}</label>
                         <input
                           type="number"
                           value={book.totalPages}
@@ -538,7 +544,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                               disabled={book.status !== 'pending'}
                             />
                             <label htmlFor={`processOCR-${book.id}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                              Process with OCR (makes PDF searchable)
+                              {t('massUpload.bookList.ocr.label')}
                             </label>
                           </div>
                         </div>
@@ -557,8 +563,8 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {bookFiles.length > 0 && (
                 <span>
-                  {bookFiles.filter(b => b.status === 'completed').length} completed, {' '}
-                  {bookFiles.filter(b => b.status === 'error').length} failed
+                  {bookFiles.filter(b => b.status === 'completed').length} {t('massUpload.bookList.summary.completed')}, {' '}
+                  {bookFiles.filter(b => b.status === 'error').length} {t('massUpload.bookList.summary.failed')}
                 </span>
               )}
             </div>
@@ -569,7 +575,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 disabled={isUploading}
               >
-                {bookFiles.some(b => b.status === 'completed') ? 'Close' : 'Cancel'}
+                {bookFiles.some(b => b.status === 'completed') ? t('massUpload.buttons.close') : t('massUpload.buttons.cancel')}
               </button>
               
               {bookFiles.length > 0 && (
@@ -579,7 +585,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                       onClick={retryAllFailed}
                       className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
                     >
-                      Retry All Failed ({bookFiles.filter(b => b.status === 'error').length})
+                      {t('massUpload.buttons.retryAllFailed')} ({bookFiles.filter(b => b.status === 'error').length})
                     </button>
                   )}
                   <button
@@ -588,8 +594,8 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUploading 
-                      ? `Uploading... (${uploadProgress.completed}/${uploadProgress.total})`
-                      : `Upload ${bookFiles.filter(b => b.status === 'pending').length} Book(s)`
+                      ? `${t('massUpload.buttons.uploading')} (${uploadProgress.completed}/${uploadProgress.total})`
+                      : t('massUpload.buttons.upload', { count: bookFiles.filter(b => b.status === 'pending').length })
                     }
                   </button>
                 </>

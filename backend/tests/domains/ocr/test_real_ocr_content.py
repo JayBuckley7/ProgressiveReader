@@ -533,6 +533,79 @@ def test_ocr_apply_text_to_pdf_empty_response():
     output_doc.close()
 
 
+@pytest.mark.skipif(not HAS_VISION or not HAS_PYMUPDF, reason="Missing dependencies")
+def test_is_vertical():
+    """Test that _is_vertical_text correctly identifies vertical text paragraphs from saved live data."""
+    import pickle
+    
+    # Load saved vertical paragraphs from the pickle file
+    # These were captured during actual OCR processing
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    pickle_path = os.path.join(backend_dir, "test_outputs", "vertical_paragraphs.pkl")
+    
+    if not os.path.exists(pickle_path):
+        pytest.skip(f"Saved vertical paragraphs not found at: {pickle_path}. "
+                    f"Run OCR processing first to generate this file.")
+    
+    # Load the saved paragraphs
+    with open(pickle_path, 'rb') as f:
+        vertical_paragraphs = pickle.load(f)
+    
+    assert len(vertical_paragraphs) > 0, \
+        "No vertical paragraphs found in saved pickle file."
+    
+    # Test that _is_vertical_text returns True for all collected vertical paragraphs
+    service = OCRService()
+    
+    print(f"\n{'='*80}")
+    print(f"Testing {len(vertical_paragraphs)} vertical paragraphs:")
+    print(f"{'='*80}\n")
+    
+    for i, paragraph in enumerate(vertical_paragraphs):
+        # Extract text for debugging
+        para_text = "".join(
+            "".join(symbol.text for symbol in word.symbols)
+            for word in paragraph.words
+        )
+        
+        # Get bounding box info for debugging
+        vertices = paragraph.bounding_box.vertices
+        x_coords = [v.x for v in vertices]
+        y_coords = [v.y for v in vertices]
+        p_width = max(x_coords) - min(x_coords)
+        p_height = max(y_coords) - min(y_coords)
+        
+        # Show which words are in this paragraph
+        words = []
+        for word in paragraph.words:
+            word_text = "".join(symbol.text for symbol in word.symbols)
+            words.append(word_text)
+        
+        print(f"Paragraph {i+1}:")
+        print(f"  Text: {para_text}")
+        print(f"  Words: {words}")
+        print(f"  Width: {p_width}, Height: {p_height}")
+        print(f"  Height/Width ratio: {p_height/p_width if p_width > 0 else 0:.2f}")
+        print(f"  Vertices: {[(v.x, v.y) for v in vertices]}")
+        
+        # Test the method
+        is_vertical = service._is_vertical_text(paragraph)
+        
+        print(f"  → is_vertical: {is_vertical}")
+        print()
+        
+        assert is_vertical is True, \
+            f"Paragraph {i+1} should be detected as vertical but was not.\n" \
+            f"  Text: {repr(para_text[:50])}\n" \
+            f"  Width: {p_width}, Height: {p_height}\n" \
+            f"  Height/Width ratio: {p_height/p_width if p_width > 0 else 0:.2f}\n" \
+            f"  Vertices: {[(v.x, v.y) for v in vertices]}"
+    
+    print(f"{'='*80}")
+    print(f"All {len(vertical_paragraphs)} paragraphs correctly identified as vertical!")
+    print(f"{'='*80}\n")
+
+
 @pytest.fixture(scope="module")
 @pytest.mark.skipif(not HAS_VISION or not HAS_PYMUPDF, reason="Missing dependencies")
 def generate_ocr_processed_pdf():

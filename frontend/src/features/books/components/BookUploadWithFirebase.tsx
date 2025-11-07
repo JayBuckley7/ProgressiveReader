@@ -57,7 +57,7 @@ export function BookUpload({ onUploadComplete }: BookUploadProps) {
           <div>
             <input
               type="file"
-              accept=".epub,.pdf,.txt,.docx,.mobi"
+              accept=".epub,.pdf,.txt,.docx,.mobi,.json"
               onChange={handleFileSelect}
               disabled={isUploading}
               className="block w-full text-sm text-gray-500

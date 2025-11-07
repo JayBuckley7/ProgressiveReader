@@ -44,10 +44,12 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
     def process_in_thread():
         """Process OCR in a separate thread."""
         try:
+            logger.info(f"📄 [OCR Routes] Starting OCR processing thread for PDF: {len(pdf_bytes)} bytes")
             ocr_pdf_bytes = ocr_service.process_pdf(pdf_bytes, progress_callback=collect_progress)
+            logger.info(f"📄 [OCR Routes] OCR processing completed successfully: {len(ocr_pdf_bytes)} bytes")
             result_queue.put(('success', ocr_pdf_bytes))
         except Exception as e:
-            logger.error(f"OCR processing error in thread: {e}", exc_info=True)
+            logger.error(f"📄 [OCR Routes] OCR processing error in thread: {e}", exc_info=True)
             result_queue.put(('error', str(e)))
     
     # Start OCR processing in a background thread
@@ -61,7 +63,8 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
             # Check for progress updates (non-blocking)
             try:
                 progress_update = progress_queue.get_nowait()
-                yield f"data: {json.dumps(progress_update)}\n\n"
+                # Encode SSE messages as bytes for consistent streaming
+                yield f"data: {json.dumps(progress_update)}\n\n".encode('utf-8')
             except queue.Empty:
                 pass
             
@@ -77,7 +80,9 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                             'filename': filename,
                             'size': len(result)
                         }
-                        yield f"data: {json.dumps(completion_data)}\n\n"
+                        # Send completion message as SSE text (encoded as bytes)
+                        completion_msg = f"data: {json.dumps(completion_data)}\n\n"
+                        yield completion_msg.encode('utf-8')
                         # Now stream PDF as binary chunks
                         logger.info(f"Starting to stream PDF: {len(result)} bytes in chunks")
                         chunk_size = 8192  # 8KB chunks
@@ -85,7 +90,8 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                         total_bytes_sent = 0
                         for i in range(0, len(result), chunk_size):
                             chunk = result[i:i + chunk_size]
-                            yield chunk
+                            # Ensure chunk is bytes, not string
+                            yield bytes(chunk)
                             chunks_sent += 1
                             total_bytes_sent += len(chunk)
                             if chunks_sent % 1000 == 0:  # Log every ~8MB
@@ -99,7 +105,7 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                             'type': 'error',
                             'error': result
                         }
-                        yield f"data: {json.dumps(error_data)}\n\n"
+                        yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
                         break
                 except queue.Empty:
                     pass
@@ -117,7 +123,9 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                             'filename': filename,
                             'size': len(result)
                         }
-                        yield f"data: {json.dumps(completion_data)}\n\n"
+                        # Send completion message as SSE text (encoded as bytes)
+                        completion_msg = f"data: {json.dumps(completion_data)}\n\n"
+                        yield completion_msg.encode('utf-8')
                         # Stream PDF as binary chunks
                         logger.info(f"Thread finished - streaming PDF: {len(result)} bytes in chunks")
                         chunk_size = 8192  # 8KB chunks
@@ -125,7 +133,8 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                         total_bytes_sent = 0
                         for i in range(0, len(result), chunk_size):
                             chunk = result[i:i + chunk_size]
-                            yield chunk
+                            # Ensure chunk is bytes, not string
+                            yield bytes(chunk)
                             chunks_sent += 1
                             total_bytes_sent += len(chunk)
                             if chunks_sent % 1000 == 0:  # Log every ~8MB
@@ -138,7 +147,7 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                             'type': 'error',
                             'error': result
                         }
-                        yield f"data: {json.dumps(error_data)}\n\n"
+                        yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
                         break
                 except queue.Empty:
                     # No result found, likely an error occurred
@@ -146,7 +155,7 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                         'type': 'error',
                         'error': 'OCR processing failed unexpectedly'
                     }
-                    yield f"data: {json.dumps(error_data)}\n\n"
+                    yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
                     break
             
             # If PDF already sent, we're done
@@ -162,7 +171,7 @@ def _generate_ocr_with_progress(pdf_bytes, filename):
                 'type': 'error',
                 'error': str(e)
             }
-            yield f"data: {json.dumps(error_data)}\n\n"
+            yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
             break
 
 

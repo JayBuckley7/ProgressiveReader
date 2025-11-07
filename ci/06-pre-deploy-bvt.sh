@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 # Cloud Build substitution passed as environment variable
 if gcloud run services describe $_SERVICE_NAME --platform managed --region us-central1 --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -12,15 +12,15 @@ if gcloud run services describe $_SERVICE_NAME --platform managed --region us-ce
   # Only fail on connection errors or other critical issues
   if [ "$STATUS_CODE" -ge 200 ] && [ "$STATUS_CODE" -lt 600 ]; then
     if [ "$STATUS_CODE" -ge 200 ] && [ "$STATUS_CODE" -lt 400 ]; then
-      echo "✅ Pre-deployment health check passed"
+      echo "笨・Pre-deployment health check passed"
     else
-      echo "⚠️ Pre-deployment health check returned $STATUS_CODE (service may be unhealthy, but allowing deployment to proceed)"
+      echo "笞・・Pre-deployment health check returned $STATUS_CODE (service may be unhealthy, but allowing deployment to proceed)"
     fi
   else
-    echo "❌ Pre-deployment BVT failed ($STATUS_CODE) for $HEALTH_CHECK_URL - connection or critical error"
+    echo "笶・Pre-deployment BVT failed ($STATUS_CODE) for $HEALTH_CHECK_URL - connection or critical error"
     exit 1
   fi
 else
-  echo "ℹ️ Service $_SERVICE_NAME not found yet; skipping pre-deployment health check."
+  echo "邃ｹ・・Service $_SERVICE_NAME not found yet; skipping pre-deployment health check."
 fi
 

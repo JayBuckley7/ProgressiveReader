@@ -2,7 +2,7 @@
  * Google Drive service types and constants
  */
 
-export const BOOK_FILE_EXTENSIONS = ['epub', 'pdf', 'mobi', 'docx', 'txt'] as const;
+export const BOOK_FILE_EXTENSIONS = ['epub', 'pdf', 'mobi', 'docx', 'txt', 'json'] as const;
 
 export const FOLDER_NAME = 'ProgReader';
 export const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';

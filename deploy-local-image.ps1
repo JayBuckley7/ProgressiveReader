@@ -35,8 +35,8 @@ Write-Host "🔐 Deploying with secrets..."
 gcloud run deploy progressive-reader `
   --image us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:test-local `
   --region us-central1 --platform managed --allow-unauthenticated `
-  --set-secrets /secrets/env.json=PR-app-config:latest,/secrets/pdf-ocr-credentials.json=pdf-ocr-credentials:latest `
-  --set-env-vars APP_ENV=dev,GOOGLE_APPLICATION_CREDENTIALS=/secrets/pdf-ocr-credentials.json `
+  --set-secrets /secrets/env.json=PR-app-config:latest `
+  --set-env-vars APP_ENV=dev `
   --service-account progressive-reader-bvt-sa@floofgg.iam.gserviceaccount.com `
   --vpc-connector floof-connector `
   --vpc-egress private-ranges-only `

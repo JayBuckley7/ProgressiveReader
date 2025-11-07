@@ -31,6 +31,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip service worker for external URLs (CDN, etc.) - only handle same-origin requests
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Skip service worker for PDF.js worker file (needs to load directly)
+  if (requestUrl.includes('pdf.worker')) {
+    return;
+  }
+
   // Skip service worker for API endpoints that are proxied by Vite
   if (url.pathname.startsWith('/api') || 
       url.pathname.startsWith('/drive') || 

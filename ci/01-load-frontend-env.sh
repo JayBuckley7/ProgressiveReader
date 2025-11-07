@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
-echo "📦 Loading frontend environment variables from PR-app-config..."
+echo "逃 Loading frontend environment variables from PR-app-config..."
 
 apt-get update -y >/dev/null && apt-get install -y jq >/dev/null
 
@@ -12,13 +12,12 @@ VITE_CLERK_PUBLISHABLE_KEY="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_CLERK_P
 VITE_GDRIVE_CLIENT_ID="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_GDRIVE_CLIENT_ID // empty')"
 VITE_GAPI_KEY="$(printf %s "$SECRET_CONTENT" | jq -r '.VITE_GAPI_KEY // empty')"
 
-[ -n "$VITE_CLERK_PUBLISHABLE_KEY" ] || { echo "❌ Missing VITE_CLERK_PUBLISHABLE_KEY"; exit 1; }
-[ -n "$VITE_GDRIVE_CLIENT_ID" ]      || { echo "❌ Missing VITE_GDRIVE_CLIENT_ID"; exit 1; }
-[ -n "$VITE_GAPI_KEY" ]              || { echo "❌ Missing VITE_GAPI_KEY"; exit 1; }
+[ -n "$VITE_CLERK_PUBLISHABLE_KEY" ] || { echo "笶・Missing VITE_CLERK_PUBLISHABLE_KEY"; exit 1; }
+[ -n "$VITE_GDRIVE_CLIENT_ID" ]      || { echo "笶・Missing VITE_GDRIVE_CLIENT_ID"; exit 1; }
+[ -n "$VITE_GAPI_KEY" ]              || { echo "笶・Missing VITE_GAPI_KEY"; exit 1; }
 
 printf %s "$VITE_CLERK_PUBLISHABLE_KEY" > /workspace/vite_clerk_key.txt
 printf %s "$VITE_GDRIVE_CLIENT_ID"     > /workspace/vite_gdrive_client.txt
 printf %s "$VITE_GAPI_KEY"             > /workspace/vite_gapi_key.txt
 
-echo "✅ Frontend environment variables extracted"
-
+echo "笨・Frontend environment variables extracted"

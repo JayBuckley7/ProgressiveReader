@@ -1,6 +1,6 @@
 """File utility functions."""
 
-ALLOWED_EXTENSIONS = {'pdf', 'epub', 'mobi', 'txt', 'docx'}
+ALLOWED_EXTENSIONS = {'pdf', 'epub', 'mobi', 'txt', 'docx', 'json'}
 
 
 def allowed_file(filename):

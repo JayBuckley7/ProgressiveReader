@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
-echo "🔍 Verifying PR-app-config secret can be parsed as JSON..."
+echo "剥 Verifying PR-app-config secret can be parsed as JSON..."
 
 # Get the secret content and save to temp file to preserve BOM
 TEMP_FILE=$(mktemp)
@@ -28,29 +28,29 @@ try:
     missing_keys = [key for key in required_keys if key not in data]
     
     if missing_keys:
-        print(f"❌ Missing required keys: {missing_keys}")
+        print(f"笶・Missing required keys: {missing_keys}")
         sys.exit(1)
     
     # Verify values are not empty
     for key in required_keys:
         value = data.get(key)
         if not value:
-            print(f"❌ {key} is empty or missing")
+            print(f"笶・{key} is empty or missing")
             sys.exit(1)
     
-    print(f"✅ Secret parsed successfully")
-    print(f"✅ Found keys: {list(data.keys())}")
-    print(f"✅ Required keys present: {required_keys}")
+    print(f"笨・Secret parsed successfully")
+    print(f"笨・Found keys: {list(data.keys())}")
+    print(f"笨・Required keys present: {required_keys}")
     sys.exit(0)
     
 except json.JSONDecodeError as e:
-    print(f"❌ Failed to parse secret as JSON: {e}")
+    print(f"笶・Failed to parse secret as JSON: {e}")
     if 'content' in locals():
         print(f"First 200 chars: {content[:200]}")
         print(f"Raw bytes (first 20): {raw_content[:20]}")
     sys.exit(1)
 except Exception as e:
-    print(f"❌ Unexpected error: {type(e).__name__}: {e}")
+    print(f"笶・Unexpected error: {type(e).__name__}: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
@@ -62,9 +62,9 @@ PYTHON_EXIT=$?
 rm -f "$TEMP_FILE"
 
 if [ $PYTHON_EXIT -ne 0 ]; then
-    echo "❌ Secret validation failed - build will not proceed"
+    echo "笶・Secret validation failed - build will not proceed"
     exit 1
 fi
 
-echo "✅ Secret parsing validation complete"
+echo "笨・Secret parsing validation complete"
 

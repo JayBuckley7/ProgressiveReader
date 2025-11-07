@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface Question {
   part: number | null;
@@ -21,6 +22,7 @@ interface JLPTTestRunnerProps {
 }
 
 export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
+  const { t } = useTranslation();
   const [allQuestions] = useState<Question[]>(testData);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -157,7 +159,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
 
   const readTranscript = () => {
     if (!('speechSynthesis' in window)) {
-      alert('Your browser does not support text-to-speech.');
+      alert(t('jlptTest.runner.textToSpeechNotSupported'));
       return;
     }
 
@@ -214,9 +216,9 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
     if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
       const q = questions[index];
       const isCorrect = answers[questionKey] === q.correct_choice_index;
-      return isCorrect ? ' ✓' : ' ✗';
+      return isCorrect ? ` ${t('jlptTest.runner.correct')}` : ` ${t('jlptTest.runner.incorrect')}`;
     } else if (skipped[questionKey]) {
-      return ' (Skipped)';
+      return ` ${t('jlptTest.runner.skippedLabel')}`;
     }
     return '';
   };
@@ -260,11 +262,10 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
   const percentage = finalAnswered > 0 ? Math.round((finalCorrect / finalAnswered) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-purple-700 p-5">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          JLPT Test Runner - {testName}
-        </h1>
+    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8">
+      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+        {t('jlptTest.runner.title', { testName })}
+      </h1>
 
         {/* Section Selector */}
         <div className="flex flex-wrap gap-2 justify-center mb-6 p-4 bg-gray-100 rounded-lg">
@@ -278,7 +279,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                   : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
               }`}
             >
-              Part {part} ({sections[part]?.length || 0} questions)
+              {t('jlptTest.runner.part', { part })} ({t('jlptTest.runner.questions', { count: sections[part]?.length || 0 })})
             </button>
           ))}
         </div>
@@ -287,24 +288,24 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
         <div className="flex justify-around mb-6 p-4 bg-gray-100 rounded-lg">
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">{currentIndex + 1}</div>
-            <div className="text-xs text-gray-600">Current Question</div>
+            <div className="text-xs text-gray-600">{t('jlptTest.runner.currentQuestion')}</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">{questions.length}</div>
-            <div className="text-xs text-gray-600">Total Questions</div>
+            <div className="text-xs text-gray-600">{t('jlptTest.runner.totalQuestions')}</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
               {answered > 0 ? `${correct}/${answered}` : '0/0'}
             </div>
-            <div className="text-xs text-gray-600">Score</div>
+            <div className="text-xs text-gray-600">{t('jlptTest.runner.score')}</div>
           </div>
         </div>
 
         {/* Question Selector */}
         <div className="flex items-center gap-2 justify-center mb-4 p-2 bg-gray-50 rounded-lg">
           <label htmlFor="question-selector" className="font-semibold text-gray-700 text-sm">
-            Jump to Question:
+            {t('jlptTest.runner.jumpToQuestion')}
           </label>
           <select
             id="question-selector"
@@ -317,7 +318,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
               const status = getQuestionStatus(index);
               return (
                 <option key={index} value={index}>
-                  Question {index + 1}{qNum !== String(index + 1) ? ` (${qNum})` : ''}{status}
+                  {t('jlptTest.runner.question', { number: index + 1 })}{qNum !== String(index + 1) ? ` (${qNum})` : ''}{status}
                 </option>
               );
             })}
@@ -329,17 +330,17 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
           <div className="mb-6 p-6 bg-gray-50 rounded-lg border-l-4 border-purple-600">
             <div className="flex justify-between items-center mb-4">
               <span className="font-bold text-purple-600 text-lg">
-                Question {currentIndex + 1} {question.question_number ? `(${question.question_number})` : ''}
+                {t('jlptTest.runner.question', { number: currentIndex + 1 })} {question.question_number ? `(${question.question_number})` : ''}
               </span>
               <div className="flex gap-2">
                 {question.part !== null && (
                   <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs">
-                    Part {question.part}
+                    {t('jlptTest.runner.part', { part: question.part })}
                   </span>
                 )}
                 {isSkipped && (
                   <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs">
-                    Skipped
+                    {t('jlptTest.runner.skipped')}
                   </span>
                 )}
               </div>
@@ -349,7 +350,9 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
             {question.parent_content && question.parent_content.trim() && (
               <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <div className="font-bold text-blue-700 text-xs uppercase mb-2">
-                  Reading Passage {question.parent_question_number ? `(Question ${question.parent_question_number})` : ''}
+                  {question.parent_question_number 
+                    ? t('jlptTest.runner.readingPassageWithNumber', { number: question.parent_question_number })
+                    : t('jlptTest.runner.readingPassage')}
                 </div>
                 <div
                   className="text-base leading-relaxed text-gray-800"
@@ -361,13 +364,13 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
             {/* Prompt */}
             <div
               className="mb-4 text-lg leading-relaxed text-gray-800"
-              dangerouslySetInnerHTML={{ __html: question.prompt || '(No prompt)' }}
+              dangerouslySetInnerHTML={{ __html: question.prompt || t('jlptTest.runner.noPrompt') }}
             />
 
             {/* Audio Player */}
             {question.is_audio && question.audio_url && (
               <div className="mb-4 p-4 bg-purple-50 rounded-lg border-l-4 border-purple-600">
-                <div className="font-bold mb-2 text-purple-600">Audio Question</div>
+                <div className="font-bold mb-2 text-purple-600">{t('jlptTest.runner.audioQuestion')}</div>
                 <audio
                   className="audio-player w-full"
                   controls
@@ -380,7 +383,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                   }}
                 >
                   <source src={question.audio_url} type="audio/mpeg" />
-                  Your browser does not support the audio element.
+                  {t('jlptTest.runner.audioNotSupported')}
                 </audio>
               </div>
             )}
@@ -426,7 +429,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                         {hasHTML ? (
                           <span className="flex-1 text-gray-800" dangerouslySetInnerHTML={{ __html: choice }} />
                         ) : (
-                          <span className="flex-1 text-gray-800">{choice || `Choice ${index + 1}`}</span>
+                          <span className="flex-1 text-gray-800">{choice || t('jlptTest.runner.choice', { number: index + 1 })}</span>
                         )}
                       </label>
                     </li>
@@ -435,7 +438,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
               </ul>
             ) : (
               <div className="my-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
-                <p className="text-yellow-700">No choices available for this question.</p>
+                <p className="text-yellow-700">{t('jlptTest.runner.noChoices')}</p>
               </div>
             )}
 
@@ -443,7 +446,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
             {(isAnswered && question.explanation) || (showAnswers && question.explanation) ? (
               <div className="mt-4 p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
                 <div className="font-bold mb-2 text-yellow-700">
-                  {question.is_audio ? 'Transcript:' : 'Explanation:'}
+                  {question.is_audio ? t('jlptTest.runner.transcript') : t('jlptTest.runner.explanation')}
                 </div>
                 <div className="text-gray-800" dangerouslySetInnerHTML={{ __html: question.explanation }} />
                 {question.is_audio && (
@@ -453,14 +456,14 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                       className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       disabled={window.speechSynthesis?.speaking}
                     >
-                      Read Transcript
+                      {t('jlptTest.runner.readTranscript')}
                     </button>
                     {window.speechSynthesis?.speaking && (
                       <button
                         onClick={pauseTranscript}
                         className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600 transition-colors"
                       >
-                        {window.speechSynthesis.paused ? 'Resume' : 'Pause'}
+                        {window.speechSynthesis.paused ? t('jlptTest.runner.resume') : t('jlptTest.runner.pause')}
                       </button>
                     )}
                   </div>
@@ -472,13 +475,13 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
           <div className="mb-6 p-6 bg-gray-50 rounded-lg border-l-4 border-purple-600">
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading questions...</p>
+              <p className="text-gray-600">{t('jlptTest.runner.loadingQuestions')}</p>
             </div>
           </div>
         ) : (
           <div className="mb-6 p-6 bg-gray-50 rounded-lg border-l-4 border-purple-600">
             <div className="text-center py-8">
-              <p className="text-gray-600">No question available. Please select a section.</p>
+              <p className="text-gray-600">{t('jlptTest.runner.noQuestionAvailable')}</p>
             </div>
           </div>
         )}
@@ -492,14 +495,14 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                 disabled={currentIndex === 0}
                 className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
               >
-                Previous
+                {t('jlptTest.runner.previous')}
               </button>
               <button
                 onClick={skipQuestion}
                 disabled={showAnswers}
                 className="px-6 py-3 bg-orange-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600"
               >
-                Skip
+                {t('jlptTest.runner.skip')}
               </button>
             </div>
             <div className="flex gap-2">
@@ -508,14 +511,14 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                   onClick={nextQuestion}
                   className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium transition-all hover:bg-purple-700"
                 >
-                  Next
+                  {t('jlptTest.runner.next')}
                 </button>
               ) : (
                 <button
                   onClick={showResults}
                   className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium transition-all hover:bg-green-600"
                 >
-                  Show Results
+                  {t('jlptTest.runner.showResults')}
                 </button>
               )}
             </div>
@@ -525,15 +528,14 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
         {/* Results */}
         {showAnswers && (
           <div className="mt-6 p-6 bg-gray-100 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4">Test Results</h2>
+            <h2 className="text-2xl font-bold mb-4">{t('jlptTest.runner.testResults')}</h2>
             <div className="text-center text-4xl font-bold text-purple-600 my-6">
-              Part {currentSection}: {finalCorrect} / {finalAnswered} answered ({percentage}%)
-              {skippedCount > 0 ? ` | ${skippedCount} skipped` : ''}
+              {t('jlptTest.runner.partResults', { part: currentSection, correct: finalCorrect, answered: finalAnswered, percentage })}
+              {skippedCount > 0 ? ` | ${t('jlptTest.runner.skippedCount', { count: skippedCount })}` : ''}
             </div>
           </div>
         )}
       </div>
-    </div>
   );
 }
 

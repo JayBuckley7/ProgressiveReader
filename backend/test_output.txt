@@ -1,0 +1,201 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0 -- C:\Users\TheJ\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\TheJ\Documents\Code\ProgressiveReader
+configfile: pytest.ini
+plugins: anyio-4.11.0
+collecting ... collected 1 item
+
+tests\domains\ocr\test_real_ocr_content.py::test_ocr_full_process_flow Cached Vision API response loaded successfully
+Test PDF path: C:\Users\TheJ\Documents\Code\mokuro\suihanki.pdf
+[DEBUG] Extracted paragraph text: 'よしつねでん'
+applying 'よしつねでん' to pdf
+[DEBUG] Extracted paragraph text: '「義経伝」'
+applying '「義経伝」' to pdf
+[DEBUG] Extracted paragraph text: 'うしわかまるやく'
+applying 'うしわかまるやく' to pdf
+[DEBUG] Extracted paragraph text: '牛若丸役!'
+applying '牛若丸役!' to pdf
+[DEBUG] Extracted paragraph text: 'さあさあいくらでも'
+applying 'さあさあいくらでも' to pdf
+[DEBUG] Extracted paragraph text: 'た'
+applying 'た' to pdf
+[DEBUG] Extracted paragraph text: '食べてくれよ'
+applying '食べてくれよ' to pdf
+[DEBUG] Extracted paragraph text: '何それ'
+applying '何それ' to pdf
+[DEBUG] Extracted paragraph text: 'ぜんぜんし'
+applying 'ぜんぜんし' to pdf
+[DEBUG] Extracted paragraph text: '全然知らな'
+applying '全然知らな' to pdf
+[DEBUG] Extracted paragraph text: 'たいよう'
+applying 'たいよう' to pdf
+[DEBUG] Extracted paragraph text: '太陽くん!'
+applying '太陽くん!' to pdf
+[DEBUG] Extracted paragraph text: 'かったぞ...'
+applying 'かったぞ...' to pdf
+[DEBUG] Extracted paragraph text: 'すばらしかった'
+applying 'すばらしかった' to pdf
+[DEBUG] Extracted paragraph text: '大河の子役って'
+applying '大河の子役って' to pdf
+[DEBUG] Extracted paragraph text: 'おかわり'
+applying 'おかわり' to pdf
+[DEBUG] Extracted paragraph text: 'どうりで演技'
+applying 'どうりで演技' to pdf
+[DEBUG] Extracted paragraph text: 'どうだい'
+applying 'どうだい' to pdf
+[DEBUG] Extracted paragraph text: '?'
+applying '?' to pdf
+[DEBUG] Extracted paragraph text: 'どーも'
+applying 'どーも' to pdf
+[DEBUG] Extracted paragraph text: 'どーも'
+applying 'どーも' to pdf
+[DEBUG] Extracted paragraph text: 'ですわ!'
+applying 'ですわ!' to pdf
+[DEBUG] Extracted paragraph text: 'まさか'
+applying 'まさか' to pdf
+[DEBUG] Extracted paragraph text: 'にいさま'
+applying 'にいさま' to pdf
+[DEBUG] Extracted paragraph text: 'お兄様の'
+applying 'お兄様の' to pdf
+[DEBUG] Extracted paragraph text: 'がくゆう'
+applying 'がくゆう' to pdf
+[DEBUG] Extracted paragraph text: 'ご学友だった'
+applying 'ご学友だった' to pdf
+[DEBUG] Extracted paragraph text: 'なんて'
+applying 'なんて' to pdf
+[DEBUG] Extracted paragraph text: 'あとで皆で'
+applying 'あとで皆で' to pdf
+[DEBUG] Extracted paragraph text: '写真いいかしら'
+applying '写真いいかしら' to pdf
+[DEBUG] Extracted paragraph text: 'いいわよね'
+applying 'いいわよね' to pdf
+[DEBUG] Extracted paragraph text: 'じゃ'
+applying 'じゃ' to pdf
+[DEBUG] Extracted paragraph text: 'えんりょ'
+applying 'えんりょ' to pdf
+[DEBUG] Extracted paragraph text: '遠慮なく'
+applying '遠慮なく' to pdf
+[DEBUG] Extracted paragraph text: 'カス'
+applying 'カス' to pdf
+[DEBUG] Extracted paragraph text: 'おっと'
+applying 'おっと' to pdf
+[DEBUG] Extracted paragraph text: '恥ずかしい'
+applying '恥ずかしい' to pdf
+[DEBUG] Extracted paragraph text: 'うちの'
+applying 'うちの' to pdf
+[DEBUG] Extracted paragraph text: 'から'
+applying 'から' to pdf
+[DEBUG] Extracted paragraph text: '炊飯器'
+applying '炊飯器' to pdf
+[DEBUG] Extracted paragraph text: '知ってたことに'
+applying '知ってたことに' to pdf
+[DEBUG] Extracted paragraph text: 'しょ...'
+applying 'しょ...' to pdf
+[DEBUG] Extracted paragraph text: 'ちょうし'
+applying 'ちょうし' to pdf
+[DEBUG] Extracted paragraph text: 'ちょっと調子が'
+applying 'ちょっと調子が' to pdf
+[DEBUG] Extracted paragraph text: '悪くてね・・・'
+applying '悪くてね・・・' to pdf
+[DEBUG] Extracted paragraph text: 'manga10'
+applying 'manga10' to pdf
+ERROR
+
+=================================== ERRORS ====================================
+________________ ERROR at setup of test_ocr_full_process_flow _________________
+
+    @pytest.fixture(scope="module")
+    @pytest.mark.skipif(not HAS_VISION or not HAS_PYMUPDF, reason="Missing dependencies")
+    def generate_ocr_processed_pdf():
+        """
+        Fixture that runs the full OCR flow and generates the processed PDF.
+        Returns the path to the generated PDF file.
+        """
+        # Clean up any existing PDF before running the flow
+        output_path = r"C:\Users\TheJ\Documents\Code\ProgressiveReader\backend\test_outputs\ocr_processed_output.pdf"
+        if os.path.exists(output_path):
+            os.remove(output_path)
+    
+        # Load the cached Vision API response to mock the API call
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        cache_path = os.path.join(backend_dir, "test_outputs", "vision_cache",
+                                  "vision_response_a8512a99d15c58337bac0a186a993861.pb")
+    
+        if not os.path.exists(cache_path):
+            pytest.fail(f"Cached Vision API response not found at: {cache_path}")
+    
+        cached_response = load_vision_response_from_cache(cache_path)
+        if cached_response is None:
+            pytest.fail("Failed to load cached Vision API response")
+        print(f"Cached Vision API response loaded successfully")
+        # Load the test PDF (the one that generated this cache)
+        test_pdf_path = r"C:\Users\TheJ\Documents\Code\mokuro\suihanki.pdf"
+        if not os.path.exists(test_pdf_path):
+            pytest.skip(f"Test PDF not found at: {test_pdf_path}")
+        print(f"Test PDF path: {test_pdf_path}")
+    
+        with open(test_pdf_path, 'rb') as f:
+            test_pdf_bytes = f.read()
+    
+        # Run the full OCR process with mocked API response
+        service = OCRService()
+        with patch.object(service.client, 'document_text_detection', return_value=cached_response):
+            result_bytes = service.process_pdf(test_pdf_bytes)
+    
+        # Verify PDF was created successfully
+        assert len(result_bytes) > 0, "Empty PDF result"
+        assert result_bytes.startswith(b'%PDF'), "Invalid PDF format"
+    
+        # Verify the PDF can be opened and has content
+        output_doc = fitz.open(stream=result_bytes, filetype="pdf")
+        assert output_doc.page_count > 0, "Output PDF has no pages"
+    
+        # Extract text to verify OCR was applied
+        page = output_doc[0]
+        extracted_text = page.get_text("text")
+        assert len(extracted_text.strip()) > 0, "No text found in OCR-processed PDF"
+    
+        page_count = output_doc.page_count
+        output_doc.close()
+    
+        # Save the output PDF to the specified location (use the same path variable from cleanup)
+        # Ensure output directory exists
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+    
+        # Write the PDF to file
+        with open(output_path, 'wb') as f:
+            f.write(result_bytes)
+    
+        # Verify the file was written successfully
+        assert os.path.exists(output_path), f"Output PDF was not written to {output_path}"
+        assert os.path.getsize(output_path) > 0, "Output PDF file is empty"
+    
+>       print(f"\\n\u2713 Full OCR process completed successfully!")
+E       UnicodeEncodeError: 'cp932' codec can't encode character '\u2713' in position 2: illegal multibyte sequence
+
+tests\domains\ocr\test_real_ocr_content.py:603: UnicodeEncodeError
+----------------------------- Captured log setup ------------------------------
+WARNING  app.domains.ocr.service:service.py:96 GOOGLE_APPLICATION_CREDENTIALS_JSON not found, falling back to ADC
+============================== warnings summary ===============================
+<frozen importlib._bootstrap>:488
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+tests\domains\ocr\test_real_ocr_content.py:536
+  C:\Users\TheJ\Documents\Code\ProgressiveReader\backend\tests\domains\ocr\test_real_ocr_content.py:536: PytestRemovedIn9Warning: Marks applied to fixtures have no effect
+  See docs: https://docs.pytest.org/en/stable/deprecations.html#applying-a-mark-to-a-fixture-function
+    @pytest.fixture(scope="module")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tests\domains\ocr\test_real_ocr_content.py::test_ocr_full_process_flow
+======================== 6 warnings, 1 error in 1.96s =========================

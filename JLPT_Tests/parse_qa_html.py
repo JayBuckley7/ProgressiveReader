@@ -237,8 +237,9 @@ def write_csv(objs, path: Path):
     import csv
     # Flatten choices into semicolon-joined string
     fieldnames = [
-        "part", "question_number", "prompt",
-        "choices", "correct_choice_index", "correct_choice_text", "explanation"
+        "part", "question_number", "parent_question_number", "parent_content", "prompt",
+        "choices", "correct_choice_index", "correct_choice_text", "explanation",
+        "is_audio", "audio_url"
     ]
     with path.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)

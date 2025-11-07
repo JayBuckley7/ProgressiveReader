@@ -24,7 +24,7 @@ def upload_file():
     if file.filename == '':
         return jsonify({'success': False, 'message': 'No selected file'}), 400
 
-    if file and file.filename.lower().endswith(('.epub', '.txt', '.docx', '.pdf', '.mobi')):
+    if file and file.filename.lower().endswith(('.epub', '.txt', '.docx', '.pdf', '.mobi', '.json')):
         # No longer saving the file to the server.
         # The client will handle storage in IndexedDB.
         # This endpoint now exists purely to maintain familiar upload terminology
@@ -42,7 +42,7 @@ def upload_file():
                 'success': False,
                 'message': (
                     'Invalid file type, please upload an EPUB, PDF, MOBI, DOCX, '
-                    'or TXT file.'
+                    'TXT, or JSON file.'
                 )
             }),
             400,

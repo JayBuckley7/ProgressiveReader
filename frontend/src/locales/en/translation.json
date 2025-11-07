@@ -19,7 +19,7 @@
     "signedOut": {
       "animationAlt": "Animation",
       "title": "Your Digital Bookshelf, Reimagined.",
-      "description": "Upload books in EPUB, PDF, MOBI, DOCX, or TXT format, read anywhere, and enhance your language learning.",
+      "description": "Upload books in EPUB, PDF, MOBI, DOCX, TXT, or JSON format, read anywhere, and enhance your language learning.",
       "features": {
         "smartReading": {
           "title": "Smart Reading",
@@ -429,5 +429,121 @@
       "saveFailed": "Failed to save to library"
     },
     "titleFrom": "Clipboard Paste"
+  },
+  "massUpload": {
+    "title": "Mass Upload Books",
+    "description": "Upload multiple books at once. Drag & drop files or click to select.",
+    "dropZone": {
+      "processing": "Processing files...",
+      "dropHere": "Drop your books here",
+      "or": "or",
+      "browse": "browse to select files",
+      "supports": "Supports:"
+    },
+    "bookList": {
+      "title": "Books to Upload",
+      "progress": "Progress:",
+      "labels": {
+        "title": "Title",
+        "author": "Author",
+        "language": "Language",
+        "pagesChapters": "Pages/Chapters"
+      },
+      "ocr": {
+        "label": "Process with OCR (makes PDF searchable)"
+      },
+      "actions": {
+        "remove": "Remove",
+        "retry": "Retry"
+      },
+      "status": {
+        "pending": "pending",
+        "processing": "processing",
+        "uploading": "uploading",
+        "completed": "completed",
+        "error": "error"
+      },
+      "summary": {
+        "completed": "completed",
+        "failed": "failed"
+      }
+    },
+    "buttons": {
+      "close": "Close",
+      "cancel": "Cancel",
+      "retryAllFailed": "Retry All Failed",
+      "uploading": "Uploading...",
+      "upload": "Upload {{count}} Book(s)"
+    },
+    "defaults": {
+      "unknownAuthor": "Unknown Author",
+      "defaultLanguage": "English"
+    },
+    "toasts": {
+      "unsupportedFormat": "Unsupported file format: {{fileName}}. Please use EPUB, TXT, DOCX, PDF, or MOBI files.",
+      "addedBooks": "Added {{count}} book(s) for upload. Review and edit metadata as needed.",
+      "retrySuccess": "Successfully retried upload for \"{{title}}\"",
+      "retryFailed": "Retry failed for \"{{title}}\"",
+      "retrying": "Retrying {{count}} failed upload(s)...",
+      "signInRequired": "Please sign in to upload books",
+      "noBooks": "No books to upload",
+      "uploadSuccess": "Successfully uploaded {{count}} book(s)!",
+      "uploadFailed": "Upload failed"
+    }
+  },
+  "jlptTest": {
+    "page": {
+      "title": "JLPT Test Runner",
+      "backToSelection": "← Back to Test Selection",
+      "loadingTests": "Loading available tests...",
+      "loadingTest": "Loading test...",
+      "failedToLoadTests": "Failed to load tests",
+      "failedToLoadTest": "Failed to load test",
+      "retry": "Retry",
+      "noTestsFound": "No Tests Found",
+      "noTestsDescription": "No JLPT test JSON files were found in your library or local folder.",
+      "noTestsHint": "Tests can be picked from your library if JSON files are present, or from the local JLPT_Tests folder.",
+      "selectTest": "Select a Test",
+      "fromLibrary": "From Google Drive",
+      "fromLocal": "From local folder",
+      "library": "📚 Library",
+      "local": "💾 Local"
+    },
+    "runner": {
+      "title": "JLPT Test Runner - {{testName}}",
+      "part": "Part {{part}}",
+      "questions": "{{count}} questions",
+      "currentQuestion": "Current Question",
+      "totalQuestions": "Total Questions",
+      "score": "Score",
+      "jumpToQuestion": "Jump to Question:",
+      "question": "Question {{number}}",
+      "skipped": "Skipped",
+      "readingPassage": "Reading Passage",
+      "readingPassageWithNumber": "Reading Passage (Question {{number}})",
+      "noPrompt": "(No prompt)",
+      "audioQuestion": "Audio Question",
+      "audioNotSupported": "Your browser does not support the audio element.",
+      "noChoices": "No choices available for this question.",
+      "choice": "Choice {{number}}",
+      "explanation": "Explanation:",
+      "transcript": "Transcript:",
+      "readTranscript": "Read Transcript",
+      "pause": "Pause",
+      "resume": "Resume",
+      "loadingQuestions": "Loading questions...",
+      "noQuestionAvailable": "No question available. Please select a section.",
+      "previous": "Previous",
+      "skip": "Skip",
+      "next": "Next",
+      "showResults": "Show Results",
+      "testResults": "Test Results",
+      "partResults": "Part {{part}}: {{correct}} / {{answered}} answered ({{percentage}}%)",
+      "skippedCount": "{{count}} skipped",
+      "correct": "✓",
+      "incorrect": "✗",
+      "skippedLabel": "(Skipped)",
+      "textToSpeechNotSupported": "Your browser does not support text-to-speech."
+    }
   }
 }

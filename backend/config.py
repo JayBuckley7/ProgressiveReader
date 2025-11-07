@@ -2,7 +2,7 @@
 import os
 
 class Config:
-    ALLOWED_EXTENSIONS = {'epub', 'txt', 'docx', 'pdf', 'mobi'}
+    ALLOWED_EXTENSIONS = {'epub', 'txt', 'docx', 'pdf', 'mobi', 'json'}
     # JPDB API Limits (can be configured here)
     MAX_BYTES_PER_API_BATCH = 15000 
     MAX_SEGMENTS_PER_API_BATCH = 75

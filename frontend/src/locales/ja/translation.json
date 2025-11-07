@@ -19,7 +19,7 @@
     "signedOut": {
       "animationAlt": "アニメーション",
       "title": "あなたのデジタル本棚を再発明",
-      "description": "EPUB・PDF・MOBI・DOCX・TXT 形式の本をアップロードして、どこでも読書しながら言語学習を強化できます。",
+      "description": "EPUB・PDF・MOBI・DOCX・TXT・JSON 形式の本をアップロードして、どこでも読書しながら言語学習を強化できます。",
       "features": {
         "smartReading": {
           "title": "スマートリーディング",
@@ -425,5 +425,121 @@
       "saveFailed": "ライブラリへの保存に失敗しました"
     },
     "titleFrom": "クリップボード貼り付け"
+  },
+  "massUpload": {
+    "title": "一括アップロード",
+    "description": "複数の本を一度にアップロード。ファイルをドラッグ&ドロップするか、クリックして選択してください。",
+    "dropZone": {
+      "processing": "ファイルを処理中...",
+      "dropHere": "ここに本をドロップ",
+      "or": "または",
+      "browse": "ファイルを選択",
+      "supports": "対応形式:"
+    },
+    "bookList": {
+      "title": "アップロード予定の本",
+      "progress": "進捗:",
+      "labels": {
+        "title": "タイトル",
+        "author": "著者",
+        "language": "言語",
+        "pagesChapters": "ページ/章"
+      },
+      "ocr": {
+        "label": "OCR で処理（PDF を検索可能にします）"
+      },
+      "actions": {
+        "remove": "削除",
+        "retry": "再試行"
+      },
+      "status": {
+        "pending": "待機中",
+        "processing": "処理中",
+        "uploading": "アップロード中",
+        "completed": "完了",
+        "error": "エラー"
+      },
+      "summary": {
+        "completed": "完了",
+        "failed": "失敗"
+      }
+    },
+    "buttons": {
+      "close": "閉じる",
+      "cancel": "キャンセル",
+      "retryAllFailed": "失敗したものをすべて再試行",
+      "uploading": "アップロード中...",
+      "upload": "{{count}} 冊をアップロード"
+    },
+    "defaults": {
+      "unknownAuthor": "著者不明",
+      "defaultLanguage": "英語"
+    },
+    "toasts": {
+      "unsupportedFormat": "対応していないファイル形式: {{fileName}}。EPUB、TXT、DOCX、PDF、または MOBI ファイルを使用してください。",
+      "addedBooks": "{{count}} 冊の本をアップロード予定に追加しました。必要に応じてメタデータを確認・編集してください。",
+      "retrySuccess": "\"{{title}}\" の再アップロードに成功しました",
+      "retryFailed": "\"{{title}}\" の再試行に失敗しました",
+      "retrying": "{{count}} 件の失敗したアップロードを再試行中...",
+      "signInRequired": "本をアップロードするにはサインインしてください",
+      "noBooks": "アップロードする本がありません",
+      "uploadSuccess": "{{count}} 冊の本をアップロードしました！",
+      "uploadFailed": "アップロードに失敗しました"
+    }
+  },
+  "jlptTest": {
+    "page": {
+      "title": "JLPT テストランナー",
+      "backToSelection": "← テスト選択に戻る",
+      "loadingTests": "利用可能なテストを読み込み中...",
+      "loadingTest": "テストを読み込み中...",
+      "failedToLoadTests": "テストの読み込みに失敗しました",
+      "failedToLoadTest": "テストの読み込みに失敗しました",
+      "retry": "再試行",
+      "noTestsFound": "テストが見つかりません",
+      "noTestsDescription": "ライブラリまたはローカルフォルダーに JLPT テスト JSON ファイルが見つかりませんでした。",
+      "noTestsHint": "JSON ファイルがライブラリにある場合はそこから、またはローカルの JLPT_Tests フォルダーから選択できます。",
+      "selectTest": "テストを選択",
+      "fromLibrary": "Google Drive から",
+      "fromLocal": "ローカルフォルダーから",
+      "library": "📚 ライブラリ",
+      "local": "💾 ローカル"
+    },
+    "runner": {
+      "title": "JLPT テストランナー - {{testName}}",
+      "part": "第{{part}}部",
+      "questions": "{{count}} 問",
+      "currentQuestion": "現在の問題",
+      "totalQuestions": "総問題数",
+      "score": "スコア",
+      "jumpToQuestion": "問題にジャンプ:",
+      "question": "問題 {{number}}",
+      "skipped": "スキップ済み",
+      "readingPassage": "読解文",
+      "readingPassageWithNumber": "読解文（問題 {{number}}）",
+      "noPrompt": "（問題文なし）",
+      "audioQuestion": "音声問題",
+      "audioNotSupported": "お使いのブラウザーは音声要素をサポートしていません。",
+      "noChoices": "この問題には選択肢がありません。",
+      "choice": "選択肢 {{number}}",
+      "explanation": "解説:",
+      "transcript": "スクリプト:",
+      "readTranscript": "スクリプトを読み上げ",
+      "pause": "一時停止",
+      "resume": "再開",
+      "loadingQuestions": "問題を読み込み中...",
+      "noQuestionAvailable": "問題がありません。セクションを選択してください。",
+      "previous": "前へ",
+      "skip": "スキップ",
+      "next": "次へ",
+      "showResults": "結果を表示",
+      "testResults": "テスト結果",
+      "partResults": "第{{part}}部: {{correct}} / {{answered}} 回答済み（{{percentage}}%）",
+      "skippedCount": "{{count}} スキップ",
+      "correct": "✓",
+      "incorrect": "✗",
+      "skippedLabel": "（スキップ済み）",
+      "textToSpeechNotSupported": "お使いのブラウザーは音声読み上げをサポートしていません。"
+    }
   }
 }

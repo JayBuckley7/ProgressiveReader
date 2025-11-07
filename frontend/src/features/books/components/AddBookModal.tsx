@@ -28,17 +28,19 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
       'application/epub+zip',
       'application/pdf',
       'application/x-mobipocket-ebook',
-      'text/plain'
+      'text/plain',
+      'application/json'
     ];
     
     const isValidType = allowedTypes.includes(selectedFile.type) || 
       selectedFile.name.toLowerCase().endsWith('.epub') ||
       selectedFile.name.toLowerCase().endsWith('.mobi') ||
       selectedFile.name.toLowerCase().endsWith('.pdf') ||
-      selectedFile.name.toLowerCase().endsWith('.txt');
+      selectedFile.name.toLowerCase().endsWith('.txt') ||
+      selectedFile.name.toLowerCase().endsWith('.json');
 
     if (!isValidType) {
-      toast.error("Please select an EPUB, PDF, MOBI, or TXT file");
+      toast.error("Please select an EPUB, PDF, MOBI, TXT, or JSON file");
       return;
     }
     
@@ -119,6 +121,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
         'pdf': 'pdf',
         'mobi': 'mobi',
         'txt': 'txt',
+        'json': 'json',
       };
       const fileType = fileTypeMap[fileExtension || ''] || 'epub';
 
@@ -185,7 +188,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              ✁E
+              ✕
             </button>
           </div>
           
@@ -196,13 +199,13 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               </label>
               <input
                 type="file"
-                accept=".epub,.pdf,.mobi,.txt,application/epub+zip,application/pdf,application/x-mobipocket-ebook,text/plain"
+                accept=".epub,.pdf,.mobi,.txt,.json,application/epub+zip,application/pdf,application/x-mobipocket-ebook,text/plain,application/json"
                 onChange={handleFileChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 disabled={isProcessing}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Supported formats: EPUB, PDF, MOBI, TXT
+                Supported formats: EPUB, PDF, MOBI, TXT, JSON
               </p>
               {isProcessing && !ocrProgress && (
                 <p className="text-xs text-blue-600 mt-1 flex items-center">

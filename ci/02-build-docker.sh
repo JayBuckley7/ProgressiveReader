@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 VITE_CLERK_PUBLISHABLE_KEY="$(tr -d '\r\n' < /workspace/vite_clerk_key.txt)"
 VITE_GDRIVE_CLIENT_ID="$(tr -d '\r\n' < /workspace/vite_gdrive_client.txt)"
 VITE_GAPI_KEY="$(tr -d '\r\n' < /workspace/vite_gapi_key.txt)"
 
-echo "🔨 Building Docker image (frontend build args only)..."
+echo "畑 Building Docker image (frontend build args only)..."
 
 # Cloud Build substitutions passed as environment variables
 docker build \

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 # Cloud Build substitution passed as environment variable
 SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME --platform managed --region us-central1 --project="$PROJECT_ID" --format 'value(status.url)')
@@ -12,7 +12,7 @@ HEALTH_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 
 curl_status=$?
 set -e
 if [ $curl_status -ne 0 ] || [ -z "$HEALTH_RESPONSE" ]; then
-  echo "⚠️ Health endpoint unavailable or empty; continuing."
+  echo "笞・・Health endpoint unavailable or empty; continuing."
   HEALTH_RESPONSE='{}'
 else
   echo "Health: $HEALTH_RESPONSE"
@@ -22,7 +22,7 @@ CLERK_OVERALL=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:spa
 CLERK_PUB_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
 CLERK_SECRET_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
 
-echo "📊 Clerk:"
+echo "投 Clerk:"
 echo "  - overall_healthy: ${CLERK_OVERALL:-unknown}"
 echo "  - publishable_key_configured: ${CLERK_PUB_CONFIGURED:-unknown}"
 echo "  - secret_key_configured: ${CLERK_SECRET_CONFIGURED:-unknown}"
@@ -35,23 +35,23 @@ OPENAI_RESPONSE=$(curl --silent --show-error --connect-timeout 10 --max-time 20 
 curl_status=$?
 set -e
 if [ $curl_status -ne 0 ] || [ -z "$OPENAI_RESPONSE" ]; then
-  echo "⚠️ OpenAI configuration endpoint unavailable; continuing."
+  echo "笞・・OpenAI configuration endpoint unavailable; continuing."
   OPENAI_RESPONSE='{}'
 fi
 echo "OpenAI: $OPENAI_RESPONSE"
 CONFIGURED=$(echo "$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
 POOL_SIZE=$(echo "$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
 if [ "$CONFIGURED" -eq 1 ] && [ "${POOL_SIZE:-0}" -gt 0 ]; then
-  echo "✅ OpenAI pool looks healthy (pool_size=${POOL_SIZE})"
+  echo "笨・OpenAI pool looks healthy (pool_size=${POOL_SIZE})"
 else
-  echo "⚠️ Unable to confirm OpenAI pool configuration; continuing."
+  echo "笞・・Unable to confirm OpenAI pool configuration; continuing."
 fi
 
 # Test 3: Confirm both Clerk keys seen by backend
 echo "Post-deploy BVT 3/3: Checking Clerk flags again"
 if [ "$CLERK_PUB_CONFIGURED" = "true" ] && [ "$CLERK_SECRET_CONFIGURED" = "true" ]; then
-  echo "✅ Clerk keys confirmed"
+  echo "笨・Clerk keys confirmed"
 else
-  echo "⚠️ Clerk key confirmation incomplete."
+  echo "笞・・Clerk key confirmation incomplete."
 fi
 

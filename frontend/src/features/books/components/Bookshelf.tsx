@@ -20,7 +20,7 @@ export function Bookshelf() {
             <div className="text-4xl mb-4">📖</div>
             <h3 className="font-semibold text-lg mb-2">Smart Reading</h3>
             <p className="text-gray-600 text-sm">
-              Upload EPUB, PDF, MOBI, or TXT files and read with built-in language learning tools
+              Upload EPUB, PDF, MOBI, TXT, or JSON files and read with built-in language learning tools
             </p>
           </div>
           <div className="bg-white rounded-lg border p-6 shadow-sm">
@@ -48,7 +48,7 @@ export function Bookshelf() {
             </li>
             <li className="flex items-center">
               <span className="w-2 h-2 bg-blue-600 rounded-full mr-3"></span>
-              Supported formats: EPUB, PDF, MOBI, TXT
+              Supported formats: EPUB, PDF, MOBI, TXT, JSON
             </li>
             <li className="flex items-center">
               <span className="w-2 h-2 bg-blue-600 rounded-full mr-3"></span>

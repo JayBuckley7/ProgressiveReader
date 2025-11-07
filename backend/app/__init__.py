@@ -73,6 +73,12 @@ def create_app(config_class=Config) -> Flask:
                         os.environ[key] = json.dumps(value)
                     else:
                         os.environ.setdefault(key, json.dumps(value))
+                # Special handling for GOOGLE_APPLICATION_CREDENTIALS_JSON to preserve JSON object format
+                elif key == "GOOGLE_APPLICATION_CREDENTIALS_JSON" and isinstance(value, dict):
+                    if override_env:
+                        os.environ[key] = json.dumps(value)
+                    else:
+                        os.environ.setdefault(key, json.dumps(value))
                 else:
                     if override_env:
                         os.environ[key] = str(value)
@@ -207,11 +213,28 @@ def create_app(config_class=Config) -> Flask:
     @app.route('/health')
     def health_check():
         """
-        Simple health check endpoint. Always returns 200.
-        This endpoint should be fast and not depend on external services.
-        For deeper readiness checks, use /ready endpoint.
+        Health check endpoint that verifies essential configuration.
+        Returns 200 if critical services are configured, 500 otherwise.
         """
-        return jsonify({"status": "healthy"}), 200
+        health_status = {
+            "status": "healthy",
+            "clerk_secret_key_configured": bool(os.environ.get("CLERK_SECRET_KEY")),
+            "clerk_publishable_key_configured": bool(os.environ.get("VITE_CLERK_PUBLISHABLE_KEY")),
+            "secrets_file_exists": os.path.exists("/secrets/env.json"),
+        }
+        
+        # Check if Clerk keys are configured (required for auth)
+        clerk_healthy = (
+            bool(os.environ.get("CLERK_SECRET_KEY")) and
+            bool(os.environ.get("VITE_CLERK_PUBLISHABLE_KEY"))
+        )
+        
+        # Overall health: Clerk keys must be configured
+        health_status["clerk_overall_healthy"] = clerk_healthy
+        
+        # Return 500 if Clerk keys are missing (critical for app functionality)
+        status_code = 200 if clerk_healthy else 500
+        return jsonify(health_status), status_code
     # --- End Health Check Endpoint ---
 
     # --- Load OpenAI API keys BEFORE importing blueprints ---

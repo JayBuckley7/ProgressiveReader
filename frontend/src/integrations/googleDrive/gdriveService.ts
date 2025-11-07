@@ -550,84 +550,109 @@ class GDriveService {
   /**
    * Get Google Drive token from Clerk backend
    * This uses Clerk's stored Google OAuth token which is more reliable
+   * Includes deduplication to prevent concurrent requests
    */
   private async getTokenFromClerkBackend(): Promise<{access_token: string, expires_in: number} | null> {
-    
-    try {
+    // Deduplicate concurrent token requests
+    const cacheKey = 'getTokenFromClerkBackend';
+    if (gDriveCacheService.hasPendingAPICall(cacheKey)) {
+      return gDriveCacheService.getPendingAPICall<{access_token: string, expires_in: number} | null>(cacheKey) ?? null;
+    }
 
-      
-      const clerkSessionToken = await window.Clerk?.session?.getToken();
-      if (!clerkSessionToken) {
-        console.warn('[🔗 CLERK TOKEN] ❌ No Clerk session token available');
-        return null;
-      }
-      
-      console.log('[🔗 CLERK TOKEN] Clerk session token retrieved:', clerkSessionToken.substring(0, 20) + '...');
-      
-
-      // Add timeout to prevent hanging
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, 15000); // 15 second timeout
-
-
-      const startTime = Date.now();
-      
-      console.log('[🔗 CLERK TOKEN] 🔄 Requesting token from /drive/token...');
-      const response = await fetch('/drive/token', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${clerkSessionToken}`,
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const responseTime = Date.now() - startTime;
-      console.log('[🔗 CLERK TOKEN] ✅ Received response in', responseTime, 'ms:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorDetails;
-        try {
-          errorDetails = JSON.parse(errorText);
-        } catch {
-          errorDetails = errorText;
+    const tokenPromise = (async () => {
+      try {
+        const clerkSessionToken = await window.Clerk?.session?.getToken();
+        if (!clerkSessionToken) {
+          console.warn('[🔗 CLERK TOKEN] ❌ No Clerk session token available');
+          return null;
         }
-        
-        console.error('[🔗 CLERK TOKEN] ❌ Backend token request failed');
-        console.error('[🔗 CLERK TOKEN] Status:', response.status, response.statusText);
-        console.error('[🔗 CLERK TOKEN] Error body:', JSON.stringify(errorDetails, null, 2));
-        console.log('[🔗 CLERK TOKEN] ==========================================');
-        return null;
-      }
 
-      console.log('[🔗 CLERK TOKEN] 📄 Parsing JSON response...');
-      const tokenData = await response.json();
-      
-      if (tokenData.access_token && tokenData.expires_in) {
+        console.log('[🔗 CLERK TOKEN] Clerk session token retrieved:', clerkSessionToken.substring(0, 20) + '...');
+        console.log('[🔗 CLERK TOKEN] 🔄 Requesting token from /drive/token...');
+
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 15000); // 15 second timeout
+
+        const startTime = Date.now();
+        const response = await fetch('/drive/token', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${clerkSessionToken}`,
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const elapsed = Date.now() - startTime;
+        console.log(`[🔗 CLERK TOKEN] ✅ Received response in ${elapsed} ms:`, {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorDetails;
+          try {
+            errorDetails = JSON.parse(errorText);
+          } catch {
+            errorDetails = errorText;
+          }
+          
+          console.error('[🔗 CLERK TOKEN] ❌ Backend token request failed');
+          console.error('[🔗 CLERK TOKEN] Status:', response.status, response.statusText);
+          console.error('[🔗 CLERK TOKEN] Error body:', JSON.stringify(errorDetails, null, 2));
+          return null;
+        }
+
+        console.log('[🔗 CLERK TOKEN] 📄 Parsing JSON response...');
+        const tokenData = await response.json();
+        
+        // Log the actual response structure for debugging
         console.log('[🔗 CLERK TOKEN] ✅ Successfully retrieved token data:', {
           hasAccessToken: !!tokenData.access_token,
-          tokenStart: tokenData.access_token.substring(0, 20) + '...',
-          expiresIn: tokenData.expires_in
+          tokenStart: tokenData.access_token?.substring(0, 20) + '...',
+          expiresIn: tokenData.expires_in,
+          expiresInType: typeof tokenData.expires_in,
+          allKeys: Object.keys(tokenData)
         });
-        console.log('[🔗 CLERK TOKEN] ✅ Retrieved token from Clerk backend');
-        console.log('[🔗 CLERK TOKEN] ==========================================');
-        return tokenData;
-      } else {
-        console.warn('[🔐 GOOGLE DRIVE AUTH] Invalid token response from backend:', tokenData);
+
+        // Handle both snake_case and camelCase response formats
+        const accessToken = tokenData.access_token || tokenData.accessToken;
+        let expiresIn = tokenData.expires_in || tokenData.expiresIn;
+
+        // If expiresIn is a timestamp (milliseconds), convert to seconds remaining
+        if (expiresIn && expiresIn > 1000000000000) { // Likely a timestamp in milliseconds
+          const now = Date.now();
+          expiresIn = Math.max(0, Math.floor((expiresIn - now) / 1000));
+          console.warn('[🔗 CLERK TOKEN] ⚠️ expiresIn was a timestamp, converted to seconds:', expiresIn);
+        }
+
+        if (accessToken && typeof expiresIn === 'number') {
+          console.log('[🔗 CLERK TOKEN] ✅ Retrieved token from Clerk backend');
+          console.log('[🔗 CLERK TOKEN] ==========================================');
+          return {
+            access_token: accessToken,
+            expires_in: expiresIn
+          };
+        } else {
+          console.warn('[🔐 GOOGLE DRIVE AUTH] Invalid token response from backend:', tokenData);
+          return null;
+        }
+      } catch (error) {
+        console.warn('[🔐 GOOGLE DRIVE AUTH] Error fetching token from Clerk backend:', error);
         return null;
+      } finally {
+        gDriveCacheService.deletePendingAPICall(cacheKey);
       }
-    } catch (error) {
-      console.warn('[🔐 GOOGLE DRIVE AUTH] Error fetching token from Clerk backend:', error);
-      return null;
-    }
+    })();
+
+    gDriveCacheService.setPendingAPICall(cacheKey, tokenPromise);
+    return tokenPromise;
   }
   
   public async getUserProfile(): Promise<GoogleUser | null> {

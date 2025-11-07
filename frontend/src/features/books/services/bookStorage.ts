@@ -1,9 +1,13 @@
 import { BookMetadata, ReadingProgress } from '~/types';
 import { getCachedFile, cacheFile } from '@integrations/googleDrive/services/driveCache';
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
+import * as pdfjsLib from 'pdfjs-dist';
 
 // Request deduplication cache to prevent multiple simultaneous requests for the same resource
 const activeDownloads = new Map<string, Promise<Blob>>();
+
+// Configure PDF.js worker once - use CDN URL with explicit HTTPS protocol
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '5.4.54'}/pdf.worker.min.js`;
 
 // Declare global types for epub.js and pdf.js
 declare global {
@@ -141,28 +145,25 @@ class BookStorageService {
      */
     async extractCoverFromPdf(file: File): Promise<Blob | null> {
         try {
-            await this.loadPdfJs();
-            const pdfjsLib = window.pdfjsLib;
-            if (!pdfjsLib) {
-                throw new Error('pdf.js library failed to load');
-            }
-
             const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-            const pdf = await loadingTask.promise;
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
             if (pdf.numPages < 1) {
                 return null;
             }
+            
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 1 });
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
+            
             if (!context) {
                 throw new Error('Failed to get canvas context');
             }
+            
             canvas.width = viewport.width;
             canvas.height = viewport.height;
-            await page.render({ canvasContext: context, viewport }).promise;
+            await page.render({ canvasContext: context, viewport, canvas }).promise;
 
             return await new Promise<Blob | null>((resolve) => {
                 canvas.toBlob((blob) => resolve(blob || null), 'image/jpeg');
@@ -189,21 +190,6 @@ class BookStorageService {
                 .then(() => resolve())
                 .catch(reject);
         });
-    }
-
-    /**
-     * Dynamically load pdf.js library
-     */
-    private async loadPdfJs(): Promise<void> {
-        if (window.pdfjsLib) {
-            return;
-        }
-        await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-        const pdfjsLib = window.pdfjsLib;
-        if (!pdfjsLib) {
-            throw new Error('pdf.js failed to load');
-        }
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
     /**
