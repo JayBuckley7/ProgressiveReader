@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLPT Test Runner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .question-container {
+            margin: 30px 0;
+            padding: 25px;
+            background: #fafafa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .question-number {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 18px;
+        }
+        
+        .part-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .parent-content {
+            margin: 20px 0;
+            padding: 20px;
+            background: #e8f4f8;
+            border-left: 4px solid #2196f3;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .parent-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 15px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .parent-content-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #1976d2;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .question-prompt {
+            font-size: 18px;
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .question-prompt img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 15px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .choices {
+            list-style: none;
+            margin: 20px 0;
+        }
+        
+        .choice img {
+            max-width: 200px;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .choice {
+            margin: 10px 0;
+            padding: 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .choice:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .choice.selected {
+            border-color: #667eea;
+            background: #e8edff;
+        }
+        
+        .choice.correct {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .choice.incorrect {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .choice input[type="radio"] {
+            margin-right: 10px;
+        }
+        
+        .explanation {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff9c4;
+            border-radius: 8px;
+            border-left: 4px solid #fbc02d;
+            display: none;
+        }
+        
+        .explanation.show {
+            display: block;
+        }
+        
+        .explanation-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #f57c00;
+        }
+        
+        .audio-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f4ff;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .audio-player {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .transcript-button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        
+        .transcript-button:hover {
+            background: #5568d3;
+        }
+        
+        .transcript-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .transcript-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            gap: 10px;
+        }
+        
+        .controls-left {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .controls-right {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #d0d0d0;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #45a049;
+        }
+        
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #f57c00;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .score {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .section-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .section-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .section-btn:hover {
+            background: #f0f4ff;
+        }
+        
+        .section-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .question-selector-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            justify-content: center;
+        }
+        
+        .question-selector-container label {
+            font-weight: bold;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .question-selector {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .question-selector:hover {
+            border-color: #5568d3;
+        }
+        
+        .question-selector:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JLPT Test Runner</h1>
+        
+        <div class="section-selector" id="section-selector">
+            <!-- Sections will be populated dynamically -->
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="current-question">0</div>
+                <div class="stat-label">Current Question</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="total-questions">0</div>
+                <div class="stat-label">Total Questions</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="score">0</div>
+                <div class="stat-label">Score</div>
+            </div>
+        </div>
+        
+        <div class="question-selector-container">
+            <label for="question-selector">Jump to Question:</label>
+            <select id="question-selector" class="question-selector" onchange="jumpToQuestion()">
+                <option value="">Select...</option>
+            </select>
+        </div>
+        
+        <div id="question-area"></div>
+        
+        <div class="controls">
+            <div class="controls-left">
+                <button class="btn-secondary" id="prev-btn" onclick="previousQuestion()">Previous</button>
+                <button class="btn-warning" id="skip-btn" onclick="skipQuestion()">Skip</button>
+            </div>
+            <div class="controls-right">
+                <button class="btn-primary" id="next-btn" onclick="nextQuestion()">Next</button>
+                <button class="btn-success" id="submit-btn" onclick="showResults()" style="display: none;">Show Results</button>
+            </div>
+        </div>
+        
+        <div class="results" id="results">
+            <h2>Test Results</h2>
+            <div class="score" id="final-score"></div>
+        </div>
+    </div>
+
+    <script>
+        let allQuestions = [];  // All questions from JSON
+        let questions = [];     // Filtered questions for current section
+        let currentIndex = 0;
+        let currentSection = null;
+        let answers = {};
+        let skipped = {};
+        let audioPositions = {};  // Store audio playback positions by question key
+        let showAnswers = false;
+        let testFileName = '';
+        let sections = {};      // Map of part number to questions
+        let speechSynthesis = null;  // For text-to-speech
+        let currentUtterance = null;  // Current speech utterance
+
+        // Get test file name from URL query parameter, default to n5_1
+        const urlParams = new URLSearchParams(window.location.search);
+        testFileName = urlParams.get('test') || 'n5_1';
+        
+        // Ensure it ends with .json
+        if (!testFileName.endsWith('.json')) {
+            testFileName += '.json';
+        }
+        
+        // Update title to show which test is running
+        document.title = `JLPT Test Runner - ${testFileName.replace('.json', '')}`;
+        document.querySelector('h1').textContent = `JLPT Test Runner - ${testFileName.replace('.json', '')}`;
+
+        // Load questions from the specified JSON file
+        fetch(testFileName)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${testFileName}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                allQuestions = data;
+                
+                // Group questions by part/section
+                sections = {};
+                allQuestions.forEach(q => {
+                    const part = q.part !== null && q.part !== undefined ? q.part : 'none';
+                    if (!sections[part]) {
+                        sections[part] = [];
+                    }
+                    sections[part].push(q);
+                });
+                
+                // Create section buttons
+                createSectionButtons();
+                
+                // Default to first section
+                const firstSection = Object.keys(sections).sort((a, b) => {
+                    if (a === 'none') return 1;
+                    if (b === 'none') return -1;
+                    return parseInt(a) - parseInt(b);
+                })[0];
+                
+                selectSection(firstSection);
+            })
+            .catch(error => {
+                document.getElementById('question-area').innerHTML = 
+                    `<div class="loading">Error loading questions. Make sure ${testFileName} exists.<br><br>
+                    Usage: test_runner.html?test=n5_1</div>`;
+                console.error('Error:', error);
+            });
+        
+        function createSectionButtons() {
+            const selector = document.getElementById('section-selector');
+            selector.innerHTML = '';
+            
+            const sortedSections = Object.keys(sections).sort((a, b) => {
+                if (a === 'none') return 1;
+                if (b === 'none') return -1;
+                return parseInt(a) - parseInt(b);
+            });
+            
+            sortedSections.forEach(part => {
+                const btn = document.createElement('button');
+                btn.className = 'section-btn';
+                btn.textContent = `Part ${part} (${sections[part].length} questions)`;
+                btn.onclick = () => selectSection(part);
+                selector.appendChild(btn);
+            });
+        }
+        
+        function selectSection(part) {
+            saveAudioPosition();
+            stopSpeech();
+            currentSection = part;
+            questions = sections[part] || [];
+            currentIndex = 0;
+            showAnswers = false;  // Reset show answers when switching sections
+            
+            // Hide results if showing
+            document.getElementById('results').classList.remove('show');
+            
+            // Update active button
+            document.querySelectorAll('.section-btn').forEach((btn, idx) => {
+                const sortedSections = Object.keys(sections).sort((a, b) => {
+                    if (a === 'none') return 1;
+                    if (b === 'none') return -1;
+                    return parseInt(a) - parseInt(b);
+                });
+                if (sortedSections[idx] === part) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // Populate question selector
+            populateQuestionSelector();
+            
+            displayQuestion();
+        }
+        
+        function populateQuestionSelector() {
+            const selector = document.getElementById('question-selector');
+            selector.innerHTML = '<option value="">Select...</option>';
+            
+            questions.forEach((q, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                const qNum = q.question_number || `${index + 1}`;
+                const status = getQuestionStatus(index);
+                option.textContent = `Question ${index + 1}${qNum !== String(index + 1) ? ` (${qNum})` : ''}${status}`;
+                selector.appendChild(option);
+            });
+            
+            // Set current selection
+            selector.value = currentIndex;
+        }
+        
+        function getQuestionStatus(index) {
+            const questionKey = getQuestionKey(currentSection, index);
+            if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
+                const q = questions[index];
+                const isCorrect = answers[questionKey] === q.correct_choice_index;
+                return isCorrect ? ' ✓' : ' ✗';
+            } else if (skipped[questionKey]) {
+                return ' (Skipped)';
+            }
+            return '';
+        }
+        
+        function jumpToQuestion() {
+            const selector = document.getElementById('question-selector');
+            const selectedIndex = parseInt(selector.value);
+            if (!isNaN(selectedIndex) && selectedIndex >= 0 && selectedIndex < questions.length) {
+                saveAudioPosition();
+                stopSpeech();
+                currentIndex = selectedIndex;
+                displayQuestion();
+            }
+        }
+
+        function getQuestionKey(part, index) {
+            return `${part}-${index}`;
+        }
+        
+        function restoreAudioPosition() {
+            const question = questions[currentIndex];
+            const questionKey = getQuestionKey(currentSection, currentIndex);
+            
+            if (question.is_audio && question.audio_url) {
+                const audioPlayer = document.querySelector('.audio-player');
+                if (audioPlayer) {
+                    const savedPosition = audioPositions[questionKey];
+                    let positionRestored = false;
+                    
+                    // Wait for audio to be ready before restoring position
+                    const restorePosition = () => {
+                        if (positionRestored) return; // Already restored
+                        if (savedPosition !== undefined && savedPosition !== null && savedPosition > 0) {
+                            try {
+                                if (audioPlayer.readyState >= 2) { // Only if we have current data
+                                    // Try to seek - browser will buffer as needed
+                                    audioPlayer.currentTime = savedPosition;
+                                    positionRestored = true;
+                                    
+                                    // Verify it was set correctly after a short delay
+                                    setTimeout(() => {
+                                        const actualPos = audioPlayer.currentTime;
+                                        if (Math.abs(actualPos - savedPosition) > 1) {
+                                            // Didn't stick, try again
+                                            audioPlayer.currentTime = savedPosition;
+                                        }
+                                    }, 200);
+                                }
+                            } catch (e) {
+                                console.log('Could not restore audio position:', e);
+                            }
+                        }
+                    };
+                    
+                    // Try multiple events to ensure audio is ready
+                    const tryRestore = () => {
+                        if (audioPlayer.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+                            restorePosition();
+                            return true;
+                        }
+                        return false;
+                    };
+                    
+                    // Try immediately if ready
+                    if (!tryRestore()) {
+                        // Wait for canplaythrough event (audio is fully ready)
+                        audioPlayer.addEventListener('canplaythrough', () => {
+                            restorePosition();
+                        }, { once: true });
+                        
+                        // Wait for canplay event (audio is ready to play)
+                        audioPlayer.addEventListener('canplay', () => {
+                            // Small delay to ensure audio is fully ready
+                            setTimeout(() => {
+                                restorePosition();
+                            }, 100);
+                        }, { once: true });
+                        
+                        // Also try loadedmetadata as backup
+                        audioPlayer.addEventListener('loadedmetadata', () => {
+                            if (audioPlayer.readyState >= 2) {
+                                setTimeout(() => {
+                                    restorePosition();
+                                }, 100);
+                            }
+                        }, { once: true });
+                        
+                        // Fallback: try after a short delay
+                        setTimeout(() => {
+                            if (audioPlayer.readyState >= 2) {
+                                const currentPos = audioPlayer.currentTime;
+                                if (savedPosition && Math.abs(currentPos - savedPosition) > 1) {
+                                    restorePosition();
+                                }
+                            }
+                        }, 500);
+                    }
+                    
+                    // Confirm seek worked
+                    audioPlayer.addEventListener('seeked', () => {
+                        if (savedPosition && Math.abs(audioPlayer.currentTime - savedPosition) > 0.5) {
+                            // Seek didn't work, try once more
+                            setTimeout(() => {
+                                audioPlayer.currentTime = savedPosition;
+                            }, 50);
+                        }
+                    }, { once: true });
+                    
+                    // Also try on progress event (when data is being loaded)
+                    if (savedPosition) {
+                        const progressHandler = () => {
+                            if (audioPlayer.readyState >= 2) {
+                                restorePosition();
+                            }
+                        };
+                        audioPlayer.addEventListener('progress', progressHandler, { once: true });
+                    }
+                    
+                    // Continuously save position as audio plays
+                    audioPlayer.addEventListener('timeupdate', () => {
+                        if (audioPlayer.currentTime > 0) {
+                            audioPositions[questionKey] = audioPlayer.currentTime;
+                        }
+                    });
+                }
+            }
+        }
+        
+        function displayQuestion() {
+            if (questions.length === 0) return;
+            
+            const question = questions[currentIndex];
+            const questionArea = document.getElementById('question-area');
+            const questionKey = getQuestionKey(currentSection, currentIndex);
+            const selectedAnswer = answers[questionKey];
+            const isAnswered = selectedAnswer !== undefined && selectedAnswer !== null;
+            const isSkipped = skipped[questionKey] === true;
+            
+            let html = `
+                <div class="question-container">
+                    <div class="question-header">
+                        <span class="question-number">Question ${currentIndex + 1} ${question.question_number ? `(${question.question_number})` : ''}</span>
+                        ${question.part !== null ? `<span class="part-badge">Part ${question.part}</span>` : ''}
+                        ${isSkipped ? `<span class="part-badge" style="background: #ff9800;">Skipped</span>` : ''}
+                    </div>
+            `;
+            
+            // Show parent content (reading passage/context) if it exists
+            if (question.parent_content && question.parent_content.trim()) {
+                html += `
+                    <div class="parent-content">
+                        <div class="parent-content-title">Reading Passage ${question.parent_question_number ? `(Question ${question.parent_question_number})` : ''}</div>
+                        <div>${question.parent_content}</div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    <div class="question-prompt">${question.prompt || '(No prompt)'}</div>
+            `;
+            
+            // Show audio player if this is an audio question
+            if (question.is_audio && question.audio_url) {
+                const savedPos = audioPositions[getQuestionKey(currentSection, currentIndex)];
+                html += `
+                    <div class="audio-controls">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #667eea;">Audio Question</div>
+                        <audio class="audio-player" controls preload="metadata">
+                            <source src="${question.audio_url}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    <ul class="choices">
+            `;
+            
+            question.choices.forEach((choice, index) => {
+                let classes = 'choice';
+                if (selectedAnswer === index) {
+                    classes += ' selected';
+                }
+                // Show grading immediately if question is answered
+                if (isAnswered || showAnswers) {
+                    if (index === question.correct_choice_index) {
+                        classes += ' correct';
+                    } else if (selectedAnswer === index && index !== question.correct_choice_index) {
+                        classes += ' incorrect';
+                    }
+                }
+                
+                html += `
+                    <li class="${classes}" onclick="selectAnswer(${index})">
+                        <input type="radio" name="answer" value="${index}" ${selectedAnswer === index ? 'checked' : ''} 
+                               ${isAnswered || showAnswers ? 'disabled' : ''}>
+                        <label>${choice}</label>
+                    </li>
+                `;
+            });
+            
+            html += `</ul>`;
+            
+            // Show explanation immediately if answered, or if showing all answers
+            if ((isAnswered && question.explanation) || (showAnswers && question.explanation)) {
+                const explanationTitle = question.is_audio ? "Transcript:" : "Explanation:";
+                html += `
+                    <div class="explanation show">
+                        <div class="explanation-title">${explanationTitle}</div>
+                        <div>${question.explanation}</div>
+                        ${question.is_audio ? `
+                            <div class="transcript-controls">
+                                <button class="transcript-button" id="read-transcript-btn" onclick="readTranscript()">
+                                    Read Transcript
+                                </button>
+                                <button class="transcript-button" id="pause-transcript-btn" onclick="pauseTranscript()" style="display: none; background: #ff9800;">
+                                    Pause
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            questionArea.innerHTML = html;
+            
+            // Use requestAnimationFrame to ensure DOM is updated before restoring audio
+            requestAnimationFrame(() => {
+                // Restore audio position if this is an audio question
+                if (question.is_audio && question.audio_url) {
+                    restoreAudioPosition();
+                }
+            });
+            
+            // Update stats
+            document.getElementById('current-question').textContent = currentIndex + 1;
+            document.getElementById('total-questions').textContent = questions.length;
+            updateScore();
+            
+            // Update question selector value (don't repopulate, just update selection)
+            const selector = document.getElementById('question-selector');
+            selector.value = currentIndex;
+            // Update the current option's text to reflect status
+            if (selector.options[currentIndex + 1]) { // +1 because of "Select..." option
+                const q = question;
+                const qNum = q.question_number || `${currentIndex + 1}`;
+                const status = getQuestionStatus(currentIndex);
+                selector.options[currentIndex + 1].textContent = `Question ${currentIndex + 1}${qNum !== String(currentIndex + 1) ? ` (${qNum})` : ''}${status}`;
+            }
+            
+            // Update button states
+            document.getElementById('prev-btn').disabled = currentIndex === 0;
+            document.getElementById('next-btn').style.display = currentIndex < questions.length - 1 ? 'block' : 'none';
+            document.getElementById('submit-btn').style.display = currentIndex === questions.length - 1 ? 'block' : 'none';
+        }
+
+        function selectAnswer(index) {
+            if (showAnswers) return;
+            const questionKey = getQuestionKey(currentSection, currentIndex);
+            // Remove skip status if answering
+            if (skipped[questionKey]) {
+                delete skipped[questionKey];
+            }
+            answers[questionKey] = index;
+            displayQuestion();
+        }
+
+        function skipQuestion() {
+            if (showAnswers) return;
+            const questionKey = getQuestionKey(currentSection, currentIndex);
+            skipped[questionKey] = true;
+            // Clear answer if skipping
+            if (answers[questionKey] !== undefined) {
+                delete answers[questionKey];
+            }
+            displayQuestion();
+        }
+
+        function saveAudioPosition() {
+            // Save current audio position before leaving question
+            const audioPlayer = document.querySelector('.audio-player');
+            if (audioPlayer) {
+                const questionKey = getQuestionKey(currentSection, currentIndex);
+                audioPositions[questionKey] = audioPlayer.currentTime;
+            }
+        }
+        
+        function nextQuestion() {
+            if (currentIndex < questions.length - 1) {
+                saveAudioPosition();
+                stopSpeech();
+                currentIndex++;
+                displayQuestion();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentIndex > 0) {
+                saveAudioPosition();
+                stopSpeech();
+                currentIndex--;
+                displayQuestion();
+            }
+        }
+
+        function updateScore() {
+            let correct = 0;
+            let answered = 0;
+            questions.forEach((q, index) => {
+                const questionKey = getQuestionKey(currentSection, index);
+                if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
+                    answered++;
+                    if (answers[questionKey] === q.correct_choice_index) {
+                        correct++;
+                    }
+                }
+            });
+            // Show score as "correct/answered (total)"
+            if (answered > 0) {
+                document.getElementById('score').textContent = `${correct}/${answered}`;
+            } else {
+                document.getElementById('score').textContent = '0/0';
+            }
+        }
+
+        function showResults() {
+            showAnswers = true;
+            currentIndex = 0;
+            displayQuestion();
+            
+            let correct = 0;
+            let answered = 0;
+            let skippedCount = 0;
+            
+            questions.forEach((q, index) => {
+                const questionKey = getQuestionKey(currentSection, index);
+                if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
+                    answered++;
+                    if (answers[questionKey] === q.correct_choice_index) {
+                        correct++;
+                    }
+                } else if (skipped[questionKey]) {
+                    skippedCount++;
+                }
+            });
+            
+            const percentage = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+            document.getElementById('final-score').textContent = 
+                `Part ${currentSection}: ${correct} / ${answered} answered (${percentage}%)${skippedCount > 0 ? ` | ${skippedCount} skipped` : ''}`;
+            document.getElementById('results').classList.add('show');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        function readTranscript() {
+            if (!('speechSynthesis' in window)) {
+                alert('Your browser does not support text-to-speech.');
+                return;
+            }
+            
+            const question = questions[currentIndex];
+            if (!question.explanation) {
+                return;
+            }
+            
+            // Stop any current speech
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            
+            // Create utterance
+            const utterance = new SpeechSynthesisUtterance(question.explanation);
+            utterance.lang = 'ja-JP';  // Japanese
+            utterance.rate = 0.9;  // Slightly slower for clarity
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            // Update button states
+            utterance.onstart = () => {
+                document.getElementById('read-transcript-btn').style.display = 'none';
+                document.getElementById('pause-transcript-btn').style.display = 'inline-block';
+            };
+            
+            utterance.onend = () => {
+                document.getElementById('read-transcript-btn').style.display = 'inline-block';
+                document.getElementById('pause-transcript-btn').style.display = 'none';
+                currentUtterance = null;
+            };
+            
+            utterance.onerror = () => {
+                document.getElementById('read-transcript-btn').style.display = 'inline-block';
+                document.getElementById('pause-transcript-btn').style.display = 'none';
+                currentUtterance = null;
+            };
+            
+            currentUtterance = utterance;
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        function pauseTranscript() {
+            if (!('speechSynthesis' in window)) {
+                return;
+            }
+            
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.pause();
+                document.getElementById('pause-transcript-btn').textContent = 'Resume';
+            } else if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+                document.getElementById('pause-transcript-btn').textContent = 'Pause';
+            }
+        }
+        
+        // Stop speech when changing questions
+        function stopSpeech() {
+            if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                currentUtterance = null;
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                stopSpeech();
+                previousQuestion();
+            } else if (e.key === 'ArrowRight' && currentIndex < questions.length - 1) {
+                stopSpeech();
+                nextQuestion();
+            }
+        });
+    </script>
+</body>
+</html>

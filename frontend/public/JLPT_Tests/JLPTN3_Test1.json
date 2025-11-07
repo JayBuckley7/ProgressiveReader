@@ -1,0 +1,1874 @@
+[
+  {
+    "part": 0,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "駅まで アンケート <strong>調査</strong>を行った",
+    "choices": [
+      "しゅうさ",
+      "しょうさ",
+      "ちゅうさ",
+      "ちょうさ"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "ちょうさ",
+    "explanation": "Investigation: survey.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.2",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "弟は<strong>熱心</strong>にその本を読んでいた。",
+    "choices": [
+      "ねしん",
+      "ねつしん",
+      "ねっしん",
+      "ねつじん"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ねっしん",
+    "explanation": "Nesshin: Enthusiasm",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.3",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "その<strong>戦争</strong>で たくさんの人が亡くなった",
+    "choices": [
+      "せんそ",
+      "せんぞ",
+      "せんそう",
+      "せんぞう"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "せんそう",
+    "explanation": "Senso: War.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.4",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "今の<strong>状況</strong>を説明してください",
+    "choices": [
+      "しょうぎょう",
+      "しょぎゅう",
+      "じょうきゅう",
+      "じょうきょう"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "じょうきょう",
+    "explanation": "Jo-kyou: Situation/Condition.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.5",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "息子は絵や音楽など <strong>芸術</strong>に関心があるようだ",
+    "choices": [
+      "げいじつ",
+      "げいしゅつ",
+      "げいじゅつ",
+      "げいちゅつ"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "げいじゅつ",
+    "explanation": "Geijutsu: art.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.6",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "話している 間に、すっかりコーヒーが<strong>冷めて</strong>しまった",
+    "choices": [
+      "きめて",
+      "さめて",
+      "しめて",
+      "つめて"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "さめて",
+    "explanation": "さめる: cool down",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.7",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "このページは読者からの <strong>投書</strong>で作られている",
+    "choices": [
+      "としょ",
+      "とうしょ",
+      "としょう",
+      "とうしょう"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "とうしょ",
+    "explanation": "Tousho: Articles, comments from readers.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.8",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題Ⅰ____ のことばの読み方として最もよいものを１.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "その船は太平洋に<strong>沈んで</strong>しまった",
+    "choices": [
+      "およんで",
+      "ころんで",
+      "きしんで",
+      "しずんで"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "しずんで",
+    "explanation": "Shizumu: to sink.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.1",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II ___ のことばを漢字で書くとき最もよいものを１.２.３.４から―つえらび なさい。</strong></p>",
+    "prompt": "見つけたお金を<strong>けいさつ</strong>に持っていつた",
+    "choices": [
+      "警官",
+      "警察",
+      "検察",
+      "検事"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "警察",
+    "explanation": "Police: police, police station.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.2",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II ___ のことばを漢字で書くとき最もよいものを１.２.３.４から―つえらび なさい。</strong></p>",
+    "prompt": "その小鳥を<strong>とらえて</strong>、かごの中に入れた",
+    "choices": [
+      "取らえて",
+      "担れえて",
+      "補れえて",
+      "捕らえて"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "捕らえて",
+    "explanation": "Captured: being caught.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.3",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II ___ のことばを漢字で書くとき最もよいものを１.２.３.４から―つえらび なさい。</strong></p>",
+    "prompt": "<strong>きょうどう</strong>で、新しい仕事をはじめた",
+    "choices": [
+      "強同",
+      "強道",
+      "共同",
+      "同道"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "共同",
+    "explanation": "共同: cooperation",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.4",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II ___ のことばを漢字で書くとき最もよいものを１.２.３.４から―つえらび なさい。</strong></p>",
+    "prompt": "日本語の <strong>じゅうしょ</strong>の 書き方を教えてください。",
+    "choices": [
+      "任所",
+      "住所",
+      "主所",
+      "往所"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "住所",
+    "explanation": "Address.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.5",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II ___ のことばを漢字で書くとき最もよいものを１.２.３.４から―つえらび なさい。</strong></p>",
+    "prompt": "<strong>ぐあい</strong>が悪いので、健康室に行ってもいいですか。",
+    "choices": [
+      "具合",
+      "具会",
+      "貝合",
+      "貝会"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "具合",
+    "explanation": "Condition: state, health status.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.6",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II ___ のことばを漢字で書くとき最もよいものを１.２.３.４から―つえらび なさい。</strong></p>",
+    "prompt": "弟を泣かせて母に<strong>おこられた</strong>。",
+    "choices": [
+      "忘られた",
+      "怒られた",
+      "努られた",
+      "忙られた"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "怒られた",
+    "explanation": "Angry: to be angry",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.1",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "引っ越しをするときは、（ ）な手続きがたくさんある。",
+    "choices": [
+      "退屈",
+      "苦手",
+      "面倒",
+      "不安"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "面倒",
+    "explanation": "面倒：Troublesome: 面倒な手続き：Tedious procedures: When moving house, there are many cumbersome procedures.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.2",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "今年は給料が少しだけ（ ）した。",
+    "choices": [
+      "トップ",
+      "チェック",
+      "アップ",
+      "カット"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "アップ",
+    "explanation": "Up: increase This year, the salary only increases a little bit.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.3",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "台風が近づいているので、これから雨が（ ）なりそうだ。",
+    "choices": [
+      "苦しく",
+      "きびしく",
+      "激しく",
+      "つらく"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "激しく",
+    "explanation": "Intense: strong, fierce, powerful. The storm is approaching, so from now on, the rain seems to be more intense.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.4",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "予約では、５名とお伝えしたのですが、あと２名（ ）することができますか。",
+    "choices": [
+      "記録",
+      "登録",
+      "追加",
+      "確認"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "追加",
+    "explanation": "Addition: Adding, supplementing more.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.5",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "（ ）を入れてから、野菜をいためてください。",
+    "choices": [
+      "こんだて",
+      "ゆげ",
+      "ほのお",
+      "あぶら"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "あぶら",
+    "explanation": "あぶら: Cooking oil. いためる: Fried.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.6",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "久しぶりに会った同級生と飲みすぎてしまい、今朝から胃が（ ）している。",
+    "choices": [
+      "むかむか",
+      "いらいら",
+      "むっと",
+      "うんざり"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "むかむか",
+    "explanation": "I feel nauseous: my stomach feels uncomfortable and queasy.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.7",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "私の誕生日をみんなで（ ）くれて。うれしかった。",
+    "choices": [
+      "祝って",
+      "泣いて",
+      "望んで",
+      "願って"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "祝って",
+    "explanation": "Wishing: Congratulations.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.8",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "あさ、ひげを（ ）時間がなかった。",
+    "choices": [
+      "そる",
+      "とる",
+      "かる",
+      "おる"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "そる",
+    "explanation": "Shave beard.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.9",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "その 文章は，（ ）なことばで書かれていた",
+    "choices": [
+      "不足",
+      "丈夫",
+      "明確",
+      "優秀"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "明確",
+    "explanation": "Clear: Distinctly, precisely.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.10",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "母に（ ）のセーターをもらって、うれしかった。",
+    "choices": [
+      "手立て",
+      "手ぬい",
+      "手さぐり",
+      "手作り"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "手作り",
+    "explanation": "Explain: Handmade: knitting or making by oneself.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.11",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III: ( ) に入れるのに最もよいものを、 １.２.３.４から―つえらびなさい。</strong></p>",
+    "prompt": "会社に 入って ３年、仕事の面白さが（ ）わかってきました",
+    "choices": [
+      "さっぱり",
+      "べつに",
+      "だんだん",
+      "あんまり"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "だんだん",
+    "explanation": "だんだん： Gradually Gradually",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.1",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong>問題 IV： に意味が最も近いものを、１・２・３・４から―つえらびなさい。</strong></p>",
+    "prompt": "<strong>くやしい</strong> 気持ちを 日記に 書いた。",
+    "choices": [
+      "うれしい",
+      "満足な",
+      "さびしい",
+      "残念な"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "残念な",
+    "explanation": "Regretful, remorseful. \"Zannen. Regret.\"",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.2",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong>問題 IV： に意味が最も近いものを、１・２・３・４から―つえらびなさい。</strong></p>",
+    "prompt": "意見を必ず<strong>述べて</strong>ください",
+    "choices": [
+      "話して",
+      "聞いて",
+      "出して",
+      "考えて"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "出して",
+    "explanation": "述べる = to state, to express, to mention, to articulate",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.3",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong>問題 IV： に意味が最も近いものを、１・２・３・４から―つえらびなさい。</strong></p>",
+    "prompt": "机の上が<strong>ごちゃごちゃな</strong>ので、かたづけてください。",
+    "choices": [
+      "汚い",
+      "せまい",
+      "くさい",
+      "黒い"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "汚い",
+    "explanation": "\"ごちゃごちゃ\" in English means \"messy, disorganized\". Dirty: stained.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.4",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong>問題 IV： に意味が最も近いものを、１・２・３・４から―つえらびなさい。</strong></p>",
+    "prompt": "道を間違(まちが)えて、strong&gt;",
+    "choices": [
+      "ななめ",
+      "手前",
+      "先",
+      "反対"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "反対",
+    "explanation": "Reverse: the opposite, inverted. Opposite: contrast",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.5",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong>問題 IV： に意味が最も近いものを、１・２・３・４から―つえらびなさい。</strong></p>",
+    "prompt": "少し、 <strong>じっと</strong>してなさい。",
+    "choices": [
+      "めを閉じて",
+      "働く",
+      "だまって",
+      "考えて"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "だまって",
+    "explanation": "Explain: じっと: Impassive, quietly だまる: Silence",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.1",
+    "parent_question_number": "5",
+    "parent_content": "<strong>問題 V：次の言葉の使い方として最もよいものを、１・２・３・４ から―つえらびな さい。</strong>",
+    "prompt": "はじめ",
+    "choices": [
+      "スキーをするのは、これが{はじめ}です。",
+      "私は毎朝、夫より{はじめ}に起きます。",
+      "先生が来なくて、 授業(じゅぎょう) の{はじめ}が5分遅れた。",
+      "日本の生活に、{はじめ}はなかなか 慣(な) れませんでした。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "日本の生活に、{はじめ}はなかなか<慣(な)>れませんでした。",
+    "explanation": "Hajime: beginning, start, initial. 1 －＞はじめて －＞はじめて ２－＞先に ２－＞先に ３－＞はじまり ３－＞はじまり At first, I couldn't get used to life in Japan.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.2",
+    "parent_question_number": "5",
+    "parent_content": "<strong>問題 V：次の言葉の使い方として最もよいものを、１・２・３・４ から―つえらびな さい。</strong>",
+    "prompt": "重大",
+    "choices": [
+      "私にとって家族は何よりも{重大}だ。",
+      "荷物が{重大}で、一人では持てない。",
+      "そのことを決めたリーダーの 責任(せきにん) は{重大}だ。",
+      "その会議には 様々(さまざま) な国の{重大}な 政治家(せいじか) が集まった"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "そのことを決めたリーダーの<責任(せきにん)>は{重大}だ。",
+    "explanation": "Significant: important, large, substantial. １－＞大切 １－＞大切 ２－＞重い ２－＞重い ４－＞重要 ４－＞重要",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.3",
+    "parent_question_number": "5",
+    "parent_content": "<strong>問題 V：次の言葉の使い方として最もよいものを、１・２・３・４ から―つえらびな さい。</strong>",
+    "prompt": "似合う",
+    "choices": [
+      "このワインは、料理によく{似合う}。",
+      "あの親子は顔がよく{似合って}いる。",
+      "その黒い 帽子(ぼうし) は、彼によく{似合って}いた。",
+      "最近のドラマは、とてもよく{似合った}話ばかりでつまらない。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "その黒い<帽子(ぼうし)>は、彼によく{似合って}いた。",
+    "explanation": "Matching: To be matching (with someone) 3: That black hat suits him very well. 1 －＞合う －＞合う 2 －＞似て －＞似て",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.4",
+    "parent_question_number": "5",
+    "parent_content": "<strong>問題 V：次の言葉の使い方として最もよいものを、１・２・３・４ から―つえらびな さい。</strong>",
+    "prompt": "修理(しゅうり)",
+    "choices": [
+      "テレビの画面の明るさを{修理}した。",
+      "この計画はまだまだ{修理}が必要だ。",
+      "壊(こわ) れた自転車を自分で{修理}した。",
+      "間違(まちが) えたところを{修理}して、もう一度 提出(ていしゅつ) してください。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<壊(こわ)>れた自転車を自分で{修理}した。",
+    "explanation": "Repair: fix or mend. 3: I repaired the broken bicycle by myself. 1 －＞ (ちょうせい) －＞ 調整 2 －＞ (しゅうせい) －＞ 修正 4 －＞ (ていせい) －＞ 訂正",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.5",
+    "parent_question_number": "5",
+    "parent_content": "<strong>問題 V：次の言葉の使い方として最もよいものを、１・２・３・４ から―つえらびな さい。</strong>",
+    "prompt": "どうしても",
+    "choices": [
+      "どうしてもお体にはお気を付けください。",
+      "すみません、明日の午後はどうしてもいけないんです。",
+      "何度やっても失敗ばかりで、どうしてもいいかわからない。",
+      "地図を忘れたので心配したが、どうしてもそこに着くことができた。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "すみません、明日の午後はどうしてもいけないんです。",
+    "explanation": "どうしても: No matter how, still cannot ~. 2: I'm very sorry but I won't be able to go tomorrow afternoon no matter what. 1 －＞どうぞ／どうか －＞どうぞ／どうか 3 －＞どうして／どうすれば －＞どうして／どうすれば 4 －＞どうにか －＞どうにか",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "日本では、年上や目上の人に（ ）、敬語を使います。",
+    "choices": [
+      "対して",
+      "とって",
+      "ついて",
+      "かかわらず"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "対して",
+    "explanation": "N に対して： Regarding N N に対して： Regarding N",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.2",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "先輩(せんぱい)に仕事をお願(ねが)いした（ ）、気持ちよく引(ひ)き受(う)けてくれました。",
+    "choices": [
+      "ばかり",
+      "ところ",
+      "くせに",
+      "といっても"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "ところ",
+    "explanation": "V たところ： when （「 V1 たら、 V2 した」と同じです。 たところ： when （「 たら、 した」と同じです。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.3",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "あの人には以前どこかで会った（ ）きがするが、どうしても思い出せない。",
+    "choices": [
+      "ような",
+      "はずの",
+      "らしい",
+      "かもしれない"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "ような",
+    "explanation": "\"～like N: Like～\"",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.4",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "ゆうべは暑かったので、窓を（ ）まま寝た。",
+    "choices": [
+      "開けている",
+      "開けて",
+      "あける",
+      "開けた"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "開けた",
+    "explanation": "\"V-tamama\" means to maintain the action after having done it. Just open the window like that and sleep.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.5",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "あの二人の結婚が本当だと（ ）、大ニュースだ。",
+    "choices": [
+      "いうと",
+      "いえば",
+      "したら",
+      "しても"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "したら",
+    "explanation": "\"If\" or \"suppose\" in English, assuming that in that case it is true.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.6",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "小さいころはよく姉の着られなくなった服を（ ）。",
+    "choices": [
+      "着させられた",
+      "着せていた",
+      "着させていた",
+      "着られていた"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "着させられた",
+    "explanation": "To wear → To be made to wear (Passive causative verb) I was forced to wear clothes that my sister no longer fits in.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.7",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "試験（ ）近くのビルの工場が始まって、集中できなかった。",
+    "choices": [
+      "の最中に",
+      "の際に",
+      "において",
+      "のことで"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "の際に",
+    "explanation": "When N: N の際に N の際に",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.8",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "人から借りたお金は必ず（ ）べきだと思います。",
+    "choices": [
+      "返し",
+      "返さ",
+      "返す",
+      "返して"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "返す",
+    "explanation": "V るべきだ： Should do V. V るべきだ：",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.9",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "A 「家庭料理ですが、どうぞ（ ）。」 B「ありがとうございます。いただきます。」",
+    "choices": [
+      "食べたい",
+      "いただいてください",
+      "召し上がってください",
+      "お食べになられて"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "召し上がってください",
+    "explanation": "Explain: Please partake: honorific form of 食べてください.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.10",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "母「テーブルの上に置い（ ）お弁当、持った？」 娘「うん、持った。ありがとう。",
+    "choices": [
+      "て",
+      "てくる",
+      "ている",
+      "ておいた"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "ておいた",
+    "explanation": "Explain: Vておく: to do V in advance, beforehand.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.11",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "その山火事に（ ）、森に住む多くの動物が死んでしまった。",
+    "choices": [
+      "せいで",
+      "ために",
+      "なって",
+      "よって"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "よって",
+    "explanation": "その山火事によって、森に住む多くの動物が死んでしまった。 By: do, because of.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.12",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "私はお酒は（ ）んですが、あまりすきじゃないです。",
+    "choices": [
+      "飲むことはない",
+      "飲むわけがない",
+      "飲むべきじゃない",
+      "飲めないことはない"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "飲めないことはない",
+    "explanation": "Explain: It's not that it's impossible.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.13",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>問題 I：次の文の（ ）に入れるのに最もよいものを、１・２・３・４ から―つえ らびなさい。</strong></p>",
+    "prompt": "A: うちにはめずらしい金魚がいるんですよ。 B：へえ、今度ぜひ見に（ ）ください。",
+    "choices": [
+      "行って",
+      "行かせて",
+      "行かれて",
+      "行ってみて"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "行かせて",
+    "explanation": "Explain: iku -> ikaseru: A causative verb meaning to allow someone to come and see.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.1",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II：次の文の * に入れる最もよいものを、１・２・３・４ から―つえら びなさい。</strong></p>",
+    "prompt": "病気に _ _ * _ 大切さに気がついた。",
+    "choices": [
+      "の",
+      "健康",
+      "なって",
+      "はじめて"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "健康",
+    "explanation": "病気に３なって４初めて２健康１の大切さに気が付いた。 病気に３なって４初めて２健康１の大切さに気が付いた。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.2",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II：次の文の * に入れる最もよいものを、１・２・３・４ から―つえら びなさい。</strong></p>",
+    "prompt": "お金を下ろしたから、駅に _ _ * _ もいい？",
+    "choices": [
+      "行く",
+      "よって",
+      "銀行に",
+      "途中で"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "銀行に",
+    "explanation": "お金を下したから、駅に１行く４途中で３銀行に２よってもいい？ お金を下したから、駅に１行く４途中で３銀行に２よってもいい？",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.3",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II：次の文の * に入れる最もよいものを、１・２・３・４ から―つえら びなさい。</strong></p>",
+    "prompt": "この辺りは景色(けしき)が美(うつく)しい _ _ * _ 有名だ。",
+    "choices": [
+      "ことでも",
+      "見られる",
+      "だけでなく",
+      "多くの野生動物が"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "見られる",
+    "explanation": "この辺りは景色が美しい３だけでなく４多くの野生動物が２見られる１ことでも有名だ。 この辺りは景色が美しい３だけでなく４多くの野生動物が２見られる１ことでも有名だ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.4",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II：次の文の * に入れる最もよいものを、１・２・３・４ から―つえら びなさい。</strong></p>",
+    "prompt": "お金を _ _ * _ くれないそうだ。",
+    "choices": [
+      "品物を",
+      "払って",
+      "からでないと",
+      "送って"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "品物を",
+    "explanation": "お金を２払って３からでないと１品物を４送ってくれないどうだ。 お金を２払って３からでないと１品物を４送ってくれないどうだ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.5",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong>問題 II：次の文の * に入れる最もよいものを、１・２・３・４ から―つえら びなさい。</strong></p>",
+    "prompt": "結婚式 _ _ * _ ことになった。",
+    "choices": [
+      "出席する",
+      "だけが",
+      "には",
+      "家族と親せき"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "だけが",
+    "explanation": "結婚式３には４家族と親せき２だけが、１出席することになった。 結婚式３には４家族と親せき２だけが、１出席することになった。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.1",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III：次の文章を読んで、（１）から（５）の中にに入れる最もよいものを、 １・２・３・４ から―つえらびなさい。</strong></p> <p> <span lang=\"JA\">オーストラリアでホームステイしていたときのことです。その家のお母さんの</span>(たんじょうび)<span lang=\"JA\">になり、私は</span>(はちう)<span lang=\"JA\">えの花を（１）。近くの花屋さんで買った</span>(はちう)<span lang=\"JA\">えは、何の</span>(かざ)<span lang=\"JA\">りもないもの。私は、日本の花屋さんのことを思い出し、「そうだ、</span>(えいじしんぶん)<span lang=\"JA\">を鉢のまわりにまいて飾ろう！」と思ったのです。</span></p> <p><span lang=\"JA\"> そして、きれいに飾った鉢植えが</span>()(かんせい)<span lang=\"JA\">。私はお母さんに渡す前に、お父さんに見せました。すると、「すてきだね」と言われる（２）「新聞でつつむのはやめたほうがいいよ」と、笑われ（３）。</span></p> <p><span lang=\"JA\"> 日本人の私には「おしゃれ」に見えた英字新聞。しかし、考えるとオーストラリア人の彼ら（４）、英字新聞はおしゃれでも何でもない。日本の花屋では、よくお</span>(はか)<span lang=\"JA\">に飾る</span>(きく)<span lang=\"JA\">の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは（５）。それと同じことだと気付いたのです。</span>(は)<span lang=\"JA\">ずかしい思い出です。</span></p>",
+    "prompt": "",
+    "choices": [
+      "おくっていただきました",
+      "おくってもらいました",
+      "おくることにしました",
+      "おくってやりました"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "おくることにしました",
+    "explanation": "Vることにしました: Determined to do something. Vることにしました: 私はお母さんに鉢植えの花をおくることにしました: I decided to send my homestay mother a potted plant. 私はお母さんに鉢植えの花をおくることにしました:",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.2",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III：次の文章を読んで、（１）から（５）の中にに入れる最もよいものを、 １・２・３・４ から―つえらびなさい。</strong></p> <p> <span lang=\"JA\">オーストラリアでホームステイしていたときのことです。その家のお母さんの</span>(たんじょうび)<span lang=\"JA\">になり、私は</span>(はちう)<span lang=\"JA\">えの花を（１）。近くの花屋さんで買った</span>(はちう)<span lang=\"JA\">えは、何の</span>(かざ)<span lang=\"JA\">りもないもの。私は、日本の花屋さんのことを思い出し、「そうだ、</span>(えいじしんぶん)<span lang=\"JA\">を鉢のまわりにまいて飾ろう！」と思ったのです。</span></p> <p><span lang=\"JA\"> そして、きれいに飾った鉢植えが</span>()(かんせい)<span lang=\"JA\">。私はお母さんに渡す前に、お父さんに見せました。すると、「すてきだね」と言われる（２）「新聞でつつむのはやめたほうがいいよ」と、笑われ（３）。</span></p> <p><span lang=\"JA\"> 日本人の私には「おしゃれ」に見えた英字新聞。しかし、考えるとオーストラリア人の彼ら（４）、英字新聞はおしゃれでも何でもない。日本の花屋では、よくお</span>(はか)<span lang=\"JA\">に飾る</span>(きく)<span lang=\"JA\">の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは（５）。それと同じことだと気付いたのです。</span>(は)<span lang=\"JA\">ずかしい思い出です。</span></p>",
+    "prompt": "",
+    "choices": [
+      "とおりに",
+      "といっても",
+      "とともに",
+      "どころか"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "どころか",
+    "explanation": "Dokoroka: On the contrary~ The first clause \"すてきだね\" and the second clause \"新聞でつつむのはやめたほうがいい\" have opposite meanings.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.3",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III：次の文章を読んで、（１）から（５）の中にに入れる最もよいものを、 １・２・３・４ から―つえらびなさい。</strong></p> <p> <span lang=\"JA\">オーストラリアでホームステイしていたときのことです。その家のお母さんの</span>(たんじょうび)<span lang=\"JA\">になり、私は</span>(はちう)<span lang=\"JA\">えの花を（１）。近くの花屋さんで買った</span>(はちう)<span lang=\"JA\">えは、何の</span>(かざ)<span lang=\"JA\">りもないもの。私は、日本の花屋さんのことを思い出し、「そうだ、</span>(えいじしんぶん)<span lang=\"JA\">を鉢のまわりにまいて飾ろう！」と思ったのです。</span></p> <p><span lang=\"JA\"> そして、きれいに飾った鉢植えが</span>()(かんせい)<span lang=\"JA\">。私はお母さんに渡す前に、お父さんに見せました。すると、「すてきだね」と言われる（２）「新聞でつつむのはやめたほうがいいよ」と、笑われ（３）。</span></p> <p><span lang=\"JA\"> 日本人の私には「おしゃれ」に見えた英字新聞。しかし、考えるとオーストラリア人の彼ら（４）、英字新聞はおしゃれでも何でもない。日本の花屋では、よくお</span>(はか)<span lang=\"JA\">に飾る</span>(きく)<span lang=\"JA\">の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは（５）。それと同じことだと気付いたのです。</span>(は)<span lang=\"JA\">ずかしい思い出です。</span></p>",
+    "prompt": "",
+    "choices": [
+      "てみたのです",
+      "てしまったのです",
+      "てたまらないのです",
+      "てもいいのです"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "てしまったのです",
+    "explanation": "笑われてしまったのです： I was laughed at by my father. 笑われてしまったのです：",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.4",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III：次の文章を読んで、（１）から（５）の中にに入れる最もよいものを、 １・２・３・４ から―つえらびなさい。</strong></p> <p> <span lang=\"JA\">オーストラリアでホームステイしていたときのことです。その家のお母さんの</span>(たんじょうび)<span lang=\"JA\">になり、私は</span>(はちう)<span lang=\"JA\">えの花を（１）。近くの花屋さんで買った</span>(はちう)<span lang=\"JA\">えは、何の</span>(かざ)<span lang=\"JA\">りもないもの。私は、日本の花屋さんのことを思い出し、「そうだ、</span>(えいじしんぶん)<span lang=\"JA\">を鉢のまわりにまいて飾ろう！」と思ったのです。</span></p> <p><span lang=\"JA\"> そして、きれいに飾った鉢植えが</span>()(かんせい)<span lang=\"JA\">。私はお母さんに渡す前に、お父さんに見せました。すると、「すてきだね」と言われる（２）「新聞でつつむのはやめたほうがいいよ」と、笑われ（３）。</span></p> <p><span lang=\"JA\"> 日本人の私には「おしゃれ」に見えた英字新聞。しかし、考えるとオーストラリア人の彼ら（４）、英字新聞はおしゃれでも何でもない。日本の花屋では、よくお</span>(はか)<span lang=\"JA\">に飾る</span>(きく)<span lang=\"JA\">の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは（５）。それと同じことだと気付いたのです。</span>(は)<span lang=\"JA\">ずかしい思い出です。</span></p>",
+    "prompt": "",
+    "choices": [
+      "にとっては",
+      "にくらべて",
+      "につれて",
+      "にとっても"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "にとっては",
+    "explanation": "As a Japanese person,~ For Australians, from their perspective, point of view, ~",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.5",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong>問題 III：次の文章を読んで、（１）から（５）の中にに入れる最もよいものを、 １・２・３・４ から―つえらびなさい。</strong></p> <p> <span lang=\"JA\">オーストラリアでホームステイしていたときのことです。その家のお母さんの</span>(たんじょうび)<span lang=\"JA\">になり、私は</span>(はちう)<span lang=\"JA\">えの花を（１）。近くの花屋さんで買った</span>(はちう)<span lang=\"JA\">えは、何の</span>(かざ)<span lang=\"JA\">りもないもの。私は、日本の花屋さんのことを思い出し、「そうだ、</span>(えいじしんぶん)<span lang=\"JA\">を鉢のまわりにまいて飾ろう！」と思ったのです。</span></p> <p><span lang=\"JA\"> そして、きれいに飾った鉢植えが</span>()(かんせい)<span lang=\"JA\">。私はお母さんに渡す前に、お父さんに見せました。すると、「すてきだね」と言われる（２）「新聞でつつむのはやめたほうがいいよ」と、笑われ（３）。</span></p> <p><span lang=\"JA\"> 日本人の私には「おしゃれ」に見えた英字新聞。しかし、考えるとオーストラリア人の彼ら（４）、英字新聞はおしゃれでも何でもない。日本の花屋では、よくお</span>(はか)<span lang=\"JA\">に飾る</span>(きく)<span lang=\"JA\">の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは（５）。それと同じことだと気付いたのです。</span>(は)<span lang=\"JA\">ずかしい思い出です。</span></p>",
+    "prompt": "",
+    "choices": [
+      "感じません",
+      "感じました",
+      "感じます",
+      "感じませんでした"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "感じません",
+    "explanation": "日本の花屋では、よくお (はか) に飾る (きく) の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは感じません。 日本の花屋では、よくお 墓 に飾る 菊 の花を日本語の新聞につつんで売っていますが、日本人はこれをおしゃれとは感じません。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "4.1",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong>問題 IV：次の（１）から（４）文章を読んで、質問を答えなさい。答えは１・２・３・ ４ から最も良いものを―つえらびなさい。</strong></p> <p>（１）スミスさんはお父さんとお母さんを連れて旅行に行くことにしました。お父さんと お母さんは初めて日本に来ますからぜひ日本旅館に泊まって温泉に入りたいそうです。でも (はだか)<span lang=\"JA\">になるのは恥ずかしいですから、（注）</span>(だいよくじょう)<span lang=\"JA\">の風呂には入りたくないそうです</span><span lang=\"JA\">。</span></p> <p>共用のトイレも嫌だそうです。寝室は２部屋欲しいですが、無理ならかまいません。部屋 からの景色はいいほうがいいですが気にしません。夜は日本料理が、朝はやっぱりパンが 食べたいそうです。それになるべく安い旅館に泊まりたいそうです。</p> <p>（注）(だいよくじょう)<span lang=\"JA\">：広い風呂場。大勢の人が一緒に使</span><span lang=\"JA\">う</span></p>",
+    "prompt": "お父さんとお母さんが気にしないことは何か。",
+    "choices": [
+      "朝食が洋食か和食か",
+      "寝室がいくつあるか",
+      "風呂付の部屋かどうか",
+      "温泉があるかどうか"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "寝室がいくつあるか",
+    "explanation": "ヒント： 「 寝室は２部屋欲しいですが、無理ならかまいません」。 ヒント： 「 寝室は２部屋欲しいですが、無理ならかまいません」。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "5.1",
+    "parent_question_number": "5",
+    "parent_content": "<p>（２）<span lang=\"JA\">私は</span> (しゅう) (しょく)<span lang=\"JA\">使い方や時間などいろいろな細かい決まりがあ</span><span lang=\"JA\">る</span>。また、夜遅くテレビを見たり、音楽を 聞いたりすることは音の大きさにも気に付けなければなりません。これまで家族と暮らし たことしかなかったので、不便だと思わないが、集団生活でみんなが快適に暮らすために は必要だろう。</p> <p class=\"MsoNormal\" style=\"line-height: normal; background-image: initial; background-position: initial; background-size: initial; background-repeat: initial; background-attachment: initial; background-origin: initial; background-clip: initial;\"> </p> <p class=\"MsoNormal\" style=\"line-height: normal; background-image: initial; background-position: initial; background-size: initial; background-repeat: initial; background-attachment: initial; background-origin: initial; background-clip: initial;\"> </p>",
+    "prompt": "決まりについて、この文章を書いた人はどう考えているか。",
+    "choices": [
+      "いろいろな決まりがあるのはとても不便だ。",
+      "いろいろな細かい決まりは必要ない。",
+      "決まりはすべて守らなかればならない。",
+      "集団生活には決まりがあったほうがいい。"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "集団生活には決まりがあったほうがいい。",
+    "explanation": "ヒント：「 集団生活でみんなが快適に暮らすために は必要だろう。」 ヒント：「 集団生活でみんなが快適に暮らすために は必要だろう。」",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "6.1",
+    "parent_question_number": "6",
+    "parent_content": "<p>(3) テニスをしてみませんか。参加者募集</p> <p>10 月 20 日（日）にさくら公園でテニス 1 日教室を開きます。参加希望の方は 10 月4 日（金）までに電話を申し込みください。道具はお貸しします。必要の方は申し込みの 際に言ってください。10 時から 14 時までの予定ですので、昼食は各自でご用意ください。運動できる服装で来てください。</p> <p class=\"MsoNormal\" style=\"line-height: 12.15pt; mso-line-height-rule: exactly; tab-stops: 37.75pt;\"><span style=\"font-size: 11.5pt; mso-bidi-font-size: 11.0pt;\">電話</span><span style=\"font-size: 11.5pt; mso-bidi-font-size: 11.0pt; font-family: 'Times New Roman','serif'; mso-fareast-font-family: 'Times New Roman'; mso-hansi-font-family: 'MS Mincho'; mso-bidi-font-family: 'MS Mincho';\">: </span><span style=\"font-size: 11.5pt; mso-bidi-font-size: 11.0pt; letter-spacing: -.05pt;\">０４５－＊＊＊－＊＊＊＊ </span><span style=\"font-family: 'MS Mincho'; font-size: 11.5pt;\">さくら公園テニス教室</span></p>",
+    "prompt": "電話で伝えることについて、正しいものはどれですか。",
+    "choices": [
+      "テニスをしたことがあるかどうか。",
+      "道具を借りるかどうか。",
+      "昼食の用意を頼むかどうか。",
+      "道具と昼食を申し込むかどうか。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "道具を借りるかどうか。",
+    "explanation": "ヒント： 道具はお貸しします。必要の方は申し込みの 際に言ってください。 ヒント： 道具はお貸しします。必要の方は申し込みの 際に言ってください。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "7.1",
+    "parent_question_number": "7",
+    "parent_content": "<p>(4) 朝風レイナ コンサート券 予約発売の知らせ</p> <p>今年の夏、全国 10 カ所でレイナのコンサートが行われます。</p> <p>会員の皆さんから先に、コンサート券の予約を受け付けます。</p> <p> · 受け付け開始：3 月 12 日（土）午前 10 時～</p> <p> · 受け付け方法：ホームページからお申込みください。</p> <p align=\"center\"> </p> <p> (*) 値段は、会員の場合、一般価格の 10 パーセント割引きになります。</p> <p> (*) 3 コンサート以上、申し込んだ方は合計金額からさらに 1000 円安くいたし ます。</p> <p> (*) 1 回に要約できるのは、1 コンサートにつき、１人２枚までです。</p> <p class=\"MsoBodyText\" style=\"margin: 2.8pt 0in .0001pt 59.15pt;\"> </p>",
+    "prompt": "会員の A さんは、3 つのコンサートに行こうと思っている。一般価格 5000 円 の券を 3 枚買うと、いくらになるか。",
+    "choices": [
+      "15000 円",
+      "13500 円",
+      "12500 円",
+      "10000 円"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "12500 円",
+    "explanation": "Mr. A plans to attend 3 concerts, which will entitle him to a 1000 yen discount from the total amount due. Therefore, 13500 - 1000 = 12500 yen.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "8.1",
+    "parent_question_number": "8",
+    "parent_content": "<p><strong>問題 V：次の（１）と（２）文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良いものを―つえらびなさい。</strong></p> <p>（１）<span lang=\"JA\">かゆみを消す方法がある。</span>(ふくすう)<span lang=\"JA\">の</span>&gt;<span lang=\"JA\">情報が入ると脳は混乱してしまうそうだ。その時</span> <span lang=\"JA\">脳は大切なほうの情報を選ぶそうだ。人間にとって何が一番大切か。１痛み、２熱さ、３</span> <span lang=\"JA\">冷たさなどの順番だそうだ。命を守るために必要な情報が上に来ている。重要性からいう</span> <span lang=\"JA\">とかゆみはかなり下のほうあるそうだ。だからかゆいときにもっと上にある情報を与える</span> <span lang=\"JA\">と脳はそちらを伝えることに一生懸命になってかゆいという情報を伝えるのを忘れてしま</span> <span lang=\"JA\">うそうだ。このことから子どものころかゆいときにその部分を爪で押して痛くしていたの</span> <span lang=\"JA\">は</span>(こうか)<span lang=\"JA\">は効果があったのだということがわかる。だからと言ってかゆいときに何か痛いこと</span> <span lang=\"JA\">をしたり熱い思いをしたりするのは嫌だ。だからかゆいときは体に何か冷たい物をつける</span> <span lang=\"JA\">のが一番いい。どこを冷たくしてもいいそうだ。かゆい部分は熱を持っているのでそこを</span> <span lang=\"JA\">冷やすのがいい。しかし冷やしすぎると、それを取ったときにもっとかゆくなってしまう</span> <span lang=\"JA\">そうだ。だから、まずそこを、次に他の部分を冷やすのが一番いいと言える</span><span lang=\"JA\">。</span></p>",
+    "prompt": "蚊に刺されたときどうしたらいいか。",
+    "choices": [
+      "爪でさされたところを痛くする。",
+      "刺された場所と違うところを冷やす。",
+      "刺された場所を冷やし続ける。",
+      "刺された場所を冷やした後、他の場所を冷やす。"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "刺された場所を冷やした後、他の場所を冷やす。",
+    "explanation": "ヒント： かゆい部分は熱を持っているのでそこを 冷やすのがいい。 ヒント： かゆい部分は熱を持っているのでそこを 冷やすのがいい。 次に他の部分を冷やすのが一番いいと言える。 次に他の部分を冷やすのが一番いいと言える。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "8.2",
+    "parent_question_number": "8",
+    "parent_content": "<p><strong>問題 V：次の（１）と（２）文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良いものを―つえらびなさい。</strong></p> <p>（１）<span lang=\"JA\">かゆみを消す方法がある。</span>(ふくすう)<span lang=\"JA\">の</span>&gt;<span lang=\"JA\">情報が入ると脳は混乱してしまうそうだ。その時</span> <span lang=\"JA\">脳は大切なほうの情報を選ぶそうだ。人間にとって何が一番大切か。１痛み、２熱さ、３</span> <span lang=\"JA\">冷たさなどの順番だそうだ。命を守るために必要な情報が上に来ている。重要性からいう</span> <span lang=\"JA\">とかゆみはかなり下のほうあるそうだ。だからかゆいときにもっと上にある情報を与える</span> <span lang=\"JA\">と脳はそちらを伝えることに一生懸命になってかゆいという情報を伝えるのを忘れてしま</span> <span lang=\"JA\">うそうだ。このことから子どものころかゆいときにその部分を爪で押して痛くしていたの</span> <span lang=\"JA\">は</span>(こうか)<span lang=\"JA\">は効果があったのだということがわかる。だからと言ってかゆいときに何か痛いこと</span> <span lang=\"JA\">をしたり熱い思いをしたりするのは嫌だ。だからかゆいときは体に何か冷たい物をつける</span> <span lang=\"JA\">のが一番いい。どこを冷たくしてもいいそうだ。かゆい部分は熱を持っているのでそこを</span> <span lang=\"JA\">冷やすのがいい。しかし冷やしすぎると、それを取ったときにもっとかゆくなってしまう</span> <span lang=\"JA\">そうだ。だから、まずそこを、次に他の部分を冷やすのが一番いいと言える</span><span lang=\"JA\">。</span></p>",
+    "prompt": "著者が一番書きたかったことは何か。",
+    "choices": [
+      "脳は混乱することがある",
+      "虫刺されなどのかゆみを止める方法",
+      "全身のかゆみを止める方法",
+      "脳にとって大切な情報は何か"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "全身のかゆみを止める方法",
+    "explanation": "ヒント： かゆみを消す方法がある ヒント： かゆみを消す方法がある",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "8.3",
+    "parent_question_number": "8",
+    "parent_content": "<p><strong>問題 V：次の（１）と（２）文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良いものを―つえらびなさい。</strong></p> <p>（１）<span lang=\"JA\">かゆみを消す方法がある。</span>(ふくすう)<span lang=\"JA\">の</span>&gt;<span lang=\"JA\">情報が入ると脳は混乱してしまうそうだ。その時</span> <span lang=\"JA\">脳は大切なほうの情報を選ぶそうだ。人間にとって何が一番大切か。１痛み、２熱さ、３</span> <span lang=\"JA\">冷たさなどの順番だそうだ。命を守るために必要な情報が上に来ている。重要性からいう</span> <span lang=\"JA\">とかゆみはかなり下のほうあるそうだ。だからかゆいときにもっと上にある情報を与える</span> <span lang=\"JA\">と脳はそちらを伝えることに一生懸命になってかゆいという情報を伝えるのを忘れてしま</span> <span lang=\"JA\">うそうだ。このことから子どものころかゆいときにその部分を爪で押して痛くしていたの</span> <span lang=\"JA\">は</span>(こうか)<span lang=\"JA\">は効果があったのだということがわかる。だからと言ってかゆいときに何か痛いこと</span> <span lang=\"JA\">をしたり熱い思いをしたりするのは嫌だ。だからかゆいときは体に何か冷たい物をつける</span> <span lang=\"JA\">のが一番いい。どこを冷たくしてもいいそうだ。かゆい部分は熱を持っているのでそこを</span> <span lang=\"JA\">冷やすのがいい。しかし冷やしすぎると、それを取ったときにもっとかゆくなってしまう</span> <span lang=\"JA\">そうだ。だから、まずそこを、次に他の部分を冷やすのが一番いいと言える</span><span lang=\"JA\">。</span></p>",
+    "prompt": "内容と合っているのはどれか。",
+    "choices": [
+      "かゆいとき爪で痛くするのはとてもいい方法だ。",
+      "熱さほど痛みは受け入れられない。",
+      "脳が受け入れる情報に順番がある。",
+      "昔からある方法には間違いがない。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "脳が受け入れる情報に順番がある。",
+    "explanation": "ヒント： 脳は大切なほうの情報を選ぶそうだ。人間にとって何が一番大切か。１痛み、２熱さ、３ 冷たさなどの順番だそうだ。 ヒント： 脳は大切なほうの情報を選ぶそうだ。人間にとって何が一番大切か。１痛み、２熱さ、３ 冷たさなどの順番だそうだ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "9.1",
+    "parent_question_number": "9",
+    "parent_content": "<p>（２）</p> <p>電話が苦手な若い人が増えています。「今自分がしていることを、途中で一度やめ なければならない」「話の途中で切りにくい」などが理由だそうです。彼らは電話に気が ついても出ないで、あとから「用事は何でしたか」とメールで書きます。一番ストレスが ないのがメールだからです。携帯電話のいいところはどこでも連絡できることですが、これでは意味がありません。</p> <p> また、会社や人の家きかけるのは、もっと苦手なのだそうです。この場合、本人以 外の誰かと話をして、相手を呼び出してもらわなければいけない。それを難しく感じるよ うです。携帯電話で相手に直接つながることに慣れてきた人間には、このようなこともス トレスになるでしょう。また、会社などで、自分が話している内容を人に聞かれたくない と思う人もい恵右そうです。</p> <p> 頼みにくいことはメールで伝えるほうが楽だという人もいますが、大切なことはや はり電話のほうがいいでしょう。恥ずかしくてちょっと言いにくいことも、そうです。そ れが本当に大切なことなら。直接言いましょう。そのほうが、相手にしっかり伝わります。</p>",
+    "prompt": "<strong>これ</strong>とは何か。",
+    "choices": [
+      "電話ではなく、メールで人に質問すること",
+      "携帯電話を持つことを面倒に思うこと",
+      "携帯電話にかかってきても出ないこと",
+      "メールをする場合のストレスにきをつけること"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "携帯電話にかかってきても出ないこと",
+    "explanation": "携帯電話のいいところはどこでも連絡できることですが、これでは意味がありません。 The most outstanding feature of a mobile phone is that it can be a means of communication anywhere. However, this will be meaningless if they have a phone but do not pick it up.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "9.2",
+    "parent_question_number": "9",
+    "parent_content": "<p>（２）</p> <p>電話が苦手な若い人が増えています。「今自分がしていることを、途中で一度やめ なければならない」「話の途中で切りにくい」などが理由だそうです。彼らは電話に気が ついても出ないで、あとから「用事は何でしたか」とメールで書きます。一番ストレスが ないのがメールだからです。携帯電話のいいところはどこでも連絡できることですが、これでは意味がありません。</p> <p> また、会社や人の家きかけるのは、もっと苦手なのだそうです。この場合、本人以 外の誰かと話をして、相手を呼び出してもらわなければいけない。それを難しく感じるよ うです。携帯電話で相手に直接つながることに慣れてきた人間には、このようなこともス トレスになるでしょう。また、会社などで、自分が話している内容を人に聞かれたくない と思う人もい恵右そうです。</p> <p> 頼みにくいことはメールで伝えるほうが楽だという人もいますが、大切なことはや はり電話のほうがいいでしょう。恥ずかしくてちょっと言いにくいことも、そうです。そ れが本当に大切なことなら。直接言いましょう。そのほうが、相手にしっかり伝わります。</p>",
+    "prompt": "<strong>このようなこと</strong>とは何か。",
+    "choices": [
+      "会社で、みんなの前で電話をすること",
+      "話したいひととすぐ話ができず、待たされること",
+      "電話で話している内容を他人に聞かれてしまうこと",
+      "電話をかけて、最初によく知らない人と話さなければならないこと"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "電話をかけて、最初によく知らない人と話さなければならないこと",
+    "explanation": "ヒント：本人以 外の誰か（よく知らない）と話をして、相手を呼び出してもらわなければいけない。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "9.3",
+    "parent_question_number": "9",
+    "parent_content": "<p>（２）</p> <p>電話が苦手な若い人が増えています。「今自分がしていることを、途中で一度やめ なければならない」「話の途中で切りにくい」などが理由だそうです。彼らは電話に気が ついても出ないで、あとから「用事は何でしたか」とメールで書きます。一番ストレスが ないのがメールだからです。携帯電話のいいところはどこでも連絡できることですが、これでは意味がありません。</p> <p> また、会社や人の家きかけるのは、もっと苦手なのだそうです。この場合、本人以 外の誰かと話をして、相手を呼び出してもらわなければいけない。それを難しく感じるよ うです。携帯電話で相手に直接つながることに慣れてきた人間には、このようなこともス トレスになるでしょう。また、会社などで、自分が話している内容を人に聞かれたくない と思う人もい恵右そうです。</p> <p> 頼みにくいことはメールで伝えるほうが楽だという人もいますが、大切なことはや はり電話のほうがいいでしょう。恥ずかしくてちょっと言いにくいことも、そうです。そ れが本当に大切なことなら。直接言いましょう。そのほうが、相手にしっかり伝わります。</p>",
+    "prompt": "この文章を書いた人が一番言いたいことは何か。",
+    "choices": [
+      "メールにはない電話の良さを理解しておくべきだ",
+      "電話に比べ、メールの法が言いたいことを簡単に伝えられる",
+      "仕事では、電話よりメールのほうが間違いがなくてもいい",
+      "言いやすいことは電話で、言いにくいことはメールでと使い分けるとよい"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "メールにはない電話の良さを理解しておくべきだ",
+    "explanation": "ヒント：頼みにくいことはメールで伝えるほうが楽だという人もいますが、大切なことはや は{電話のほうがいい}でしょう。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.1",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong>問題 VI：次の文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良い ものを―つえらびなさい。</strong></p> <p> <span style=\"text-indent: -0.25in; font-size: 10pt; font-family: Symbol;\"><span style=\"font-variant-numeric: normal; font-stretch: normal; font-size: 7pt; line-height: normal; font-family: 'Times New Roman';\"> </span></span> <span lang=\"JA\">日本語でコンミュニケーションする上では敬語が正しく伝えることはとても重要だ。</span> <span lang=\"JA\">特にビジネスの世界では、どんなに能力があっても敬語が使えなければ困るだろう。敬語は相手に</span>(けいい)<span lang=\"JA\">を持っていることや相手のたちばを</span>(そんちょう)<span lang=\"JA\">しているという気持ちを言葉で表しているからだ。しかし、敬語が大切なことはわかっているが、難しいと感じている人が</span> <span lang=\"JA\">多。丁寧な話し方をしようと思って、かえって間違えてしまうことがある。たとえば、</span>(にじゅうけいご)<span lang=\"JA\">と呼ばれる間違いである。「おっしゃられました」がその例だ。これはすでに敬語になっているのに、さらに</span>(ていねい)<span lang=\"JA\">な表現にしてしまったものである。「おっしゃる」が「言う」の尊敬語なので「おっしゃいます」でよい。</span>(そんけいご)<span lang=\"JA\">と</span>(けんじょうご)<span lang=\"JA\">を</span>(こんどう)<span lang=\"JA\">する間違いも多い。</span> </p> <p><span style=\"text-indent: -0.25in;\"> </span><span style=\"text-indent: -0.25in;\"> </span>(けいご)<span lang=\"JA\" style=\"text-indent: -0.25in;\">が難しいのは</span>(にんげんかんけい)<span lang=\"JA\" style=\"text-indent: -0.25in;\">や場面によって敬語を使い分けなければならないからだ。間違えて使ったために、相手に気持ちが伝わらなかったり、失礼だと思われてしまったりすることもある。気持ちを正しく伝えるためには、正しい</span><span style=\"text-indent: -0.25in;\"> </span>(ひょうげん)<span lang=\"JA\" style=\"text-indent: -0.25in;\">で話さなければならない。それには敬語の勉強は必要だ。しかし、コンミュニケーションは敬語が正しく伝えればいいというものではない。</span><span style=\"text-indent: -0.25in;\"> </span>(しゅうしょくかつどう)<span style=\"text-indent: -0.25in;\">&gt;</span><span lang=\"JA\" style=\"text-indent: -0.25in;\">をしている若者や留学生の中には、面接で敬語を使うことばかり考えていたら、本当に話したいことが話せなかったという人もいる。間違えた</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">くないと丁寧に話そうということばかり考えずに、相手を尊敬して誠実に話そうとする気</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">持ちを持つことも大切だ。</span></p>",
+    "prompt": "<strong>敬語が正しく伝えることはとても重要だ</strong>とあるが。どうしてですか。",
+    "choices": [
+      "ビジネスの世界で能力がない人は敬語が正しく伝えないから。",
+      "敬語を使うことで相手を大切に思っていることを表せるから。",
+      "敬語は苦手だから使わなくてもいいと考えている人が多いから。",
+      "日本語では敬語を正しく使うことが一番重要だから。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "敬語を使うことで相手を大切に思っていることを表せるから。",
+    "explanation": "ヒント： 敬語 は相手に敬意を持っていることや相手のたちばを尊 重しているという気持ちを言葉で表 しているからだ。 ヒント： 敬語 は相手に敬意を持っていることや相手のたちばを尊 重しているという気持ちを言葉で表",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.2",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong>問題 VI：次の文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良い ものを―つえらびなさい。</strong></p> <p> <span style=\"text-indent: -0.25in; font-size: 10pt; font-family: Symbol;\"><span style=\"font-variant-numeric: normal; font-stretch: normal; font-size: 7pt; line-height: normal; font-family: 'Times New Roman';\"> </span></span> <span lang=\"JA\">日本語でコンミュニケーションする上では敬語が正しく伝えることはとても重要だ。</span> <span lang=\"JA\">特にビジネスの世界では、どんなに能力があっても敬語が使えなければ困るだろう。敬語は相手に</span>(けいい)<span lang=\"JA\">を持っていることや相手のたちばを</span>(そんちょう)<span lang=\"JA\">しているという気持ちを言葉で表しているからだ。しかし、敬語が大切なことはわかっているが、難しいと感じている人が</span> <span lang=\"JA\">多。丁寧な話し方をしようと思って、かえって間違えてしまうことがある。たとえば、</span>(にじゅうけいご)<span lang=\"JA\">と呼ばれる間違いである。「おっしゃられました」がその例だ。これはすでに敬語になっているのに、さらに</span>(ていねい)<span lang=\"JA\">な表現にしてしまったものである。「おっしゃる」が「言う」の尊敬語なので「おっしゃいます」でよい。</span>(そんけいご)<span lang=\"JA\">と</span>(けんじょうご)<span lang=\"JA\">を</span>(こんどう)<span lang=\"JA\">する間違いも多い。</span> </p> <p><span style=\"text-indent: -0.25in;\"> </span><span style=\"text-indent: -0.25in;\"> </span>(けいご)<span lang=\"JA\" style=\"text-indent: -0.25in;\">が難しいのは</span>(にんげんかんけい)<span lang=\"JA\" style=\"text-indent: -0.25in;\">や場面によって敬語を使い分けなければならないからだ。間違えて使ったために、相手に気持ちが伝わらなかったり、失礼だと思われてしまったりすることもある。気持ちを正しく伝えるためには、正しい</span><span style=\"text-indent: -0.25in;\"> </span>(ひょうげん)<span lang=\"JA\" style=\"text-indent: -0.25in;\">で話さなければならない。それには敬語の勉強は必要だ。しかし、コンミュニケーションは敬語が正しく伝えればいいというものではない。</span><span style=\"text-indent: -0.25in;\"> </span>(しゅうしょくかつどう)<span style=\"text-indent: -0.25in;\">&gt;</span><span lang=\"JA\" style=\"text-indent: -0.25in;\">をしている若者や留学生の中には、面接で敬語を使うことばかり考えていたら、本当に話したいことが話せなかったという人もいる。間違えた</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">くないと丁寧に話そうということばかり考えずに、相手を尊敬して誠実に話そうとする気</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">持ちを持つことも大切だ。</span></p>",
+    "prompt": "<strong>難しいと感じている人が多</strong>とあるが、どうして難しいと感じているのか",
+    "choices": [
+      "敬語の間違いと人間関係や場面による使い分けに気を付ける必要があるから。",
+      "尊敬語と謙譲語は使い訳られるが、人間関係や場面を考えるのが難しいから。",
+      "日本語の敬語は相手に対する敬意や尊重している気持ちを十分に表せないから。",
+      "ビジネスの世界以外では敬語を使うような人間関係や場面がほとんどないから。"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "敬語の間違いと人間関係や場面による使い分けに気を付ける必要があるから。",
+    "explanation": "ヒント： 敬語が難しいのは人間関係や場面によって敬語を使い分けなければならないからだ。 ヒント： 敬語が難しいのは人間関係や場面によって敬語を使い分けなければならないからだ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.3",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong>問題 VI：次の文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良い ものを―つえらびなさい。</strong></p> <p> <span style=\"text-indent: -0.25in; font-size: 10pt; font-family: Symbol;\"><span style=\"font-variant-numeric: normal; font-stretch: normal; font-size: 7pt; line-height: normal; font-family: 'Times New Roman';\"> </span></span> <span lang=\"JA\">日本語でコンミュニケーションする上では敬語が正しく伝えることはとても重要だ。</span> <span lang=\"JA\">特にビジネスの世界では、どんなに能力があっても敬語が使えなければ困るだろう。敬語は相手に</span>(けいい)<span lang=\"JA\">を持っていることや相手のたちばを</span>(そんちょう)<span lang=\"JA\">しているという気持ちを言葉で表しているからだ。しかし、敬語が大切なことはわかっているが、難しいと感じている人が</span> <span lang=\"JA\">多。丁寧な話し方をしようと思って、かえって間違えてしまうことがある。たとえば、</span>(にじゅうけいご)<span lang=\"JA\">と呼ばれる間違いである。「おっしゃられました」がその例だ。これはすでに敬語になっているのに、さらに</span>(ていねい)<span lang=\"JA\">な表現にしてしまったものである。「おっしゃる」が「言う」の尊敬語なので「おっしゃいます」でよい。</span>(そんけいご)<span lang=\"JA\">と</span>(けんじょうご)<span lang=\"JA\">を</span>(こんどう)<span lang=\"JA\">する間違いも多い。</span> </p> <p><span style=\"text-indent: -0.25in;\"> </span><span style=\"text-indent: -0.25in;\"> </span>(けいご)<span lang=\"JA\" style=\"text-indent: -0.25in;\">が難しいのは</span>(にんげんかんけい)<span lang=\"JA\" style=\"text-indent: -0.25in;\">や場面によって敬語を使い分けなければならないからだ。間違えて使ったために、相手に気持ちが伝わらなかったり、失礼だと思われてしまったりすることもある。気持ちを正しく伝えるためには、正しい</span><span style=\"text-indent: -0.25in;\"> </span>(ひょうげん)<span lang=\"JA\" style=\"text-indent: -0.25in;\">で話さなければならない。それには敬語の勉強は必要だ。しかし、コンミュニケーションは敬語が正しく伝えればいいというものではない。</span><span style=\"text-indent: -0.25in;\"> </span>(しゅうしょくかつどう)<span style=\"text-indent: -0.25in;\">&gt;</span><span lang=\"JA\" style=\"text-indent: -0.25in;\">をしている若者や留学生の中には、面接で敬語を使うことばかり考えていたら、本当に話したいことが話せなかったという人もいる。間違えた</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">くないと丁寧に話そうということばかり考えずに、相手を尊敬して誠実に話そうとする気</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">持ちを持つことも大切だ。</span></p>",
+    "prompt": "<strong>本当に話したいことが話せなかった</strong>のはどうしてですか。",
+    "choices": [
+      "敬語は難しいことを伝えることばや表現がないから。",
+      "敬語で本当のことを話すのは失礼だから。",
+      "敬語を使って話すことばかり考えていたから。",
+      "本当のことを話さないほうがいいと思ったから。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "敬語を使って話すことばかり考えていたから。",
+    "explanation": "ヒント： 就職活 動をしている若者や留学生の中には、面接で敬語を使う ことばかり考えていたら、 本当に話したいことが話せなかった という人もいる。 ヒント： 就職活 動をしている若者や留学生の中には、面接で敬語を使う 本当に話したいことが話せなかった",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.4",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong>問題 VI：次の文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良い ものを―つえらびなさい。</strong></p> <p> <span style=\"text-indent: -0.25in; font-size: 10pt; font-family: Symbol;\"><span style=\"font-variant-numeric: normal; font-stretch: normal; font-size: 7pt; line-height: normal; font-family: 'Times New Roman';\"> </span></span> <span lang=\"JA\">日本語でコンミュニケーションする上では敬語が正しく伝えることはとても重要だ。</span> <span lang=\"JA\">特にビジネスの世界では、どんなに能力があっても敬語が使えなければ困るだろう。敬語は相手に</span>(けいい)<span lang=\"JA\">を持っていることや相手のたちばを</span>(そんちょう)<span lang=\"JA\">しているという気持ちを言葉で表しているからだ。しかし、敬語が大切なことはわかっているが、難しいと感じている人が</span> <span lang=\"JA\">多。丁寧な話し方をしようと思って、かえって間違えてしまうことがある。たとえば、</span>(にじゅうけいご)<span lang=\"JA\">と呼ばれる間違いである。「おっしゃられました」がその例だ。これはすでに敬語になっているのに、さらに</span>(ていねい)<span lang=\"JA\">な表現にしてしまったものである。「おっしゃる」が「言う」の尊敬語なので「おっしゃいます」でよい。</span>(そんけいご)<span lang=\"JA\">と</span>(けんじょうご)<span lang=\"JA\">を</span>(こんどう)<span lang=\"JA\">する間違いも多い。</span> </p> <p><span style=\"text-indent: -0.25in;\"> </span><span style=\"text-indent: -0.25in;\"> </span>(けいご)<span lang=\"JA\" style=\"text-indent: -0.25in;\">が難しいのは</span>(にんげんかんけい)<span lang=\"JA\" style=\"text-indent: -0.25in;\">や場面によって敬語を使い分けなければならないからだ。間違えて使ったために、相手に気持ちが伝わらなかったり、失礼だと思われてしまったりすることもある。気持ちを正しく伝えるためには、正しい</span><span style=\"text-indent: -0.25in;\"> </span>(ひょうげん)<span lang=\"JA\" style=\"text-indent: -0.25in;\">で話さなければならない。それには敬語の勉強は必要だ。しかし、コンミュニケーションは敬語が正しく伝えればいいというものではない。</span><span style=\"text-indent: -0.25in;\"> </span>(しゅうしょくかつどう)<span style=\"text-indent: -0.25in;\">&gt;</span><span lang=\"JA\" style=\"text-indent: -0.25in;\">をしている若者や留学生の中には、面接で敬語を使うことばかり考えていたら、本当に話したいことが話せなかったという人もいる。間違えた</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">くないと丁寧に話そうということばかり考えずに、相手を尊敬して誠実に話そうとする気</span> <span lang=\"JA\" style=\"text-indent: -0.25in;\">持ちを持つことも大切だ。</span></p>",
+    "prompt": "この文章を書いた人は敬語を使うことについてどういいているか",
+    "choices": [
+      "敬語を正しく使うことだけが日本語のコンミュニケーションでは大切だ。",
+      "尊敬を正しく使うことも必要だが、相手を大切に思う気持ちも必要だ。",
+      "敬語が正しく使えるひとは少ないので、正しく伝えなくても間違はない",
+      "敬語がただしく使えないと日本語が話せないと思われてしまうから困る"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "尊敬を正しく使うことも必要だが、相手を大切に思う気持ちも必要だ。",
+    "explanation": "ヒント：敬語が正しく伝えることはとても重要だ。 ヒント：敬語が正しく伝えることはとても重要だ。 相手を尊敬して誠実に話そうとする気 持ちを持つことも大切だ。 相手を尊敬して誠実に話そうとする気 持ちを持つことも大切だ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "11.1",
+    "parent_question_number": "11",
+    "parent_content": "<p><strong>問題 VII：次の文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良い ものを―つえらびなさい。</strong></p> <p><strong>さくら市野外活動センター 活動案内</strong></p> <p><strong>活動名</strong></p> <p><strong>日時</strong></p> <p align=\"left\"><strong>参加できる人</strong></p> <p><strong>受け付け時間</strong></p> <p><strong>（申し込み方法）</strong></p> <p align=\"left\">1．そばを作ろう</p> <p>12 月 11 日（土）</p> <p>10:00～12:00</p> <p>4 人以内のグループ・</p> <p>家族</p> <p>11 月 11 日～15 日</p> <p>（電話）</p> <p align=\"left\">2．冬の遊びを体験</p> <p align=\"left\">しよう</p> <p>1 月 22 日（土）</p> <p>9:00～14:30</p> <p>8 人以内の小学生と</p> <p>その家族</p> <p>11 月 15 日～12 月 6 日</p> <p>（はがき）</p> <p align=\"left\">3．うどんを作ろう</p> <p>2 月 12 日（土）</p> <p>8 人以内の</p> <p>グループ・家族</p> <p>1 月 13 日～31 日</p> <p>（はがき）</p> <p align=\"left\">4．梅をみに行こう</p> <p>2 月 11 日（金）</p> <p>～13 日（日）</p> <p align=\"left\">4 人以内の家族</p> <p align=\"left\">（小学生以上）</p> <p>12 月 15 日～1 月 15 日</p> <p>（電話）</p> <p align=\"left\">5．山歩きをしよう</p> <p>3 月 5 日（土）</p> <p>10:00～16:00</p> <p>4 人以内のグループ・</p> <p>家族</p> <p>1 月 13 日～2 月 3 日</p> <p>（はがき）</p> <p align=\"left\">6．早春の花を楽し</p> <p align=\"left\">もう</p> <p>3 月 6 日（日）</p> <p>10:00～16:00</p> <p>4 人以内のグループ・</p> <p>家族</p> <p>1 月 13 日～2 月 3 日</p> <p>（はがき）</p> <p align=\"left\">7．野外で料理をし</p> <p align=\"left\">よう</p> <p>3 月 12 日（土）</p> <p>9:00～14:30</p> <p align=\"left\">8 人以内の家族</p> <p align=\"left\">（小学生以上）</p> <p style=\"text-align: center;\">1 月 13 日～31 日</p> <p style=\"text-align: center;\">（はがき）</p> <p>「申し込み方法」</p> <p>· 参加を希望する方は次の方法でお申し込みください。</p> <p>· （電話）03－＊＊＊＊－＊＊＊＊ にお電話ください。先着順です。</p> <p>· （はがき）はがきに活動名、参加者氏名（全員・家族場合も全員の名前）、代表者 の名前・住所・電話番号を書いて、受け付け期間中にお送りください。1 枚のはが きで活動はひとつしか申し込めません。</p> <p>留学生のキムさんは、同じ大学に通っている友達 3 人と活動のどれかに参加したいと考えています。全員参加できるのは土曜日です。きょうは 11 月 20 日です。</p> <p class=\"MsoBodyText\" style=\"text-align: justify; text-justify: inter-ideograph; text-indent: -.25in; line-height: 140%; margin: 6.45pt 17.8pt .0001pt 86.95pt;\"> </p>",
+    "prompt": "キムさんたたちが、参加できるのはどれですか。",
+    "choices": [
+      "1 か 3",
+      "2 か 5",
+      "3 か 5",
+      "3 か 7"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3 か 5",
+    "explanation": "Kim's group consists of 4 foreign students who can participate on Saturday and today is November 20th. 1 -> The registration period (11th-15th November) has expired. 4.6 -> Kim's group can only go on Saturday, so they cannot participate. 2.7 -> Only for primary school students or family groups. So, Kim's group can participate in activities at sections 3 and 5.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "11.2",
+    "parent_question_number": "11",
+    "parent_content": "<p><strong>問題 VII：次の文章を読んで、質問を答えなさい。答えは１・２・３・４ から最も良い ものを―つえらびなさい。</strong></p> <p><strong>さくら市野外活動センター 活動案内</strong></p> <p><strong>活動名</strong></p> <p><strong>日時</strong></p> <p align=\"left\"><strong>参加できる人</strong></p> <p><strong>受け付け時間</strong></p> <p><strong>（申し込み方法）</strong></p> <p align=\"left\">1．そばを作ろう</p> <p>12 月 11 日（土）</p> <p>10:00～12:00</p> <p>4 人以内のグループ・</p> <p>家族</p> <p>11 月 11 日～15 日</p> <p>（電話）</p> <p align=\"left\">2．冬の遊びを体験</p> <p align=\"left\">しよう</p> <p>1 月 22 日（土）</p> <p>9:00～14:30</p> <p>8 人以内の小学生と</p> <p>その家族</p> <p>11 月 15 日～12 月 6 日</p> <p>（はがき）</p> <p align=\"left\">3．うどんを作ろう</p> <p>2 月 12 日（土）</p> <p>8 人以内の</p> <p>グループ・家族</p> <p>1 月 13 日～31 日</p> <p>（はがき）</p> <p align=\"left\">4．梅をみに行こう</p> <p>2 月 11 日（金）</p> <p>～13 日（日）</p> <p align=\"left\">4 人以内の家族</p> <p align=\"left\">（小学生以上）</p> <p>12 月 15 日～1 月 15 日</p> <p>（電話）</p> <p align=\"left\">5．山歩きをしよう</p> <p>3 月 5 日（土）</p> <p>10:00～16:00</p> <p>4 人以内のグループ・</p> <p>家族</p> <p>1 月 13 日～2 月 3 日</p> <p>（はがき）</p> <p align=\"left\">6．早春の花を楽し</p> <p align=\"left\">もう</p> <p>3 月 6 日（日）</p> <p>10:00～16:00</p> <p>4 人以内のグループ・</p> <p>家族</p> <p>1 月 13 日～2 月 3 日</p> <p>（はがき）</p> <p align=\"left\">7．野外で料理をし</p> <p align=\"left\">よう</p> <p>3 月 12 日（土）</p> <p>9:00～14:30</p> <p align=\"left\">8 人以内の家族</p> <p align=\"left\">（小学生以上）</p> <p style=\"text-align: center;\">1 月 13 日～31 日</p> <p style=\"text-align: center;\">（はがき）</p> <p>「申し込み方法」</p> <p>· 参加を希望する方は次の方法でお申し込みください。</p> <p>· （電話）03－＊＊＊＊－＊＊＊＊ にお電話ください。先着順です。</p> <p>· （はがき）はがきに活動名、参加者氏名（全員・家族場合も全員の名前）、代表者 の名前・住所・電話番号を書いて、受け付け期間中にお送りください。1 枚のはが きで活動はひとつしか申し込めません。</p> <p>留学生のキムさんは、同じ大学に通っている友達 3 人と活動のどれかに参加したいと考えています。全員参加できるのは土曜日です。きょうは 11 月 20 日です。</p> <p class=\"MsoBodyText\" style=\"text-align: justify; text-justify: inter-ideograph; text-indent: -.25in; line-height: 140%; margin: 6.45pt 17.8pt .0001pt 86.95pt;\"> </p>",
+    "prompt": "はがきで申し込む場合、書かなければいけないことはどれですか。",
+    "choices": [
+      "活動名、参加する全員の名前・住所・電話番号",
+      "活動名、参加する全員の名前と代表の名前・住所・電話番号",
+      "第 1 希望と第 2 希望の活動名、代表者の名前・住所・電話番号",
+      "キムさんが通っている大学の名前・住所・電話番号"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "活動名、参加する全員の名前と代表の名前・住所・電話番号",
+    "explanation": "ヒント：はがきに活動名、参加者氏名（全員・家族場合も全員の名前）、代表者 の名前・住所・電話番号を書いて、受け付け期間中にお送りください。 ヒント：はがきに活動名、参加者氏名（全員・家族場合も全員の名前）、代表者 の名前・住所・電話番号を書いて、受け付け期間中にお送りください。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 2,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong>()(もんだい)<span lang=\"JA\">１：</span></strong></p> <p class=\"MsoNormal\"><strong>()(もんだい)<span lang=\"JA\">１では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものを一つえらんでください。</span></strong></p>",
+    "prompt": "れい",
+    "choices": [
+      "きゃくをかいぎ 室(しつ) にあんないする",
+      "しりょうをコピーする",
+      "きゃくにお 茶(ちゃ) を 出(だ) す。",
+      "かいぎ 室(しつ) のエアコンをつける"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "きゃくをかいぎ<室(しつ)>にあんないする",
+    "explanation": "(かいしゃ) で、 (おんな) の (ひと) と (おとこ) の (ひと) が (はな) しています。 (おんな) の (ひと) は、このあと、まず (なに) をしなければなりませんか。 会社 で、 女 の 人 と 男 の 人 が 話 しています。 女 の 人 は、このあと、まず 何 をしなければなりませんか。 F: ABC (こうこく) の (かわしまぶちょう) が、そろそろいらっしゃる (じかん) ですね。 広告 の 川島部長 が、そろそろいらっしゃる 時間 ですね。 M: うん。 (しりょう) の (こぴ) ーはしてくれた？ うん。 資料 の コピ ーはしてくれた？ F: はい、こちらです。６ (ぶ) で (た) りますか。 はい、こちらです。６ 部 で 足 りますか。 M: そうだね、ありがとう。いらしたら、２ (かい) の (かいぎしつ) に (あんない) してくれる？ぼくは (ひと) つ (しりょう) を (ま) って (い) くから、その (かん) にお (ちゃ) を (だ) しておいて。 そうだね、ありがとう。いらしたら、２ 階 の 会議室 に 案内 してくれる？ぼくは 一 つ 資料 を 待 って 行 くから、その 間 にお 茶 を 出 しておいて。 F: わかしました。あ、エアコンもつけおきますね。 わかしました。あ、エアコンもつけおきますね。 M: ああ、それはさっき (たなか) さんがやってくれたみたい。じゃ、よろしくね。 ああ、それはさっき 田中 さんがやってくれたみたい。じゃ、よろしくね。 F: はい。 はい。 (おんな) の (ひと) は、このあと、ます (なに) をしなかればなりませんか。 女 の 人 は、このあと、ます 何 をしなかればなりませんか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">１ばん</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1491212003.435-1.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "女の人二人が話しています。どのお皿を使いますか。 女の人二人が話しています。どのお皿を使いますか。 Ｆ１：さくら、お皿はどれを使えばいいの？ Ｆ１：さくら、お皿はどれを使えばいいの？ Ｆ２：スープは取っ手が付いてるやつ。 Ｆ２：スープは取っ手が付いてるやつ。 Ｆ１：え、どれ？何色？ Ｆ１：え、どれ？何色？ Ｆ２：白で、取っ手が 2 つ付いてるのがあるでしょ。 Ｆ２：白で、取っ手が つ付いてるのがあるでしょ。 Ｆ１：ああ、これね。サラダは？ Ｆ１：ああ、これね。サラダは？ Ｆ２：サラダは・・・そうねえ・・・じゃあ、ガラスの丸いの。 Ｆ２：サラダは・・・そうねえ・・・じゃあ、ガラスの丸いの。 Ｆ１：これか・・・。後、パスタ。 Ｆ１：これか・・・。後、パスタ。 Ｆ２：パスタは白い四角いのにして Ｆ２：パスタは白い四角いのにして Ｆ１：これ？ちょっと大きい過ぎない？このトマトの絵がかいてあるお皿のほうがかわいいじゃない。 Ｆ１：これ？ちょっと大きい過ぎない？このトマトの絵がかいてあるお皿のほうがかわいいじゃない。 Ｆ２：それだと、数が足りないのよ。 Ｆ２：それだと、数が足りないのよ。 Ｆ１：そうなんだ。わかった。 Ｆ１：そうなんだ。わかった。 どのお皿を使いますか。 どのお皿を使いますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">２ばん</span></p>",
+    "prompt": "",
+    "choices": [
+      "1時まで",
+      "2時まで",
+      "2時15分前まで",
+      "1時15分前まで"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "1時15分前まで",
+    "explanation": "学校で先生が案内をしています。学生はいつまでにいかななければなりませんか。 学校で先生が案内をしています。学生はいつまでにいかななければなりませんか。 Ｍ：えー、今日の進学。就職説明会のついてですが、どちらが一つのみの参加はできません。就職説明会は午後 1 時からおよそ 1 時間の予定です。続いて、 10 分間の休憩の後、就職説明会となります。最初に受付がありますので、 15 分前には来るようにしてください。場所は３０１教室です。 Ｍ：えー、今日の進学。就職説明会のついてですが、どちらが一つのみの参加はできません。就職説明会は午後 時からおよそ 時間の予定です。続いて、 分間の休憩の後、就職説明会となります。最初に受付がありますので、 分前には来るようにしてください。場所は３０１教室です。 学生はいつまでにいかななければなりませんか。 学生はいつまでにいかななければなりませんか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">３ばん</span></p>",
+    "prompt": "",
+    "choices": [
+      "かちょうにチェックしてもらう",
+      "田中さんにチェックしてもらう",
+      "もう一度スケジュールを立てる",
+      "ほかの会社のせいひんとちがいを書く"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "もう一度スケジュールを立てる",
+    "explanation": "会社で、女の人と男の人が話しています。女の人は、この後、まず何をしなければなりませんか。 会社で、女の人と男の人が話しています。女の人は、この後、まず何をしなければなりませんか。 Ｆ：課長、この企画書、見てもらえませんか。 Ｆ：課長、この企画書、見てもらえませんか。 Ｍ：ああ、いいよ。・・・うん、大体いいと思う。 Ｍ：ああ、いいよ。・・・うん、大体いいと思う。 Ｆ：他社の製品と比べた部分については、どうですか。 Ｆ：他社の製品と比べた部分については、どうですか。 Ｍ：わかりやすくていいと思うよ。グラフも見やすいし。・・・あ、でも、このスケジュールはちょっと難しいと思うなあ。もう少し余裕があったほがいい。 Ｍ：わかりやすくていいと思うよ。グラフも見やすいし。・・・あ、でも、このスケジュールはちょっと難しいと思うなあ。もう少し余裕があったほがいい。 Ｆ：わかりました、もう一度考えます。 Ｆ：わかりました、もう一度考えます。 Ｍ：そこを修正して・・・そうだなあ、あと、田中さんにも見てもらったほうがいいな。彼女はこの分野、詳しいから。 Ｍ：そこを修正して・・・そうだなあ、あと、田中さんにも見てもらったほうがいいな。彼女はこの分野、詳しいから。 Ｆ：わかりました。 Ｆ：わかりました。 Ｍ：で、そのあとにもう一度見せてくてる？ Ｍ：で、そのあとにもう一度見せてくてる？ Ｆ：はい。 Ｆ：はい。 女の人は、この後、まず何をしなければなりませんか。 女の人は、この後、まず何をしなければなりませんか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">４ばん</span></p>",
+    "prompt": "",
+    "choices": [
+      "しかいをする",
+      "うけつけをする",
+      "しかいを人にたのむ",
+      "うけつけを人にたのむ"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "うけつけを人にたのむ",
+    "explanation": "大学で、女の学生と男の学生が電話で話しています。女の学生は、この後、まず何をしなければなりませんか。 大学で、女の学生と男の学生が電話で話しています。女の学生は、この後、まず何をしなければなりませんか。 Ｆ：困ったなあ、今電話あったんだけど、山本さん、インフルエンザだって。 Ｆ：困ったなあ、今電話あったんだけど、山本さん、インフルエンザだって。 Ｍ：えつ、うそ！？彼女、今日の司会じゃない。 Ｍ：えつ、うそ！？彼女、今日の司会じゃない。 Ｆ：そうなのよ。私が代わりにしてもいいんだけど、受付だし・・・。 Ｆ：そうなのよ。私が代わりにしてもいいんだけど、受付だし・・・。 Ｍ：そうだね。じあ、ぼくがやろうか。 Ｍ：そうだね。じあ、ぼくがやろうか。 Ｆ：鈴木君は無理だよ。やることいっぱいあるじゃない。ちょっとほかのメンパーに聞いてみるよ。 Ｆ：鈴木君は無理だよ。やることいっぱいあるじゃない。ちょっとほかのメンパーに聞いてみるよ。 Ｍ：でもさあ、やっぱり。司会は今日のイベントのことをよくわかってる人のほうがいいよ。受付を別の人にやってもらおうよ。誰かいるでしょ、友達とか後輩とか。 Ｍ：でもさあ、やっぱり。司会は今日のイベントのことをよくわかってる人のほうがいいよ。受付を別の人にやってもらおうよ。誰かいるでしょ、友達とか後輩とか。 Ｆ：そうね。そうしよか。 Ｆ：そうね。そうしよか。 女の学生は、この後、まず何をしなければなりませんか。 女の学生は、この後、まず何をしなければなりませんか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "6",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">５ばん</span></p>",
+    "prompt": "",
+    "choices": [
+      "着物",
+      "白いドレス",
+      "黒いドレス",
+      "花がらのドレス"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "黒いドレス",
+    "explanation": "女の人と男の人が話しています。女の人は何を着ますか。 女の人と男の人が話しています。女の人は何を着ますか。 Ｆ：ねえ、友達の結婚式に着ていく服、どっちがいいと思う？ Ｆ：ねえ、友達の結婚式に着ていく服、どっちがいいと思う？ Ｍ：あら、着物は着るんじゃないがったの？ Ｍ：あら、着物は着るんじゃないがったの？ Ｆ：それは姉の結婚式。今言ってるのは友達の。来週なのよ。 Ｆ：それは姉の結婚式。今言ってるのは友達の。来週なのよ。 Ｍ：そうなんだ。そうだねえ・・・僕はこっちの白いドレスのほうが好きだな。 Ｍ：そうなんだ。そうだねえ・・・僕はこっちの白いドレスのほうが好きだな。 Ｆ：えつ、白に見える？そうかあ。じゃあ、だめだな。私もこれ、好きなんだけど、花嫁さんが白を着るからね。 Ｆ：えつ、白に見える？そうかあ。じゃあ、だめだな。私もこれ、好きなんだけど、花嫁さんが白を着るからね。 Ｍ：なるほど。でも、こっちの黒はちょっと地味かもしれないね。上品で、デザイインなんだけど。 Ｍ：なるほど。でも、こっちの黒はちょっと地味かもしれないね。上品で、デザイインなんだけど。 Ｆ：うーん、新しいの買ったほうがいいのかな・・・。この前、花柄のかわいいでレスを見つけたんだよね、たかかっただけど。 Ｆ：うーん、新しいの買ったほうがいいのかな・・・。この前、花柄のかわいいでレスを見つけたんだよね、たかかっただけど。 Ｍ：でも、ちょっと待って。これは花か何か胸につければ？やってる人、いるよね。すごくいいと思う。 Ｍ：でも、ちょっと待って。これは花か何か胸につければ？やってる人、いるよね。すごくいいと思う。 Ｆ：あ、そういうやり方があったね！うん、そうしょう。 Ｆ：あ、そういうやり方があったね！うん、そうしょう。 女の人と男の人が話しています。女の人は何を着ますか。 女の人と男の人が話しています。女の人は何を着ますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "7",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">６ばん</span></p>",
+    "prompt": "",
+    "choices": [
+      "日にちをかえる",
+      "時間をかえる",
+      "同時にへやを２つ借りる",
+      "とちゅうでへやをかえる"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "とちゅうでへやをかえる",
+    "explanation": "電話で、女の人と男の人が話しています。男の人は、どうしますか。 電話で、女の人と男の人が話しています。男の人は、どうしますか。 Ｆ：はい、ふじ文化会館です。 Ｆ：はい、ふじ文化会館です。 Ｍ：あのう、今度、大会議室をお借りしたいんですが・・・。今月の 15 日の朝 10 時から夕方 5 時までです。 Ｍ：あのう、今度、大会議室をお借りしたいんですが・・・。今月の 日の朝 時から夕方 時までです。 Ｆ：日曜日ですね。・・・ああ、その日は 1 時からしか空いてないですね。中会議室なら 10 時からでも大丈夫ですが。こちらは 30 人くらいなら入ります。 Ｆ：日曜日ですね。・・・ああ、その日は 時からしか空いてないですね。中会議室なら 時からでも大丈夫ですが。こちらは 人くらいなら入ります。 Ｍ：そうですか。でも、 40 人は来るからなあ・・・。 Ｍ：そうですか。でも、 人は来るからなあ・・・。 Ｆ：中会議室は今のところ、 2 部屋空いてます。 Ｆ：中会議室は今のところ、 部屋空いてます。 Ｍ：分けられないんですよ。うーん、こまったなあ・・・。 Ｍ：分けられないんですよ。うーん、こまったなあ・・・。 Ｆ：前の日でしたら、大会議室もう一日空いてますけど・・・。 Ｆ：前の日でしたら、大会議室もう一日空いてますけど・・・。 Ｍ：その日じゃないとだめなんです。・・・そしたら、午後から移動というのでもいいですか。 Ｍ：その日じゃないとだめなんです。・・・そしたら、午後から移動というのでもいいですか。 Ｆ：それは結構ですよ。 Ｆ：それは結構ですよ。 Ｍ：じゃあ、それでおねがいします。 Ｍ：じゃあ、それでおねがいします。 男の人は、どうしますか。 男の人は、どうしますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.1",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p><strong>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></strong></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "１ばん",
+    "choices": [
+      "一人ぐらしをしたいから",
+      "りゅうがくをしたいから",
+      "かいたいものがあるから",
+      "家族の役に立ちたいから"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "一人ぐらしをしたいから",
+    "explanation": "女の学生と男の学生が話しています。女の学生は、どうしてアルバイトをしたいと言っていますか。 女の学生と男の学生が話しています。女の学生は、どうしてアルバイトをしたいと言っていますか。 Ｆ：ねえ、何がいいアルバイトないかあ？ Ｆ：ねえ、何がいいアルバイトないかあ？ Ｍ：佐藤さん、バイトするの？ Ｍ：佐藤さん、バイトするの？ Ｆ：うん。ちょっとね。してみようと思って。 Ｆ：うん。ちょっとね。してみようと思って。 Ｍ：へー、バイトとか。しないと思ってだよ。何かほしいものでもあるの？それか、留学したいとか？ Ｍ：へー、バイトとか。しないと思ってだよ。何かほしいものでもあるの？それか、留学したいとか？ Ｆ：そういうんじゃないの。実は、 4 年生になったら、一人暮らしをしてみたいと思ってるの。 Ｆ：そういうんじゃないの。実は、 年生になったら、一人暮らしをしてみたいと思ってるの。 Ｍ：そうなんだ。どうして？ Ｍ：そうなんだ。どうして？ Ｆ：家で家族と住んでると、料理も洗濯も、みんな親がやってくれるじゃない？いつまでも親に甘えちゃいけないなあって思って。 Ｆ：家で家族と住んでると、料理も洗濯も、みんな親がやってくれるじゃない？いつまでも親に甘えちゃいけないなあって思って。 Ｍ：なるほどね。じゃあ、何がいいのがあったら教えるよ。 Ｍ：なるほどね。じゃあ、何がいいのがあったら教えるよ。 女の学生は、どうしてアルバイトをしたいと言っていますか。 女の学生は、どうしてアルバイトをしたいと言っていますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.2",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p><strong>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></strong></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "２ばん",
+    "choices": [
+      "教えるのが好きだから",
+      "いい先生と出会ったから",
+      "自分でいろいろくふうできるから",
+      "そうだんできる先生がいなかったから"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "そうだんできる先生がいなかったから",
+    "explanation": "男の学生と女の学生が話しています。女の学生は、どうして教室になろうと思いました。 男の学生と女の学生が話しています。女の学生は、どうして教室になろうと思いました。 M: 田中先生、昔から教師になりたかったんですか。 田中先生、昔から教師になりたかったんですか。 Ｆ：いいえ、子供のころは洋服屋さんになりたかった。かわいい服とかドルストか、いろんな服を着たみたいって思ってたから。 Ｆ：いいえ、子供のころは洋服屋さんになりたかった。かわいい服とかドルストか、いろんな服を着たみたいって思ってたから。 Ｍ：そうなんですか。ちょっと意外です。 Ｍ：そうなんですか。ちょっと意外です。 Ｆ：でしょう。おしゃれが好きだったから、そのうち自分でデザインしたいって思うようになって。でも、高校生のとき、気がついたら、教師になろうって思うようになってた。 Ｆ：でしょう。おしゃれが好きだったから、そのうち自分でデザインしたいって思うようになって。でも、高校生のとき、気がついたら、教師になろうって思うようになってた。 Ｍ：いい先生と出会ったんですか。 Ｍ：いい先生と出会ったんですか。 Ｆ：ううん、其の逆。疑問とか悩みとかを話せろ先生が全然いなくて・・・。だから、自分がなろうと思ったの。 Ｆ：ううん、其の逆。疑問とか悩みとかを話せろ先生が全然いなくて・・・。だから、自分がなろうと思ったの。 Ｍ：そういうパターンもあるんですね。 Ｍ：そういうパターンもあるんですね。 女の学生は、どうして教室になろうと思いました。 女の学生は、どうして教室になろうと思いました。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.3",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p><strong>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></strong></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "３ばん",
+    "choices": [
+      "大家さんがやさしいこと",
+      "日本語をうまくなっていること",
+      "アルバイトが見つかったこと",
+      "日本人の友だちができたこと"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "日本人の友だちができたこと",
+    "explanation": "留学生が話しています。この留学生は、特に何がうれしいと言っていますか？ 留学生が話しています。この留学生は、特に何がうれしいと言っていますか？ Ｆ：こんにちは。私はリンと言います。台湾の大学で日本語を勉強しました。日本に来る前は、不安もたくさんありました。でも、大家さんが優しくて、いつも生活のことをいろいろ教えてくれる。日本語が難しいですが、少しずつ上達しています。いいアルバイトも見つかりました。そして、日本人の友達がたくさんできました。友達一緒に買い物や食事をするとき、日本に来てよかったと一番感じます。 Ｆ：こんにちは。私はリンと言います。台湾の大学で日本語を勉強しました。日本に来る前は、不安もたくさんありました。でも、大家さんが優しくて、いつも生活のことをいろいろ教えてくれる。日本語が難しいですが、少しずつ上達しています。いいアルバイトも見つかりました。そして、日本人の友達がたくさんできました。友達一緒に買い物や食事をするとき、日本に来てよかったと一番感じます。 この留学生は、特に何がうれしいと言っていますか？",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.4",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p><strong>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></strong></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "４ばん",
+    "choices": [
+      "5日（月）～7日（水）",
+      "９日（金）～１１日（日）",
+      "１９日（月）～２１日（水）",
+      "２３日（水）～２５日（金）"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "９日（金）～１１日（日）",
+    "explanation": "旅行会社で、男の人と係りの人に聞いています。男の人は、いつ旅行に行きました。 旅行会社で、男の人と係りの人に聞いています。男の人は、いつ旅行に行きました。 Ｍ：来月、京都に 2 泊三日で行きたいんですが・・・。 Ｍ：来月、京都に 泊三日で行きたいんですが・・・。 Ｆ： 3 月ですね。時期はいつごろをご希望ですか。 Ｆ： 月ですね。時期はいつごろをご希望ですか。 Ｍ：まだ、はっきりとは・・・。 Ｍ：まだ、はっきりとは・・・。 Ｆ：交番はかなり混みますよ。学生さんが春休みに入りますから。料金も 1 万円ほど高くなります。 Ｆ：交番はかなり混みますよ。学生さんが春休みに入りますから。料金も 万円ほど高くなります。 Ｍ：そうですか。だっから、前半にします。じゃあ、このあたりはどうですか。泊りが金、土です。 Ｍ：そうですか。だっから、前半にします。じゃあ、このあたりはどうですか。泊りが金、土です。 Ｆ：そうですね。後半に比べるとたいぶ安くなります。 2 泊 3 日だと、だいたい 3 万から 3 万 3 千円くらいです。平日で 2 泊だと、さらに 5 千円くらい安いなりますが・・・ Ｆ：そうですね。後半に比べるとたいぶ安くなります。 泊 日だと、だいたい 万から 万 千円くらいです。平日で 泊だと、さらに 千円くらい安いなりますが・・・ Ｍ：そんなに安くなるんだ。やっぱり土日に集中するんですね。でも、平日はちょっと無理です。いいですよ、この日にちです。あとは、これで、ホテルを選びますから。 Ｍ：そんなに安くなるんだ。やっぱり土日に集中するんですね。でも、平日はちょっと無理です。いいですよ、この日にちです。あとは、これで、ホテルを選びますから。 男の人は、いつ旅行に行きました。 男の人は、いつ旅行に行きました。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.5",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p><strong>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></strong></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "５ばん",
+    "choices": [
+      "仕事がたいへんだから",
+      "やりたい仕事ができないから",
+      "大きいな仕事をさせてもらえないから",
+      "しかたなく入った会社だったから"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "やりたい仕事ができないから",
+    "explanation": "女の人と男の人が話しています。女の人は、どうして会社を辞めようと思っています。 女の人と男の人が話しています。女の人は、どうして会社を辞めようと思っています。 Ｆ：田中さん、久しぶりね。 Ｆ：田中さん、久しぶりね。 Ｍ：そうだね。仕事には慣れた？ Ｍ：そうだね。仕事には慣れた？ Ｆ：実は、今の会社、やめようかと思ってるの。 Ｆ：実は、今の会社、やめようかと思ってるの。 Ｍ：え、なんで？大学のごろ、あんなに行きたかってたところじゃない？仕事、大変なの？ Ｍ：え、なんで？大学のごろ、あんなに行きたかってたところじゃない？仕事、大変なの？ Ｆ：ううん、それはない。いまのこところ、だらカの手伝いばかりだし。 Ｆ：ううん、それはない。いまのこところ、だらカの手伝いばかりだし。 Ｍ：まで 1 年目でしょ？そのうち、いろいろ任されるようになるよ。 Ｍ：まで 年目でしょ？そのうち、いろいろ任されるようになるよ。 Ｆ：まあね。ただ・・・。このまま働いてても意味がない気がして。 Ｆ：まあね。ただ・・・。このまま働いてても意味がない気がして。 Ｍ：どうして？ Ｍ：どうして？ Ｆ：イメージしていた仕事とだいぶ違ってたのよ。たから、自分がほんとにやりたいことをやるには、転職するしかないなって思って。 Ｆ：イメージしていた仕事とだいぶ違ってたのよ。たから、自分がほんとにやりたいことをやるには、転職するしかないなって思って。 Ｍ：そう・・・。でも、もうちょっと考えてみたら？ Ｍ：そう・・・。でも、もうちょっと考えてみたら？ Ｆ：うーん・・・。 Ｆ：うーん・・・。 女の人は、どうして会社を辞めようと思っています。 女の人は、どうして会社を辞めようと思っています。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.6",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p><strong>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></strong></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "６ばん",
+    "choices": [
+      "勉強をするため",
+      "読書をするため",
+      "お弁当を作るため",
+      "ジョギングをするため"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "勉強をするため",
+    "explanation": "男の学生と女の学生が話しています。女の学生はどうして早起きをしていますか。 男の学生と女の学生が話しています。女の学生はどうして早起きをしていますか。 Ｍ：山下さん、最近、来るの？早いね。 Ｍ：山下さん、最近、来るの？早いね。 Ｆ：うん、早く起きるようにしたから、その影響ね。毎朝 5 時に起きてるよ。 Ｆ：うん、早く起きるようにしたから、その影響ね。毎朝 時に起きてるよ。 Ｍ：早いねえ。何かしてるの？ Ｍ：早いねえ。何かしてるの？ Ｆ：勉強よ。今では、夜にやってたんだけど、いろいろな用事で時間が変わるし、寝るのも遅くなるし、あんまりよくないなあと思って。 Ｆ：勉強よ。今では、夜にやってたんだけど、いろいろな用事で時間が変わるし、寝るのも遅くなるし、あんまりよくないなあと思って。 Ｍ：なるほどね。 Ｍ：なるほどね。 Ｆ：だから、今は寝る前は読書。そのほうがすぐねむれるし。 Ｆ：だから、今は寝る前は読書。そのほうがすぐねむれるし。 Ｍ：へー・・・。じゃあ、最近、お弁当を持ってくるのも、早起きしてるから？ Ｍ：へー・・・。じゃあ、最近、お弁当を持ってくるのも、早起きしてるから？ Ｆ：そう。時間に余裕があるから、自分で作るようにした。体にいいからね。あ、そうそう、休みの日はジョギングもしてる。すごく気持ちいいよ。 Ｆ：そう。時間に余裕があるから、自分で作るようにした。体にいいからね。あ、そうそう、休みの日はジョギングもしてる。すごく気持ちいいよ。 Ｍ：へー、いいことばかりだね。 Ｍ：へー、いいことばかりだね。 女の学生はどうして早起きをしていますか。 女の学生はどうして早起きをしていますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.1",
+    "parent_question_number": "9",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">３：</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0cm; mso-add-space: auto;\">()(もんだい)<span lang=\"JA\">３では、</span>()(もんだいようし)<span lang=\"JA\">になにもいんさつされていません。この</span>()(もんだい)<span lang=\"JA\">は、ぜんたいとしてどんあ</span>()(ないよう)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">く</span>()(もんだい)<span lang=\"JA\">です。</span>()(はなし)<span lang=\"JA\">の</span>()(まえ)<span lang=\"JA\">に</span>()(しつもん)<span lang=\"JA\">はありません。まず</span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから、</span>()(しつもん)<span lang=\"JA\">とぜんたくしを</span>()(き)<span lang=\"JA\">いて、１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいもの</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "1 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "女の人と男の人が話しています 女の人と男の人が話しています Ｆ：ねえ、昨日のドラマ、見た？ Ｆ：ねえ、昨日のドラマ、見た？ Ｍ：見たよ。最終回だったね。 Ｍ：見たよ。最終回だったね。 Ｆ：うん。すごくよっかね、特に最後が。感動して、ちょっと泣いちゃった。 Ｆ：うん。すごくよっかね、特に最後が。感動して、ちょっと泣いちゃった。 Ｍ：そう？よくあるパターンじゃない？最後は別れた恋人を選ぶって言う。僕はもうちょっと違う終わり方を期待してだけど。 Ｍ：そう？よくあるパターンじゃない？最後は別れた恋人を選ぶって言う。僕はもうちょっと違う終わり方を期待してだけど。 Ｆ：えー？どんな？ Ｆ：えー？どんな？ Ｍ：主人公が事故で死んじゃうとか。 Ｍ：主人公が事故で死んじゃうとか。 Ｆ：そんなの悲しすぎるよ。やっぱり最後はハッピーに終わらないと。 Ｆ：そんなの悲しすぎるよ。やっぱり最後はハッピーに終わらないと。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.2",
+    "parent_question_number": "9",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">３：</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0cm; mso-add-space: auto;\">()(もんだい)<span lang=\"JA\">３では、</span>()(もんだいようし)<span lang=\"JA\">になにもいんさつされていません。この</span>()(もんだい)<span lang=\"JA\">は、ぜんたいとしてどんあ</span>()(ないよう)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">く</span>()(もんだい)<span lang=\"JA\">です。</span>()(はなし)<span lang=\"JA\">の</span>()(まえ)<span lang=\"JA\">に</span>()(しつもん)<span lang=\"JA\">はありません。まず</span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから、</span>()(しつもん)<span lang=\"JA\">とぜんたくしを</span>()(き)<span lang=\"JA\">いて、１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいもの</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "2 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "留学生の男の学生と日本字の女の学生が話しています。 留学生の男の学生と日本字の女の学生が話しています。 Ｍ：あ、田中さん、ちょっと待ってください。 Ｍ：あ、田中さん、ちょっと待ってください。 Ｆ：何？ Ｆ：何？ Ｍ：あのう。このはがき、何て書いてあるんですか？ Ｍ：あのう。このはがき、何て書いてあるんですか？ Ｆ：見せて。ああ、督促状ね。 Ｆ：見せて。ああ、督促状ね。 Ｍ：トクソクジョウ？何ですか？ Ｍ：トクソクジョウ？何ですか？ Ｆ：早く返してくださいっていうはがき。 1 ヶ月前に借りた本をまだ返してないんでしょ？ Ｆ：早く返してくださいっていうはがき。 ヶ月前に借りた本をまだ返してないんでしょ？ Ｍ：あ、そうだった！ Ｍ：あ、そうだった！ Ｆ： 1 週間以内に返さないと、もう貸し出しができなくなるって。 Ｆ： 週間以内に返さないと、もう貸し出しができなくなるって。 Ｍ：えつ、それは困ります。 Ｍ：えつ、それは困ります。 Ｆ：早く返したほうがいいよ。 Ｆ：早く返したほうがいいよ。 Ｍ：わかりました。･･･でも、どこに置いたかなあ。先生に借りたのと一緒に置いたのかなあ。 Ｍ：わかりました。･･･でも、どこに置いたかなあ。先生に借りたのと一緒に置いたのかなあ。 Ｆ：そうかもね。じゃあ、忘れずにね。 Ｆ：そうかもね。じゃあ、忘れずにね。 二人は何を見て話していますか。 二人は何を見て話していますか。 １銀行からのばかり １銀行からのばかり ２図書館からのばかり ２図書館からのばかり ３先生からのばかり ３先生からのばかり ４市役所からのばかり ４市役所からのばかり",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.3",
+    "parent_question_number": "9",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">３：</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0cm; mso-add-space: auto;\">()(もんだい)<span lang=\"JA\">３では、</span>()(もんだいようし)<span lang=\"JA\">になにもいんさつされていません。この</span>()(もんだい)<span lang=\"JA\">は、ぜんたいとしてどんあ</span>()(ないよう)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">く</span>()(もんだい)<span lang=\"JA\">です。</span>()(はなし)<span lang=\"JA\">の</span>()(まえ)<span lang=\"JA\">に</span>()(しつもん)<span lang=\"JA\">はありません。まず</span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから、</span>()(しつもん)<span lang=\"JA\">とぜんたくしを</span>()(き)<span lang=\"JA\">いて、１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいもの</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "3 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "テレビで、男の人が話しています。 テレビで、男の人が話しています。 Ｍ：皆さんは朝ごはんをきちんと食べていますか。忙しいとか、眠いとか、そんな理由で、朝ご飯を食べていない人は多いと思います。しかし、朝ごはんは一日エルギーを体に入れる、大切なものです。朝ごはんを食べないと、ずっと眠かったり、勉強や仕事になかなか集中できなくなったりします。朝、早めに起きて栄養のある朝ごはんをゆっくり食べるのが一番いいですが、それが無理なら、簡単なものでもいいです。少しでも何か食べることで、勉強や仕事がよくできるようになります。 Ｍ：皆さんは朝ごはんをきちんと食べていますか。忙しいとか、眠いとか、そんな理由で、朝ご飯を食べていない人は多いと思います。しかし、朝ごはんは一日エルギーを体に入れる、大切なものです。朝ごはんを食べないと、ずっと眠かったり、勉強や仕事になかなか集中できなくなったりします。朝、早めに起きて栄養のある朝ごはんをゆっくり食べるのが一番いいですが、それが無理なら、簡単なものでもいいです。少しでも何か食べることで、勉強や仕事がよくできるようになります。 男の人は何について話していますか。 男の人は何について話していますか。 １朝ごはんの食べ方 １朝ごはんの食べ方 ２朝ごはんの大切さ ２朝ごはんの大切さ ３朝ごはんを食べない理由 ３朝ごはんを食べない理由 ４朝ごはんを食べる人の少しなさ。 ４朝ごはんを食べる人の少しなさ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "10.1",
+    "parent_question_number": "10",
+    "parent_content": "<p>((もんだい)<strong><span lang=\"JA\">４：</span></strong></p> <p><strong>()(もんだい)<span lang=\"JA\">４では、えを</span>()(み)<span lang=\"JA\">ながら</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。やじるし（ ）の</span>()(ひと)<span lang=\"JA\">は</span>()(なん)<span lang=\"JA\">と</span>()(い)<span lang=\"JA\">いますか。１から３の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></strong></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0cm; mso-add-space: auto;\"><span lang=\"JA\">れい：</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1491212571.006-2.jpg\"/>",
+    "prompt": "れい",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "れい 正答 1 れい 正答 道がわからないので、人に聞きます。何といますか？ 道がわからないので、人に聞きます。何といますか？ Ｆ： Ｆ： 1. 東京駅に行きたいんですが 東京駅に行きたいんですが ２．東京駅に行ってくれませんか。 ２．東京駅に行ってくれませんか。 ３．東京駅に行ってもいいですか。 ３．東京駅に行ってもいいですか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "11",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\" style=\"font-family: 'Yu Mincho',serif; mso-ascii-font-family: Calibri; mso-ascii-theme-font: minor-latin; mso-fareast-font-family: 'Yu Mincho'; mso-fareast-theme-font: minor-fareast; mso-hansi-font-family: Calibri; mso-hansi-theme-font: minor-latin;\">１ばん</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1491212596.25-3.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "レストランで、注文していないものが運ばれてきました。何と言いますか？ レストランで、注文していないものが運ばれてきました。何と言いますか？ Ｍ： 1 ．これ、頼んでないんですが。 Ｍ： ．これ、頼んでないんですが。 ２．これ、頼まなかったかもしれません。 ２．これ、頼まなかったかもしれません。 ３．これ、頼んだことがありません。 ３．これ、頼んだことがありません。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "12",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">２ばん</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1491212611.805-4.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "病院に入院している友達のお見舞いに行きました。帰るとき、何と言いますか？ 病院に入院している友達のお見舞いに行きました。帰るとき、何と言いますか？ Ｆ： １．お疲れ様。 Ｆ： １．お疲れ様。 ２．お大事に。 ２．お大事に。 ３．お元気で。 ３．お元気で。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "13",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">３ばん</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1491212631.541-5.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "レポートを書くために、資料を見たいです。先生になんと言いますか？ レポートを書くために、資料を見たいです。先生になんと言いますか？ Ｍ： １資料を見ていただけませんか？ Ｍ： １資料を見ていただけませんか？ ２資料を見せていただけませんか ２資料を見せていただけませんか ３資料を見せてもいいですか ３資料を見せてもいいですか",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "14",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">４ばん</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1491212647.056-6.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "店で、ほしいと思った服があります。買う前に一度着たいです。何と言いますか？ 店で、ほしいと思った服があります。買う前に一度着たいです。何と言いますか？ Ｆ： １すみません、これ、着るといいですか？ Ｆ： １すみません、これ、着るといいですか？ ２すみません、これ、着させていいですか？ ２すみません、これ、着させていいですか？ ３すみません、これ、着てみてもいいですか？ ３すみません、これ、着てみてもいいですか？",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.1",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "1 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "日本に来てまだ 1 年なのに、日本語がお上手ですね。 日本に来てまだ 年なのに、日本語がお上手ですね。 Ｆ： １ええ、ちょっと上手ですね。 Ｆ： １ええ、ちょっと上手ですね。 ２そんなことありませんよ。 ２そんなことありませんよ。 3 ええ、 1 年しかいませんので。 ええ、 年しかいませんので。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.2",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "2 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "Ｆ：すみません、エアコンをもちょっと強くしていただけませんか？ Ｆ：すみません、エアコンをもちょっと強くしていただけませんか？ Ｍ： １あ、まだ暑かったですか、すみません Ｍ： １あ、まだ暑かったですか、すみません ２じゃ、消しましょうか？ ２じゃ、消しましょうか？ ３いいですよ、お願いします。 ３いいですよ、お願いします。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.3",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "3 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "Ｆ：山田さんが結婚してるって知ってました？ Ｆ：山田さんが結婚してるって知ってました？ Ｍ： １ええ、子供もいるそうですね。 Ｍ： １ええ、子供もいるそうですね。 ２ええ、来月、結婚しるんですよね。 ２ええ、来月、結婚しるんですよね。 ３うーん、たぶんしてないと思います ３うーん、たぶんしてないと思います",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.4",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "4 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "Ｆ：また時計止まったの？新しいのを買ったほうがいいんじゃない？ Ｆ：また時計止まったの？新しいのを買ったほうがいいんじゃない？ Ｍ： 1 僕は買ったほうがいいと思う。 Ｍ： 僕は買ったほうがいいと思う。 ２時計は要らないよ。 ２時計は要らないよ。 3 修理すれば、まだ使えるよ。 修理すれば、まだ使えるよ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.5",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "5 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "Ｍ：申し訳ありません。田中はただいま席を外しでおりますか。 Ｍ：申し訳ありません。田中はただいま席を外しでおりますか。 Ｆ： １ええ、それで結婚です。 Ｆ： １ええ、それで結婚です。 ２そうですか。じゃ、またお電話させていただきます。 ２そうですか。じゃ、またお電話させていただきます。 ３えつ。辞められたんですか！それは残念です。 ３えつ。辞められたんですか！それは残念です。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.6",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "6 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "Ｆ：金曜日のパーティーのチラシ、余ってたら 1 枚くてない？ Ｆ：金曜日のパーティーのチラシ、余ってたら 枚くてない？ Ｍ： 1 もちろん、あげないよ。 Ｍ： もちろん、あげないよ。 ２いいよ。はい、これ。 ２いいよ。はい、これ。 ３もうもらったよ。 ３もうもらったよ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.7",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "7 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "Ｆ：残っても捨てるだけだから、全部食べちゃって。 Ｆ：残っても捨てるだけだから、全部食べちゃって。 Ｍ： １うん。じゃあ、たべちゃおう。 Ｍ： １うん。じゃあ、たべちゃおう。 ２え？全部食べたの？ ２え？全部食べたの？ ３食べちゃったら、残らないよ。 ３食べちゃったら、残らないよ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.8",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "8 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "Ｍ：ここで待たせていただいてもよろしいですか？ Ｍ：ここで待たせていただいてもよろしいですか？ Ｆ： １ええ、どうぞ。 Ｆ： １ええ、どうぞ。 ２はい、待たせてもいいですよ。 ２はい、待たせてもいいですよ。 ３どうも、お待たせしました。 ３どうも、お待たせしました。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.9",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "9 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "Ｆ：かぎ、しめてくれた？ Ｆ：かぎ、しめてくれた？ Ｍ： １うん、しめてあげたよ。 Ｍ： １うん、しめてあげたよ。 ２うん、しめといたよ。 ２うん、しめといたよ。 ３うん、しめてくれたよ。 ３うん、しめてくれたよ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1491291041.046-File-Nge-N3-1.mp3"
+  }
+]

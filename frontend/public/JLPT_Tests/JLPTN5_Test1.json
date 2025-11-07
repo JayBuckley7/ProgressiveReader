@@ -1,0 +1,1640 @@
+[
+  {
+    "part": 0,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "にほんごの <strong>先生</strong> が すきです。",
+    "choices": [
+      "せんせい",
+      "せんせえ",
+      "せいせん",
+      "せんせ"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "せんせい",
+    "explanation": "先生（せんせい）：teacher",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.2",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "きょう、がっこうは <strong>休み</strong> です。",
+    "choices": [
+      "やつみ",
+      "やすみ",
+      "つやみ",
+      "すやみ"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "やすみ",
+    "explanation": "\"休み（やすみ）\" means \"rest\" or \"break\".",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.3",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "この <strong>本</strong> は おもしろいです。",
+    "choices": [
+      "ほん",
+      "はん",
+      "ぼん",
+      "ばん"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "ほん",
+    "explanation": "本 (hon): Book",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.4",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "かれに <strong>お金</strong> を かりました。",
+    "choices": [
+      "おかぬ",
+      "おがね",
+      "あかね",
+      "おかね"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "おかね",
+    "explanation": "Money (okin): (gold) currency",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.5",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "こうさてんを <strong>右</strong> へ まがってください。",
+    "choices": [
+      "みき",
+      "みぎ",
+      "ひだり",
+      "ひたり"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "みぎ",
+    "explanation": "Right (migi): the right side.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.6",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "つくえの <strong>上</strong> に かばんが あります。",
+    "choices": [
+      "いえ",
+      "なか",
+      "うえ",
+      "した"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "うえ",
+    "explanation": "Ue: (Up) above.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.7",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "ともだちと あそびに 行く <strong> 時間 </strong> が ありません。",
+    "choices": [
+      "じかん",
+      "しかん",
+      "じがん",
+      "じつかん"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "じかん",
+    "explanation": "時間（じかん）：Time:",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.8",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "この <strong> 電車</strong>は つぎの えきに とまります。",
+    "choices": [
+      "でんしゃ",
+      "てんしゃ",
+      "てんじゃ",
+      "でんじゃ"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "でんしゃ",
+    "explanation": "Densha: Electric train.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.9",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "この なかで いちばん <strong> 高い</strong> のは どれですか。",
+    "choices": [
+      "やすい",
+      "はやい",
+      "たかい",
+      "ちいさい"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "たかい",
+    "explanation": "\"Takai\" means \"high\" or \"expensive\" in English.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.10",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題１：＿＿の ことばは ひらがなで どう かきますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "あした にほんじんの <strong>友だち</strong> は あそびに きます。",
+    "choices": [
+      "どもだち",
+      "ともだち",
+      "どまだち",
+      "とまだち"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "ともだち",
+    "explanation": "友だち（ともだち）：Friend.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.1",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "なつやすみは ともだちと <strong>やま</strong> へ いきます。",
+    "choices": [
+      "世",
+      "出",
+      "山",
+      "川"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "山",
+    "explanation": "Yama: mountain",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.2",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "ほっかいどうは にほんの <strong>きた</strong> に あります。",
+    "choices": [
+      "南",
+      "北",
+      "西",
+      "東"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "北",
+    "explanation": "Kitas: North, northern direction.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.3",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "この とけいは <strong>ろくまんえん</strong>でした。",
+    "choices": [
+      "六万円",
+      "八万円",
+      "六方内",
+      "八方内"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "六万円",
+    "explanation": "Sixty thousand yen.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.4",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "あの おんなのこの <strong>あし</strong> は ながいです。",
+    "choices": [
+      "足",
+      "手",
+      "耳",
+      "目"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "足",
+    "explanation": "Ashi: Foot",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.5",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "こんばん、いっしょに えいがを <strong>み</strong> に いきませんか。",
+    "choices": [
+      "貝",
+      "買",
+      "見",
+      "目"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "見",
+    "explanation": "\"Miru\" means \"to see, to look at\" in English.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.6",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "いつも この <strong>みせ</strong> で ほんを かいます。",
+    "choices": [
+      "足",
+      "店",
+      "呈",
+      "庁"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "店",
+    "explanation": "Shop: (Mise), store.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.7",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "おおさかこうえんへ いく <strong>みち</strong> が わかりますか。",
+    "choices": [
+      "道",
+      "真",
+      "通",
+      "進"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "道",
+    "explanation": "Michi: road",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.8",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２ ＿＿＿の ことばは どう </span><span lang=\"JA\">かきますか。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "すみません、そこに <strong>はいらない</strong> で ください。",
+    "choices": [
+      "人らない",
+      "入らない",
+      "大らない",
+      "メらない"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "入らない",
+    "explanation": "\"はいります\" means \"to enter\" or \"to go in\".",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.1",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "タクシーを （ ）ください。",
+    "choices": [
+      "よんで",
+      "とって",
+      "のって",
+      "きいて"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "よんで",
+    "explanation": "I will call a taxi. Please V: Please do~",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.2",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "やまださんは くろい ぼうしを （ ）。",
+    "choices": [
+      "かかって います",
+      "かふって います",
+      "かぶって います",
+      "きて います"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "かぶって います",
+    "explanation": "I wear a hat. Vています: is/are/doing ~",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.3",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "これから ほんを よみますから、（ ）を かけます。",
+    "choices": [
+      "ベン",
+      "ぼうし",
+      "コート",
+      "めがね"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "めがね",
+    "explanation": "I put on my glasses.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.4",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "まいあさ、ジョギングをして、シャワーを （ ）。",
+    "choices": [
+      "はいります",
+      "いれます",
+      "あびます",
+      "よびます"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "あびます",
+    "explanation": "I take a shower.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.5",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "いままで （ ）にほんごを べんきょうしましたか。",
+    "choices": [
+      "いくつ",
+      "いくら",
+      "どのくらい",
+      "どちら"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "どのくらい",
+    "explanation": "How long have you been doing V?",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.6",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "はしを （ ）、みぎを まがって ください。",
+    "choices": [
+      "のぼって",
+      "わたって",
+      "いって",
+      "あるいて"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "わたって",
+    "explanation": "Cross the bridge.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.7",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "びょうきで （ ）に いきます。",
+    "choices": [
+      "びよういん",
+      "びょういん",
+      "かいぎしつ",
+      "びじゅつかん"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "びょういん",
+    "explanation": "Illness: being sick. I am going to the hospital. \"go to do V\"",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.8",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "げんかんで くつを （ ）ください。",
+    "choices": [
+      "ぬいで",
+      "きいて",
+      "かいて",
+      "かぶって"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "ぬいで",
+    "explanation": "くつを ぬぎます：I take off my shoes.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.9",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "（ ）ともだちと レストランへ いきます。",
+    "choices": [
+      "よく",
+      "もう",
+      "たくさん",
+      "あまり"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "よく",
+    "explanation": "\"よく Vます\" translates to \"often do V\" or \"frequently do V\" in English.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.10",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３（ ( ）に なにを いれますか。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "Ａ「この りんごは （ ）ですか。」 Ｂ「５０えんです。」",
+    "choices": [
+      "いかが",
+      "いくつ",
+      "いくら",
+      "なんこ"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "いくら",
+    "explanation": "\"Ikura: Asking for the price.\"",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.1",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４＿＿＿＿の ぶんと だいたい おなじ いみの ぶんが あります。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "ゆうべ やまださんに でんわを しました。",
+    "choices": [
+      "おとといの あさ やまださんに でんわを しました。",
+      "おとといの よる やまださんに でんわを しました。",
+      "きのうの あさ やまださんに でんわを しました。",
+      "きのうの よる やまださんに でんわを しました。"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "きのうの よる やまださんに でんわを しました。",
+    "explanation": "Yesterday evening.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.2",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４＿＿＿＿の ぶんと だいたい おなじ いみの ぶんが あります。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "この ほんを かして ください。",
+    "choices": [
+      "この ほんを かえしたいです。",
+      "この ほんを かしたいです。",
+      "この ほんを かりたいです。",
+      "この ほんを かいたいです。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "この ほんを かりたいです。",
+    "explanation": "Please lend me = I want to borrow.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.3",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４＿＿＿＿の ぶんと だいたい おなじ いみの ぶんが あります。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "あきらさんは けいこさんの きょうだいです。",
+    "choices": [
+      "あきらさんは けいこさんの おじさんです。",
+      "あきらさんは けいこさんの おとうさんです。",
+      "あきらさんは けいこさんの おにいさんです。",
+      "あきらさんは けいこさんの おじいさんです。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "あきらさんは けいこさんの おにいさんです。",
+    "explanation": "きょうだい： Siblings Siblings おにいさん: Older brother Older brother おじさん: Uncle Uncle おじいさん: Grandfather Grandfather おとうさん: \"Dad\" or \"Father\"",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.4",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４＿＿＿＿の ぶんと だいたい おなじ いみの ぶんが あります。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "きのうの ばんは ひまでした。",
+    "choices": [
+      "きのうの ばんは いそがしくなかったです。",
+      "きのうの ばんは いそがしかったです。",
+      "きのうの ばんは うるさくなかったです。",
+      "きのうの ばんは うるさかったです。"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "きのうの ばんは いそがしくなかったです。",
+    "explanation": "Hima: Free time.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.5",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４＿＿＿＿の ぶんと だいたい おなじ いみの ぶんが あります。１・２・３・４から いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "あそこは ゆうびんきょくです。",
+    "choices": [
+      "あそこでは パンや みずを うって います。",
+      "あそこでは はがきや きってを うって います。",
+      "あそこでは いすや つくえを うって います。",
+      "あそこでは おちゃや おかしを うって います。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "あそこでは はがきや きってを うって います。",
+    "explanation": "Post office: (selling stamps and postcards)",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "私は、日本（ ）このカメラを買(か)いました。",
+    "choices": [
+      "に",
+      "で",
+      "が",
+      "を"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "で",
+    "explanation": "Perform an action at a certain location using the particle で.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.2",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "リンさんは ベトナム人です。アンさん（ ）ベトナム人です。",
+    "choices": [
+      "は",
+      "だけ",
+      "も",
+      "が"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "も",
+    "explanation": "Also, use the particle も.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.3",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "（ ）テニスをします。",
+    "choices": [
+      "まいにち",
+      "まいにちに",
+      "まいにちを",
+      "ときどきに"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "まいにち",
+    "explanation": "After \"まいにち\" there is no accompanying particle.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.4",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "ひるやすみは（ ）です。",
+    "choices": [
+      "12 時(じ) に",
+      "12 時(じ) で",
+      "12 時(じ) から",
+      "12 時(じ) まえに"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "12<時(じ)>から",
+    "explanation": "Take a break at 12 o'clock. Choose 12:00 as the starting time.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.5",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "彼(かれ)は 学校(がっこう)に（ ）アルバイトをします。",
+    "choices": [
+      "かよい",
+      "かよいます",
+      "かよった",
+      "かよいながら"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "かよいながら",
+    "explanation": "While doing something, choose a sentence using \"~ nagara\".",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.6",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "お金がたくさん（ ）車(くるま)を買(か)いません。",
+    "choices": [
+      "いたら",
+      "いても",
+      "あったら",
+      "あっても"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "あっても",
+    "explanation": "Despite ~, choose the right one.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.7",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "すみません、トイレは（ ）ですか。",
+    "choices": [
+      "どちら",
+      "どんな",
+      "どの",
+      "どなた"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "どちら",
+    "explanation": "Ask \"where\" politely, choose どちら.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.8",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "まいばん（ ）にっきを書(か)きます。",
+    "choices": [
+      "ねたら",
+      "ねてから",
+      "ねるまえに",
+      "ねるまでに"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ねるまえに",
+    "explanation": "Before going to bed, choose.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.9",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "去年(きょねん)の12月(がつ)は（ ）。",
+    "choices": [
+      "さむいです",
+      "さむいでした",
+      "さむかったです",
+      "さむかったでした"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "さむかったです",
+    "explanation": "The past of the adjective ending in \"い\" is \"さむかったです\".",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.10",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "あたらしいコンピューターが（ ）。",
+    "choices": [
+      "ありたいです",
+      "ありたくないです",
+      "ほしいです",
+      "いたいです"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ほしいです",
+    "explanation": "Desire for something, choose \"ほしい\" in Japanese.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.11",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "にちようび、こどもと あそんだり、本を（ ）します。",
+    "choices": [
+      "よみたり",
+      "よんたり",
+      "よむたり",
+      "よんだり"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "よんだり",
+    "explanation": "The pattern ～たり～たりします is used to list actions.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.12",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "どうして きのう 会社(かいしゃ)を（ ）んですか。",
+    "choices": [
+      "やすんだ",
+      "やすみ",
+      "やすむ",
+      "やすみな"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "やすんだ",
+    "explanation": "The time was yesterday, so the past tense verb to choose is やすんだ.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.13",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "たなかさんは タイ語(ご)が すこし（ ）。",
+    "choices": [
+      "はなします",
+      "はなせます",
+      "いいます",
+      "しゃべります"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "はなせます",
+    "explanation": "The particle \"が\" is used in the potential form, and the correct answer is \"はなせます\".",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.14",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "くだもの（ ）りんごが いちばん 好きです。",
+    "choices": [
+      "に",
+      "で",
+      "が",
+      "なか"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "で",
+    "explanation": "Among the types of fruits, choose the particle \"で\".",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.15",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "給料(きゅうりょう)も（ ）、残業(ざんぎょう)も 少(すく)ないですから、この会社(かいしゃ)に入った。",
+    "choices": [
+      "たかいし",
+      "たかかった",
+      "たかいです",
+      "たかいから"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "たかいし",
+    "explanation": "The sentence pattern \"~shi ~shi ~kara\" is used to list reasons.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.16",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: normal;\"><strong><span lang=\"JA\">もんだい１：つぎの ぶんの（ ）に なにを いれますか。１．２．３．４の 中から いちばん いい ものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "かいぎで 意見(いけん)（ ）言いました。",
+    "choices": [
+      "を",
+      "と",
+      "だと",
+      "だを"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "を",
+    "explanation": "Express opinions, choose the particle を. Note: the particle \"と\" is used when quoting a sentence.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.1",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：つぎの </span>1 . 2. 3. 4<span lang=\"JA\">で ぶんを つくります。 そのときに </span><span lang=\"JA\">★ </span><span lang=\"JA\">にはいる ものは </span>1 .2 .3 .4<span lang=\"JA\">の どれですか。ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">例：これは <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> ★ <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> です。</span></p> <p>1.<span lang=\"JA\">が 2</span>.<span lang=\"JA\">山田さん </span>3.<span lang=\"JA\">ケーキ</span><span lang=\"JA\"> </span><span style=\"text-decoration: underline;\"><strong>4.(つく)<span lang=\"JA\">った</span></strong></span></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">これは 山田さん が 作った ケーキ です。→答え：</span>4</strong></p>",
+    "prompt": "わたし _ _ * _ です。",
+    "choices": [
+      "スポーツ",
+      "が",
+      "は",
+      "すき"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "が",
+    "explanation": "わたし は スポーツ (★が) すき です。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.2",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：つぎの </span>1 . 2. 3. 4<span lang=\"JA\">で ぶんを つくります。 そのときに </span><span lang=\"JA\">★ </span><span lang=\"JA\">にはいる ものは </span>1 .2 .3 .4<span lang=\"JA\">の どれですか。ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">例：これは <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> ★ <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> です。</span></p> <p>1.<span lang=\"JA\">が 2</span>.<span lang=\"JA\">山田さん </span>3.<span lang=\"JA\">ケーキ</span><span lang=\"JA\"> </span><span style=\"text-decoration: underline;\"><strong>4.(つく)<span lang=\"JA\">った</span></strong></span></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">これは 山田さん が 作った ケーキ です。→答え：</span>4</strong></p>",
+    "prompt": "わたしの _ * _ _ です。",
+    "choices": [
+      "あの",
+      "くろい",
+      "は",
+      "かさ"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "あの",
+    "explanation": "わたしの は (★あの) くろい かさ です。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.3",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：つぎの </span>1 . 2. 3. 4<span lang=\"JA\">で ぶんを つくります。 そのときに </span><span lang=\"JA\">★ </span><span lang=\"JA\">にはいる ものは </span>1 .2 .3 .4<span lang=\"JA\">の どれですか。ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">例：これは <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> ★ <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> です。</span></p> <p>1.<span lang=\"JA\">が 2</span>.<span lang=\"JA\">山田さん </span>3.<span lang=\"JA\">ケーキ</span><span lang=\"JA\"> </span><span style=\"text-decoration: underline;\"><strong>4.(つく)<span lang=\"JA\">った</span></strong></span></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">これは 山田さん が 作った ケーキ です。→答え：</span>4</strong></p>",
+    "prompt": "きのう * _ _ _ でした。",
+    "choices": [
+      "も",
+      "へ",
+      "いきません",
+      "どこ"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "どこ",
+    "explanation": "きのう (★どこ) へ も いきません でした。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.4",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：つぎの </span>1 . 2. 3. 4<span lang=\"JA\">で ぶんを つくります。 そのときに </span><span lang=\"JA\">★ </span><span lang=\"JA\">にはいる ものは </span>1 .2 .3 .4<span lang=\"JA\">の どれですか。ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">例：これは <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> ★ <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> です。</span></p> <p>1.<span lang=\"JA\">が 2</span>.<span lang=\"JA\">山田さん </span>3.<span lang=\"JA\">ケーキ</span><span lang=\"JA\"> </span><span style=\"text-decoration: underline;\"><strong>4.(つく)<span lang=\"JA\">った</span></strong></span></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">これは 山田さん が 作った ケーキ です。→答え：</span>4</strong></p>",
+    "prompt": "母 _ _ _ * おいしいです。",
+    "choices": [
+      "りょうり",
+      "つくる",
+      "は",
+      "が"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "は",
+    "explanation": "母 が つくる りょうり (★は) おいしいです。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.5",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：つぎの </span>1 . 2. 3. 4<span lang=\"JA\">で ぶんを つくります。 そのときに </span><span lang=\"JA\">★ </span><span lang=\"JA\">にはいる ものは </span>1 .2 .3 .4<span lang=\"JA\">の どれですか。ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">例：これは <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> ★ <span style=\"color: #4a4a4a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;\"> </span> です。</span></p> <p>1.<span lang=\"JA\">が 2</span>.<span lang=\"JA\">山田さん </span>3.<span lang=\"JA\">ケーキ</span><span lang=\"JA\"> </span><span style=\"text-decoration: underline;\"><strong>4.(つく)<span lang=\"JA\">った</span></strong></span></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">これは 山田さん が 作った ケーキ です。→答え：</span>4</strong></p>",
+    "prompt": "すずきさんは * _ _ _ です。",
+    "choices": [
+      "ひと",
+      "を",
+      "めがね",
+      "かけている"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "めがね",
+    "explanation": "すずきさんは (★めがね) を かけている ひとです。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.1",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい３：つぎの [２２] から [２６] に なにを いれますか。それぞれ </span>1 .2 .3 .4<span lang=\"JA\">の なかから いちばん いい もの ひとつ えらびなさい。</span></strong></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\"> らいしゅう 私としゃちょうは タイ [２２] しゅっちょうに 行きます。しゃちょうは 日本 [２３] 行きますが、私は ベトナムから 行きます。おなじ ひこうきに [２４] が、タイの くうこうで 会います。タイで、いろいろな くだものを うっているところを 見に行きます。パイナップルや すいか [２５] です。今 日本と ベトナムは さむいですが、タイは あついです。 [２６] です。</span></p>",
+    "prompt": "22",
+    "choices": [
+      "へ",
+      "で",
+      "を",
+      "から"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "へ",
+    "explanation": "Go somewhere, use へ.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.2",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい３：つぎの [２２] から [２６] に なにを いれますか。それぞれ </span>1 .2 .3 .4<span lang=\"JA\">の なかから いちばん いい もの ひとつ えらびなさい。</span></strong></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\"> らいしゅう 私としゃちょうは タイ [２２] しゅっちょうに 行きます。しゃちょうは 日本 [２３] 行きますが、私は ベトナムから 行きます。おなじ ひこうきに [２４] が、タイの くうこうで 会います。タイで、いろいろな くだものを うっているところを 見に行きます。パイナップルや すいか [２５] です。今 日本と ベトナムは さむいですが、タイは あついです。 [２６] です。</span></p>",
+    "prompt": "23",
+    "choices": [
+      "へ",
+      "で",
+      "を",
+      "から"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "から",
+    "explanation": "From somewhere, use から.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.3",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい３：つぎの [２２] から [２６] に なにを いれますか。それぞれ </span>1 .2 .3 .4<span lang=\"JA\">の なかから いちばん いい もの ひとつ えらびなさい。</span></strong></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\"> らいしゅう 私としゃちょうは タイ [２２] しゅっちょうに 行きます。しゃちょうは 日本 [２３] 行きますが、私は ベトナムから 行きます。おなじ ひこうきに [２４] が、タイの くうこうで 会います。タイで、いろいろな くだものを うっているところを 見に行きます。パイナップルや すいか [２５] です。今 日本と ベトナムは さむいですが、タイは あついです。 [２６] です。</span></p>",
+    "prompt": "24",
+    "choices": [
+      "いきます",
+      "いきません",
+      "のります",
+      "のりません"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "のりません",
+    "explanation": "\"I will not ride together on the same flight\" using the phrase \"norimasen\" in Japanese.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.4",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい３：つぎの [２２] から [２６] に なにを いれますか。それぞれ </span>1 .2 .3 .4<span lang=\"JA\">の なかから いちばん いい もの ひとつ えらびなさい。</span></strong></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\"> らいしゅう 私としゃちょうは タイ [２２] しゅっちょうに 行きます。しゃちょうは 日本 [２３] 行きますが、私は ベトナムから 行きます。おなじ ひこうきに [２４] が、タイの くうこうで 会います。タイで、いろいろな くだものを うっているところを 見に行きます。パイナップルや すいか [２５] です。今 日本と ベトナムは さむいですが、タイは あついです。 [２６] です。</span></p>",
+    "prompt": "25",
+    "choices": [
+      "や",
+      "と",
+      "など",
+      "でも"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "など",
+    "explanation": "The phrase \"～や～など\" is used to list some typical things.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.5",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい３：つぎの [２２] から [２６] に なにを いれますか。それぞれ </span>1 .2 .3 .4<span lang=\"JA\">の なかから いちばん いい もの ひとつ えらびなさい。</span></strong></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\"> らいしゅう 私としゃちょうは タイ [２２] しゅっちょうに 行きます。しゃちょうは 日本 [２３] 行きますが、私は ベトナムから 行きます。おなじ ひこうきに [２４] が、タイの くうこうで 会います。タイで、いろいろな くだものを うっているところを 見に行きます。パイナップルや すいか [２５] です。今 日本と ベトナムは さむいですが、タイは あついです。 [２６] です。</span></p>",
+    "prompt": "26",
+    "choices": [
+      "たのしい",
+      "たのしみ",
+      "たのしむ",
+      "たのしかった"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "たのしみ",
+    "explanation": "\"Tanoshimi desu\" means excitement, anticipation.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "4.1",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４：つぎの ぶんを 読んで しつもんに こたえて ください。こあては </span>1. 2. 3. 4 <span lang=\"JA\">から いちばん いいものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "あしたから、私は りょうしんと りょこうに 行きます。でんしゃに乗(の)ってから、しんかんせんに のりかえます。でんしゃの チケットは、ひとりで 300円です。しんかんせんの チケットは、ひとりで １万(まん)円です。 [?]: チケットは、ぜんぶで いくらですか。",
+    "choices": [
+      "10300円",
+      "13000円",
+      "39000円",
+      "30900円"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "30900円",
+    "explanation": "Three bus tickets cost 900. Shinkansen tickets for three people cost 30,000. The total amount is 30900 yen.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "4.2",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">もんだい４：つぎの ぶんを 読んで しつもんに こたえて ください。こあては </span>1. 2. 3. 4 <span lang=\"JA\">から いちばん いいものを ひとつ えらびなさい。</span></strong></p>",
+    "prompt": "きのう スーパーへ 行きました。りんごを ５つと みかんを １０かいました。かえってから、きんじょの 人に りんごを ２つ もらいました。きんじょの人に みかんを ５つ あげました。みかんを ２つと りんごを １つ たべました。 [?]: 今 いくつ ありますか。",
+    "choices": [
+      "りんご７つ、みかん５つ",
+      "りんご６つ、みかん５つ",
+      "りんご６つ、みかん３つ",
+      "りんご８つ、みかん４つ"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "りんご６つ、みかん３つ",
+    "explanation": "Apple: buy 5, get 2 more, then eat 1, still have 6. Mikan: bought 10, gave away 5, ate 2, have 3 left.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "5.1",
+    "parent_question_number": "5",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい５：つぎの ぶんを 読んで しつもんに こたえて ください。こあては </span>1. 2. 3. 4 <span lang=\"JA\">から いちばん いいものを ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">私の かぞくは ちちと あにと おとうとです。ちちは じどうしゃの かいしゃで はたらいています。しごとが いそがしいですから まいにち よる おそく いえに かえります。あには いま アメリカの だいがくで べんきょうしています。わたしと おとうとは こうこうに 行っています。</span></p> <p><span lang=\"JA\"> ときどき、ちちの おとうとが あそびに 来ます。いつも ケーキを かってくれます。りょこう会社で はたらいていますから いつも おもしろい はなしを してくれます</span></p> <p style=\"margin-bottom: 0in; line-height: 150%;\"><span style=\"font-family: 'Yu Mincho';\"><span style=\"font-size: 11pt;\"><span lang=\"ja-JP\">万</span></span></span></p>",
+    "prompt": "リーさんの かぞくは 何人 いますか。",
+    "choices": [
+      "3人",
+      "5人",
+      "4人",
+      "6人"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "4人",
+    "explanation": "The family consists of a father, an older brother, and a younger brother, totaling 4 people.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "5.2",
+    "parent_question_number": "5",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい５：つぎの ぶんを 読んで しつもんに こたえて ください。こあては </span>1. 2. 3. 4 <span lang=\"JA\">から いちばん いいものを ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">私の かぞくは ちちと あにと おとうとです。ちちは じどうしゃの かいしゃで はたらいています。しごとが いそがしいですから まいにち よる おそく いえに かえります。あには いま アメリカの だいがくで べんきょうしています。わたしと おとうとは こうこうに 行っています。</span></p> <p><span lang=\"JA\"> ときどき、ちちの おとうとが あそびに 来ます。いつも ケーキを かってくれます。りょこう会社で はたらいていますから いつも おもしろい はなしを してくれます</span></p> <p style=\"margin-bottom: 0in; line-height: 150%;\"><span style=\"font-family: 'Yu Mincho';\"><span style=\"font-size: 11pt;\"><span lang=\"ja-JP\">万</span></span></span></p>",
+    "prompt": "だれが あそびに きますか。",
+    "choices": [
+      "おじさん",
+      "おばあさん",
+      "おじいさん",
+      "おばさん"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "おじさん",
+    "explanation": "My father's younger brother is called \"おじさん\" in Japanese, which means \"uncle\" in English.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "5.3",
+    "parent_question_number": "5",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい５：つぎの ぶんを 読んで しつもんに こたえて ください。こあては </span>1. 2. 3. 4 <span lang=\"JA\">から いちばん いいものを ひとつ えらびなさい。</span></strong></p> <p><span lang=\"JA\">私の かぞくは ちちと あにと おとうとです。ちちは じどうしゃの かいしゃで はたらいています。しごとが いそがしいですから まいにち よる おそく いえに かえります。あには いま アメリカの だいがくで べんきょうしています。わたしと おとうとは こうこうに 行っています。</span></p> <p><span lang=\"JA\"> ときどき、ちちの おとうとが あそびに 来ます。いつも ケーキを かってくれます。りょこう会社で はたらいていますから いつも おもしろい はなしを してくれます</span></p> <p style=\"margin-bottom: 0in; line-height: 150%;\"><span style=\"font-family: 'Yu Mincho';\"><span style=\"font-size: 11pt;\"><span lang=\"ja-JP\">万</span></span></span></p>",
+    "prompt": "リーさんは、いま だれと すんでいますか。",
+    "choices": [
+      "りょうしんと おにいさん",
+      "ちちと おとうと",
+      "おじさんと おとうと",
+      "おにいさんと おじさん"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "ちちと おとうと",
+    "explanation": "Living with father and younger brother.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "6.1",
+    "parent_question_number": "6",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい５：下の ひょうは、「えいがの </span>()(じかん)<span lang=\"JA\">」と ｢バスの 時間｣です。つぎの ぶんしょうを </span>()(よ)<span lang=\"JA\">んで、しつもんに こたえて ください。こたえは、</span>1 .2 .3 .4<span lang=\"JA\">から いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p class=\"MsoNormal\" style=\"text-indent: 14.25pt; line-height: 150%;\"><span lang=\"JA\">あした ムンさんと </span>()(おがわまち)<span lang=\"JA\">で、えいがを </span>()(み)<span lang=\"JA\">ます。</span>()(おがわまち)<span lang=\"JA\">では、</span>()(いま)<span lang=\"JA\"> いろいろな えいが が あります。おもしろい えいがが </span>()(み)<span lang=\"JA\">たいです。ムンさんは どうぶつの </span>()(はなし)<span lang=\"JA\">が すきですが、わたしは </span>()(す)<span lang=\"JA\">きではありません。</span>()(かえ)<span lang=\"JA\">りは、バスで </span>()(かえ)<span lang=\"JA\">ります。ムンさんも わたしも </span>9()(じまえ)<span lang=\"JA\">に アパートの ある </span>()(うみやままち)<span lang=\"JA\">に もどりたいです。</span></p> <p align=\"center\"><span lang=\"JA\">えいがの </span>()(じかん)</p> <p align=\"center\"><span lang=\"JA\">えいが</span></p> <p align=\"center\">()(じかん)</p> <p align=\"center\"><span lang=\"JA\">ないよう</span></p> <p><span lang=\"JA\">おかあさんは どこ</span></p> <p><span lang=\"JA\">１９：０５～２０：５５</span></p> <p><span lang=\"JA\">ケンタが おかあさんを さがす </span>()(はなし)</p> <p><span lang=\"JA\">ぼくの いぬ「ゴロウ」</span></p> <p><span lang=\"JA\">１８：４５～２０：２５</span></p> <p><span lang=\"JA\">いぬの ゴロウが りょこうする </span>()(はなし)</p> <p><span lang=\"JA\">サクラ</span></p> <p><span lang=\"JA\">１９：００～２０：３５</span></p> <p><span lang=\"JA\">サクラが まんがを かく</span>()(はなし)</p> <p><span lang=\"JA\">ゆきの 日に</span></p> <p><span lang=\"JA\">１８：３０～２０：２０</span></p> <p><span lang=\"JA\">ゆきの 日に ともだちと あう </span>()(はなし)</p> <p align=\"center\"><span lang=\"JA\">バスの </span>()(じかん)</p> <p><span lang=\"JA\"> えいがかん</span>()(まえ)<span lang=\"JA\"> ～ </span>()(うみやままち)</p> <p align=\"center\">20<span lang=\"JA\">：</span>30 20<span lang=\"JA\">：</span>55</p> <p align=\"center\">20<span lang=\"JA\">：</span>45 21<span lang=\"JA\">：</span>10</p>",
+    "prompt": "どの えいがを 見(み)ますか。",
+    "choices": [
+      "おかあさんは どこ？",
+      "ぼくの いぬ「ゴロウ」",
+      "サクラ",
+      "ゆきの 日に"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "ゆきの 日に",
+    "explanation": "\"On the day of the snow\": In the passage, it is written that both Mun and I want to return to Umiyamamachi, where our apartment is located, before 9 o'clock. To arrive before 9am, you have to take the 8:30 bus as the 8:45 bus will arrive later than 9am. Therefore, the movie must end before 8:30. Based on this, eliminate the first and third movies. The second movie is about a dog (いぬの ゴロウが りょこうする ), so eliminate this option because the author doesn't like animals (わたしは すきではありません). Therefore, the correct answer is the fourth option.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 2,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい１：</span></strong></p> <p><strong><span lang=\"JA\">もんだい１では、はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><span lang=\"JA\">れい：</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489115470.168-1-1.png\"/>",
+    "prompt": "れい:",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "(いえ) で、 (おんな) の (ひと) が (おとこ) の (ひと) と (はな) しています。 (おんな) の (ひと) は、 (おとこ) の (ひと) に (なに) を (だ) しますか。 家 で、 女 の 人 が 男 の 人 と 話 しています。 女 の 人 は、 男 の 人 に 何 を 出 しますか。 F: (きょう) は (さむ) いですね。 (あたた) かい ものを (の) みませんか。 今日 は 寒 いですね。 温 かい ものを 飲 みませんか。 M: ありがとうございます。 ありがとうございます。 F: コーヒー、こうちゃ、あと。お (ちゃ) もありますけど。 コーヒー、こうちゃ、あと。お 茶 もありますけど。 M: じゃ、こうちゃを お (ねが) いします。 じゃ、こうちゃを お 願 いします。 F: さとうや ミルクは (い) れますか。 さとうや ミルクは 入 れますか。 M: あ、はい。 あ、はい。 (おんな) の (ひと) は、 (おとこ) の (ひと) に (なに) を (だ) しますおか。 女 の 人 は、 男 の 人 に 何 を 出 しますおか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">１ばん： </span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489115488.018-2-2.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "(りょこうがいしゃ) の (ひと) が (がくせい) に (はな) しています。 (がくせい) は、はじめに (なに) をしますか。 (りょこうがいしゃ) の (ひと) が (がくせい) に (はな) しています。 (がくせい) は、はじめに (なに) をしますか。 (りょこうがいしゃ) の 旅行会社 の (ひと) が (がくせい) に (はな) しています。 (がくせい) は、はじめに (なに) をしますか。 (ひと) が 人 が (がくせい) に (はな) しています。 (がくせい) は、はじめに (なに) をしますか。 (がくせい) に 学生 に (はな) しています。 (がくせい) は、はじめに (なに) をしますか。 (はな) しています。 話 しています。 (がくせい) は、はじめに (なに) をしますか。 (がくせい) は、はじめに 学生 は、はじめに (なに) をしますか。 (なに) をしますか。 何 をしますか。 F: さくら (にほんごがっこう) の みなさん、ここに (き) て ください。 (いま) から みんなで (しゃしん) をとります 。 を とった あとは フリータイムです。ご (はん) を (た) べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) りましょう。 F: さくら (にほんごがっこう) の みなさん、ここに (き) て ください。 (いま) から みんなで (しゃしん) をとります 。 日本語学校 の みなさん、ここに (き) て ください。 (いま) から みんなで (しゃしん) をとります 。 来 て ください。 (いま) から みんなで (しゃしん) をとります 今 から みんなで (しゃしん) をとります 写真 をとります 。 。 。 写真 を とった あとは フリータイムです。ご (はん) を (た) べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) を とった あとは フリータイムです。ご (はん) を (た) べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) を とった あとは フリータイムです。ご (はん) を (た) べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) を とった あとは フリータイムです。ご (はん) を (た) べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 飯 を (た) べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 食 べたり、お (てら) を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 寺 を (み) たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 見 たり、 (か) い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 買 い (もの) を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 物 を したり、 (す) きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 好 きなことをしてください。２ (じ) に また ここへ (き) て ください。では、 (しゃしん) を (と) 時 に また ここへ (き) て ください。では、 (しゃしん) を (と) 来 て ください。では、 (しゃしん) を (と) 写真 を (と) 撮 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 りましょう。 (がくせい) は、はじめに (なに) をしますか。 (がくせい) は、はじめに (なに) をしますか。 学生 は、はじめに (なに) をしますか。 何 をしますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\" style=\"font-size: 11.0pt; line-height: 115%; font-family: 'MS Mincho'; mso-ascii-font-family: 'Courier New'; mso-hansi-font-family: 'Courier New'; mso-bidi-font-family: 'Courier New'; mso-ansi-language: EN-US; mso-fareast-language: JA; mso-bidi-language: AR-SA;\">２ばん</span></strong></p>",
+    "prompt": "",
+    "choices": [
+      "２かい",
+      "４かい",
+      "６かい",
+      "８かい"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "６かい",
+    "explanation": "デパートで、 (おとこ) の (ひと) と (みせ) の (ひと) が (はな) しています。 (おとこ) の (ひと) は (なんかい) に (い) きますか。 デパートで、 男 の 人 と 店 の 人 が 話 しています。 男 の 人 は 何階 に 行 きますか。 M: あのう、すみません。めがね (う) り (ば) はどこですか。 あのう、すみません。めがね 売 り 場 はどこですか。 F: ６ (かい) でございます。 ６ 階 でございます。 M: ６ (かい) ですね。ここは (なんかい) ですか。 ６ 階 ですね。ここは 何階 ですか。 F: ２ (かい) でございます。 ２ 階 でございます。 M: あ、どうも。 あ、どうも。 (おとこ) の (ひと) は、 (なんかい) に (い) きますか。 男 の 人 は、 何階 に 行 きますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoListParagraph\" style=\"margin-left: 42.0pt; mso-add-space: auto; text-align: justify; text-justify: inter-ideograph;\"><strong><span lang=\"JA\">３ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489115510.569-3-3.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "(きょうしつ) で、 (せんせい) が (はな) しいます。 (がくせい) は (あした) 、どの (ほん) を (も) ってきますか。 教室 で、 先生 が 話 しいます。 学生 は 明日 、どの 本 を 持 ってきますか。 F: (あした) から (にほんご) の (くらす) が (はじ) まります。この 「 (にほんご) １」は (まいにちつか) いますから、 (わす) れないで ください 。「２」は、 (いま) は (つか) いません。それから、 (あした) は (かようび) ですから、 (かんじ) の (じゅぎょう) も あります。 漢字の本も 持ってきて ください。 明日 から 日本語 の クラス が 始 まります。この 「 日本語 １」は 毎日使 いますから、 忘 れないで ください 。「２」は、 今 は 使 いません。それから、 明日 は 火曜日 ですから、 漢字 の 授業 も あります。 漢字の本も 持ってきて ください。 M: 先生、この本は？ 先生、この本は？ F: その 本は (れんしゅう) に (つか) う 本です。うちで (つか) ってください。 その 本は 練習 に 使 う 本です。うちで 使 ってください。 (がくせい) は (あした) 、どの (ほん) を (も) ってきますか。 学生 は 明日 、どの 本 を 持 ってきますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoListParagraph\" style=\"margin-left: 42.0pt; mso-add-space: auto; text-align: justify; text-justify: inter-ideograph;\"><strong><span lang=\"JA\">４ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489115528.57-4.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "女の人と 男の人が 話しています。男の人は、何を しますか。 女の人と 男の人が 話しています。男の人は、何を しますか。 F: この (へや) 、 (あつ) いですね。 この 部屋 、 暑 いですね。 M: そうですね。 (まど) を (あ) けましょうか。 そうですね。 窓 を 開 けましょうか。 F: いえ、今日は (かぜ) が (つよ) いですから。 (まど) は (あ) けないでください。エアコンをつけましょう。 いえ、今日は 風 が 強 いですから。 窓 は 開 けないでください。エアコンをつけましょう。 M: そうですね。 そうですね。 男の人は、何をしますか。 男の人は、何をしますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "6",
+    "parent_content": "<p class=\"MsoListParagraph\" style=\"margin-left: 42.0pt; mso-add-space: auto; text-align: justify; text-justify: inter-ideograph;\"><span lang=\"JA\">５ばん：</span></p> <p><img src=\"http://jlpt.mazii.net/api/upload/media/1489115547.949-5-5.png\"/></p>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "男の学生 と 女の学生が (はな) しています。女の学生は どの カーテンを (か) いますか。 男の学生 と 女の学生が 話 しています。女の学生は どの カーテンを 買 いますか。 M: (あした) は (なに) をしますか。 明日 は 何 をしますか。 F: カーテンを (か) いますか。 カーテンを 買 いますか。 M: カーテンを？ (ちい) さい カーテンですか。 カーテンを？ 小 さい カーテンですか。 F: いえ、 (おお) きい カーテンです 。わたしの (へや) に (さいしょ) から ありましたが、あまり (す) きな いえ、 (おお) きい カーテンです 。わたしの (へや) に (さいしょ) から ありましたが、あまり (す) きな 大 きい カーテンです 。わたしの 部屋 に 最初 から ありましたが、あまり 好 きな デザインではありませんでした。 (はな) の (え) で …(・・・) 。 デザインではありませんでした。 花 の 絵 で 。 M: そうでしたか。どんな カーテンにしますか。 そうでしたか。どんな カーテンにしますか。 F: (しろ) で、 (なに) も かいていない ものにします 。 (しろ) で、 (なに) も かいていない ものにします 。 白 で、 何 も かいていない ものにします 。 女の学生は どの カーテンを (か) いますか 。 女の学生は どの カーテンを 買 いますか",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "7",
+    "parent_content": "<p class=\"MsoListParagraph\" style=\"margin-left: 7.1pt; mso-add-space: auto; text-align: justify; text-justify: inter-ideograph;\"><strong><span lang=\"JA\">６ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489119848.358-6-6.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "(くるま) の (うし) ろで、男の人 と 女の人が 話しています。男の (ひと) は、どのかばんを (と) りますか。 車 の 後 ろで、男の人 と 女の人が 話しています。男の 人 は、どのかばんを 取 りますか。 M: (げん) さんの かばんは どれ？ 原 さんの かばんは どれ？ F: その (しろ) いの 。 その 白 いの 。 M: これ？ これ？ F: ううん、その (よこ) の。 ううん、その 横 の。 M: ああ、これ。 けっこう (おお) きいね。 ああ、これ。 けっこう 大 きいね。 男の人 は、どのかばんを (と) りますか。 男の人 は、どのかばんを 取 りますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "8",
+    "parent_content": "<p class=\"MsoListParagraph\" style=\"margin-left: 7.1pt; mso-add-space: auto;\"><strong><span lang=\"JA\">７ばん：</span></strong></p>",
+    "prompt": "",
+    "choices": [
+      "1 ばんホームのでんしゃ。",
+      "2 ばんホームのでんしゃ。",
+      "3 ばんホームのでんしゃ。",
+      "4 ばんホームのでんしゃ。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3 ばんホームのでんしゃ。",
+    "explanation": "(えき) で、女の人 と (えきいん) が (はな) しています。女の人は、 (なんばん) ホームの (でんしゃ) に (の) りますか。 駅 で、女の人 と 駅員 が 話 しています。女の人は、 何番 ホームの 電車 に 乗 りますか。 F: すみません、 １ (ばん) ホームの (でんしゃ) は (きょうと) に (い) きますか。 すみません、 １ 番 ホームの 電車 は 京都 に 行 きますか。 M: (きょうと) ですか。いえ。１番ホームと ２番ホームは (おおさか) いきです。 (きょうと) に (い) くのは、 ３番と ４番です。 京都 ですか。いえ。１番ホームと ２番ホームは 大阪 いきです。 京都 に 行 くのは、 ３番と ４番です。 F: ３番と ４番ですね。 ３番と ４番ですね。 M: あ、でも、今日は 日曜日ですから、４番ホームの 電車は (きょうと) には (と) まりません。 あ、でも、今日は 日曜日ですから、４番ホームの 電車は 京都 には 止 まりません。 F: そうですか。わかいました。 そうですか。わかいました。 女の人は、 何番ホームの (でんしゃ) に (の) りますか。 女の人は、 何番ホームの 電車 に 乗 りますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.1",
+    "parent_question_number": "9",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：</span></strong></p> <p><strong><span lang=\"JA\">もんだい２では、</span><span lang=\"JA\">はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span></strong><strong><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><strong><span lang=\"JA\">れい：</span></strong></p> <p>１．<span lang=\"JA\">ふつか</span></p> <p>２．<span lang=\"JA\">みっか</span></p> <p>３．<span lang=\"JA\">よっか</span></p> <p>４．<span lang=\"JA\">いつか</span></p>",
+    "prompt": "１ばん：",
+    "choices": [
+      "８０えん",
+      "１６０えん",
+      "２５０えん",
+      "４１０えん"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "４１０えん",
+    "explanation": "(ゆうびんきょく) で、女の人と (ゆうびんきょく) の 人が話しています。女の人は いくら (はら) いますか。 郵便局 で、女の人と 郵便局 の 人が話しています。女の人は いくら 払 いますか。 F: ８０円の (きって) を ２ (まい) ください。 ８０円の 切手 を ２ 枚 ください。 M: ８０円の (きって) を ２ (まい) ですね。１６０円です。 ８０円の 切手 を ２ 枚 ですね。１６０円です。 F: あ、それから、はがきも ください。 あ、それから、はがきも ください。 M: 何枚ですか。 何枚ですか。 F: ５枚 おねがいします。 ５枚 おねがいします。 M: では、はがきが ５枚で ２５０円ですから、 (ぜんぶ) で ４１０円です 。 では、はがきが ５枚で ２５０円ですから、 全部 で ４１０円です 。 F: じゃあ、これで。ちょうどです。 じゃあ、これで。ちょうどです。 女の人は いくら (はら) いますか。 女の人は いくら 払 いますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.2",
+    "parent_question_number": "9",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：</span></strong></p> <p><strong><span lang=\"JA\">もんだい２では、</span><span lang=\"JA\">はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span></strong><strong><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><strong><span lang=\"JA\">れい：</span></strong></p> <p>１．<span lang=\"JA\">ふつか</span></p> <p>２．<span lang=\"JA\">みっか</span></p> <p>３．<span lang=\"JA\">よっか</span></p> <p>４．<span lang=\"JA\">いつか</span></p>",
+    "prompt": "２ばん：",
+    "choices": [
+      "２さつ",
+      "５さつ",
+      "７さつ",
+      "１０さつ"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "５さつ",
+    "explanation": "(としょかん) で、男の学生と (としょかん) の人 が 話しています。男の学生は、 (ほん) を (なんさつ) (か) りましたか。 図書館 で、男の学生と 図書館 の人 が 話しています。男の学生は、 本 を 何冊 借 りましたか。 M: えーと、 (か) りるのは ここで いいですか。 えーと、 借 りるのは ここで いいですか。 F: はい。 はい。 M: お (ねが) いします。 お 願 いします。 F: ７ (さつ) ですね。 … あ、すみません。 (がくせい) の (かた) は ５ (さつ) までです 。 ７ 冊 ですね。 あ、すみません。 学生 の 方 は ５ 冊 までです 。 M: え？ … そうですか。 え？ そうですか。 F: ええ。先生は １０冊までですが … 。 ええ。先生は １０冊までですが 。 M: わかりました。じゃ、この ２冊は いいです。 わかりました。じゃ、この ２冊は いいです。 男の 学生は、本を 何冊 (か) りましたか。 男の 学生は、本を 何冊 借 りましたか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.3",
+    "parent_question_number": "9",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：</span></strong></p> <p><strong><span lang=\"JA\">もんだい２では、</span><span lang=\"JA\">はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span></strong><strong><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><strong><span lang=\"JA\">れい：</span></strong></p> <p>１．<span lang=\"JA\">ふつか</span></p> <p>２．<span lang=\"JA\">みっか</span></p> <p>３．<span lang=\"JA\">よっか</span></p> <p>４．<span lang=\"JA\">いつか</span></p>",
+    "prompt": "3ばん：",
+    "choices": [
+      "くるま",
+      "バス",
+      "しんかんせん",
+      "ひこうき"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "バス",
+    "explanation": "女の人 と 男の人が (はな) しています。男の人は、 (おおさか) まで (なに) で 行きましたか。 女の人 と 男の人が 話 しています。男の人は、 大阪 まで 何 で 行きましたか。 F: お (しょうがつ) は、どこかへ (い) きましたか。 お 正月 は、どこかへ 行 きましたか。 M: (おおさか) の (いえ) へ (かえ) りました。 (まいとし) 、 (しょうがつ) は (おや) といっしょに すごします 大阪 の 家 へ 帰 りました。 毎年 、 正月 は 親 といっしょに すごします F(Ｆ) : そうですか。 (おおさか) へは (なに) で (い) きますか。 そうですか。 大阪 へは 何 で 行 きますか。 M: (こんかい) は バスを (つか) いました 。いつもは (くるま) で (い) きますが、 (すこ) し (つか) れていましたから。 今回 は バスを 使 いました 。いつもは 車 で 行 きますが、 少 し 疲 れていましたから。 F: (しんかんせん) や (ひこうき) は？ 新幹線 や 飛行機 は？ M: (しんかんせん) は (べんり) ですが、ちょっと (たか) くて …(・・・) 。 (ひこうき) は、 (くうこう) がちょっと (とお) いですね。 新幹線 は 便利 ですが、ちょっと 高 くて 。 飛行機 は、 空港 がちょっと 遠 いですね。 (おとこ) の (ひと) 、 (おおさか) まで (なん) で (い) きましたか。 男 の 人 、 大阪 まで 何 で 行 きましたか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.4",
+    "parent_question_number": "9",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：</span></strong></p> <p><strong><span lang=\"JA\">もんだい２では、</span><span lang=\"JA\">はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span></strong><strong><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><strong><span lang=\"JA\">れい：</span></strong></p> <p>１．<span lang=\"JA\">ふつか</span></p> <p>２．<span lang=\"JA\">みっか</span></p> <p>３．<span lang=\"JA\">よっか</span></p> <p>４．<span lang=\"JA\">いつか</span></p>",
+    "prompt": "４ばん：",
+    "choices": [
+      "８じ 3０ぷん ごろ",
+      "８じ ４０ぷん ごろ",
+      "８じ ５０ぷん ごろ",
+      "９じごろ"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "８じ 3０ぷん ごろ",
+    "explanation": "(おんな) の (がくせい) と (おとこ) の (がくせい) が (はな) しています。 (おんな) の (がくせい) は、 (あした) (なんじ) ごろ (がっこう) へ (き) ますか。 女 の 学生 と 男 の 学生 が 話 しています。 女 の 学生 は、 明日 何時 ごろ 学校 へ 来 ますか。 F: (あした) の テスト、 (はや) いですね。 明日 の テスト、 早 いですね。 M(Ｍ) : そうですね。９ (じ) は ちょっと (はや) いですね。 そうですね。９ 時 は ちょっと 早 いですね。 F: (たなか) さんは (なんじ) に (き) ますか。 田中 さんは 何時 に 来 ますか。 M: そうですね … テストの １０分 ぐらい (まえ) に (き) ます。 そうですね テストの １０分 ぐらい 前 に 来 ます。 F: そうですか。私は ３０分 ぐらい (まえ) に (き) て 、 (すこ) し (べんきょう) します。 そうですか。私は ３０分 ぐらい 前 に 来 て 、 少 し 勉強 します。 M: そうですか。 そうですか。 (おんな) の (がくせい) は、 (あした) (なんじ) ごろ (がっこう) へ (き) ますか。 女 の 学生 は、 明日 何時 ごろ 学校 へ 来 ますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.5",
+    "parent_question_number": "9",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：</span></strong></p> <p><strong><span lang=\"JA\">もんだい２では、</span><span lang=\"JA\">はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span></strong><strong><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><strong><span lang=\"JA\">れい：</span></strong></p> <p>１．<span lang=\"JA\">ふつか</span></p> <p>２．<span lang=\"JA\">みっか</span></p> <p>３．<span lang=\"JA\">よっか</span></p> <p>４．<span lang=\"JA\">いつか</span></p>",
+    "prompt": "５ばん：",
+    "choices": [
+      "こんしゅうの かようび",
+      "こんしゅうの すいようび",
+      "らいしゅうの かようび",
+      "らいしゅうの すいようび"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "らいしゅうの かようび",
+    "explanation": "(おとこ) の (がくせい) と (おんな) の (がくせい) が (はな) しています。 (ふたり) は いつ (えいが) を (み) に (い) きますか。 男 の 学生 と 女 の 学生 が 話 しています。 二人 は いつ 映画 を 見 に 行 きますか。 M: (こんしゅう) 、 (いっしょ) に (えいが) を (み) に (い) きませんか。 今週 、 一緒 に 映画 を 見 に 行 きませんか。 F: (こんしゅう) は ちょっと …(・・・) 。 (いそが) しくて。 今週 は ちょっと 。 忙 しくて。 M: そうですか … 。 そうですか 。 F: でも、 (らいしゅう) は (だいじょうぶ) ですよ 。 (かようび) か (すいようび) は どうですか。 でも、 来週 は 大丈夫 ですよ 。 火曜日 か 水曜日 は どうですか。 M: そうですか。 じゃあ、 (かようび) がいいです 。 (すいようび) は バイトが ありますから。 そうですか。 じゃあ、 火曜日 がいいです 。 水曜日 は バイトが ありますから。 F: いいですよ。 いいですよ。 (ふたり) は いつ (えいが) を (み) に (い) きますか。 二人 は いつ 映画 を 見 に 行 きますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.6",
+    "parent_question_number": "9",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい２：</span></strong></p> <p><strong><span lang=\"JA\">もんだい２では、</span><span lang=\"JA\">はじめに しつもん</span><span lang=\"JA\">を きいて ください。それから はなしを きいて、</span></strong><strong><span lang=\"JA\">もんだいようしの １から４の なかから、いちばん いい ものを ひとつ えらんでください。</span></strong></p> <p><strong><span lang=\"JA\">れい：</span></strong></p> <p>１．<span lang=\"JA\">ふつか</span></p> <p>２．<span lang=\"JA\">みっか</span></p> <p>３．<span lang=\"JA\">よっか</span></p> <p>４．<span lang=\"JA\">いつか</span></p>",
+    "prompt": "６ばん：",
+    "choices": [
+      "こうえん",
+      "デパート",
+      "としょかん",
+      "えいがかん"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "としょかん",
+    "explanation": "(おとこ) の (ひと) と (おんな) の (ひと) が はなしています。 (おんな) の (ひと) は、 (あした) 、 どこへ (い) きますか。 男 の 人 と 女 の 人 が はなしています。 女 の 人 は、 明日 、 どこへ 行 きますか。 M: (たなか) さん (やす) みの (ひ) 、 (なに) をしますか。 田中 さん 休 みの 日 、 何 をしますか。 F: そうですね。 (こうえん) でジョギングしたり、デパートに (か) い (もの) に 行ったりします。 そうですね。 公園 でジョギングしたり、デパートに 買 い 物 に 行ったりします。 M: そうですか。 (あした) は (なに) を しますか。 そうですか。 明日 は 何 を しますか。 F: (あした) は (あめ) ですから、たぶん、 (としょかん) で (ほん) を (よ) みます 。 (たなか) さんは？ 明日 は 雨 ですから、たぶん、 図書館 で 本 を 読 みます 。 田中 さんは？ M: (わたし) は、 (ともだち) と (えいが) を みに (い) きます。 私 は、 友達 と 映画 を みに 行 きます。 F: そうですか。 そうですか。 女の人は、 (あした) 、どこへ 行きますか。 女の人は、 明日 、どこへ 行きますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "10.1",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい３：</span></strong></p> <p><strong><span lang=\"JA\">もんだい３では、えを みながら しつもんを きいて ください。 </span></strong></p> <p><span lang=\"JA\"><strong>=&gt;（やじるし）の ひとは なんと いいますか。 １から３の なかから </strong></span><strong><span lang=\"JA\">いちばん いい もいを ひとつ えらんで ください。</span></strong></p> <p class=\"MsoNormal\"><strong><span lang=\"JA\">れい：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489120174.094-11-1.png\"/>",
+    "prompt": "れい：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "M: ご (はん) を (た) べます。 (なん) と (い) いますか 。 ご 飯 を 食 べます。 何 と 言 いますか 。 F: １ ごちそうさまでした。 １ ごちそうさまでした。 ２ いただきます。 ２ いただきます。 ３ じゃ、また。 ３ じゃ、また。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "11",
+    "parent_content": "<p class=\"MsoNormal\"><strong><span lang=\"JA\">１ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489120192.245-12-2.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "M: (はじ) めて (あ) う (ひと) に あいさつを します。 (なん) と (い) いますか。 初 めて 会 う 人 に あいさつを します。 何 と 言 いますか。 F: １ (やまだ) です。よろしく お (ねが) いします。 １ 山田 です。よろしく お 願 いします。 ２ (やまだ) です。どういたしまして。 ２ 山田 です。どういたしまして。 ３ 山田です。こちらこそ。 ３ 山田です。こちらこそ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "12",
+    "parent_content": "<p class=\"MsoNormal\" style=\"margin-left: 21.3pt;\"><strong><span lang=\"JA\">２ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489120208.13-13-3.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "F: (せんせい) の (へや) に (はい) ります。 (なん) と (い) いますか。 先生 の 部屋 に 入 ります。 何 と 言 いますか。 M: １ ただいま。 １ ただいま。 ２ (はい) りました。 ２ 入 りました。 ３ (しつれい) します。 ３ 失礼 します。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "13",
+    "parent_content": "<p class=\"MsoNormal\" style=\"margin-left: 21.3pt;\"><strong><span lang=\"JA\">３ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489120225.52-14-4.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "M: (ともだち) に おみやげを あげます。 (なん) と (い) いますか。 友達 に おみやげを あげます。 何 と 言 いますか。 F: １これ、わたしの (くに) の おかしです。１つ、もらいます。 １これ、わたしの 国 の おかしです。１つ、もらいます。 ２ これ、わたしの 国の おかしです。 1 つ、どうぞ。 ２ これ、わたしの 国の おかしです。 つ、どうぞ。 ３ これ、わたしの 国の おかしです。 1 つ、ください。 ３ これ、わたしの 国の おかしです。 つ、ください。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "14",
+    "parent_content": "<p class=\"MsoNormal\" style=\"margin-left: 21.3pt;\"><strong><span lang=\"JA\">４ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489120240.746-15-5.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "F: (しょくどう) です。ここに (すわ) りたいです。 (なん) と (い) いますか。 食堂 です。ここに 座 りたいです。 何 と 言 いますか。 M: １ ここ、いいですか。 １ ここ、いいですか。 ２ ここ、 (すわ) りませんか。 ２ ここ、 座 りませんか。 ３ ここ、 (すわ) りましょうか。 ３ ここ、 座 りましょうか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "15",
+    "parent_content": "<p class=\"MsoNormal\" style=\"margin-left: 21.3pt;\"><strong><span lang=\"JA\">５ばん：</span></strong></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489120253-16-6.png\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "M: (しょくどう) で、 (ともだち) と (た) べています。 (しお) が ほしいです。 (なん) と (い) いますか。 食堂 で、 友達 と 食 べています。 塩 が ほしいです。 何 と 言 いますか。 F: １ すみません、そこの (しお) を (と) ってください。 １ すみません、そこの 塩 を 取 ってください。 ２ すみません、そこの (しお) を (つか) いましょうか。 ２ すみません、そこの 塩 を 使 いましょうか。 ３ すみません、この (しお) をあげますか。 ３ すみません、この 塩 をあげますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "16.1",
+    "parent_question_number": "16",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい４：</span></strong></p> <p><strong><span lang=\"JA\">もんだい４では、えなどが ありません。ぶんを きいて、１から３の なかから、</span></strong><strong><span lang=\"JA\">いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "1 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "F: (いま) 、 (なんじ) ですか。 今 、 何時 ですか。 M: １ ４ (がつ) です。 １ ４ 月 です。 ２ ４ (にち) です。 ２ ４ 日 です。 ３ ４ (じ) です。 ３ ４ 時 です。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "16.2",
+    "parent_question_number": "16",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい４：</span></strong></p> <p><strong><span lang=\"JA\">もんだい４では、えなどが ありません。ぶんを きいて、１から３の なかから、</span></strong><strong><span lang=\"JA\">いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "2 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "M: (たなか) さんは、 (だいがく) は どこですか。 田中 さんは、 大学 は どこですか。 F: １ ふじ (だいがく) です。 １ ふじ 大学 です。 ２ (とうきょう) に あります。 ２ 東京 に あります。 ３ (とうきょうえき) から (ちか) いです。 ３ 東京駅 から 近 いです。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "16.3",
+    "parent_question_number": "16",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい４：</span></strong></p> <p><strong><span lang=\"JA\">もんだい４では、えなどが ありません。ぶんを きいて、１から３の なかから、</span></strong><strong><span lang=\"JA\">いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "3 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "M: (りょこう) は どうでしたか。 旅行 は どうでしたか。 F: １ (きょうと) でした。 １ 京都 でした。 ２ (たの) しかったです。 ２ 楽 しかったです。 ３ ３ (にちかん) でした。 ３ ３ 日間 でした。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "16.4",
+    "parent_question_number": "16",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい４：</span></strong></p> <p><strong><span lang=\"JA\">もんだい４では、えなどが ありません。ぶんを きいて、１から３の なかから、</span></strong><strong><span lang=\"JA\">いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "4 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "M: いっしょに (ひる) ご (はん) を (た) べませんか。 いっしょに 昼 ご 飯 を 食 べませんか。 F: １ ええ、いいですね。 １ ええ、いいですね。 ２ ええ、 (た) べません。 ２ ええ、 食 べません。 ３ いえ、食べます。 ３ いえ、食べます。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "16.5",
+    "parent_question_number": "16",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい４：</span></strong></p> <p><strong><span lang=\"JA\">もんだい４では、えなどが ありません。ぶんを きいて、１から３の なかから、</span></strong><strong><span lang=\"JA\">いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "5 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "FF: この (くすり) は ご (はん) の あとに (の) んでください。 この 薬 は ご 飯 の あとに 飲 んでください。 M: １ はい、そうしましょう。 １ はい、そうしましょう。 ２ はい、お (ねが) いします。 ２ はい、お 願 いします。 ３ はい、わかりました。 ３ はい、わかりました。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "16.6",
+    "parent_question_number": "16",
+    "parent_content": "<p><strong><span lang=\"JA\">もんだい４：</span></strong></p> <p><strong><span lang=\"JA\">もんだい４では、えなどが ありません。ぶんを きいて、１から３の なかから、</span></strong><strong><span lang=\"JA\">いちばん いい ものを ひとつ えらんで ください。</span></strong></p>",
+    "prompt": "6 ばん",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "F: この (くるま) 、どこのですか。 この 車 、どこのですか。 M: １ (あか) いのです。 １ 赤 いのです。 ２ (わたし) のです。 ２ 私 のです。 ３ (にほん) のです。 ３ 日本 のです。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1489554293.379-n5-1.mp3"
+  }
+]

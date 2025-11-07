@@ -3,7 +3,7 @@ import { SignedIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
 import { useState } from "react";
 
 interface TopActionsProps {
-  currentPage: "library" | "vocabulary" | "stats" | "admin";
+  currentPage: "library" | "vocabulary" | "stats" | "admin" | "jlpt";
   onShowLogin?: () => void;
 }
 
@@ -67,6 +67,14 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                 }`}
               >
                 📋 {t('nav.clipboard')}
+              </button>
+              <button
+                onClick={() => { navigate("/jlpt-tests"); setShowMobileMenu(false); }}
+                className={`w-full text-left px-3 py-2 rounded text-sm ${
+                  currentPage === "jlpt" ? "bg-blue-100 text-blue-700" : "text-gray-600"
+                }`}
+              >
+                📝 Test
               </button>
               <div className="pt-2 border-t">
                 <SignOutButton className="w-full text-left px-3 py-2 text-gray-600 rounded text-sm hover:bg-gray-100" />
@@ -134,6 +142,17 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   }`}
                 >
                   📋 {t('nav.clipboard')}
+                </button>
+                <button
+                  onClick={() => navigate("/jlpt-tests")}
+                  aria-label={t('nav.jlptTestsPageAria') || 'JLPT Tests Page'}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === "jlpt"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  📝 Test
                 </button>
               </nav>
               <SignOutButton className="px-3 py-2 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100" />

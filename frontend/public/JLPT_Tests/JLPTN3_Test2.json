@@ -1,0 +1,1874 @@
+[
+  {
+    "part": 0,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "<strong>自由席</strong>の切符を買おう。",
+    "choices": [
+      "じゆせき",
+      "じゅゆせき",
+      "じゆうせき",
+      "じじゅうせき"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "じゆうせき",
+    "explanation": "Jiyuuseki: Priority seat.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.2",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "7時に<strong>出発</strong>しましょう。",
+    "choices": [
+      "しゅつはつ",
+      "しゅっぱつ",
+      "しゅっばつ",
+      "しゅはつ"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "しゅっぱつ",
+    "explanation": "Shuppatsu: Departure",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.3",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "<strong>燃料</strong>がなくなったら、機会は止まる。",
+    "choices": [
+      "れんりょう",
+      "せんりょう",
+      "ぜんりょう",
+      "ねんりょう"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "ねんりょう",
+    "explanation": "Nenryou: fuel.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.4",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "家族と<strong>親しい</strong>友人を集めて、結婚パーティーを行った。",
+    "choices": [
+      "けわしい",
+      "したしい",
+      "くわしい",
+      "くやしい"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "したしい",
+    "explanation": "Shitashii: close, intimate.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.5",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "むこうの<strong>岸</strong>まで 泳いでみよう。",
+    "choices": [
+      "きし",
+      "りく",
+      "とち",
+      "たに"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "きし",
+    "explanation": "Kishi: shore",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.6",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "土曜日までに、この資料を<strong>提出</strong>してください。",
+    "choices": [
+      "てしゅう",
+      "てしゅつ",
+      "ていしゅう",
+      "ていしゅつ"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "ていしゅつ",
+    "explanation": "Translation: ていしゅつ: proposal, submission",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.7",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "どちらのコーヒーがおいしいか、<strong>比べて</strong>みてください。",
+    "choices": [
+      "ならべて",
+      "くらべて",
+      "しらべて",
+      "えらべて"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "くらべて",
+    "explanation": "Compare: to compare.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "1.8",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：</span> <span lang=\"JA\">＿＿の言葉の読み方として最もよいものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "日曜日の朝、バスに乗ったら、<strong>乗客</strong>がほとんどいなかった。",
+    "choices": [
+      "じょうぎゃく",
+      "しょうきゃく",
+      "じょうきゃく",
+      "しょうきゃく"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "じょうきゃく",
+    "explanation": "Passenger:",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.1",
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">：＿＿の言葉を漢字で書くとき、もっとも良いものを</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">からひとつ選びなさい。</span></strong></p>",
+    "prompt": "あの女優は<strong>ひょうげん</strong>力がある。",
+    "choices": [
+      "表現",
+      "表見",
+      "表言",
+      "表信"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "表現",
+    "explanation": "Expression; manifestation, demeanor",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.2",
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">：＿＿の言葉を漢字で書くとき、もっとも良いものを</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">からひとつ選びなさい。</span></strong></p>",
+    "prompt": "彼は足が<strong>はやい</strong>。",
+    "choices": [
+      "早い",
+      "速い",
+      "束い",
+      "草い"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "速い",
+    "explanation": "速い: fast fast",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.3",
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">：＿＿の言葉を漢字で書くとき、もっとも良いものを</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">からひとつ選びなさい。</span></strong></p>",
+    "prompt": "計算を間違えて、合計<strong>きんがく</strong>が違っている。",
+    "choices": [
+      "金価",
+      "金学",
+      "金額",
+      "金格"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "金額",
+    "explanation": "Amount: money sum.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.4",
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">：＿＿の言葉を漢字で書くとき、もっとも良いものを</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">からひとつ選びなさい。</span></strong></p>",
+    "prompt": "ここにゴミを<strong>すて</strong>ないでください。",
+    "choices": [
+      "捨て",
+      "表て",
+      "吸て",
+      "落て"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "捨て",
+    "explanation": "捨てる： Throw away. 捨てる：",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.5",
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">：＿＿の言葉を漢字で書くとき、もっとも良いものを</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">からひとつ選びなさい。</span></strong></p>",
+    "prompt": "この犬はとても<strong>かしこい</strong>。",
+    "choices": [
+      "違い",
+      "優い",
+      "賢い",
+      "利い"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "賢い",
+    "explanation": "Intelligent: smart.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "2.6",
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">：＿＿の言葉を漢字で書くとき、もっとも良いものを</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">からひとつ選びなさい。</span></strong></p>",
+    "prompt": "家族の手紙を読んだら、<strong>なみだ</strong>が出てきた。",
+    "choices": [
+      "泳",
+      "涙",
+      "泣",
+      "戻"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "涙",
+    "explanation": "涙: Tears.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.1",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "チンさんの部屋は床(ゆか)にカーペットが（ ）あります。",
+    "choices": [
+      "敷(し) いて",
+      "さめて",
+      "入れて",
+      "切って"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<敷(し)>いて",
+    "explanation": "Explain: Lay the carpet.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.2",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "けさは6時に目が（ ）。",
+    "choices": [
+      "あいた",
+      "さめた",
+      "ついた",
+      "ひらいた"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "さめた",
+    "explanation": "Explain: Sameta: open eyes, wake up.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.3",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "あっ、（ ）がこげてる！あぶない！",
+    "choices": [
+      "コーヒーカップ",
+      "氷",
+      "調味料",
+      "なべ"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "なべ",
+    "explanation": "Explain: The pot is burnt.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.4",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "さつまいも は皮(かわ)を（ ）、大きめに切ります。",
+    "choices": [
+      "たいて",
+      "むいて",
+      "まぜて",
+      "刻んで"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "むいて",
+    "explanation": "Explain: Peel: to remove the skin or outer layer.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.5",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "（ ）で肉を切ります。",
+    "choices": [
+      "はさみ",
+      "はかり",
+      "大さじ",
+      "包丁"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "包丁",
+    "explanation": "包丁： knife , ナイフと同じです 包丁： knife ナイフと同じです",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.6",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "ランさんは風邪をひいて、ずっと寝ています。本当に（ ）です",
+    "choices": [
+      "かしこい",
+      "かわいそう",
+      "かわいらしい",
+      "生意気"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "かわいそう",
+    "explanation": "Explain: かわいそう: Poor thing.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.7",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "すみません。今日は用事があるので、また（ ）誘(さそ)ってください。",
+    "choices": [
+      "いまどき",
+      "今度",
+      "今回",
+      "今後"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "今度",
+    "explanation": "Explain: Next time.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.8",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "人のことばがわかるなんて、本当に（ ）犬だ。",
+    "choices": [
+      "わがままな",
+      "むずかしい",
+      "満足(まんぞく) な",
+      "かしこい"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "かしこい",
+    "explanation": "Explain: かしこい: Smart, intelligent",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.9",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "小さい時、私がいたずらをすると、母におしりを（ ）ものだ。",
+    "choices": [
+      "たたかれた",
+      "たかれた",
+      "はかれた",
+      "しかれた"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "たたかれた",
+    "explanation": "KNOCK: To hit. KNOCKED: To be hit.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.10",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "雨に降られて、服が（ ）しまった。",
+    "choices": [
+      "たまって",
+      "散らかして",
+      "ぬれて",
+      "かわいて"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ぬれて",
+    "explanation": "Explain: The clothes are wet.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "3.11",
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%; tab-stops: 392.25pt;\"><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： （ ）の入れるのに最もよいものを。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "エプロンを（ ）、料理を作ってください。",
+    "choices": [
+      "どけて",
+      "して",
+      "ふって",
+      "こして"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "して",
+    "explanation": "Explain: Wear an apron.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.1",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅳ<span lang=\"JA\">： （ ）に意味が最も近いものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "ウールのセーターは洗うと、<strong>縮んでしまった</strong>。",
+    "choices": [
+      "大きくなってしまった",
+      "長くなってしまった",
+      "小さくなってしまった",
+      "古くなってしまった"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "小さくなってしまった",
+    "explanation": "Explain: Shrink: to become smaller or more compact.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.2",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅳ<span lang=\"JA\">： （ ）に意味が最も近いものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "このままでは中止も<strong>やむをえない</strong>だろう。",
+    "choices": [
+      "できない",
+      "しかたない",
+      "したくない",
+      "やめられない"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "しかたない",
+    "explanation": "Explain: \"Yamuwoenai\": there is no other choice.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.3",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅳ<span lang=\"JA\">： （ ）に意味が最も近いものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "<strong>くだらない</strong>話を聞かされた。",
+    "choices": [
+      "だめになる",
+      "おもしろい",
+      "つまらない",
+      "おそろしい"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "つまらない",
+    "explanation": "Explain: Kudaranai: Boring, tedious.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.4",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅳ<span lang=\"JA\">： （ ）に意味が最も近いものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "この映画は<strong>かなり</strong>おもしろかった。",
+    "choices": [
+      "すこし",
+      "ぜんぶ",
+      "けっこう",
+      "まあまあ"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "けっこう",
+    "explanation": "Explain: かなり: quite, fairly, rather",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "4.5",
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅳ<span lang=\"JA\">： （ ）に意味が最も近いものを、１・２・３・４から一つ選びなさい。</span></strong></p>",
+    "prompt": "木村さんは大きな家に<strong>引っ越した</strong>。",
+    "choices": [
+      "動(うご) いた",
+      "泊(と) まった",
+      "移(うつ) った",
+      "出(で) て 行(い) った"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<移(うつ)>った",
+    "explanation": "Explain: Moving: relocating, transferring.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.1",
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">： </span>[31]<span lang=\"JA\"> から </span>[35]<span lang=\"JA\"> の言葉の使い方として最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "ふくざつ",
+    "choices": [
+      "妹はいろいろな複雑を乗りこえて、彼と結婚した。",
+      "きのうは祝日だったので、道路は複雑にこんでいた。",
+      "この問題は、とても複雑で、私１人では解決できない。",
+      "違うものをいっしょに複雑しないほうがいい。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "この問題は、とても複雑で、私１人では解決できない。",
+    "explanation": "Fukuzatsu: (A na) Complicated.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.2",
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">： </span>[31]<span lang=\"JA\"> から </span>[35]<span lang=\"JA\"> の言葉の使い方として最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "きっと",
+    "choices": [
+      "午後から雨になったので、きっと出かけた。",
+      "心配しなくても、きっと、だれかが助けてくれるよ。",
+      "きっと言われた通り、ちゃんとやりました。",
+      "彼がきっとにできるようになるまで、待ちましょう。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "心配しなくても、きっと、だれかが助けてくれるよ。",
+    "explanation": "\"Kitto: Surely\"",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.3",
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">： </span>[31]<span lang=\"JA\"> から </span>[35]<span lang=\"JA\"> の言葉の使い方として最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "ガラス",
+    "choices": [
+      "事故で車のガラスが割れてしまった。",
+      "のどが渇いたので、ガラスから水を飲んだ。。",
+      "目が悪くなったので、ガラスをかけることにした。",
+      "きれいに光るようによくガラスしておいてください。"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "事故で車のガラスが割れてしまった。",
+    "explanation": "Glass: windowpane",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.4",
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">： </span>[31]<span lang=\"JA\"> から </span>[35]<span lang=\"JA\"> の言葉の使い方として最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "おかげ",
+    "choices": [
+      "彼女がメダルをとったおかげには、コーチの助けがあった。",
+      "試合に負けたおかげは、練習が足りなかったことだ。",
+      "しめきりを１日間違えたおかげで、試験を受けられなかった。",
+      "先生が勉強を教えてくれたおかげで、合格できました。"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "先生が勉強を教えてくれたおかげで、合格できました。",
+    "explanation": "Okage: Thanks to, owing to...",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 0,
+    "question_number": "5.5",
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">： </span>[31]<span lang=\"JA\"> から </span>[35]<span lang=\"JA\"> の言葉の使い方として最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p>",
+    "prompt": "通知",
+    "choices": [
+      "そのニュースはテレビで通知した。",
+      "郵便で、合格の通知が届いた。",
+      "先生のところは電話が通知されません。",
+      "このことは、みんなが通知をしている。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "郵便で、合格の通知が届いた。",
+    "explanation": "Explain: Notice: Announcement",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "このケーキ、100円（ ）おいしいね。",
+    "choices": [
+      "くせに",
+      "のわりに",
+      "なんか",
+      "だもん"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "のわりに",
+    "explanation": "Nのわりに～: relatively ~ compared to N Compared to the price of 100 yen, this cake is relatively delicious.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.2",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "川があふれて家が流される（ ）雨が降った。",
+    "choices": [
+      "につれて",
+      "かぎり",
+      "くらい",
+      "うちに"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "くらい",
+    "explanation": "\"~kurai\": To the extent, to the degree of ~ (used to compare the level or degree of a certain situation or action). The rain was so heavy that the river overflowed and swept away the entire house.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.3",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "今日はあの選手(せんしゅ)、調子(ちょうし)が悪いなあ。どこかけがをしているに （ ）。",
+    "choices": [
+      "よる",
+      "ちがいない",
+      "はずだ",
+      "ついてだ"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "ちがいない",
+    "explanation": "\"Ni chigai nai\" means \"without a doubt\" or \"for sure\" in English, expressing that one is convinced and certain about something in their heart. Today that player's condition is not good. Surely, he has been injured somewhere (can't be wrong).",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.4",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "きのう 友だちが 来た（ ）、べんきょうが できませんでした。",
+    "choices": [
+      "でも",
+      "だから",
+      "ので",
+      "ように"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ので",
+    "explanation": "\"Polite form + ので\": Explanation of reason. Yesterday, I couldn't study because you came to visit me.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.5",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "社長の一言によって、（ ）。",
+    "choices": [
+      "言うとおりにするつもりだ",
+      "計画(けいかく) が 変(か) わることもある",
+      "部下(ぶか) が社長に意見を言った",
+      "大変ためになる"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<計画(けいかく)>が<変(か)>わることもある",
+    "explanation": "\"～によって、～\" translates to \"due to ~; because of ~\" in English. Due to a statement from the director, sometimes the plan will be altered.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.6",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "友だちに かさを かりた（ ）、かえすのを わすれて いました。",
+    "choices": [
+      "あいだ",
+      "まま",
+      "だけ",
+      "ながら"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "まま",
+    "explanation": "As V, without any change. You keep borrowing your friend's umbrella and forget to return it.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.7",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "洗濯機が壊れてしまったから、手で洗う（ ）。",
+    "choices": [
+      "ことか",
+      "ものか",
+      "しかない",
+      "ことはない"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "しかない",
+    "explanation": "V るしかない: There is no choice but to V. V るしかない: The only way left is to hand wash.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.8",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "となりの部屋に住む大学生は、毎晩パーティーをして、（ ）たまらない。",
+    "choices": [
+      "うるさくて",
+      "うるさい",
+      "うるさく",
+      "うるさかった"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "うるさくて",
+    "explanation": "\"~Tamaranai: unbearable\" A い ＋くてたまらない . い ＋くてたまらない",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.9",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "コーヒーと紅茶、お好きなのはどちらでした（ ）。",
+    "choices": [
+      "もの",
+      "こそ",
+      "っけ",
+      "ことか"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "っけ",
+    "explanation": "\"Kke: Is it true that ~ / Isn't it?\" Go with the past form to express confirming things that one doesn't remember clearly. Used in spoken language. Coffee or tea, which one do you prefer?",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.10",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "今日のテニスの練習(れんしゅう)はつらくて、泣きたい（ ）だった",
+    "choices": [
+      "まで",
+      "つもり",
+      "ほど",
+      "ぎみ"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ほど",
+    "explanation": "As much as~ Studying for today's exam is exhausting to the point where I want to cry.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.11",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "こんな天気のいい日に、家の中で仕事（ ）したくない。",
+    "choices": [
+      "だもん",
+      "もんか",
+      "なんか",
+      "ことか"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "なんか",
+    "explanation": "Nなんか: Things like, for example (similar to など) On beautiful weather days like this, I don't feel like doing indoor work at all.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.12",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "子供は まだ ３さいです。山の 上まで（ ）のは むりでしょう。",
+    "choices": [
+      "歩ける",
+      "歩かれる",
+      "歩かせる",
+      "歩いた"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "歩かせる",
+    "explanation": "Walk → Make someone walk: The causative form of the verb, forcing it to become V. The child is only 3 years old. It is impossible to make them climb to the top of the mountain.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "1.13",
+    "parent_question_number": "1",
+    "parent_content": "<p class=\"MsoNormal\" style=\"line-height: 150%;\"><strong><span lang=\"JA\">問題</span>Ⅰ<span lang=\"JA\">：（ ）に何を入れますか。</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から 一番いいものを一つ選んでください</span></strong></p>",
+    "prompt": "この仕事は年齢(ねんれい)にかかわらず、（ ）",
+    "choices": [
+      "していただけます",
+      "年上を尊敬してください",
+      "わかい人ができます",
+      "やりやすい仕事のほうがいいです。"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "していただけます",
+    "explanation": "にかからわず、～：Regardless of ~ I would like to do this job as it does not discriminate based on age.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.1",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">： 次の文の </span>★<span lang=\"JA\"> </span><span lang=\"JA\"> に最も良いものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p><strong>(<span lang=\"JA\">問題例</span>)</strong></p> <p><span lang=\"JA\">引き出しの __ __ *</span><span lang=\"JA\"> __ あります。</span></p> <p>①<span lang=\"JA\"> が </span>②<span lang=\"JA\"> に </span>③<span lang=\"JA\"> 中 </span>④<span lang=\"JA\"> めがね</span></p> <p><span lang=\"JA\"> </span><strong>(<span lang=\"JA\">解答の仕方</span>)</strong></p> <p><span lang=\"JA\">＊ 正しい文はこうです。</span></p> <p><span lang=\"JA\">引き出しの ＿＿ ＿＿＿ *</span><span lang=\"JA\"> </span><span lang=\"JA\"> ＿＿ あります。</span></p> <p>③<span lang=\"JA\"> 中 </span>②<span lang=\"JA\"> に </span>④<span lang=\"JA\"> めがね </span>①<span lang=\"JA\"> が</span></p> <p><span lang=\"JA\"> ＊＊ </span>★<span lang=\"JA\"> に入る番号を解答用紙にマークします。</span></p> <p><span lang=\"JA\"> </span>(<span lang=\"JA\">解答用紙</span>)<span lang=\"JA\"> </span>(<span lang=\"JA\">例</span>)<span lang=\"JA\"> </span>①<span lang=\"JA\"> </span>②<span lang=\"JA\"> </span>③<span lang=\"JA\"> </span>④<span lang=\"JA\"> </span></p>",
+    "prompt": "夏休みの __ ___ * ___ かなり違うようだ。",
+    "choices": [
+      "は",
+      "日数(にっすう) や期間",
+      "にとって",
+      "会社"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "会社",
+    "explanation": "夏休みの２日数や期間１は４会社３によってかなり違うようだ。 夏休みの２日数や期間１は４会社３によってかなり違うようだ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.2",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">： 次の文の </span>★<span lang=\"JA\"> </span><span lang=\"JA\"> に最も良いものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p><strong>(<span lang=\"JA\">問題例</span>)</strong></p> <p><span lang=\"JA\">引き出しの __ __ *</span><span lang=\"JA\"> __ あります。</span></p> <p>①<span lang=\"JA\"> が </span>②<span lang=\"JA\"> に </span>③<span lang=\"JA\"> 中 </span>④<span lang=\"JA\"> めがね</span></p> <p><span lang=\"JA\"> </span><strong>(<span lang=\"JA\">解答の仕方</span>)</strong></p> <p><span lang=\"JA\">＊ 正しい文はこうです。</span></p> <p><span lang=\"JA\">引き出しの ＿＿ ＿＿＿ *</span><span lang=\"JA\"> </span><span lang=\"JA\"> ＿＿ あります。</span></p> <p>③<span lang=\"JA\"> 中 </span>②<span lang=\"JA\"> に </span>④<span lang=\"JA\"> めがね </span>①<span lang=\"JA\"> が</span></p> <p><span lang=\"JA\"> ＊＊ </span>★<span lang=\"JA\"> に入る番号を解答用紙にマークします。</span></p> <p><span lang=\"JA\"> </span>(<span lang=\"JA\">解答用紙</span>)<span lang=\"JA\"> </span>(<span lang=\"JA\">例</span>)<span lang=\"JA\"> </span>①<span lang=\"JA\"> </span>②<span lang=\"JA\"> </span>③<span lang=\"JA\"> </span>④<span lang=\"JA\"> </span></p>",
+    "prompt": "説明が__ __ * __ しまった。",
+    "choices": [
+      "かえって",
+      "くわしすぎて",
+      "なって",
+      "わかりにくく"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "わかりにくく",
+    "explanation": "説明が２くわしすぎて１かえって４わかりにくく３なってしまった。 説明が２くわしすぎて１かえって４わかりにくく３なってしまった。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.3",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">： 次の文の </span>★<span lang=\"JA\"> </span><span lang=\"JA\"> に最も良いものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p><strong>(<span lang=\"JA\">問題例</span>)</strong></p> <p><span lang=\"JA\">引き出しの __ __ *</span><span lang=\"JA\"> __ あります。</span></p> <p>①<span lang=\"JA\"> が </span>②<span lang=\"JA\"> に </span>③<span lang=\"JA\"> 中 </span>④<span lang=\"JA\"> めがね</span></p> <p><span lang=\"JA\"> </span><strong>(<span lang=\"JA\">解答の仕方</span>)</strong></p> <p><span lang=\"JA\">＊ 正しい文はこうです。</span></p> <p><span lang=\"JA\">引き出しの ＿＿ ＿＿＿ *</span><span lang=\"JA\"> </span><span lang=\"JA\"> ＿＿ あります。</span></p> <p>③<span lang=\"JA\"> 中 </span>②<span lang=\"JA\"> に </span>④<span lang=\"JA\"> めがね </span>①<span lang=\"JA\"> が</span></p> <p><span lang=\"JA\"> ＊＊ </span>★<span lang=\"JA\"> に入る番号を解答用紙にマークします。</span></p> <p><span lang=\"JA\"> </span>(<span lang=\"JA\">解答用紙</span>)<span lang=\"JA\"> </span>(<span lang=\"JA\">例</span>)<span lang=\"JA\"> </span>①<span lang=\"JA\"> </span>②<span lang=\"JA\"> </span>③<span lang=\"JA\"> </span>④<span lang=\"JA\"> </span></p>",
+    "prompt": "_ _ * _ つくったが、うまくできなかった。",
+    "choices": [
+      "とおりに",
+      "書いてある",
+      "本に",
+      "料理の"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "書いてある",
+    "explanation": "４料理の３本に２書いてある１通りに作ったが、うまくできなかった。 ４料理の３本に２書いてある１通りに作ったが、うまくできなかった。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.4",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">： 次の文の </span>★<span lang=\"JA\"> </span><span lang=\"JA\"> に最も良いものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p><strong>(<span lang=\"JA\">問題例</span>)</strong></p> <p><span lang=\"JA\">引き出しの __ __ *</span><span lang=\"JA\"> __ あります。</span></p> <p>①<span lang=\"JA\"> が </span>②<span lang=\"JA\"> に </span>③<span lang=\"JA\"> 中 </span>④<span lang=\"JA\"> めがね</span></p> <p><span lang=\"JA\"> </span><strong>(<span lang=\"JA\">解答の仕方</span>)</strong></p> <p><span lang=\"JA\">＊ 正しい文はこうです。</span></p> <p><span lang=\"JA\">引き出しの ＿＿ ＿＿＿ *</span><span lang=\"JA\"> </span><span lang=\"JA\"> ＿＿ あります。</span></p> <p>③<span lang=\"JA\"> 中 </span>②<span lang=\"JA\"> に </span>④<span lang=\"JA\"> めがね </span>①<span lang=\"JA\"> が</span></p> <p><span lang=\"JA\"> ＊＊ </span>★<span lang=\"JA\"> に入る番号を解答用紙にマークします。</span></p> <p><span lang=\"JA\"> </span>(<span lang=\"JA\">解答用紙</span>)<span lang=\"JA\"> </span>(<span lang=\"JA\">例</span>)<span lang=\"JA\"> </span>①<span lang=\"JA\"> </span>②<span lang=\"JA\"> </span>③<span lang=\"JA\"> </span>④<span lang=\"JA\"> </span></p>",
+    "prompt": "父は __ __ * __ 食べない。",
+    "choices": [
+      "料理",
+      "しか",
+      "作った",
+      "母が"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "料理",
+    "explanation": "父は４母が３作った１料理２しか食べない。 父は４母が３作った１料理２しか食べない。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "2.5",
+    "parent_question_number": "2",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅱ<span lang=\"JA\">： 次の文の </span>★<span lang=\"JA\"> </span><span lang=\"JA\"> に最も良いものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p><strong>(<span lang=\"JA\">問題例</span>)</strong></p> <p><span lang=\"JA\">引き出しの __ __ *</span><span lang=\"JA\"> __ あります。</span></p> <p>①<span lang=\"JA\"> が </span>②<span lang=\"JA\"> に </span>③<span lang=\"JA\"> 中 </span>④<span lang=\"JA\"> めがね</span></p> <p><span lang=\"JA\"> </span><strong>(<span lang=\"JA\">解答の仕方</span>)</strong></p> <p><span lang=\"JA\">＊ 正しい文はこうです。</span></p> <p><span lang=\"JA\">引き出しの ＿＿ ＿＿＿ *</span><span lang=\"JA\"> </span><span lang=\"JA\"> ＿＿ あります。</span></p> <p>③<span lang=\"JA\"> 中 </span>②<span lang=\"JA\"> に </span>④<span lang=\"JA\"> めがね </span>①<span lang=\"JA\"> が</span></p> <p><span lang=\"JA\"> ＊＊ </span>★<span lang=\"JA\"> に入る番号を解答用紙にマークします。</span></p> <p><span lang=\"JA\"> </span>(<span lang=\"JA\">解答用紙</span>)<span lang=\"JA\"> </span>(<span lang=\"JA\">例</span>)<span lang=\"JA\"> </span>①<span lang=\"JA\"> </span>②<span lang=\"JA\"> </span>③<span lang=\"JA\"> </span>④<span lang=\"JA\"> </span></p>",
+    "prompt": "__ __ * __ とても心が落ち着く。",
+    "choices": [
+      "川の 流(なが) れる",
+      "に 加(くわ) えて",
+      "音も聞こえて",
+      "虫(むし) の 音(ね)"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "川の<流(なが)>れる",
+    "explanation": "４虫の音２に加えて、１川の流れる３音も聞こえて、とても心が落ち着く。 ４虫の音２に加えて、１川の流れる３音も聞こえて、とても心が落ち着く。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.1",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： 次の文章を読んで、 [</span>19]<span lang=\"JA\"> </span><span lang=\"JA\"> から [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\"> の中に入る最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p> (しがけん)<span lang=\"JA\">にある</span>(びわこ)<span lang=\"JA\">は、日本で一番大きい</span>(みずうみ)<span lang=\"JA\"> [1</span>9]<span lang=\"JA\"> </span><span lang=\"JA\"> </span><span lang=\"JA\">有名だ。しかし、この湖が日本で一番古い湖だということは、あまり知られていない。</span></p> <p><span lang=\"JA\">ふつう、</span>()(みずうみ)<span lang=\"JA\">の</span>()(じゅみょう)<span lang=\"JA\">は数千年から数万円と言われている。これは、湖に流れこんでいる</span></p> <p><span lang=\"JA\">川が運ぶ</span>()(すな)<span lang=\"JA\">や土が湖の</span>()(そこ)<span lang=\"JA\">にたまっていき、月日がたつ</span><span lang=\"JA\"> [</span>20]<span lang=\"JA\"> </span><span lang=\"JA\"> 湖を</span>()(う)<span lang=\"JA\">めていくからだ。</span></p> <p><span lang=\"JA\">ところが、中には</span>10<span lang=\"JA\">万年以上長生きする湖もある。このような湖は「古代湖」と呼ばれる。「古代湖」は世界でも</span>20<span lang=\"JA\">だけしか確認 [</span>21]<span lang=\"JA\"> </span><span lang=\"JA\"> 。その中で一番古いのは、ロシアにあるバイカル</span>()(こ)<span lang=\"JA\">で、</span>2000<span lang=\"JA\">万年の歴史がある。琵琶湖はバイカル湖 [</span>22]<span lang=\"JA\"> </span><span lang=\"JA\"> 古くはないが、</span>400<span lang=\"JA\">万年もの歴史がある日本でたった一つの「古代湖」だ。</span></p> <span lang=\"JA\">「古代湖」では、他の場所にはいない</span>()(めずら)<span lang=\"JA\">しい生物がみられる。琵琶湖にも琵琶湖にしかい</span><span lang=\"JA\">ない生生物が</span><span lang=\"JA\">50(しゅるい)<span lang=\"JA\">以上いる。</span></span> 400<span lang=\"JA\">万年もの歴史を持つ琵琶湖と、そこに住むめずらしい生物たちをこれからも</span><span lang=\"JA\"> </span><span lang=\"JA\"> [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\">ものだ。</span>",
+    "prompt": "19",
+    "choices": [
+      "として",
+      "について",
+      "において",
+      "としたら"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "として",
+    "explanation": "As N: With the noun N, in the capacity of N. Lake Biwa is famous for being the largest lake in Japan.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.2",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： 次の文章を読んで、 [</span>19]<span lang=\"JA\"> </span><span lang=\"JA\"> から [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\"> の中に入る最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p> (しがけん)<span lang=\"JA\">にある</span>(びわこ)<span lang=\"JA\">は、日本で一番大きい</span>(みずうみ)<span lang=\"JA\"> [1</span>9]<span lang=\"JA\"> </span><span lang=\"JA\"> </span><span lang=\"JA\">有名だ。しかし、この湖が日本で一番古い湖だということは、あまり知られていない。</span></p> <p><span lang=\"JA\">ふつう、</span>()(みずうみ)<span lang=\"JA\">の</span>()(じゅみょう)<span lang=\"JA\">は数千年から数万円と言われている。これは、湖に流れこんでいる</span></p> <p><span lang=\"JA\">川が運ぶ</span>()(すな)<span lang=\"JA\">や土が湖の</span>()(そこ)<span lang=\"JA\">にたまっていき、月日がたつ</span><span lang=\"JA\"> [</span>20]<span lang=\"JA\"> </span><span lang=\"JA\"> 湖を</span>()(う)<span lang=\"JA\">めていくからだ。</span></p> <p><span lang=\"JA\">ところが、中には</span>10<span lang=\"JA\">万年以上長生きする湖もある。このような湖は「古代湖」と呼ばれる。「古代湖」は世界でも</span>20<span lang=\"JA\">だけしか確認 [</span>21]<span lang=\"JA\"> </span><span lang=\"JA\"> 。その中で一番古いのは、ロシアにあるバイカル</span>()(こ)<span lang=\"JA\">で、</span>2000<span lang=\"JA\">万年の歴史がある。琵琶湖はバイカル湖 [</span>22]<span lang=\"JA\"> </span><span lang=\"JA\"> 古くはないが、</span>400<span lang=\"JA\">万年もの歴史がある日本でたった一つの「古代湖」だ。</span></p> <span lang=\"JA\">「古代湖」では、他の場所にはいない</span>()(めずら)<span lang=\"JA\">しい生物がみられる。琵琶湖にも琵琶湖にしかい</span><span lang=\"JA\">ない生生物が</span><span lang=\"JA\">50(しゅるい)<span lang=\"JA\">以上いる。</span></span> 400<span lang=\"JA\">万年もの歴史を持つ琵琶湖と、そこに住むめずらしい生物たちをこれからも</span><span lang=\"JA\"> </span><span lang=\"JA\"> [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\">ものだ。</span>",
+    "prompt": "20.",
+    "choices": [
+      "ことで",
+      "につれて",
+      "によって",
+      "ところで"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "につれて",
+    "explanation": "As V (verb) increases: The more... the more... As time goes by, the lake is gradually being filled up and improved.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.3",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： 次の文章を読んで、 [</span>19]<span lang=\"JA\"> </span><span lang=\"JA\"> から [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\"> の中に入る最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p> (しがけん)<span lang=\"JA\">にある</span>(びわこ)<span lang=\"JA\">は、日本で一番大きい</span>(みずうみ)<span lang=\"JA\"> [1</span>9]<span lang=\"JA\"> </span><span lang=\"JA\"> </span><span lang=\"JA\">有名だ。しかし、この湖が日本で一番古い湖だということは、あまり知られていない。</span></p> <p><span lang=\"JA\">ふつう、</span>()(みずうみ)<span lang=\"JA\">の</span>()(じゅみょう)<span lang=\"JA\">は数千年から数万円と言われている。これは、湖に流れこんでいる</span></p> <p><span lang=\"JA\">川が運ぶ</span>()(すな)<span lang=\"JA\">や土が湖の</span>()(そこ)<span lang=\"JA\">にたまっていき、月日がたつ</span><span lang=\"JA\"> [</span>20]<span lang=\"JA\"> </span><span lang=\"JA\"> 湖を</span>()(う)<span lang=\"JA\">めていくからだ。</span></p> <p><span lang=\"JA\">ところが、中には</span>10<span lang=\"JA\">万年以上長生きする湖もある。このような湖は「古代湖」と呼ばれる。「古代湖」は世界でも</span>20<span lang=\"JA\">だけしか確認 [</span>21]<span lang=\"JA\"> </span><span lang=\"JA\"> 。その中で一番古いのは、ロシアにあるバイカル</span>()(こ)<span lang=\"JA\">で、</span>2000<span lang=\"JA\">万年の歴史がある。琵琶湖はバイカル湖 [</span>22]<span lang=\"JA\"> </span><span lang=\"JA\"> 古くはないが、</span>400<span lang=\"JA\">万年もの歴史がある日本でたった一つの「古代湖」だ。</span></p> <span lang=\"JA\">「古代湖」では、他の場所にはいない</span>()(めずら)<span lang=\"JA\">しい生物がみられる。琵琶湖にも琵琶湖にしかい</span><span lang=\"JA\">ない生生物が</span><span lang=\"JA\">50(しゅるい)<span lang=\"JA\">以上いる。</span></span> 400<span lang=\"JA\">万年もの歴史を持つ琵琶湖と、そこに住むめずらしい生物たちをこれからも</span><span lang=\"JA\"> </span><span lang=\"JA\"> [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\">ものだ。</span>",
+    "prompt": "21.",
+    "choices": [
+      "しない",
+      "させていない",
+      "させられない",
+      "されていない"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "されていない",
+    "explanation": "Vされる: Passive form of a verb. \"Shika ~ nai\" means \"only ~\" in English. There are only 20 confirmed ancient lakes in the world.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.4",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： 次の文章を読んで、 [</span>19]<span lang=\"JA\"> </span><span lang=\"JA\"> から [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\"> の中に入る最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p> (しがけん)<span lang=\"JA\">にある</span>(びわこ)<span lang=\"JA\">は、日本で一番大きい</span>(みずうみ)<span lang=\"JA\"> [1</span>9]<span lang=\"JA\"> </span><span lang=\"JA\"> </span><span lang=\"JA\">有名だ。しかし、この湖が日本で一番古い湖だということは、あまり知られていない。</span></p> <p><span lang=\"JA\">ふつう、</span>()(みずうみ)<span lang=\"JA\">の</span>()(じゅみょう)<span lang=\"JA\">は数千年から数万円と言われている。これは、湖に流れこんでいる</span></p> <p><span lang=\"JA\">川が運ぶ</span>()(すな)<span lang=\"JA\">や土が湖の</span>()(そこ)<span lang=\"JA\">にたまっていき、月日がたつ</span><span lang=\"JA\"> [</span>20]<span lang=\"JA\"> </span><span lang=\"JA\"> 湖を</span>()(う)<span lang=\"JA\">めていくからだ。</span></p> <p><span lang=\"JA\">ところが、中には</span>10<span lang=\"JA\">万年以上長生きする湖もある。このような湖は「古代湖」と呼ばれる。「古代湖」は世界でも</span>20<span lang=\"JA\">だけしか確認 [</span>21]<span lang=\"JA\"> </span><span lang=\"JA\"> 。その中で一番古いのは、ロシアにあるバイカル</span>()(こ)<span lang=\"JA\">で、</span>2000<span lang=\"JA\">万年の歴史がある。琵琶湖はバイカル湖 [</span>22]<span lang=\"JA\"> </span><span lang=\"JA\"> 古くはないが、</span>400<span lang=\"JA\">万年もの歴史がある日本でたった一つの「古代湖」だ。</span></p> <span lang=\"JA\">「古代湖」では、他の場所にはいない</span>()(めずら)<span lang=\"JA\">しい生物がみられる。琵琶湖にも琵琶湖にしかい</span><span lang=\"JA\">ない生生物が</span><span lang=\"JA\">50(しゅるい)<span lang=\"JA\">以上いる。</span></span> 400<span lang=\"JA\">万年もの歴史を持つ琵琶湖と、そこに住むめずらしい生物たちをこれからも</span><span lang=\"JA\"> </span><span lang=\"JA\"> [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\">ものだ。</span>",
+    "prompt": "22.",
+    "choices": [
+      "こそ",
+      "さえ",
+      "ほど",
+      "まで"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ほど",
+    "explanation": "N1 is not as ~ as N2. Lake Biwa is not as young as Lake Baikal.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "3.5",
+    "parent_question_number": "3",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅲ<span lang=\"JA\">： 次の文章を読んで、 [</span>19]<span lang=\"JA\"> </span><span lang=\"JA\"> から [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\"> の中に入る最もよいものを、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から一つ選びなさい。</span></strong></p> <p> (しがけん)<span lang=\"JA\">にある</span>(びわこ)<span lang=\"JA\">は、日本で一番大きい</span>(みずうみ)<span lang=\"JA\"> [1</span>9]<span lang=\"JA\"> </span><span lang=\"JA\"> </span><span lang=\"JA\">有名だ。しかし、この湖が日本で一番古い湖だということは、あまり知られていない。</span></p> <p><span lang=\"JA\">ふつう、</span>()(みずうみ)<span lang=\"JA\">の</span>()(じゅみょう)<span lang=\"JA\">は数千年から数万円と言われている。これは、湖に流れこんでいる</span></p> <p><span lang=\"JA\">川が運ぶ</span>()(すな)<span lang=\"JA\">や土が湖の</span>()(そこ)<span lang=\"JA\">にたまっていき、月日がたつ</span><span lang=\"JA\"> [</span>20]<span lang=\"JA\"> </span><span lang=\"JA\"> 湖を</span>()(う)<span lang=\"JA\">めていくからだ。</span></p> <p><span lang=\"JA\">ところが、中には</span>10<span lang=\"JA\">万年以上長生きする湖もある。このような湖は「古代湖」と呼ばれる。「古代湖」は世界でも</span>20<span lang=\"JA\">だけしか確認 [</span>21]<span lang=\"JA\"> </span><span lang=\"JA\"> 。その中で一番古いのは、ロシアにあるバイカル</span>()(こ)<span lang=\"JA\">で、</span>2000<span lang=\"JA\">万年の歴史がある。琵琶湖はバイカル湖 [</span>22]<span lang=\"JA\"> </span><span lang=\"JA\"> 古くはないが、</span>400<span lang=\"JA\">万年もの歴史がある日本でたった一つの「古代湖」だ。</span></p> <span lang=\"JA\">「古代湖」では、他の場所にはいない</span>()(めずら)<span lang=\"JA\">しい生物がみられる。琵琶湖にも琵琶湖にしかい</span><span lang=\"JA\">ない生生物が</span><span lang=\"JA\">50(しゅるい)<span lang=\"JA\">以上いる。</span></span> 400<span lang=\"JA\">万年もの歴史を持つ琵琶湖と、そこに住むめずらしい生物たちをこれからも</span><span lang=\"JA\"> </span><span lang=\"JA\"> [</span>23]<span lang=\"JA\"> </span><span lang=\"JA\">ものだ。</span>",
+    "prompt": "23.",
+    "choices": [
+      "守り続ける",
+      "守り続けよう",
+      "守り続けべき",
+      "守り続けていきたい"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "守り続けていきたい",
+    "explanation": "Vていく: Expresses that after a certain point in time, an action or change will continue to progress towards the future. The rare creatures in this lake are still being protected and preserved.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "4.1",
+    "parent_question_number": "4",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅳ<span lang=\"JA\">： </span><span lang=\"JA\">次の文章を読んで、質問に答えなさい。答えは</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から最も良い物を一つ選びなさい</span></strong></p> <p><strong><span lang=\"JA\">（</span>1<span lang=\"JA\">）</span></strong></p> <p>To<span lang=\"JA\">：山田さま</span></p> <p>From<span lang=\"JA\">：スグクル営業部</span></p> <p><span lang=\"JA\"> こんにちは。きのうはメール、ありがとうございました。</span></p> <p><span lang=\"JA\"> </span>()(ふうとう)<span lang=\"JA\">の値段と、割引について、お答えします。</span></p> <p><span lang=\"JA\"> 大きい封筒は１セット１００枚で５００円、小さい封筒は１セット２００枚で３００円です。割びきですが、どちらも、</span>5<span lang=\"JA\">セット以上、買っていただくと</span>10<span lang=\"JA\">パーセント</span></p> <p><span lang=\"JA\">わりびきになります。大きいふうとうと小さいふうとうをいっしょにして</span>5<span lang=\"JA\">セットになっても、安くなりませんので、ご注意ください。</span></p>",
+    "prompt": "山田さんは、大きいふうとう5セットと、小さいふうとう2セットを買いたいです。いくらになりますか。",
+    "choices": [
+      "2500円",
+      "2790円",
+      "2850円",
+      "3100円"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "2850円",
+    "explanation": "大きいふうとう 5 セット： 2500 円。 大きいふうとう セット： 円。 10 パーセントわりびきになります： 2250 円 パーセントわりびきになります： 円 小さい封筒２セット： 600 円 小さい封筒２セット： 円 合計： 2850 円 合計： 円",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "5.1",
+    "parent_question_number": "5",
+    "parent_content": "<p><strong><span lang=\"JA\">（</span>2<span lang=\"JA\">）</span></strong></p> <p> <span lang=\"JA\">商品のご注文は、はがきまたは電話でお願いいたします、商品は</span>(たくはい)<span lang=\"JA\">（</span><span lang=\"JA\">⊛</span>1<span lang=\"JA\">）便でお送りいたしますので、商品をお受け取りになるときに代金</span><span lang=\"JA\">をお支払いください。代金は、商品の値段にそれぞれの</span><span lang=\"JA\">地域</span><span lang=\"JA\">までの送料と</span>(てすうりょう)<span lang=\"JA\">（⊛</span>2<span lang=\"JA\">）</span>525<span lang=\"JA\">円を加えた金額になります。なお、お買い上げの商品が合計で</span>1<span lang=\"JA\">万</span>5000<span lang=\"JA\">円以上になる場合は、送料と</span>(てすうりょう)<span lang=\"JA\">は無料となります。</span></p> <p><span lang=\"JA\">（⊛</span>1<span lang=\"JA\">）</span>()(たくはい)<span lang=\"JA\">：配達をするサービス</span></p> <p class=\"MsoNormal\" style=\"margin-left: .25in; line-height: 150%;\"><span lang=\"JA\">（</span><span lang=\"JA\">⊛</span>2<span lang=\"JA\">）</span>()(てすうりょう)<span lang=\"JA\">：だれかのために何かをしたときに、その</span>()(てま)<span lang=\"JA\">に対して払われるお金。</span></p> <p class=\"MsoNormal\" style=\"margin-left: .25in; line-height: 150%;\"> </p>",
+    "prompt": "この文の内容について、正しいのはどれですか。",
+    "choices": [
+      "商品の注文、電話のほかに、ハガキやメールでもできる。",
+      "商品の代金は、銀行から送るか、郵便局から 現金書留(げんきんかきとめ) で送る。",
+      "送料と 手数料(てすうりょう) が無料になるのは、注文が1万5000円以上の時である。",
+      "商品を受け取り時に、支払う金額は、商品の値段と送料である。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "送料と<手数料(てすうりょう)>が無料になるのは、注文が1万5000円以上の時である。",
+    "explanation": "ヒント： お買い上げの商品が合計で 1 万 5000 円以上になる場合は、送料と (てすうりょう) は無料となります。 お買い上げの商品が合計で 1 万 5000 円以上になる場合は、送料と (てすうりょう) は無料となります。 手数料 は無料となります。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "6.1",
+    "parent_question_number": "6",
+    "parent_content": "<p align=\"left\">(3<span lang=\"JA\">）</span></p> <p> 2020<span lang=\"JA\">年</span>5<span lang=\"JA\">月</span>10<span lang=\"JA\">日</span></p> <p><span lang=\"JA\">田中自動車販売部 御中</span></p> <p><span lang=\"JA\"> （株）ぎんざ屋</span></p> <p><span lang=\"JA\"> 営業部 山田 力</span></p> <p><span lang=\"JA\">いつもお世話になっております。</span></p> <p><span lang=\"JA\">先日は新しく</span>()(はつばい)<span lang=\"JA\">された車のパンフレット（⊛１）</span></p> <p><span lang=\"JA\">を送っていただき、ありがとうございます。</span></p> <p><span lang=\"JA\">部長の石井とも</span>()(けんとう)<span lang=\"JA\">いたしましたが、しばらくの間は、新しいものを買うより現在のものを</span>()(しゅうり)<span lang=\"JA\">しながら使うほうがいい、ということになりました。ご</span>()(りかい)<span lang=\"JA\">いただければありがたいです。</span></p> <p><span lang=\"JA\">今後ともよろしくお願いいたします。</span></p> <p class=\"MsoNormal\" style=\"text-indent: -9.0pt; line-height: 150%;\"><span lang=\"JA\">（⊛</span>1<span lang=\"JA\">）パンフレット：商品の紹介や説明が</span>()(いんさつ)<span lang=\"JA\">されているもの。</span></p>",
+    "prompt": "手紙の内容で正しいのはどれですか。",
+    "choices": [
+      "田中自動車は新しく車を買おうと考えている。",
+      "田中自動車の仕事は、車の 修理(しゅうり) や 管理(かんり) である。",
+      "ぎんざ屋は、田中自動車から車を買わない。",
+      "ぎんざ屋は、また新しい車の情報を送ってほしいと頼んでいる。"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ぎんざ屋は、田中自動車から車を買わない。",
+    "explanation": "ヒント： 新しいものを買うより現在のものを (しゅうり) しながら使うほうがいい。 ヒント： 新しいものを買うより現在のものを 修理 しながら使うほうがいい。 ＝＞買わない ＝＞買わない",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "7.1",
+    "parent_question_number": "7",
+    "parent_content": "<p><span lang=\"JA\">（４）</span></p> <p class=\"MsoNormal\" style=\"text-indent: -9.35pt; line-height: 150%;\"><span lang=\"JA\"> </span> <span lang=\"JA\">いい病院とは、どんな病院だろう。医師がよく話を聞いてくれる、最新の機械があるかどうかと、人によって考えは様々だ。</span>()(けっきょく)<span lang=\"JA\">、自分にとって安心できる病院がいい病院だと言えるだろう。では、どうやっていい病院を見つけるか。人に聞いたり、本や</span>()(ざっし)<span lang=\"JA\">、インターネットなどで調べたり、いくらでも方法がある。でも、最終的に選ぶのは自分である。いい病院を選ぶための物差しを、自分の中にしっかり持っていることが重要だ。</span></p>",
+    "prompt": "この文章では、病院を選ぶ時に大切なのはどんなことだと言っているか。",
+    "choices": [
+      "その病院の医者がよく話を聞いてくれること",
+      "その病院に新しい機械がたくさんおいてあること",
+      "その病院が本や雑誌などで紹介されていること",
+      "その病院がよいと自分で確かに思えること"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "その病院がよいと自分で確かに思えること",
+    "explanation": "ヒント：いい病院を選ぶための物差しを、自分の中にしっかり持っていることが重要だ。 ヒント：いい病院を選ぶための物差しを、自分の中にしっかり持っていることが重要だ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "8.1",
+    "parent_question_number": "8",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">：次の文章を読んで、後の問いに答えなさい。答えは、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から </span></strong></p> <p><strong><span lang=\"JA\">一つ選びなさい。</span></strong></p> <p><strong><span lang=\"JA\">（１）</span></strong></p> <p><span lang=\"JA\">今の子供は大人になったらどんな仕事をしたいのだろうか。また、なぜその仕事がしたいのだろうか。今年の春、小学校に入学する</span>()(じどう)<span lang=\"JA\">を</span>()(たいしょう)<span lang=\"JA\">に行われた「将来、</span>()(つ)<span lang=\"JA\">きたい</span>()(しょくぎょう)<span lang=\"JA\">についての調査結果を 見てみた。</span></p> <p><span lang=\"JA\"> 男の子は</span>1<span lang=\"JA\">位がスポーツ選手、</span>2<span lang=\"JA\">位は</span>()(けいさつかん)<span lang=\"JA\">、</span>3<span lang=\"JA\">位は運転手・運転士。女の子は</span>1<span lang=\"JA\">位がパン・ケーキ・お菓子屋、</span>2<span lang=\"JA\">位は花屋、</span>3<span lang=\"JA\">位は</span>()(げいのうじん)<span lang=\"JA\">（注</span><span lang=\"JA\">）・タレントである。男の子のスポーツ選手は</span>30.1<span lang=\"JA\">％、女の子のパン・ケーキ・お菓子屋は</span>29.6<span lang=\"JA\">％。男の子も女の子も、</span>1<span lang=\"JA\">位は</span>12<span lang=\"JA\">年間変わらない そうである。</span></p> <p><span lang=\"JA\">一方、親が就かせたい職業を見ると、男の子は</span>1<span lang=\"JA\">位が公務員、</span>2<span lang=\"JA\">位はスポーツ選手、</span>3<span lang=\"JA\">位は医者である。女の子は</span>1<span lang=\"JA\">位は</span>()(かんごし)<span lang=\"JA\">、</span>2<span lang=\"JA\">位は公務員、</span>3<span lang=\"JA\">位はパン・ケーキ・お菓子屋である、（ </span>1<span lang=\"JA\"> ）就きたい職業には親の</span>()(きぼう)<span lang=\"JA\">もやや</span>()(えいきょう)<span lang=\"JA\">していると考えられる。</span></p> <p class=\"MsoNormal\" style=\"text-indent: 10.5pt; line-height: 150%;\"><span lang=\"JA\">（注） </span>()(げいのうじん)<span lang=\"JA\">：テレビやラジオの番組に出て仕事をする人たち</span></p>",
+    "prompt": "子供の希望する職業について、調査結果と違っているものはどれか。",
+    "choices": [
+      "男の子の1位は、公務員である。",
+      "女の子の1位は、パン・ケーキ・お菓子屋である。",
+      "1位の職業は男の子も女の子も12年間同じである。",
+      "男の子も女の子も、約3人に1人が1位の職業を選んでいる。"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "男の子の1位は、公務員である。",
+    "explanation": "ヒント：子供の希望する職業について、男の子は 1 位がスポーツ選手です。 ヒント：子供の希望する職業について、男の子は 位がスポーツ選手です。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "8.2",
+    "parent_question_number": "8",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">：次の文章を読んで、後の問いに答えなさい。答えは、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から </span></strong></p> <p><strong><span lang=\"JA\">一つ選びなさい。</span></strong></p> <p><strong><span lang=\"JA\">（１）</span></strong></p> <p><span lang=\"JA\">今の子供は大人になったらどんな仕事をしたいのだろうか。また、なぜその仕事がしたいのだろうか。今年の春、小学校に入学する</span>()(じどう)<span lang=\"JA\">を</span>()(たいしょう)<span lang=\"JA\">に行われた「将来、</span>()(つ)<span lang=\"JA\">きたい</span>()(しょくぎょう)<span lang=\"JA\">についての調査結果を 見てみた。</span></p> <p><span lang=\"JA\"> 男の子は</span>1<span lang=\"JA\">位がスポーツ選手、</span>2<span lang=\"JA\">位は</span>()(けいさつかん)<span lang=\"JA\">、</span>3<span lang=\"JA\">位は運転手・運転士。女の子は</span>1<span lang=\"JA\">位がパン・ケーキ・お菓子屋、</span>2<span lang=\"JA\">位は花屋、</span>3<span lang=\"JA\">位は</span>()(げいのうじん)<span lang=\"JA\">（注</span><span lang=\"JA\">）・タレントである。男の子のスポーツ選手は</span>30.1<span lang=\"JA\">％、女の子のパン・ケーキ・お菓子屋は</span>29.6<span lang=\"JA\">％。男の子も女の子も、</span>1<span lang=\"JA\">位は</span>12<span lang=\"JA\">年間変わらない そうである。</span></p> <p><span lang=\"JA\">一方、親が就かせたい職業を見ると、男の子は</span>1<span lang=\"JA\">位が公務員、</span>2<span lang=\"JA\">位はスポーツ選手、</span>3<span lang=\"JA\">位は医者である。女の子は</span>1<span lang=\"JA\">位は</span>()(かんごし)<span lang=\"JA\">、</span>2<span lang=\"JA\">位は公務員、</span>3<span lang=\"JA\">位はパン・ケーキ・お菓子屋である、（ </span>1<span lang=\"JA\"> ）就きたい職業には親の</span>()(きぼう)<span lang=\"JA\">もやや</span>()(えいきょう)<span lang=\"JA\">していると考えられる。</span></p> <p class=\"MsoNormal\" style=\"text-indent: 10.5pt; line-height: 150%;\"><span lang=\"JA\">（注） </span>()(げいのうじん)<span lang=\"JA\">：テレビやラジオの番組に出て仕事をする人たち</span></p>",
+    "prompt": "親が就かせたい職業について、調査結果と違っているものはどれか。",
+    "choices": [
+      "女の子では、パン・ケーキ・お菓子屋が3位である。",
+      "男の子では、スポーツ選手が2位、医師が3位である。",
+      "男の子も女の子も公務員の人気が高い。",
+      "親が就かせたい職業と子供の希望はまったく違う。"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "親が就かせたい職業と子供の希望はまったく違う。",
+    "explanation": "ヒント：就きたい職業には親の (きぼう) もやや (えいきょう) していると考えられる。 ヒント：就きたい職業には親の 希望 もやや 影響 していると考えられる。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "8.3",
+    "parent_question_number": "8",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>Ⅴ<span lang=\"JA\">：次の文章を読んで、後の問いに答えなさい。答えは、</span>1<span lang=\"JA\">・</span>2<span lang=\"JA\">・</span>3<span lang=\"JA\">・</span>4<span lang=\"JA\">から </span></strong></p> <p><strong><span lang=\"JA\">一つ選びなさい。</span></strong></p> <p><strong><span lang=\"JA\">（１）</span></strong></p> <p><span lang=\"JA\">今の子供は大人になったらどんな仕事をしたいのだろうか。また、なぜその仕事がしたいのだろうか。今年の春、小学校に入学する</span>()(じどう)<span lang=\"JA\">を</span>()(たいしょう)<span lang=\"JA\">に行われた「将来、</span>()(つ)<span lang=\"JA\">きたい</span>()(しょくぎょう)<span lang=\"JA\">についての調査結果を 見てみた。</span></p> <p><span lang=\"JA\"> 男の子は</span>1<span lang=\"JA\">位がスポーツ選手、</span>2<span lang=\"JA\">位は</span>()(けいさつかん)<span lang=\"JA\">、</span>3<span lang=\"JA\">位は運転手・運転士。女の子は</span>1<span lang=\"JA\">位がパン・ケーキ・お菓子屋、</span>2<span lang=\"JA\">位は花屋、</span>3<span lang=\"JA\">位は</span>()(げいのうじん)<span lang=\"JA\">（注</span><span lang=\"JA\">）・タレントである。男の子のスポーツ選手は</span>30.1<span lang=\"JA\">％、女の子のパン・ケーキ・お菓子屋は</span>29.6<span lang=\"JA\">％。男の子も女の子も、</span>1<span lang=\"JA\">位は</span>12<span lang=\"JA\">年間変わらない そうである。</span></p> <p><span lang=\"JA\">一方、親が就かせたい職業を見ると、男の子は</span>1<span lang=\"JA\">位が公務員、</span>2<span lang=\"JA\">位はスポーツ選手、</span>3<span lang=\"JA\">位は医者である。女の子は</span>1<span lang=\"JA\">位は</span>()(かんごし)<span lang=\"JA\">、</span>2<span lang=\"JA\">位は公務員、</span>3<span lang=\"JA\">位はパン・ケーキ・お菓子屋である、（ </span>1<span lang=\"JA\"> ）就きたい職業には親の</span>()(きぼう)<span lang=\"JA\">もやや</span>()(えいきょう)<span lang=\"JA\">していると考えられる。</span></p> <p class=\"MsoNormal\" style=\"text-indent: 10.5pt; line-height: 150%;\"><span lang=\"JA\">（注） </span>()(げいのうじん)<span lang=\"JA\">：テレビやラジオの番組に出て仕事をする人たち</span></p>",
+    "prompt": "（１）に入るものはどれか。",
+    "choices": [
+      "この理由を見ると",
+      "この結果を見ると",
+      "この図を見ると",
+      "この対象を見ると"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "この結果を見ると",
+    "explanation": "The article discusses the results of a survey on the desired future professions. The final sentence reaffirms this result.",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "9.1",
+    "parent_question_number": "9",
+    "parent_content": "<p><span lang=\"JA\">（２）</span></p> <p><span lang=\"JA\">先日、仕事の帰りにバスに乗ったときのことだ。 私のとなりの</span>()(せき)<span lang=\"JA\">に</span>10()(さい)<span lang=\"JA\">ぐらいの女の子が</span>()(すわ)<span lang=\"JA\">っていた。</span>()(かのじょ)<span lang=\"JA\">は</span>()(とちゅう)<span lang=\"JA\">から乗ってきた</span>50<span lang=\"JA\">代ぐらいの</span>()(じょせい)<span lang=\"JA\">を見ると、「どうぞ」と言って</span>()(せき)<span lang=\"JA\">を立った。すると、その</span>()(じょせい)<span lang=\"JA\">は少し</span>()(おこ)<span lang=\"JA\">ったような顔で、「いいわよ」と言った。「自分はまだそんな年ではないのだから</span>()(としよ)<span lang=\"JA\">り</span>()(あつか)<span lang=\"JA\">いをしないでほしい」と思って、いい気持ちがしなかったのかもしれない。けれども、女の子にはその</span>()(じょせい)<span lang=\"JA\">が十分年寄りに見えたのだろう。そして、「</span>()()()(としよ)<span lang=\"JA\">りや体の不自由な人がいたら、</span>()(せき)<span lang=\"JA\">を</span>()(ゆず)<span lang=\"JA\">りなさい」と教えられているのをちゃんと守って立ったのだろう。女性は、それを</span>()(りかい)<span lang=\"JA\">して「ありがとう」と言って</span>()(すわ)<span lang=\"JA\">ればよかったのに。私は、女の子ががっかりしているのではないかと気になって、「雨が降ってきたね」。</span>()(かさ)<span lang=\"JA\">、持っている？」 と声をかけた。すると、</span>()(かのじょ)<span lang=\"JA\">は「はい」とにっこり笑ってバズを降り、走って行った。私は少し安心した。</span></p> <p class=\"MsoNormal\" style=\"text-indent: 6.75pt; line-height: 115%; tab-stops: 472.5pt; margin: 0in 66.0pt .0001pt 63.0pt;\"> </p>",
+    "prompt": "この文章を書いた人は、女性がしたことについてどう思ったか。",
+    "choices": [
+      "「ありがとう」と言ったのはよかった。",
+      "「いいわよ」と言った理由が 理解(りかい) できない。",
+      "女性(じょせい) が 座(すわ) ったので、安心した。",
+      "女性(じょせい) が 座(すわ) らなかったのは 残念(ざんねん) 。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<女性(じょせい)>が<座(すわ)>らなかったのは<残念(ざんねん)>。",
+    "explanation": "ヒント： 女性は、それを (りかい) して「ありがとう」と言って (すわ) ればよかったのに。 女性は、それを 理解 して「ありがとう」と言って 座 ればよかったのに。 \"～のに\": But/However/Despite that, (expressing a feeling of regret)",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "9.2",
+    "parent_question_number": "9",
+    "parent_content": "<p><span lang=\"JA\">（２）</span></p> <p><span lang=\"JA\">先日、仕事の帰りにバスに乗ったときのことだ。 私のとなりの</span>()(せき)<span lang=\"JA\">に</span>10()(さい)<span lang=\"JA\">ぐらいの女の子が</span>()(すわ)<span lang=\"JA\">っていた。</span>()(かのじょ)<span lang=\"JA\">は</span>()(とちゅう)<span lang=\"JA\">から乗ってきた</span>50<span lang=\"JA\">代ぐらいの</span>()(じょせい)<span lang=\"JA\">を見ると、「どうぞ」と言って</span>()(せき)<span lang=\"JA\">を立った。すると、その</span>()(じょせい)<span lang=\"JA\">は少し</span>()(おこ)<span lang=\"JA\">ったような顔で、「いいわよ」と言った。「自分はまだそんな年ではないのだから</span>()(としよ)<span lang=\"JA\">り</span>()(あつか)<span lang=\"JA\">いをしないでほしい」と思って、いい気持ちがしなかったのかもしれない。けれども、女の子にはその</span>()(じょせい)<span lang=\"JA\">が十分年寄りに見えたのだろう。そして、「</span>()()()(としよ)<span lang=\"JA\">りや体の不自由な人がいたら、</span>()(せき)<span lang=\"JA\">を</span>()(ゆず)<span lang=\"JA\">りなさい」と教えられているのをちゃんと守って立ったのだろう。女性は、それを</span>()(りかい)<span lang=\"JA\">して「ありがとう」と言って</span>()(すわ)<span lang=\"JA\">ればよかったのに。私は、女の子ががっかりしているのではないかと気になって、「雨が降ってきたね」。</span>()(かさ)<span lang=\"JA\">、持っている？」 と声をかけた。すると、</span>()(かのじょ)<span lang=\"JA\">は「はい」とにっこり笑ってバズを降り、走って行った。私は少し安心した。</span></p> <p class=\"MsoNormal\" style=\"text-indent: 6.75pt; line-height: 115%; tab-stops: 472.5pt; margin: 0in 66.0pt .0001pt 63.0pt;\"> </p>",
+    "prompt": "この文章を書いた人は、女の子がしたことについてどう思ったか。",
+    "choices": [
+      "女性(じょせい) を 年寄(としよ) りだと思ったのはよくないかった。",
+      "女性に 席(せき) を 譲(ゆず) ろうとしたことはよかった。",
+      "女性をいやな気分にしたのはよくなかった。",
+      "女性に 笑(わら) って答えたのはよかった。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "女性に<席(せき)>を<譲(ゆず)>ろうとしたことはよかった。",
+    "explanation": "ヒント： () (としよ) りや体の不自由な人がいたら、 (せき) を (ゆず) りなさい」と教えられているのを{ちゃんと守って立った}のだろう。 お 年寄 りや体の不自由な人がいたら、 席 を 譲 りなさい」と教えられているのを{ちゃんと守って立った}のだろう。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "9.3",
+    "parent_question_number": "9",
+    "parent_content": "<p><span lang=\"JA\">（２）</span></p> <p><span lang=\"JA\">先日、仕事の帰りにバスに乗ったときのことだ。 私のとなりの</span>()(せき)<span lang=\"JA\">に</span>10()(さい)<span lang=\"JA\">ぐらいの女の子が</span>()(すわ)<span lang=\"JA\">っていた。</span>()(かのじょ)<span lang=\"JA\">は</span>()(とちゅう)<span lang=\"JA\">から乗ってきた</span>50<span lang=\"JA\">代ぐらいの</span>()(じょせい)<span lang=\"JA\">を見ると、「どうぞ」と言って</span>()(せき)<span lang=\"JA\">を立った。すると、その</span>()(じょせい)<span lang=\"JA\">は少し</span>()(おこ)<span lang=\"JA\">ったような顔で、「いいわよ」と言った。「自分はまだそんな年ではないのだから</span>()(としよ)<span lang=\"JA\">り</span>()(あつか)<span lang=\"JA\">いをしないでほしい」と思って、いい気持ちがしなかったのかもしれない。けれども、女の子にはその</span>()(じょせい)<span lang=\"JA\">が十分年寄りに見えたのだろう。そして、「</span>()()()(としよ)<span lang=\"JA\">りや体の不自由な人がいたら、</span>()(せき)<span lang=\"JA\">を</span>()(ゆず)<span lang=\"JA\">りなさい」と教えられているのをちゃんと守って立ったのだろう。女性は、それを</span>()(りかい)<span lang=\"JA\">して「ありがとう」と言って</span>()(すわ)<span lang=\"JA\">ればよかったのに。私は、女の子ががっかりしているのではないかと気になって、「雨が降ってきたね」。</span>()(かさ)<span lang=\"JA\">、持っている？」 と声をかけた。すると、</span>()(かのじょ)<span lang=\"JA\">は「はい」とにっこり笑ってバズを降り、走って行った。私は少し安心した。</span></p> <p class=\"MsoNormal\" style=\"text-indent: 6.75pt; line-height: 115%; tab-stops: 472.5pt; margin: 0in 66.0pt .0001pt 63.0pt;\"> </p>",
+    "prompt": "<strong>少し安心した</strong>とあるが、それはどうしてだと考えられるか。",
+    "choices": [
+      "女の子ががっかりしていないようだったから",
+      "女の子がバスを降りたから",
+      "女の子が 傘(かさ) を持っていたから",
+      "女の子が教えられたことを守ったから。"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "女の子ががっかりしていないようだったから",
+    "explanation": "ヒント：（私は）女の子ががっかりしているのではないか。 (かのじょ) は「はい」とにっこり笑ってバズを降り、走って行った。 彼女 は「はい」とにっこり笑ってバズを降り、走って行った。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.1",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>VI<span lang=\"JA\"> 次の文章を読んで、質問に答えなさい。答えは、１・２・３・４ から最もよいものを一つ選びなさい。</span></strong></p> <p><span lang=\"JA\">マラソン大会、チーズまつり、</span>()(てじな)<span lang=\"JA\">コンテスト</span>…<span lang=\"JA\">。住民による小さなイベントや趣味のサークル活動が、町の名物と呼ばれるほど大きく広がることがある。大浜市にも（1）<span style=\"text-decoration: underline;\">このような名物</span>がある。小学生親子バレーボール大会、「ひかりカップ」だ。今年は、県の内外から</span>156<span lang=\"JA\">チームが出場し、</span>2<span lang=\"JA\">日間で</span>4000<span lang=\"JA\">人もの人が同市をおとずれた。</span></p> <p><span lang=\"JA\"> この大会は、バレーボールの市民サークルが小学生のクラブと交流試合を行ったのが始まりだ。はじめは参加</span>10<span lang=\"JA\">チームの小さな大会だったが、この大会を広めることで（2）</span><span lang=\"JA\"><span style=\"text-decoration: underline;\">町おこし</span>ができないかとサークルのメンバーたちは考えた。</span></p> <p><span lang=\"JA\"> 商店街に協力を呼びかけてもなかなかこたえてもらえず、</span><span lang=\"JA\">大会当日の昼はおべんとうを注文する、</span><span lang=\"JA\">県外からのチームは市内に泊まる、という参加ルールをつくることにした。その結果、多くの店や旅館が協力してくれるようになった。これは農家にとっても（3）<span style=\"text-decoration: underline;\">いい宣伝になっている</span>。おべんとうにはすべて</span>()(じもと)<span lang=\"JA\">（注）</span><span lang=\"JA\">の食材を使うことになっているのだ。今では、大会中は町に人があふれ、まつりのようなにぎやかさだ。試合の帰りに市内を観光して帰る人も多い。町おこしは</span>()(だいせいこう)<span lang=\"JA\">だ。</span></p> <p><span lang=\"JA\"> 「皆さんが楽しそうにプレーしていたのが一番うれしい。町の夕方とボランティアの力を借りて、来年もより良い大会にしたい」と会長の木村さん。サークルには、参加者からのお礼の手紙がたくさん届いているそうだ。試合結果と参加者の声はサークルのホームページで</span>()(こうかい)<span lang=\"JA\">されている。</span></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\">（注）</span><span lang=\"JA\">地元：その人やそのことに直接関係のあるところ</span></p>",
+    "prompt": "（1）<strong>このような名物</strong>とは、どのような名物か。",
+    "choices": [
+      "全国にも知られている有名なスポーツ大会",
+      "親子で参加するスポーツ大会",
+      "市民だけで参加できる特別なイベント",
+      "町の人々の活動から大きくなったイベント"
+    ],
+    "correct_choice_index": 3,
+    "correct_choice_text": "町の人々の活動から大きくなったイベント",
+    "explanation": "ヒント： 住民による小さなイベントや趣味のサークル活動が、町の名物と呼ばれるほど大きく広がることがある。 ヒント： 住民による小さなイベントや趣味のサークル活動が、町の名物と呼ばれるほど大きく広がることがある。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.2",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>VI<span lang=\"JA\"> 次の文章を読んで、質問に答えなさい。答えは、１・２・３・４ から最もよいものを一つ選びなさい。</span></strong></p> <p><span lang=\"JA\">マラソン大会、チーズまつり、</span>()(てじな)<span lang=\"JA\">コンテスト</span>…<span lang=\"JA\">。住民による小さなイベントや趣味のサークル活動が、町の名物と呼ばれるほど大きく広がることがある。大浜市にも（1）<span style=\"text-decoration: underline;\">このような名物</span>がある。小学生親子バレーボール大会、「ひかりカップ」だ。今年は、県の内外から</span>156<span lang=\"JA\">チームが出場し、</span>2<span lang=\"JA\">日間で</span>4000<span lang=\"JA\">人もの人が同市をおとずれた。</span></p> <p><span lang=\"JA\"> この大会は、バレーボールの市民サークルが小学生のクラブと交流試合を行ったのが始まりだ。はじめは参加</span>10<span lang=\"JA\">チームの小さな大会だったが、この大会を広めることで（2）</span><span lang=\"JA\"><span style=\"text-decoration: underline;\">町おこし</span>ができないかとサークルのメンバーたちは考えた。</span></p> <p><span lang=\"JA\"> 商店街に協力を呼びかけてもなかなかこたえてもらえず、</span><span lang=\"JA\">大会当日の昼はおべんとうを注文する、</span><span lang=\"JA\">県外からのチームは市内に泊まる、という参加ルールをつくることにした。その結果、多くの店や旅館が協力してくれるようになった。これは農家にとっても（3）<span style=\"text-decoration: underline;\">いい宣伝になっている</span>。おべんとうにはすべて</span>()(じもと)<span lang=\"JA\">（注）</span><span lang=\"JA\">の食材を使うことになっているのだ。今では、大会中は町に人があふれ、まつりのようなにぎやかさだ。試合の帰りに市内を観光して帰る人も多い。町おこしは</span>()(だいせいこう)<span lang=\"JA\">だ。</span></p> <p><span lang=\"JA\"> 「皆さんが楽しそうにプレーしていたのが一番うれしい。町の夕方とボランティアの力を借りて、来年もより良い大会にしたい」と会長の木村さん。サークルには、参加者からのお礼の手紙がたくさん届いているそうだ。試合結果と参加者の声はサークルのホームページで</span>()(こうかい)<span lang=\"JA\">されている。</span></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\">（注）</span><span lang=\"JA\">地元：その人やそのことに直接関係のあるところ</span></p>",
+    "prompt": "ここで言う、（２）<strong>町おこし</strong>とはどのようなものか。",
+    "choices": [
+      "大会を行うことで、町をおとずれる人を増やす。",
+      "町のバレーボールチームを強いチームにする。",
+      "サークルと商店とで、町の新しいまつりを作る。",
+      "活動内容を増やしてサークルの名前を町に広める"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "大会を行うことで、町をおとずれる人を増やす。",
+    "explanation": "ヒント：次の段落： 「 大会中は町に人があふれ、まつりのようなにぎやかさだ。試合の帰りに市内を観光して帰る人も多い。町おこしは (だいせいこう) だ。」と書いてある。 ヒント：次の段落： 「 大会中は町に人があふれ、まつりのようなにぎやかさだ。試合の帰りに市内を観光して帰る人も多い。町おこしは 大成功 だ。」と書いてある。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.3",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>VI<span lang=\"JA\"> 次の文章を読んで、質問に答えなさい。答えは、１・２・３・４ から最もよいものを一つ選びなさい。</span></strong></p> <p><span lang=\"JA\">マラソン大会、チーズまつり、</span>()(てじな)<span lang=\"JA\">コンテスト</span>…<span lang=\"JA\">。住民による小さなイベントや趣味のサークル活動が、町の名物と呼ばれるほど大きく広がることがある。大浜市にも（1）<span style=\"text-decoration: underline;\">このような名物</span>がある。小学生親子バレーボール大会、「ひかりカップ」だ。今年は、県の内外から</span>156<span lang=\"JA\">チームが出場し、</span>2<span lang=\"JA\">日間で</span>4000<span lang=\"JA\">人もの人が同市をおとずれた。</span></p> <p><span lang=\"JA\"> この大会は、バレーボールの市民サークルが小学生のクラブと交流試合を行ったのが始まりだ。はじめは参加</span>10<span lang=\"JA\">チームの小さな大会だったが、この大会を広めることで（2）</span><span lang=\"JA\"><span style=\"text-decoration: underline;\">町おこし</span>ができないかとサークルのメンバーたちは考えた。</span></p> <p><span lang=\"JA\"> 商店街に協力を呼びかけてもなかなかこたえてもらえず、</span><span lang=\"JA\">大会当日の昼はおべんとうを注文する、</span><span lang=\"JA\">県外からのチームは市内に泊まる、という参加ルールをつくることにした。その結果、多くの店や旅館が協力してくれるようになった。これは農家にとっても（3）<span style=\"text-decoration: underline;\">いい宣伝になっている</span>。おべんとうにはすべて</span>()(じもと)<span lang=\"JA\">（注）</span><span lang=\"JA\">の食材を使うことになっているのだ。今では、大会中は町に人があふれ、まつりのようなにぎやかさだ。試合の帰りに市内を観光して帰る人も多い。町おこしは</span>()(だいせいこう)<span lang=\"JA\">だ。</span></p> <p><span lang=\"JA\"> 「皆さんが楽しそうにプレーしていたのが一番うれしい。町の夕方とボランティアの力を借りて、来年もより良い大会にしたい」と会長の木村さん。サークルには、参加者からのお礼の手紙がたくさん届いているそうだ。試合結果と参加者の声はサークルのホームページで</span>()(こうかい)<span lang=\"JA\">されている。</span></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\">（注）</span><span lang=\"JA\">地元：その人やそのことに直接関係のあるところ</span></p>",
+    "prompt": "（３）<strong>いい宣伝になっている</strong>とあるが、それはどうしてだと言っているか。",
+    "choices": [
+      "作った米や野菜を旅館の食事で使ってもらえるから。",
+      "多くの人に、自分の作ったものを食べてもらえるから。",
+      "おべんとうに珍しい野菜などが使われているから。",
+      "大会の会場で 地元(じもと) の農産物を売ることができるから。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "多くの人に、自分の作ったものを食べてもらえるから。",
+    "explanation": "ヒント： 大会当日の昼はおべんとうを注文する ヒント： 大会当日の昼はおべんとうを注文する おべんとうにはすべて (じもと) の食材を使うことになっているのだ。 おべんとうにはすべて 地元 の食材を使うことになっているのだ。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "10.4",
+    "parent_question_number": "10",
+    "parent_content": "<p><strong><span lang=\"JA\">問題</span>VI<span lang=\"JA\"> 次の文章を読んで、質問に答えなさい。答えは、１・２・３・４ から最もよいものを一つ選びなさい。</span></strong></p> <p><span lang=\"JA\">マラソン大会、チーズまつり、</span>()(てじな)<span lang=\"JA\">コンテスト</span>…<span lang=\"JA\">。住民による小さなイベントや趣味のサークル活動が、町の名物と呼ばれるほど大きく広がることがある。大浜市にも（1）<span style=\"text-decoration: underline;\">このような名物</span>がある。小学生親子バレーボール大会、「ひかりカップ」だ。今年は、県の内外から</span>156<span lang=\"JA\">チームが出場し、</span>2<span lang=\"JA\">日間で</span>4000<span lang=\"JA\">人もの人が同市をおとずれた。</span></p> <p><span lang=\"JA\"> この大会は、バレーボールの市民サークルが小学生のクラブと交流試合を行ったのが始まりだ。はじめは参加</span>10<span lang=\"JA\">チームの小さな大会だったが、この大会を広めることで（2）</span><span lang=\"JA\"><span style=\"text-decoration: underline;\">町おこし</span>ができないかとサークルのメンバーたちは考えた。</span></p> <p><span lang=\"JA\"> 商店街に協力を呼びかけてもなかなかこたえてもらえず、</span><span lang=\"JA\">大会当日の昼はおべんとうを注文する、</span><span lang=\"JA\">県外からのチームは市内に泊まる、という参加ルールをつくることにした。その結果、多くの店や旅館が協力してくれるようになった。これは農家にとっても（3）<span style=\"text-decoration: underline;\">いい宣伝になっている</span>。おべんとうにはすべて</span>()(じもと)<span lang=\"JA\">（注）</span><span lang=\"JA\">の食材を使うことになっているのだ。今では、大会中は町に人があふれ、まつりのようなにぎやかさだ。試合の帰りに市内を観光して帰る人も多い。町おこしは</span>()(だいせいこう)<span lang=\"JA\">だ。</span></p> <p><span lang=\"JA\"> 「皆さんが楽しそうにプレーしていたのが一番うれしい。町の夕方とボランティアの力を借りて、来年もより良い大会にしたい」と会長の木村さん。サークルには、参加者からのお礼の手紙がたくさん届いているそうだ。試合結果と参加者の声はサークルのホームページで</span>()(こうかい)<span lang=\"JA\">されている。</span></p> <p class=\"MsoNormal\" style=\"line-height: 150%;\"><span lang=\"JA\">（注）</span><span lang=\"JA\">地元：その人やそのことに直接関係のあるところ</span></p>",
+    "prompt": "会長の木村さんは、この大会についてどう言っているか。",
+    "choices": [
+      "大会を広く知ってもらうために、ホームページを作る予定だ。",
+      "町の人たちには、次の大会でもぜひ協力してほしい。",
+      "参加した人は、大会の感想を手紙に書いて送ってほしい。",
+      "どの試合もよかったので、 勝(か) ち 負(ま) けを決めたくなかった。"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "町の人たちには、次の大会でもぜひ協力してほしい。",
+    "explanation": "ヒント： 町の夕方とボランティアの力を借りて、来年もより良い大会にしたい」と会長の木村さん。 ヒント： 町の夕方とボランティアの力を借りて、来年もより良い大会にしたい」と会長の木村さん。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "11.1",
+    "parent_question_number": "11",
+    "parent_content": "<p><strong><span lang=\"JA\">問題VII</span><span lang=\"JA\"> 次のページは、「レインボー旅行社 </span>1<span lang=\"JA\">月のバスツアー」の案内である。これを読んで、下の質問に答えなさい。答えは、１・２・３・４から最も良いものを一つ選びなさい。</span></strong></p> <p align=\"center\"><strong>1<span lang=\"JA\">月・東京発おすすめのバスツアーのご案内</span></strong></p> <p align=\"right\"><span lang=\"JA\">レインボー旅行者</span></p> <p><strong><span lang=\"JA\">ツアー名 夜行バスで行く北原スキー場</span></strong></p> <p><strong>✿<span lang=\"JA\">出発日：</span>1<span lang=\"JA\">月中の金曜日・土曜日（</span>1<span lang=\"JA\">月</span>4<span lang=\"JA\">・</span>5<span lang=\"JA\">・</span>11<span lang=\"JA\">・</span>12<span lang=\"JA\">・</span>18<span lang=\"JA\">・</span>19<span lang=\"JA\">・</span>25<span lang=\"JA\">・</span>26<span lang=\"JA\">日）</span></strong></p> <p><strong>✿<span lang=\"JA\">基本代金：</span>15,000<span lang=\"JA\">円</span></strong></p> <p><span lang=\"JA\">〈基本代金にふくまれるもの〉</span></p> <p><span lang=\"JA\"> 大福のバス・宿泊・リフト券・用具とウェアのレンタル</span></p> <p><span lang=\"JA\"> </span>※<span lang=\"JA\">食事代は基本代金にふくまれません。</span></p> <p><strong><span lang=\"JA\">〈スケジュール〉</span></strong></p> <p><span lang=\"JA\"> </span>1<span lang=\"JA\">日目 </span>22:00<span lang=\"JA\">東京発 </span>→<span lang=\"JA\">（車中泊）</span></p> <p><span lang=\"JA\"> </span>2<span lang=\"JA\">日目 </span>6:00<span lang=\"JA\">北原ズキー場着 </span>→<span lang=\"JA\">（フリータイム） </span>→<span lang=\"JA\">（北原ホテル泊）</span></p> <p><span lang=\"JA\"> </span>3<span lang=\"JA\">日目 （フリータイム） </span>→16:00<span lang=\"JA\">北原スキー場発 </span>→22:00<span lang=\"JA\">東京着</span></p> <p>※ <span lang=\"JA\">北原ホテルには温泉はありません。ただし、北原温泉ホテルに変更することもでき ます。その場合は、基本代金といっしょに追加料金</span>3000<span lang=\"JA\">円をお支払いください。</span></p> <p>※<span lang=\"JA\">「初心者のためのスキー教室」に参加することができます。参加費（</span>1<span lang=\"JA\">日</span>2000<span lang=\"JA\">円）は、当日、スキー場でお支払いください。</span></p> <p>■<span lang=\"JA\">お申込み・お支払について</span>■</p> <p><span lang=\"JA\">・お電話、</span><span lang=\"VI\">FAX</span><span lang=\"JA\">、</span><span lang=\"VI\">E</span><span lang=\"JA\">メールで、ご出発の</span>7<span lang=\"JA\">日前までにお申し込みください。</span></p> <p><span lang=\"JA\">・</span><span lang=\"VI\">FAX</span><span lang=\"JA\">、</span><span lang=\"VI\">E</span><span lang=\"JA\">メールでお申し込みの場合、</span>①<span lang=\"JA\">ツアー名、</span>②<span lang=\"JA\">ご出発日、</span>③<span lang=\"JA\">お名前と参加する人数、</span>④<span lang=\"JA\">お電話番号または</span><span lang=\"VI\">E</span><span lang=\"JA\">メールドレス、</span>⑤<span lang=\"JA\">希望する宿泊先をお書きください。</span></p> <p><span lang=\"JA\">・旅行代金は、ご出発の</span>3<span lang=\"JA\">日前までにお支払いください。クレジットカード、銀行、コンビニでお支払いが可能です。</span></p> <p>■<span lang=\"JA\">ご注意</span>■</p> <p><span lang=\"JA\">・</span>(けんこうほけんしょう)<span lang=\"JA\">をご持参ください。</span></p>",
+    "prompt": "ワンさんはこのツアーに参加するつもりだ。温泉のあるホテルに泊まり、2日目にスキー教室に参加したいと思っている。旅行会社に払う代金はいくらか。",
+    "choices": [
+      "15,000円",
+      "18,000円",
+      "20,000円",
+      "22,000円"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "18,000円",
+    "explanation": "ヒント：基本代金： 15000 円＋温泉ホテル 3000 円＝ 18000 円 ヒント：基本代金： 円＋温泉ホテル 円＝ 円 スキー教室に参加費（ 1 日 2000 円）は、スキー場でお支払いください（旅行会社に払うのではない。 スキー教室に参加費（ 日 円）は、スキー場でお支払いください（旅行会社に払うのではない。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 1,
+    "question_number": "11.2",
+    "parent_question_number": "11",
+    "parent_content": "<p><strong><span lang=\"JA\">問題VII</span><span lang=\"JA\"> 次のページは、「レインボー旅行社 </span>1<span lang=\"JA\">月のバスツアー」の案内である。これを読んで、下の質問に答えなさい。答えは、１・２・３・４から最も良いものを一つ選びなさい。</span></strong></p> <p align=\"center\"><strong>1<span lang=\"JA\">月・東京発おすすめのバスツアーのご案内</span></strong></p> <p align=\"right\"><span lang=\"JA\">レインボー旅行者</span></p> <p><strong><span lang=\"JA\">ツアー名 夜行バスで行く北原スキー場</span></strong></p> <p><strong>✿<span lang=\"JA\">出発日：</span>1<span lang=\"JA\">月中の金曜日・土曜日（</span>1<span lang=\"JA\">月</span>4<span lang=\"JA\">・</span>5<span lang=\"JA\">・</span>11<span lang=\"JA\">・</span>12<span lang=\"JA\">・</span>18<span lang=\"JA\">・</span>19<span lang=\"JA\">・</span>25<span lang=\"JA\">・</span>26<span lang=\"JA\">日）</span></strong></p> <p><strong>✿<span lang=\"JA\">基本代金：</span>15,000<span lang=\"JA\">円</span></strong></p> <p><span lang=\"JA\">〈基本代金にふくまれるもの〉</span></p> <p><span lang=\"JA\"> 大福のバス・宿泊・リフト券・用具とウェアのレンタル</span></p> <p><span lang=\"JA\"> </span>※<span lang=\"JA\">食事代は基本代金にふくまれません。</span></p> <p><strong><span lang=\"JA\">〈スケジュール〉</span></strong></p> <p><span lang=\"JA\"> </span>1<span lang=\"JA\">日目 </span>22:00<span lang=\"JA\">東京発 </span>→<span lang=\"JA\">（車中泊）</span></p> <p><span lang=\"JA\"> </span>2<span lang=\"JA\">日目 </span>6:00<span lang=\"JA\">北原ズキー場着 </span>→<span lang=\"JA\">（フリータイム） </span>→<span lang=\"JA\">（北原ホテル泊）</span></p> <p><span lang=\"JA\"> </span>3<span lang=\"JA\">日目 （フリータイム） </span>→16:00<span lang=\"JA\">北原スキー場発 </span>→22:00<span lang=\"JA\">東京着</span></p> <p>※ <span lang=\"JA\">北原ホテルには温泉はありません。ただし、北原温泉ホテルに変更することもでき ます。その場合は、基本代金といっしょに追加料金</span>3000<span lang=\"JA\">円をお支払いください。</span></p> <p>※<span lang=\"JA\">「初心者のためのスキー教室」に参加することができます。参加費（</span>1<span lang=\"JA\">日</span>2000<span lang=\"JA\">円）は、当日、スキー場でお支払いください。</span></p> <p>■<span lang=\"JA\">お申込み・お支払について</span>■</p> <p><span lang=\"JA\">・お電話、</span><span lang=\"VI\">FAX</span><span lang=\"JA\">、</span><span lang=\"VI\">E</span><span lang=\"JA\">メールで、ご出発の</span>7<span lang=\"JA\">日前までにお申し込みください。</span></p> <p><span lang=\"JA\">・</span><span lang=\"VI\">FAX</span><span lang=\"JA\">、</span><span lang=\"VI\">E</span><span lang=\"JA\">メールでお申し込みの場合、</span>①<span lang=\"JA\">ツアー名、</span>②<span lang=\"JA\">ご出発日、</span>③<span lang=\"JA\">お名前と参加する人数、</span>④<span lang=\"JA\">お電話番号または</span><span lang=\"VI\">E</span><span lang=\"JA\">メールドレス、</span>⑤<span lang=\"JA\">希望する宿泊先をお書きください。</span></p> <p><span lang=\"JA\">・旅行代金は、ご出発の</span>3<span lang=\"JA\">日前までにお支払いください。クレジットカード、銀行、コンビニでお支払いが可能です。</span></p> <p>■<span lang=\"JA\">ご注意</span>■</p> <p><span lang=\"JA\">・</span>(けんこうほけんしょう)<span lang=\"JA\">をご持参ください。</span></p>",
+    "prompt": "原さんは友達の石川さんと、メールでこのツアーに申し込む。きたはらホテルに泊まり、スキー教室にも参加したいと思っている。申し込みの内容が正しいのはどれか。",
+    "choices": [
+      "ツアー名：夜行バスで行く 北原(きたはら) スキー場 出発日：1月11日 ホテル・旅館名：きたはらホテル 旅行者：原ゆう子（2名） 電話番号：099－3346－6679",
+      "ツアー名：夜行バスで行く 北原(きたはら) スキー場 出発日：1月11日 旅行者：原ゆう子（2名） 電話番号：099－3346－6679 その他：スキー教室に参加します",
+      "ツアー名：夜行バスで行く北原スキー場 出発日：1月11日 ホテル・旅館名：きたはらホテル 旅行者：原ゆう子・石川みどり 電話番号：099－3346－6679",
+      "ツアー名：夜行バスで行く北原スキー場 出発日：1月11日 旅行者：原ゆう子・石川みどり 電話番号：099－3346－6679 その他：スキー教室に参加します"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "ツアー名：夜行バスで行く<北原(きたはら)>スキー場 出発日：1月11日 ホテル・旅館名：きたはらホテル 旅行者：原ゆう子（2名） 電話番号：099－3346－6679",
+    "explanation": "ヒント： FAX 、 E メールでお申し込みの場合、 ① ツアー名、 ② ご出発日、 ③ お名前と参加する人数、 ④ お電話番号または E メールドレス、 ⑤ 希望する宿泊先をお書きください。 ヒント： FAX 、 E メールでお申し込みの場合、 ツアー名、 ご出発日、 お名前と参加する人数、 お電話番号または E メールドレス、 希望する宿泊先をお書きください。",
+    "is_audio": false,
+    "audio_url": null
+  },
+  {
+    "part": 2,
+    "question_number": "1.1",
+    "parent_question_number": "1",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">１：</span></p> <p class=\"MsoNormal\">()(もんだい)<span lang=\"JA\">１では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものを一つえらんでください。</span></p>",
+    "prompt": "れい：",
+    "choices": [
+      "きゃくをかいぎ 室(しつ) にあんないする",
+      "しりょうを コピ(こぴ) ーする",
+      "きゃくにお 茶(ちゃ) を 出(だ) す。",
+      "かいぎ 室(しつ) の エアコン(えあこん) をつける"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "きゃくをかいぎ<室(しつ)>にあんないする",
+    "explanation": "(かいしゃ) で、 (おんな) の (ひと) と (おとこ) の (ひと) が (はな) しています。 (おんな) の (ひと) は、このあと、まず (なに) をしなければなりませんか。 会社 で、 女 の 人 と 男 の 人 が 話 しています。 女 の 人 は、このあと、まず 何 をしなければなりませんか。 F: ABC (こうこく) の (かわしまぶちょう) が、そろそろいらっしゃる (じかん) ですね。 広告 の 川島部長 が、そろそろいらっしゃる 時間 ですね。 M: うん。 (しりょう) の (こぴ) ーはしてくれた？ うん。 資料 の コピ ーはしてくれた？ F: はい、こちらです。６ (ぶ) で (た) りますか。 はい、こちらです。６ 部 で 足 りますか。 M: そうだね、ありがとう。いらしたら、２ (かい) の (かいぎしつ) に (あんない) してくれる？ぼくは (ひと) つ (しりょう) を (ま) って (い) くから、その (かん) にお (ちゃ) を (だ) しておいて。 そうだね、ありがとう。いらしたら、２ 階 の 会議室 に 案内 してくれる？ぼくは 一 つ 資料 を 待 って 行 くから、その 間 にお 茶 を 出 しておいて。 F: わかしました。あ、エアコンもつけおきますね。 わかしました。あ、エアコンもつけおきますね。 M: ああ、それはさっき (たなか) さんがやってくれたみたい。じゃ、よろしくね。 ああ、それはさっき 田中 さんがやってくれたみたい。じゃ、よろしくね。 F: はい。 はい。 (おんな) の (ひと) は、このあと、ます (なに) をしなかればなりませんか。 女 の 人 は、このあと、ます 何 をしなかればなりませんか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "2",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">１ばん：</span></p> <p><img src=\"http://jlpt.mazii.net/api/upload/media/1489133876.748-1.jpg\"/></p>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "コンビにで、男の人が女の人に電話しています。男の人はどのパンを買いますか コンビにで、男の人が女の人に電話しています。男の人はどのパンを買いますか Ｍ : もしもし。お昼、買っていくよ。今コンビニにいるんだけど、何がいい？おにぎりとか？ Ｍ もしもし。お昼、買っていくよ。今コンビニにいるんだけど、何がいい？おにぎりとか？ F: うーん、パンのほうがいいかな。 うーん、パンのほうがいいかな。 Ｍ：わかった。どういうのがいい？ Ｍ：わかった。どういうのがいい？ Ｆ： 甘いの１つとあまくないの１つ。 Ｆ： 甘いの１つとあまくないの１つ。 Ｍ： 甘くないのって、サンドイッチとか？ Ｍ： 甘くないのって、サンドイッチとか？ Ｆ：え一つ、サンドイッチよりはソーサージが入ってるのがいいな。あと、甘いのは、小さいのが何個か入ってるやつがいい。 Ｆ：え一つ、サンドイッチよりはソーサージが入ってるのがいいな。あと、甘いのは、小さいのが何個か入ってるやつがいい。 Ｍ： 何個か？今あるのはドーナツだけど、いい？ Ｍ： 何個か？今あるのはドーナツだけど、いい？ Ｆ： それしかなかったらいいよ、それで。ああ、あと、飲み物もお願い。コーヒーじゃなくて、紅茶ね。ミルクティーとか。 Ｆ： それしかなかったらいいよ、それで。ああ、あと、飲み物もお願い。コーヒーじゃなくて、紅茶ね。ミルクティーとか。 Ｍ： 了解。じゃ、買ってくね。 Ｍ： 了解。じゃ、買ってくね。 男の人はどのパンを買いますか。 男の人はどのパンを買いますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "3",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\" style=\"font-family: 'MS Mincho'; mso-ascii-font-family: Calibri; mso-ascii-theme-font: minor-latin; mso-hansi-font-family: Calibri; mso-hansi-theme-font: minor-latin; mso-fareast-language: JA;\">２ばん：</span></p>",
+    "prompt": "",
+    "choices": [
+      "デザインをかくにんする。",
+      "けいたい 電話(でんわ) に 電話(でんわ) する",
+      "ひとりき 先(さき) にれんらくする",
+      "うちあわせに 行(い) く"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "ひとりき<先(さき)>にれんらくする",
+    "explanation": "会社で、男の人と女の人が話しています。女の人このあと、何をしなければなりませんか。 会社で、男の人と女の人が話しています。女の人このあと、何をしなければなりませんか。 Ｆ： あのう、山田さん。部長、どこに行かれたかご存知ですか。 Ｆ： あのう、山田さん。部長、どこに行かれたかご存知ですか。 Ｍ： 部長？あさひ工業との打ち合わせにでかけてるよ。 Ｍ： 部長？あさひ工業との打ち合わせにでかけてるよ。 Ｆ： そうなんですか…。困ったなあ。ふじ広告から至急確認してほしいって、メールでデザイン案が送られてきたんですよ。部長に見ていただきたいかったんですが…。 Ｆ： そうなんですか…。困ったなあ。ふじ広告から至急確認してほしいって、メールでデザイン案が送られてきたんですよ。部長に見ていただきたいかったんですが…。 Ｍ： うーん、今日はそのまま帰るっていってたかなあ。 Ｍ： うーん、今日はそのまま帰るっていってたかなあ。 Ｆ： 携帯に電話して聞いてみましょうか。 Ｆ： 携帯に電話して聞いてみましょうか。 Ｍ： でも、結局、デザインは見られないからね。明日の朝まで待ってほしいって、言ってみて。 Ｍ： でも、結局、デザインは見られないからね。明日の朝まで待ってほしいって、言ってみて。 Ｆ：そうですね。わかりました。 Ｆ：そうですね。わかりました。 女の人はこのあと、何をしなければなりませんか。 女の人はこのあと、何をしなければなりませんか。 「明日の朝まで待ってほしいって、言ってみて」の、言う相手は取引先。よってこたえは３． 「明日の朝まで待ってほしいって、言ってみて」の、言う相手は取引先。よってこたえは３．",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "4",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\" style=\"font-family: 'MS Mincho'; mso-ascii-font-family: Calibri; mso-ascii-theme-font: minor-latin; mso-hansi-font-family: Calibri; mso-hansi-theme-font: minor-latin; mso-fareast-language: JA;\">３ばん：</span></p>",
+    "prompt": "",
+    "choices": [
+      "かいひをはらう",
+      "はなをかう",
+      "そつぎょう 生(しょう) にお 礼(れい) を 言(い) い",
+      "メッセージを 書(か) く"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "メッセージを<書(か)>く",
+    "explanation": "大学で、男の学生と女の学生が話しています。男の学生はこのあと、何をしな 大学で、男の学生と女の学生が話しています。男の学生はこのあと、何をしな ければなりませんか。 ければなりませんか。 Ｆ： たけし君、今日の卒業生の送別会だけど。 Ｆ： たけし君、今日の卒業生の送別会だけど。 Ｍ： ああ、６時だよね。遅れないように行くよ。 Ｍ： ああ、６時だよね。遅れないように行くよ。 Ｆ： それはもちろんだけど。会費は？今日までだったんだけど。 Ｆ： それはもちろんだけど。会費は？今日までだったんだけど。 Ｍ： えつ、そうなの？その場で払えばいいんじゃないの？ Ｍ： えつ、そうなの？その場で払えばいいんじゃないの？ Ｆ： 余計な時間がかかるから早めに集めるって言ったじゃない。 Ｆ： 余計な時間がかかるから早めに集めるって言ったじゃない。 Ｍ： 今、財布にお金ないんだよ。行く前にＡＴＭでおろそうと思ってたから。 Ｍ： 今、財布にお金ないんだよ。行く前にＡＴＭでおろそうと思ってたから。 Ｆ： しかたないなあ。じゃあ、私が出しておくから、あとでちょうだい。でも、卒業生へのメッセージは早めに書いといてよ。今日カード渡すんだから。 Ｆ： しかたないなあ。じゃあ、私が出しておくから、あとでちょうだい。でも、卒業生へのメッセージは早めに書いといてよ。今日カード渡すんだから。 Ｍ： ああ、それもまだだ。わかった。 Ｍ： ああ、それもまだだ。わかった。 Ｆ： じゃ、私はこれから花を買いに行って、そのままお店に行くね。 Ｆ： じゃ、私はこれから花を買いに行って、そのままお店に行くね。 Ｍ： わかった。 Ｍ： わかった。 男の学生はこのあと、何をしなければなりませんか。 男の学生はこのあと、何をしなければなりませんか。 「メッセージだけは早めに書いといて」とあるので、答えは４． 「メッセージだけは早めに書いといて」とあるので、答えは４．",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "5",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">４ばん：</span></p>",
+    "prompt": "",
+    "choices": [
+      "１１ 時(じ) １５ 分(ぷん)",
+      "１１ 時(じ) ４５ 分(ぷん)",
+      "１２ 時(じ) １５ 分(ぷん)",
+      "１２ 時(じ) ４５ 分(ぷん)"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "１１<時(じ)>４５<分(ぷん)>",
+    "explanation": "会社で、女の人と男の人が話しています。二人は明日、何時に会いますか。 会社で、女の人と男の人が話しています。二人は明日、何時に会いますか。 Ｆ： 明日の研修会、１時からでしょう。何分くらい前に行く？ Ｆ： 明日の研修会、１時からでしょう。何分くらい前に行く？ Ｍ： ５分前から。駅に４５分に着く感じ。 Ｍ： ５分前から。駅に４５分に着く感じ。 Ｆ： そっか。私はもうちょっと早めに行く。行ったことない場所だし、迷うかもしれないから。 Ｆ： そっか。私はもうちょっと早めに行く。行ったことない場所だし、迷うかもしれないから。 Ｍ： ああ、始めてなんだ。そしたら、会場の近くでお昼、一緒に食べない？ぼくは一回行ったことがあるから場所はわかるよ。 Ｍ： ああ、始めてなんだ。そしたら、会場の近くでお昼、一緒に食べない？ぼくは一回行ったことがあるから場所はわかるよ。 Ｆ： あ、それだと助かる。 Ｆ： あ、それだと助かる。 Ｍ： じゃあ、ぼくは明日、午前中、外で用事があるから、駅で待ち合わせでいいかなあ。改札か１つだから、そこで。１２時でいい？ Ｍ： じゃあ、ぼくは明日、午前中、外で用事があるから、駅で待ち合わせでいいかなあ。改札か１つだから、そこで。１２時でいい？ Ｆ： もうちょっと早くしようよ。お昼で混む時間だから、もう１５分前は？ Ｆ： もうちょっと早くしようよ。お昼で混む時間だから、もう１５分前は？ Ｍ： わかった。 Ｍ： わかった。 二人は明日、何時に会いますか。 二人は明日、何時に会いますか。 「１２時でいい」＞ 「もう１５分前」とあるので、答えは２． 「１２時でいい」＞ 「もう１５分前」とあるので、答えは２．",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "6",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">５ばん：</span></p>",
+    "prompt": "",
+    "choices": [
+      "クッキー",
+      "おさけ",
+      "ジャム",
+      "チーズ"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "クッキー",
+    "explanation": "土産物屋で、女の人と男の人が話しています。女の人は何を買いますか。 土産物屋で、女の人と男の人が話しています。女の人は何を買いますか。 Ｆ： 困ったなあ。まだ決まらないよ。家族に買うお土産。 Ｆ： 困ったなあ。まだ決まらないよ。家族に買うお土産。 Ｍ： ぼくはもう買ったよ、クッキー。結構有名何だって。 Ｍ： ぼくはもう買ったよ、クッキー。結構有名何だって。 Ｆ： そうなんだ。でも、前もクッキーだったえあなあ。 Ｆ： そうなんだ。でも、前もクッキーだったえあなあ。 Ｍ： いいんじゃない、物がよければ。…あ、このお酒、おいしそう。自分用に１個買おう。 Ｍ： いいんじゃない、物がよければ。…あ、このお酒、おいしそう。自分用に１個買おう。 Ｆ： いいな、私もなんかほしい。…あ、これにしよう、手作りジャム。 Ｆ： いいな、私もなんかほしい。…あ、これにしよう、手作りジャム。 Ｍ： ああ、おいしそうじゃない。家族にも、それにしたら？ Ｍ： ああ、おいしそうじゃない。家族にも、それにしたら？ F: うーん、あんまり食べてるの見たことがないなあ。特に父親。あ、チーズがいいかも。種類もいっぱいある！ うーん、あんまり食べてるの見たことがないなあ。特に父親。あ、チーズがいいかも。種類もいっぱいある！ Ｍ： ねえねえ、もうみんな集まってるよ。行ったほうがいいみたい。 Ｍ： ねえねえ、もうみんな集まってるよ。行ったほうがいいみたい。 Ｆ： え、うそ。どうしょう。困ったなあ。いいや、もう。私も同じのにする。 Ｆ： え、うそ。どうしょう。困ったなあ。いいや、もう。私も同じのにする。 Ｍ： いいと思うよ。じゃ、急いで。 Ｍ： いいと思うよ。じゃ、急いで。 女の人は何を買いますか。 女の人は何を買いますか。 男の人が「買ったよ、クッキー」と言っていて、女の人が最後に「私も同じのにする」と言っている。 男の人が「買ったよ、クッキー」と言っていて、女の人が最後に「私も同じのにする」と言っている。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "7",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">６ばん：</span></p>",
+    "prompt": "",
+    "choices": [
+      "つくえをかたづける",
+      "ごみをすてる",
+      "ポスターをけがす",
+      "お 茶(ちゃ) を 買(か) う"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "ポスターをけがす",
+    "explanation": "女の人と男の人が話しています。男の人は最初に何をしなければなりませんか。 女の人と男の人が話しています。男の人は最初に何をしなければなりませんか。 Ｆ： なんとか今回のセミナーも無事に終わったね。５日間お疲れさまでした。さ、片づけちゃいましょう。 Ｆ： なんとか今回のセミナーも無事に終わったね。５日間お疲れさまでした。さ、片づけちゃいましょう。 Ｍ： はい。じゃ、ぼくは机を。 Ｍ： はい。じゃ、ぼくは机を。 Ｆ： うん、お願い。…あ、ちょっと待って。やっぱり最初に部屋の外からやりましょう。外のポスターをはがしてきてくれない？７、８枚あったこと思う。私はこの辺を片づけてるよ。 Ｆ： うん、お願い。…あ、ちょっと待って。やっぱり最初に部屋の外からやりましょう。外のポスターをはがしてきてくれない？７、８枚あったこと思う。私はこの辺を片づけてるよ。 Ｍ： わかりました。何を飲み物を買ってきましょうか。 Ｍ： わかりました。何を飲み物を買ってきましょうか。 Ｆ： そうねえ。じゃあ、冷たいお茶を。 Ｆ： そうねえ。じゃあ、冷たいお茶を。 Ｍ： はい。…あ、課長、あれ、ゴミですよね。捨ててきましょうか。 Ｍ： はい。…あ、課長、あれ、ゴミですよね。捨ててきましょうか。 Ｆ： ゴミはいいよ。あとでまとめて捨てるから。 Ｆ： ゴミはいいよ。あとでまとめて捨てるから。 Ｍ： わかりました。じゃあ、ちょっと行ってきます。 Ｍ： わかりました。じゃあ、ちょっと行ってきます。 男の人は最初に何をしなければなりませんか。 男の人は最初に何をしなければなりませんか。 「やっぱり最初に」「外のポスターをはがしてきてくれない？」とあるので。答えは３． 「やっぱり最初に」「外のポスターをはがしてきてくれない？」とあるので。答えは３．",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.1",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "１ばん：",
+    "choices": [
+      "ひりとき 先(さき) に 古(ふる) い サンプル(さんぷる) をわたした",
+      "注文(ちゅうもん) のかずまちがえた",
+      "かいぎの 時間(じかん) をまちがえてつたえた",
+      "スピーチで 人(ひと) の 名前(なまえ) をまちがえた。"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "ひりとき<先(さき)>に<古(ふる)>い<サンプル(さんぷる)>をわたした",
+    "explanation": "会社で、女の人と男の人が話しています。男の人は、今日、どんな失敗をしたと言っていますか。 会社で、女の人と男の人が話しています。男の人は、今日、どんな失敗をしたと言っていますか。 Ｆ： 原さん、どうしたの？なんだか元気なさそうだけど。 Ｆ： 原さん、どうしたの？なんだか元気なさそうだけど。 Ｍ： うん…ちょっとミスしちゃって。今朝Ａ社に渡したデザインサンプル、古いやつだったんだ。むこうはそれについて社内で話し合って、さっき返事をしてきて…。 Ｍ： うん…ちょっとミスしちゃって。今朝Ａ社に渡したデザインサンプル、古いやつだったんだ。むこうはそれについて社内で話し合って、さっき返事をしてきて…。 Ｆ： ああ、そうなんだ。 Ｆ： ああ、そうなんだ。 Ｍ : また部長に怒られたよ。この間は、注文の数を間違えたし…。だめだなあ、ほんと。 Ｍ また部長に怒られたよ。この間は、注文の数を間違えたし…。だめだなあ、ほんと。 Ｆ： 誰にでも失敗はあるよ。私も最近、会議の時間を間違えて伝えたりしたし。部長だって、スピーチで人の名前、間違えたりしたからね。 Ｆ： 誰にでも失敗はあるよ。私も最近、会議の時間を間違えて伝えたりしたし。部長だって、スピーチで人の名前、間違えたりしたからね。 Ｍ： うん…。ありがとう。また頑張るよ。 Ｍ： うん…。ありがとう。また頑張るよ。 男の人は、今日どんな失敗をしたと言っていますか。 男の人は、今日どんな失敗をしたと言っていますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.2",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "２ばん：",
+    "choices": [
+      "本館(ほんかん) ３０１",
+      "本館(ほんかん) ３０２",
+      "別館(べっかん) ５０１",
+      "別館(べっかん) ５０２"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<別館(べっかん)>５０２",
+    "explanation": "男の人と女の人か話しています。上級日本語コースの授業は、どの部屋で行われますか。 男の人と女の人か話しています。上級日本語コースの授業は、どの部屋で行われますか。 Ｍ： すみません、今日、こちらのセンターで特別日本語講座を受けるんですが、上級クラスはどの部屋ですか。チランに書いてある３０２にいったんですか。誰もいなくて。３０１には人がいたんですが。 Ｍ： すみません、今日、こちらのセンターで特別日本語講座を受けるんですが、上級クラスはどの部屋ですか。チランに書いてある３０２にいったんですか。誰もいなくて。３０１には人がいたんですが。 Ｆ： あっ、すみません。隣の別館５階の５０２になります。 Ｆ： あっ、すみません。隣の別館５階の５０２になります。 Ｍ： えつ。別館！？でも、案内には本館の３階って…。 Ｍ： えつ。別館！？でも、案内には本館の３階って…。 Ｆ： ええ。そうなんですけど…。実は、エアコンが故障してしまって、さつき変更になったんです。 Ｆ： ええ。そうなんですけど…。実は、エアコンが故障してしまって、さつき変更になったんです。 まだ案内を貼ってなくて…すみません。エレベーターを降りてすぐの部屋が５０１なんですが、５０２はその右隣の部屋になります。 まだ案内を貼ってなくて…すみません。エレベーターを降りてすぐの部屋が５０１なんですが、５０２はその右隣の部屋になります。 Ｍ： わかりました。どうも。 Ｍ： わかりました。どうも。 上級日本語コースの授業は、どの部屋で行われますか。 上級日本語コースの授業は、どの部屋で行われますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.3",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "３ばん：",
+    "choices": [
+      "おさけのしゅるいが 少(すく) なかったから",
+      "へやがよくなかったから",
+      "料理(りょうり) がおいしくなかったから",
+      "ふんい 気(き) がよくなかったから"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<料理(りょうり)>がおいしくなかったから",
+    "explanation": "会社で、女の人と男の人が話しています。女の人は、どうして去年と違う店にすると言っていますか。 会社で、女の人と男の人が話しています。女の人は、どうして去年と違う店にすると言っていますか。 Ｆ： 忘年会の店、どこがいいかなあ。 Ｆ： 忘年会の店、どこがいいかなあ。 Ｍ： そうだねえ。去年と同じさくら屋でもいいんじゃない？あそこ、安かったし、お酒のメニューも結構あったし。 Ｍ： そうだねえ。去年と同じさくら屋でもいいんじゃない？あそこ、安かったし、お酒のメニューも結構あったし。 Ｆ： うーん、確かにお酒はいろいろあったし、部屋も広かったけど、料理はそんなにおいしくなかった気がする。それに、お酒、飲めない人もいるし。 Ｆ： うーん、確かにお酒はいろいろあったし、部屋も広かったけど、料理はそんなにおいしくなかった気がする。それに、お酒、飲めない人もいるし。 Ｍ： まあ、そうだね。 Ｍ： まあ、そうだね。 Ｆ： 『味一』はどう？行ったことあるけど、どれもおいしかったよ。雰囲気もなかなかよかったし。 Ｆ： 『味一』はどう？行ったことあるけど、どれもおいしかったよ。雰囲気もなかなかよかったし。 Ｍ： へえ、じゃ、そこにしようよ。 Ｍ： へえ、じゃ、そこにしようよ。 女の人は、どうして去年と違う店にすると言っていますか。 女の人は、どうして去年と違う店にすると言っていますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.4",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "４ばん：",
+    "choices": [
+      "知(し) っている 人(ひと) が 通(かよ) っているから",
+      "知(し) っている 人(ひと) のおくさんが 先生(せんせい) だから",
+      "家(いえ) から 近(ちか) くて、 料金(りょうきん) も 安(やす) いから",
+      "中国(ちゅうごく) の 人(ひと) にすすめられたから"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<知(し)>っている<人(ひと)>のおくさんが<先生(せんせい)>だから",
+    "explanation": "学校で、女の学生と男の学生が話しています。女の学生は、どうして国際センターの中国語講座を選んだと言っていますか。 学校で、女の学生と男の学生が話しています。女の学生は、どうして国際センターの中国語講座を選んだと言っていますか。 Ｆ： 私ね、今、中国語を勉強してるんだ。 Ｆ： 私ね、今、中国語を勉強してるんだ。 Ｍ： へー、そうなんだ。 Ｍ： へー、そうなんだ。 Ｆ： バイト先によく来るお客さんに中国の人がいてさ。日本語も話せるんだけど、その人と中国語で話してみたいなあと思って。 Ｆ： バイト先によく来るお客さんに中国の人がいてさ。日本語も話せるんだけど、その人と中国語で話してみたいなあと思って。 Ｍ： 実際に使うのが、うまくなる一番の方法だって言うしね。 Ｍ： 実際に使うのが、うまくなる一番の方法だって言うしね。 Ｆ： そうそう。で、市の文化会館と国際センターの中国語講座を見学に行ったの。そしたら、国際センターの先生が、其のお客さんの奥さんだったのよ。もう、びっくり！ Ｆ： そうそう。で、市の文化会館と国際センターの中国語講座を見学に行ったの。そしたら、国際センターの先生が、其のお客さんの奥さんだったのよ。もう、びっくり！ Ｍ： へえ、すごい！ Ｍ： へえ、すごい！ Ｆ： それで、そこに通うことにしたの。文化会館の方が近いし、料金もちょっと安かったんだけどね。 Ｆ： それで、そこに通うことにしたの。文化会館の方が近いし、料金もちょっと安かったんだけどね。 Ｍ： そっかあ。頑張ってね。 Ｍ： そっかあ。頑張ってね。 女の学生は、どうして国際センターの中国語講座を選んだと言っていますか。 女の学生は、どうして国際センターの中国語講座を選んだと言っていますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.5",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "５ばん：",
+    "choices": [
+      "はれ",
+      "こもり",
+      "雨(あめ)",
+      "ゆき"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "はれ",
+    "explanation": "天気予報 を聞いています。明日の午後の天気はどうなると言っていますか。 天気予報 を聞いています。明日の午後の天気はどうなると言っていますか。 Ｆ： 今日は午前中は晴れますが、午後から雲が多くなり、夜には雨が降り出すでしょう。山の方では雪に変わります。朝方まで雪が少し残るかもしれませんので、車の運転には十分ご注意ください。 Ｆ： 今日は午前中は晴れますが、午後から雲が多くなり、夜には雨が降り出すでしょう。山の方では雪に変わります。朝方まで雪が少し残るかもしれませんので、車の運転には十分ご注意ください。 あすは昼すぎから太陽が顔を出し、気温も上がってくるでしょう。 あすは昼すぎから太陽が顔を出し、気温も上がってくるでしょう。 明日の午後の天気はどうなると言っていますか。 明日の午後の天気はどうなると言っていますか。 「明日は昼すぎから太陽が顔を出し」＞＞ 晴れる。 「明日は昼すぎから太陽が顔を出し」＞＞ 晴れる。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "8.6",
+    "parent_question_number": "8",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">２：</span></p> <p>()(もんだい)<span lang=\"JA\">２では、まず</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。そのあと、</span>()(もんだいようし)<span lang=\"JA\">を</span>()(み)<span lang=\"JA\">てください。</span></p> <p>()(よ)<span lang=\"JA\">む</span>()(じかん)<span lang=\"JA\">があります。それから </span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いて、</span>()(もんだいようし)<span lang=\"JA\">の１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものっを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p><span lang=\"JA\">れい：</span></p> <p>１．<span lang=\"JA\">ぐあいが</span>()(わる)<span lang=\"JA\">かったから</span></p> <p>２．<span lang=\"JA\">ねぼうしたから</span></p> <p>３．<span lang=\"JA\">セミナーに行きたくないから</span></p> <p>４．<span lang=\"JA\">お</span>()(ひる)<span lang=\"JA\">を</span>()(た)<span lang=\"JA\">べていたから</span></p>",
+    "prompt": "６ばん：",
+    "choices": [
+      "へやが 広(ひろ) いこと",
+      "やちんか 安(やす) いこと",
+      "へやが 南(みなみ) むきであること",
+      "駅(えき) から 近(ちか) いこと"
+    ],
+    "correct_choice_index": null,
+    "correct_choice_text": "<駅(えき)>から<近(ちか)>いこと",
+    "explanation": "男の人と女の人が話しています。女の人は、部屋を選ぶとき、特に何が大切だと思っていますか。 男の人と女の人が話しています。女の人は、部屋を選ぶとき、特に何が大切だと思っていますか。 Ｍ： 何見てるの？ Ｍ： 何見てるの？ Ｆ： そろそろ引っ越そうと思って。不動産屋でチラシをもらってきたの。 Ｆ： そろそろ引っ越そうと思って。不動産屋でチラシをもらってきたの。 Ｍ： そうなんだ。何をポイントに選んでるの？ Ｍ： そうなんだ。何をポイントに選んでるの？ Ｆ：うーん、何かなあ…。部屋が広いこととか、家賃が安いこととか…。 Ｆ：うーん、何かなあ…。部屋が広いこととか、家賃が安いこととか…。 Ｍ： まあ、そうだよね。あと、やっぱり南向きがいいんじゃない？明るいほうがいいでしょ。 Ｍ： まあ、そうだよね。あと、やっぱり南向きがいいんじゃない？明るいほうがいいでしょ。 Ｆ： そうね、でも、一日いるわけじゃんないから、東向きとか西向きとかでもいいかな。…あっ、あと、帰りがいつも遅いから、駅から近くないとだめだ。 Ｆ： そうね、でも、一日いるわけじゃんないから、東向きとか西向きとかでもいいかな。…あっ、あと、帰りがいつも遅いから、駅から近くないとだめだ。 Ｍ： ああ、それが一番大事なんじゃない？毎日のことだし。 Ｍ： ああ、それが一番大事なんじゃない？毎日のことだし。 Ｆ： うん、そう思う Ｆ： うん、そう思う 女の人は、部屋を選ぶとき、特に何が大切だと思っていますか。 女の人は、部屋を選ぶとき、特に何が大切だと思っていますか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.1",
+    "parent_question_number": "9",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">３：</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0in; mso-add-space: auto;\">()(もんだい)<span lang=\"JA\">３では、</span>()(もんだいようし)<span lang=\"JA\">になにもいんさつされていません。この</span>()(もんだい)<span lang=\"JA\">は、ぜんたいとしてどんあ</span>()(ないよう)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">く</span>()(もんだい)<span lang=\"JA\">です。</span>()(はなし)<span lang=\"JA\">の</span>()(まえ)<span lang=\"JA\">に</span>()(しつもん)<span lang=\"JA\">はありません。まず</span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから、</span>()(しつもん)<span lang=\"JA\">とぜんたくしを</span>()(き)<span lang=\"JA\">いて、１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいもの</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "1 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "会社で、女の人と男の人が話しています。 会社で、女の人と男の人が話しています。 Ｆ：田中さん、お昼まだ？ Ｆ：田中さん、お昼まだ？ Ｍ： あ、はい…この資料までやっておこうと思ってて。 Ｍ： あ、はい…この資料までやっておこうと思ってて。 Ｆ： そっか…。じゃあ、また後にするよ。 Ｆ： そっか…。じゃあ、また後にするよ。 Ｍ：えっ、何ですか。いいですよ、今で。 Ｍ：えっ、何ですか。いいですよ、今で。 Ｆ：そう？…実はね、あさってのセミナー、うちの会社からは私が行くことになってるんだけど、ちょっと都合が悪くなっちゃって…。 Ｆ：そう？…実はね、あさってのセミナー、うちの会社からは私が行くことになってるんだけど、ちょっと都合が悪くなっちゃって…。 Ｍ： 代わりに行けばいいんですか。 Ｍ： 代わりに行けばいいんですか。 Ｆ： ごめん、よかったらお願いできないかなあ。父が急に入院することになっちゃって、あさって私が手続きに行かないといけない状況なの。 Ｆ： ごめん、よかったらお願いできないかなあ。父が急に入院することになっちゃって、あさって私が手続きに行かないといけない状況なの。 Ｍ： そうでしたか。もちろん、いいですよ。 Ｍ： そうでしたか。もちろん、いいですよ。 女の人は男の人に何を頼みましたか。 女の人は男の人に何を頼みましたか。 １ 一緒に昼食を食べること １ 一緒に昼食を食べること ２ セミナーの日にちを変えてもらうこと ２ セミナーの日にちを変えてもらうこと ３ 代わりにセミナーに行くこと ３ 代わりにセミナーに行くこと ４ 入院の手続きをすること ４ 入院の手続きをすること",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.2",
+    "parent_question_number": "9",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">３：</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0in; mso-add-space: auto;\">()(もんだい)<span lang=\"JA\">３では、</span>()(もんだいようし)<span lang=\"JA\">になにもいんさつされていません。この</span>()(もんだい)<span lang=\"JA\">は、ぜんたいとしてどんあ</span>()(ないよう)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">く</span>()(もんだい)<span lang=\"JA\">です。</span>()(はなし)<span lang=\"JA\">の</span>()(まえ)<span lang=\"JA\">に</span>()(しつもん)<span lang=\"JA\">はありません。まず</span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから、</span>()(しつもん)<span lang=\"JA\">とぜんたくしを</span>()(き)<span lang=\"JA\">いて、１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいもの</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "2 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "留守番電話のメッセージを聞いています。 留守番電話のメッセージを聞いています。 Ｆ：おんにちは、中村様のお電話でしょうか。さくら町図書館です。中村様が予約さらた「かんたん 季節の料理」ですが、本日返却され、貸出が可能となりました。次の予約も入っていますので、よろしければお早めにお越しください。なあ、１週間いらっしゃらなかった場合、予約は取り消しとなります。よろしくお願いいたします。 Ｆ：おんにちは、中村様のお電話でしょうか。さくら町図書館です。中村様が予約さらた「かんたん 季節の料理」ですが、本日返却され、貸出が可能となりました。次の予約も入っていますので、よろしければお早めにお越しください。なあ、１週間いらっしゃらなかった場合、予約は取り消しとなります。よろしくお願いいたします。 女の人が一番言いたいことは何ですか。 女の人が一番言いたいことは何ですか。 １ 本を借りることができること １ 本を借りることができること ２ 早く本を返してほしいこと ２ 早く本を返してほしいこと ３ 次の人が予約していること ３ 次の人が予約していること ４ 予約が取り消されたこと ４ 予約が取り消されたこと 「貸出可能となりました（＝借りることができるようになりました）」が一番言いたいこと。 「貸出可能となりました（＝借りることができるようになりました）」が一番言いたいこと。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "9.3",
+    "parent_question_number": "9",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">３：</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0in; mso-add-space: auto;\">()(もんだい)<span lang=\"JA\">３では、</span>()(もんだいようし)<span lang=\"JA\">になにもいんさつされていません。この</span>()(もんだい)<span lang=\"JA\">は、ぜんたいとしてどんあ</span>()(ないよう)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">く</span>()(もんだい)<span lang=\"JA\">です。</span>()(はなし)<span lang=\"JA\">の</span>()(まえ)<span lang=\"JA\">に</span>()(しつもん)<span lang=\"JA\">はありません。まず</span>()(はなし)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。それから、</span>()(しつもん)<span lang=\"JA\">とぜんたくしを</span>()(き)<span lang=\"JA\">いて、１から４の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいもの</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "3 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "女の人と男の人が話しています。 女の人と男の人が話しています。 Ｆ： 健康のために何か運動 をしたいと思ってるんですが、田中さんって何かやってます？ Ｆ： 健康のために何か運動 をしたいと思ってるんですが、田中さんって何かやってます？ Ｍ： うん。週に２，３日走ってるよ。 Ｍ： うん。週に２，３日走ってるよ。 Ｆ：そうなんですか。実は私も走ろうかなと思ってて…。あのう、靴とか服はどういうものがいいんですか。 Ｆ：そうなんですか。実は私も走ろうかなと思ってて…。あのう、靴とか服はどういうものがいいんですか。 Ｍ：そうだね、特に靴は大事だね。いい靴じゃないと、走りづらかったり足が痛くなったりするから。ちゃんと専用のものを買ったほうがいいと思う。服は走りやすい、動きやすい形のもので。暑すぎたり寒すぎたりしないようにすることだね。あと、日差しが強いときは、帽子とかサングラスか使ったほうがいいよ。 Ｍ：そうだね、特に靴は大事だね。いい靴じゃないと、走りづらかったり足が痛くなったりするから。ちゃんと専用のものを買ったほうがいいと思う。服は走りやすい、動きやすい形のもので。暑すぎたり寒すぎたりしないようにすることだね。あと、日差しが強いときは、帽子とかサングラスか使ったほうがいいよ。 Ｆ：なるほど、わかりました。 Ｆ：なるほど、わかりました。 二人は主に何について話していますか。 二人は主に何について話していますか。 １ 走る楽しさ １ 走る楽しさ ２ 健康の大切さ ２ 健康の大切さ ３ ジョギングに必要なもの ３ ジョギングに必要なもの ４ 運動をするときに注意すること ４ 運動をするときに注意すること",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "10.1",
+    "parent_question_number": "10",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">４：</span></p> <p><img height=\"16\" src=\"file:///C:/Users/Duc/AppData/Local/Temp/msohtmlclip1/01/clip_image001.png\" width=\"31\"/>()(もんだい)<span lang=\"JA\">４では、えを</span>()(み)<span lang=\"JA\">ながら</span>()(しつもん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。やじるし（ ）の</span>()(ひと)<span lang=\"JA\">は</span>()(なん)<span lang=\"JA\">と</span>()(い)<span lang=\"JA\">いますか。１から３の</span>()(なか)<span lang=\"JA\">から、</span>()(もっと)<span lang=\"JA\">もよいものを</span>()(ひと)<span lang=\"JA\">つえらんでください。</span></p> <p class=\"MsoListParagraphCxSpLast\" style=\"margin-left: 0in; mso-add-space: auto;\"><span lang=\"JA\">れい：</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489134851.067-2.jpg\"/>",
+    "prompt": "れい：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "道がわからないので、人に聞きます。何と言いますか。 道がわからないので、人に聞きます。何と言いますか。 Ｆ : １ 東京駅に行きたいんですが。 Ｆ １ 東京駅に行きたいんですが。 ２ 東京駅に行ってくれませんか。 ２ 東京駅に行ってくれませんか。 ３ 東京駅に行ってもいいですか。 ３ 東京駅に行ってもいいですか。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "11",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">１ばん：</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489134870.58-3.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "仕事が終わりました。一緒に作業をした人に何と言いますか。 仕事が終わりました。一緒に作業をした人に何と言いますか。 Ｆ： １ お大事に Ｆ： １ お大事に ２ お疲れさまでした ２ お疲れさまでした ３ お気をつけて ３ お気をつけて １＞ 病気の人や怪我をした人に言う言葉。 病気の人や怪我をした人に言う言葉。 ２＞ 仕事が終わったときに使う言葉。 仕事が終わったときに使う言葉。 ３＞ 旅行に行く人などに言う言葉。 旅行に行く人などに言う言葉。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "12",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">２ばん：</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489134885.349-4.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "友達が、たくさん荷物を持っています。手伝いたいです。何と言いますか。 友達が、たくさん荷物を持っています。手伝いたいです。何と言いますか。 Ｍ：１荷物、持とうか Ｍ：１荷物、持とうか ２荷物、持ってもらえない？ ２荷物、持ってもらえない？ ３荷物、持たないと。 ３荷物、持たないと。 １＞「～ようか」は、相手に手伝いを申し出るときに使う言葉。 １＞「～ようか」は、相手に手伝いを申し出るときに使う言葉。 ２＞「～てもらえない？」は、相手に頼むときに使う。 ２＞「～てもらえない？」は、相手に頼むときに使う。 ３＞「持たないといけない」を短くした形。 ３＞「持たないといけない」を短くした形。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "13",
+    "parent_content": "<p class=\"MsoNormal\"><span lang=\"JA\">3 ばん：</span></p><img src=\"http://jlpt.mazii.net/api/upload/media/1489134909.564-5.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "アルバイトをやめます。最後の日、みんなに何と言いますか。 アルバイトをやめます。最後の日、みんなに何と言いますか。 Ｆ： １ おかまいなく Ｆ： １ おかまいなく ２ よくいらっしゃいました。 ２ よくいらっしゃいました。 ３ お世話になりました。 ３ お世話になりました。 １＞ 人の家に行ったときなどに、「何もしてくれなくていいですよ」と相手に伝える言葉。 人の家に行ったときなどに、「何もしてくれなくていいですよ」と相手に伝える言葉。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": null,
+    "parent_question_number": "14",
+    "parent_content": "<p>4 ばん：</p><img src=\"http://jlpt.mazii.net/api/upload/media/1489134923.537-6.jpg\"/>",
+    "prompt": "",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "美術館の中で写真を撮ってはいけないと、友達に注意します。何と言いますか。 美術館の中で写真を撮ってはいけないと、友達に注意します。何と言いますか。 Ｍ： １ 写真を撮っちゃったんだよ。 Ｍ： １ 写真を撮っちゃったんだよ。 ２ 写真を撮らなくちゃいけないよ。 ２ 写真を撮らなくちゃいけないよ。 ３ 写真を撮っちゃいけないよ。 ３ 写真を撮っちゃいけないよ。 １＞ 「撮ってしまった」の話し言葉。 １＞ 「撮ってしまった」の話し言葉。 2＞ 「撮らなければいけない」の話し言葉。 「撮らなければいけない」の話し言葉。 3＞ 「撮ってはいけない」の話し言葉。 「撮ってはいけない」の話し言葉。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.1",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "1 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "Ｍ：ごめん、先に行って、みんなに説明しといてもらえる？ Ｍ：ごめん、先に行って、みんなに説明しといてもらえる？ Ｆ： １ じゃ、話してもらおう。 Ｆ： １ じゃ、話してもらおう。 ２ うん、やっておくね。 ２ うん、やっておくね。 ３ あっ、先だったんだ。 ３ あっ、先だったんだ。 「説明しておいて」に対する答え。 「説明しておいて」に対する答え。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.2",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "2 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "M: 明日のカラオケ、佐藤さんも誘ってみたらどうですか。 明日のカラオケ、佐藤さんも誘ってみたらどうですか。 F: １ そうですね。聞いてみます。 １ そうですね。聞いてみます。 ２ いいえ、誘うつもりです。 ２ いいえ、誘うつもりです。 ３ うーん、どうして誘わないんでしょうね。 ３ うーん、どうして誘わないんでしょうね。 ３＞＞誘わない理由を聞かれたときの答え方の一例。 ３＞＞誘わない理由を聞かれたときの答え方の一例。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.3",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "3 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "F: このデジカメ、フラッシュが光らないようにできる？ このデジカメ、フラッシュが光らないようにできる？ M: １ もっと光ったらいいのにね。 １ もっと光ったらいいのにね。 ２ どうして光らないんだろう。 ２ どうして光らないんだろう。 ３ このボタンを押すといいよ。 ３ このボタンを押すといいよ。 女の人は、フラッシュを光らないようにしたい。それに対する答えなので、答えは３． 女の人は、フラッシュを光らないようにしたい。それに対する答えなので、答えは３．",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.4",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "4 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "F: お父さんから、早く来てくれって電話があったよ。 お父さんから、早く来てくれって電話があったよ。 M: １ わかった、すぐ行くよ。 １ わかった、すぐ行くよ。 ２ そっか、早く来てほしいねえ。 ２ そっか、早く来てほしいねえ。 ３ じゃあ、もう帰ってくるかなあ。 ３ じゃあ、もう帰ってくるかなあ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.5",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "5 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "M: そろそろバスの時間から、店を出ようか。 そろそろバスの時間から、店を出ようか。 F: １ 時間まで、あとどのくらいだろうね。 １ 時間まで、あとどのくらいだろうね。 ２ いや、早く出たほうがいいよ。 ２ いや、早く出たほうがいいよ。 ３ そう？ まだ大丈夫じゃない？ ３ そう？ まだ大丈夫じゃない？",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.6",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "6 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 2,
+    "correct_choice_text": "3",
+    "explanation": "F: 今度の企画、ぜひ私にやらせてください。 今度の企画、ぜひ私にやらせてください。 M: １ うん、やらせてほしいね。 １ うん、やらせてほしいね。 ２ そうか、悪かったな。 ２ そうか、悪かったな。 ３ じゃあ、よろしく頼むよ ３ じゃあ、よろしく頼むよ 「私にさせてください」あので、「私がしたい」ということ。よって答えは３．",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.7",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "7 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 0,
+    "correct_choice_text": "1",
+    "explanation": "F: このままだと、９時に間に合いそうもないですね。 このままだと、９時に間に合いそうもないですね。 M: １ そんなことはないと思うよ。 １ そんなことはないと思うよ。 ２ 早く終わってよかったね。 ２ 早く終わってよかったね。 ３ ずいぶん早かったんだね。 ３ ずいぶん早かったんだね。 「間に合いそうもない」は 「時間に間に合わないと思う」ということ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.8",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "8 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "M: 風邪がひどくなったので、今日は早めに帰っていいですか。 風邪がひどくなったので、今日は早めに帰っていいですか。 F: １ そうですか。それはひどいですね。 １ そうですか。それはひどいですね。 ２ わかりました、お大事に。 ２ わかりました、お大事に。 ３ そんなに無理しなくていいですよ。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  },
+  {
+    "part": 2,
+    "question_number": "15.9",
+    "parent_question_number": "15",
+    "parent_content": "<p>()(もんだい)<span lang=\"JA\">５：</span></p> <p>()(もんだい)<span lang=\"JA\">５では、</span>()(もんだいようし)<span lang=\"JA\">に</span>()(なに)<span lang=\"JA\">もいんさつされていません。まず</span>()(ぶん)<span lang=\"JA\">を</span>()(き)<span lang=\"JA\">いてください。</span><span lang=\"JA\">それから、そのへんじを</span>(き)<span lang=\"JA\">いて、１から３の</span>(なか)<span lang=\"JA\">から、</span>(もっと)<span lang=\"JA\">もよいものを</span>(ひと)<span lang=\"JA\">つえらんでください。</span></p>",
+    "prompt": "9 ばん：",
+    "choices": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "correct_choice_index": 1,
+    "correct_choice_text": "2",
+    "explanation": "F: これ、どうぞ食べてください。 これ、どうぞ食べてください。 M: １ いえ、どういたしまして。 １ いえ、どういたしまして。 ２ いいんですか、じゃ、遠慮なく。 ２ いいんですか、じゃ、遠慮なく。 ３ はい。では、失礼します。 ３ はい。では、失礼します。 １＞ ＞「相手にお礼を言われたとき」に返す言葉。 ＞「相手にお礼を言われたとき」に返す言葉。 ３＞＞「相手に『どうぞ』と言われて、部屋の中に入るときや先に帰るとき」などに言う言葉。 ３＞＞「相手に『どうぞ』と言われて、部屋の中に入るときや先に帰るとき」などに言う言葉。",
+    "is_audio": true,
+    "audio_url": "http://jlpt.mazii.net/api/upload/media/1490947870.153-N3-2.mp3"
+  }
+]

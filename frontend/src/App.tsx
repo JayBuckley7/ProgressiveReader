@@ -25,6 +25,7 @@ import { AppDataProvider, useAppData } from "@shared/contexts/AppDataContext";
 import { gDriveService } from "@integrations/googleDrive/gdriveService";
 import { AdminPage } from "./features/admin/components/AdminPage";
 import ClipboardReader from "./features/clipboard/components/ClipboardReader";
+import { JLPTTestPage } from "./features/jlpt/components/JLPTTestPage";
 
 
 // Get Clerk publishable key from environment variable
@@ -146,6 +147,7 @@ function AppContent() {
               <Route path="vocabulary" element={<VocabularyPage />} />
               <Route path="clipboard" element={<ClipboardReader />} />
               <Route path="admin" element={<AdminPage />} />
+              <Route path="jlpt-tests" element={<JLPTTestPage />} />
             </Route>
             <Route path="book/:bookId" element={<BookReaderRoute />} />
           </Routes>
@@ -164,6 +166,7 @@ function AppContent() {
 
 function MainLayout() {
   const location = useLocation();
+  const isJLPTTestPage = location.pathname.startsWith('/jlpt-tests');
 
   return (
     <div>
@@ -171,10 +174,11 @@ function MainLayout() {
         currentPage={
           location.pathname.startsWith('/vocabulary') ? 'vocabulary' :
           location.pathname.startsWith('/clipboard') ? 'stats' :
-          location.pathname.startsWith('/admin') ? 'admin' : 'library'
+          location.pathname.startsWith('/admin') ? 'admin' :
+          location.pathname.startsWith('/jlpt-tests') ? 'jlpt' : 'library'
         }
       />
-      <HeroBanner />
+      {!isJLPTTestPage && <HeroBanner />}
       <main className="flex-1">
         <Outlet />
       </main>
