@@ -2,6 +2,18 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+const furiganaPattern = /([\p{sc=Han}々〆ヶ]+)\(([^)]+)\)/gu;
+
+const addFuriganaMarkup = (content: string | null | undefined) => {
+  if (!content) {
+    return '';
+  }
+
+  return content.replace(furiganaPattern, (_match, kanji: string, reading: string) => {
+    return `<ruby>${kanji}<rt>${reading}</rt></ruby>`;
+  });
+};
+
 interface Question {
   part: number | null;
   question_number: string | null;
@@ -350,13 +362,13 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
             {question.parent_content && question.parent_content.trim() && (
               <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <div className="font-bold text-blue-700 text-xs uppercase mb-2">
-                  {question.parent_question_number 
+                  {question.parent_question_number
                     ? t('jlptTest.runner.readingPassageWithNumber', { number: question.parent_question_number })
                     : t('jlptTest.runner.readingPassage')}
                 </div>
                 <div
                   className="text-base leading-relaxed text-gray-800"
-                  dangerouslySetInnerHTML={{ __html: question.parent_content }}
+                  dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.parent_content) }}
                 />
               </div>
             )}
@@ -364,7 +376,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
             {/* Prompt */}
             <div
               className="mb-4 text-lg leading-relaxed text-gray-800"
-              dangerouslySetInnerHTML={{ __html: question.prompt || t('jlptTest.runner.noPrompt') }}
+              dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.prompt || t('jlptTest.runner.noPrompt')) }}
             />
 
             {/* Audio Player */}
@@ -407,7 +419,8 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                   }
 
                   // Check if choice contains HTML tags
-                  const hasHTML = /<[a-z][\s\S]*>/i.test(choice);
+                  const formattedChoice = addFuriganaMarkup(choice);
+                  const hasHTML = /<[a-z][\s\S]*>/i.test(formattedChoice);
 
                   return (
                     <li
@@ -427,9 +440,9 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                           onClick={(e) => e.stopPropagation()}
                         />
                         {hasHTML ? (
-                          <span className="flex-1 text-gray-800" dangerouslySetInnerHTML={{ __html: choice }} />
+                          <span className="flex-1 text-gray-800" dangerouslySetInnerHTML={{ __html: formattedChoice }} />
                         ) : (
-                          <span className="flex-1 text-gray-800">{choice || t('jlptTest.runner.choice', { number: index + 1 })}</span>
+                          <span className="flex-1 text-gray-800">{formattedChoice || t('jlptTest.runner.choice', { number: index + 1 })}</span>
                         )}
                       </label>
                     </li>
@@ -448,7 +461,7 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
                 <div className="font-bold mb-2 text-yellow-700">
                   {question.is_audio ? t('jlptTest.runner.transcript') : t('jlptTest.runner.explanation')}
                 </div>
-                <div className="text-gray-800" dangerouslySetInnerHTML={{ __html: question.explanation }} />
+                <div className="text-gray-800" dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.explanation) }} />
                 {question.is_audio && (
                   <div className="flex gap-2 mt-3">
                     <button
