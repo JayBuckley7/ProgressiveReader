@@ -103,3 +103,5 @@ def test_translate_chapter_api_key_not_configured(client):
         data = response.get_json()
         assert 'error' in data
 
+
+

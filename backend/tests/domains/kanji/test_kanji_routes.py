@@ -143,3 +143,5 @@ def test_get_kanji_info_invalid_char(client):
     response = client.get('/api/kanji/info/漢字')  # Multiple characters
     assert response.status_code == 400
 
+
+

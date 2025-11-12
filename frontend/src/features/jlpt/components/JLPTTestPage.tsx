@@ -10,7 +10,7 @@ export function JLPTTestPage() {
   const [tests, setTests] = useState<TestFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTest, setSelectedTest] = useState<TestFile | null>(null);
-  const [testData, setTestData] = useState<any[] | null>(null);
+  const [testData, setTestData] = useState<{ questions: any[]; meta?: any } | null>(null);
   const [loadingTest, setLoadingTest] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +60,7 @@ export function JLPTTestPage() {
           >
             {t('jlptTest.page.backToSelection')}
           </button>
-          <JLPTTestRunner testData={testData} testName={selectedTest.name.replace('.json', '')} />
+          <JLPTTestRunner testData={testData.questions} testMeta={testData.meta} testName={selectedTest.name.replace('.json', '')} />
         </div>
       </div>
     );

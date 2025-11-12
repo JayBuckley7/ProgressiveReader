@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-const furiganaPattern = /([\p{sc=Han}々〆ヶ]+)\(([^)]+)\)/gu;
+const furiganaPattern = /((?:[\p{sc=Han}々〆ヶ]+)|\(\)|（）)\(([^)]+)\)/gu;
 
 const addFuriganaMarkup = (content: string | null | undefined) => {
   if (!content) {
@@ -10,7 +10,9 @@ const addFuriganaMarkup = (content: string | null | undefined) => {
   }
 
   return content.replace(furiganaPattern, (_match, kanji: string, reading: string) => {
-    return `<ruby>${kanji}<rt>${reading}</rt></ruby>`;
+    // Handle empty parentheses case - if kanji is empty parentheses, use empty string
+    const kanjiText = kanji === '()' || kanji === '（）' ? '' : kanji;
+    return `<ruby>${kanjiText}<rt>${reading}</rt></ruby>`;
   });
 };
 
@@ -26,16 +28,41 @@ interface Question {
   explanation: string;
   is_audio: boolean;
   audio_url: string | null;
+  points_per_question?: number;
+  part_index?: number;
+  part_name?: string;
+  part_max_score?: number;
+  part_min_score?: number;
+}
+
+interface TestMeta {
+  _id?: string;
+  type?: string;
+  level?: string;
+  pass_score?: number;
+  time?: number;
+  parts?: Array<{
+    total: number;
+    name: string;
+    jp_name: string;
+    time?: number;
+    min_score: number;
+    max_score: number;
+    require_audio?: boolean;
+  }>;
 }
 
 interface JLPTTestRunnerProps {
   testData: Question[];
+  testMeta?: TestMeta | null;
   testName: string;
 }
 
-export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
+export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerProps) {
   const { t } = useTranslation();
-  const [allQuestions] = useState<Question[]>(testData);
+  // Ensure testData is always an array
+  const questionsArray = Array.isArray(testData) ? testData : [];
+  const [allQuestions] = useState<Question[]>(questionsArray);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentSection, setCurrentSection] = useState<string | null>(null);
@@ -211,16 +238,23 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
   const updateScore = () => {
     let correct = 0;
     let answered = 0;
+    let totalPoints = 0;
+    let earnedPoints = 0;
+    
     questions.forEach((q, index) => {
       const questionKey = getQuestionKey(currentSection!, index);
+      const points = q.points_per_question ?? 1; // Default to 1 point if not specified
+      
       if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
         answered++;
+        totalPoints += points;
         if (answers[questionKey] === q.correct_choice_index) {
           correct++;
+          earnedPoints += points;
         }
       }
     });
-    return { correct, answered };
+    return { correct, answered, totalPoints, earnedPoints };
   };
 
   const getQuestionStatus = (index: number) => {
@@ -235,7 +269,8 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
     return '';
   };
 
-  const { correct, answered } = updateScore();
+  const { correct, answered, totalPoints, earnedPoints } = updateScore();
+  const pointsPercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
   const question = questions[currentIndex];
   const questionKey = currentSection ? getQuestionKey(currentSection, currentIndex) : '';
   const selectedAnswer = answers[questionKey];
@@ -256,22 +291,31 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
     return parseInt(a) - parseInt(b);
   });
 
-  // Calculate final results
+  // Calculate final results with per-question scoring
   let finalCorrect = 0;
   let finalAnswered = 0;
   let skippedCount = 0;
+  let finalTotalPoints = 0;
+  let finalEarnedPoints = 0;
+  
   questions.forEach((q, index) => {
     const qKey = getQuestionKey(currentSection!, index);
+    const points = q.points_per_question ?? 1; // Default to 1 point if not specified
+    
     if (answers[qKey] !== undefined && answers[qKey] !== null) {
       finalAnswered++;
+      finalTotalPoints += points;
       if (answers[qKey] === q.correct_choice_index) {
         finalCorrect++;
+        finalEarnedPoints += points;
       }
     } else if (skipped[qKey]) {
       skippedCount++;
     }
   });
+  
   const percentage = finalAnswered > 0 ? Math.round((finalCorrect / finalAnswered) * 100) : 0;
+  const pointsPercentage = finalTotalPoints > 0 ? Math.round((finalEarnedPoints / finalTotalPoints) * 100) : 0;
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8">
@@ -311,6 +355,16 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
               {answered > 0 ? `${correct}/${answered}` : '0/0'}
             </div>
             <div className="text-xs text-gray-600">{t('jlptTest.runner.score')}</div>
+            {totalPoints > 0 && (
+              <>
+                <div className="text-lg font-semibold text-purple-500 mt-1">
+                  {earnedPoints}/{totalPoints} {t('jlptTest.runner.points', { defaultValue: 'points' })}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {pointsPercentage}%
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -546,6 +600,11 @@ export function JLPTTestRunner({ testData, testName }: JLPTTestRunnerProps) {
               {t('jlptTest.runner.partResults', { part: currentSection, correct: finalCorrect, answered: finalAnswered, percentage })}
               {skippedCount > 0 ? ` | ${t('jlptTest.runner.skippedCount', { count: skippedCount })}` : ''}
             </div>
+            {finalTotalPoints > 0 && (
+              <div className="text-center text-2xl font-semibold text-purple-500 my-4">
+                {finalEarnedPoints}/{finalTotalPoints} {t('jlptTest.runner.points', { defaultValue: 'points' })} ({pointsPercentage}%)
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -97,22 +97,42 @@ class JLPTTestService {
 
   /**
    * Load test data from a test file
+   * Handles both old format (array of questions) and new format (object with meta and questions)
    */
-  async loadTestData(testFile: TestFile): Promise<any[]> {
+  async loadTestData(testFile: TestFile): Promise<{ questions: any[]; meta?: any }> {
     try {
+      let data: any;
       if (testFile.source === 'library') {
         // Download from Google Drive
         const blob = await gDriveService.downloadFile(testFile.id);
         const text = await blob.text();
-        return JSON.parse(text);
+        data = JSON.parse(text);
       } else {
         // Load from local path
         const response = await fetch(testFile.path!);
         if (!response.ok) {
           throw new Error(`Failed to load test file: ${testFile.name}`);
         }
-        return await response.json();
+        data = await response.json();
       }
+
+      // Handle new format (object with meta and questions)
+      if (data && typeof data === 'object' && !Array.isArray(data) && data.questions) {
+        return {
+          questions: Array.isArray(data.questions) ? data.questions : [],
+          meta: data.meta || null,
+        };
+      }
+
+      // Handle old format (array of questions directly)
+      if (Array.isArray(data)) {
+        return {
+          questions: data,
+          meta: null,
+        };
+      }
+
+      throw new Error('Invalid test file format');
     } catch (error) {
       console.error('Error loading test data:', error);
       throw new Error(`Failed to load test: ${error instanceof Error ? error.message : 'Unknown error'}`);
