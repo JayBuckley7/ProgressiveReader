@@ -315,7 +315,7 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
   });
   
   const percentage = finalAnswered > 0 ? Math.round((finalCorrect / finalAnswered) * 100) : 0;
-  const pointsPercentage = finalTotalPoints > 0 ? Math.round((finalEarnedPoints / finalTotalPoints) * 100) : 0;
+  const finalPointsPercentage = finalTotalPoints > 0 ? Math.round((finalEarnedPoints / finalTotalPoints) * 100) : 0;
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8">
@@ -602,7 +602,7 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
             </div>
             {finalTotalPoints > 0 && (
               <div className="text-center text-2xl font-semibold text-purple-500 my-4">
-                {finalEarnedPoints}/{finalTotalPoints} {t('jlptTest.runner.points', { defaultValue: 'points' })} ({pointsPercentage}%)
+                {finalEarnedPoints}/{finalTotalPoints} {t('jlptTest.runner.points', { defaultValue: 'points' })} ({finalPointsPercentage}%)
               </div>
             )}
           </div>
