@@ -58,6 +58,46 @@ interface JLPTTestRunnerProps {
   testName: string;
 }
 
+const parseNumericValue = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const getQuestionPoints = (question: Question): number => {
+  return parseNumericValue(question.points_per_question) ?? 1;
+};
+
+const getSectionMaxScore = (questionList: Question[]): number | undefined => {
+  if (!questionList.length) {
+    return undefined;
+  }
+  return parseNumericValue(questionList[0]?.part_max_score);
+};
+
+const scalePointsToSectionMax = (earnedPoints: number, totalPoints: number, sectionMax?: number) => {
+  if (!sectionMax || totalPoints === 0) {
+    return { earned: earnedPoints, total: totalPoints };
+  }
+
+  return {
+    earned: (earnedPoints / totalPoints) * sectionMax,
+    total: sectionMax,
+  };
+};
+
+const formatPoints = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Number(value.toFixed(2));
+};
+
 export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerProps) {
   const { t } = useTranslation();
   // Ensure testData is always an array
@@ -238,23 +278,26 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
   const updateScore = () => {
     let correct = 0;
     let answered = 0;
-    let totalPoints = 0;
-    let earnedPoints = 0;
+    let rawTotalPoints = 0;
+    let rawEarnedPoints = 0;
     
     questions.forEach((q, index) => {
       const questionKey = getQuestionKey(currentSection!, index);
-      const points = q.points_per_question ?? 1; // Default to 1 point if not specified
+      const points = getQuestionPoints(q);
+      rawTotalPoints += points;
       
       if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
         answered++;
-        totalPoints += points;
         if (answers[questionKey] === q.correct_choice_index) {
           correct++;
-          earnedPoints += points;
+          rawEarnedPoints += points;
         }
       }
     });
-    return { correct, answered, totalPoints, earnedPoints };
+
+    const sectionMaxScore = getSectionMaxScore(questions);
+    const { earned, total } = scalePointsToSectionMax(rawEarnedPoints, rawTotalPoints, sectionMaxScore);
+    return { correct, answered, totalPoints: total, earnedPoints: earned };
   };
 
   const getQuestionStatus = (index: number) => {
@@ -297,22 +340,29 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
   let skippedCount = 0;
   let finalTotalPoints = 0;
   let finalEarnedPoints = 0;
+  let rawTotalPoints = 0;
+  let rawEarnedPoints = 0;
   
   questions.forEach((q, index) => {
     const qKey = getQuestionKey(currentSection!, index);
-    const points = q.points_per_question ?? 1; // Default to 1 point if not specified
+    const points = getQuestionPoints(q);
+    rawTotalPoints += points;
     
     if (answers[qKey] !== undefined && answers[qKey] !== null) {
       finalAnswered++;
-      finalTotalPoints += points;
       if (answers[qKey] === q.correct_choice_index) {
         finalCorrect++;
-        finalEarnedPoints += points;
+        rawEarnedPoints += points;
       }
     } else if (skipped[qKey]) {
       skippedCount++;
     }
   });
+
+  const sectionMaxScore = getSectionMaxScore(questions);
+  const scaledFinalPoints = scalePointsToSectionMax(rawEarnedPoints, rawTotalPoints, sectionMaxScore);
+  finalEarnedPoints = scaledFinalPoints.earned;
+  finalTotalPoints = scaledFinalPoints.total;
   
   const percentage = finalAnswered > 0 ? Math.round((finalCorrect / finalAnswered) * 100) : 0;
   const finalPointsPercentage = finalTotalPoints > 0 ? Math.round((finalEarnedPoints / finalTotalPoints) * 100) : 0;
@@ -358,7 +408,7 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
             {totalPoints > 0 && (
               <>
                 <div className="text-lg font-semibold text-purple-500 mt-1">
-                  {earnedPoints}/{totalPoints} {t('jlptTest.runner.points', { defaultValue: 'points' })}
+                  {formatPoints(earnedPoints)}/{formatPoints(totalPoints)} {t('jlptTest.runner.points', { defaultValue: 'points' })}
                 </div>
                 <div className="text-xs text-gray-500">
                   {pointsPercentage}%
@@ -602,7 +652,7 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
             </div>
             {finalTotalPoints > 0 && (
               <div className="text-center text-2xl font-semibold text-purple-500 my-4">
-                {finalEarnedPoints}/{finalTotalPoints} {t('jlptTest.runner.points', { defaultValue: 'points' })} ({finalPointsPercentage}%)
+                {formatPoints(finalEarnedPoints)}/{formatPoints(finalTotalPoints)} {t('jlptTest.runner.points', { defaultValue: 'points' })} ({finalPointsPercentage}%)
               </div>
             )}
           </div>

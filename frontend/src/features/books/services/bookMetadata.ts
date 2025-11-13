@@ -183,6 +183,7 @@ class BookMetadataService {
 
     async getUserBooks(onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
         console.log('getUserBooks: Fetching book list from user\'s Google Drive...');
+        const isJsonFileType = (fileType?: string | null) => (fileType || '').toLowerCase() === 'json';
         
         try {
             // CRITICAL: Check Clerk authentication first before accessing Google Drive
@@ -208,8 +209,12 @@ class BookMetadataService {
             // Check cache first to prevent redundant API calls
             const cachedBooks = bookCacheService.getBookListCache();
             if (cachedBooks) {
+                const cachedLibraryBooks = cachedBooks.filter(book => !isJsonFileType(book.fileType));
+                if (cachedLibraryBooks.length !== cachedBooks.length) {
+                    console.log('getUserBooks: Filtered JSON test files from cached library list');
+                }
                 // Update books with current cached cover URLs and trigger callbacks
-                const updatedBooks = cachedBooks.map(book => {
+                const updatedBooks = cachedLibraryBooks.map(book => {
                     const cachedCoverUrl = bookCacheService.getCachedCoverUrl(book.id);
                     const updatedBook = cachedCoverUrl ? { ...book, coverUrl: cachedCoverUrl } : book;
                     
@@ -254,6 +259,10 @@ class BookMetadataService {
 
                 if (!BOOK_FILE_EXTENSIONS.includes(extFromMeta)) {
                     console.log(`Skipping non-book entry ${bookMeta.fileName || bookFileId}`);
+                    continue;
+                }
+                if (isJsonFileType(extFromMeta)) {
+                    console.log(`Skipping JSON test file ${bookMeta.fileName || bookFileId} from library view`);
                     continue;
                 }
 
