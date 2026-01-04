@@ -5,8 +5,8 @@ import { bookMetadataService } from '@features/books/services/bookMetadata';
 import { bookCacheService } from '@features/books/services/bookCache';
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
 import { authManager } from '@shared/services/authManager';
-import { addOfflineBook, getOfflineBooksWithCovers } from '@features/books/utils/offlineLibrary';
-import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '@integrations/googleDrive/services/driveCache';
+import { addOfflineBook, getOfflineBooksWithCovers, OFFLINE_BOOKS_KEY, getOfflineBooks } from '@features/books/utils/offlineLibrary';
+import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, clearAllCache } from '@integrations/googleDrive/services/driveCache';
 import { toast } from 'sonner';
 import { useUser } from '@clerk/clerk-react';
 
@@ -15,15 +15,15 @@ import { useUser } from '@clerk/clerk-react';
  * Order is ignored and only stable fields are compared.
  */
 function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
-    if (a.length !== b.length) {
-        return false;
-    }
-    const serialize = (arr: BookMetadata[]) =>
-        arr
-            .map(book => `${book.id}-${book.title}-${book.fileType}-${book.coverImageId ?? ''}`)
-            .sort()
-            .join('|');
-    return serialize(a) === serialize(b);
+  if (a.length !== b.length) {
+    return false;
+  }
+  const serialize = (arr: BookMetadata[]) =>
+    arr
+      .map(book => `${book.id}-${book.title}-${book.fileType}-${book.coverImageId ?? ''}`)
+      .sort()
+      .join('|');
+  return serialize(a) === serialize(b);
 }
 
 function useStorageService() {
@@ -52,8 +52,8 @@ function useStorageService() {
     try {
       isRefreshingRef.current = true;
       if (process.env.NODE_ENV === 'development') {
-      console.log('[useStorageService] Silently refreshing books...');
-    }
+        console.log('[useStorageService] Silently refreshing books...');
+      }
 
       const previous = booksRef.current;
 
@@ -84,10 +84,10 @@ function useStorageService() {
         booksRef.current = userBooks;
       }
 
-              if (process.env.NODE_ENV === 'development') {
-          console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
-        }
-      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
+      }
+
       // Show success feedback only
       if (userBooks.length > 0) {
         toast.success(`✅ Loaded ${userBooks.length} book${userBooks.length === 1 ? '' : 's'} from Google Drive`);
@@ -114,13 +114,13 @@ function useStorageService() {
       console.log('[useStorageService] Cannot connect: no Clerk user or already loading');
       return false;
     }
-    
+
     console.log('[useStorageService] 🔐 User requested Google Drive connection - starting auth sequence...');
     setIsLoading(true);
     setIsDriveBookLoading(true);
     isRefreshingRef.current = true;
     isDriveSyncingRef.current = true;
-    
+
     try {
       // Step 1: Authenticate FIRST
       console.log('[useStorageService] Step 1: Authenticating with Google Drive...');
@@ -153,7 +153,7 @@ function useStorageService() {
       ]);
 
       console.log(`[useStorageService] ✅ Loaded ${userBooks.length} books and ${userFolders.length} folders`);
-      
+
       if (areBooksEqual(userBooks, previous)) {
         setBooks(userBooks);
         booksRef.current = userBooks;
@@ -168,16 +168,16 @@ function useStorageService() {
       }
 
       setFolders(userFolders);
-      
+
       // Remember that user successfully connected
       localStorage.setItem('wasGoogleDriveConnected', 'true');
-      
+
       toast.success('Google Drive connected and library loaded!');
       return true;
     } catch (error) {
       console.error('[useStorageService] ❌ Error during Google Drive connection:', error);
-      toast.error('Failed to load your Google Drive library');
-      setBooks([]);
+      toast.error('Failed to connect to Google Drive - showing offline books');
+      await loadOfflineBooks();
       return false;
     } finally {
       setIsLoading(false);
@@ -191,6 +191,22 @@ function useStorageService() {
   const loadUserBooks = useCallback(async () => {
     return await connectToGoogleDriveAndLoad();
   }, [connectToGoogleDriveAndLoad]);
+
+  // Check online status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     // 🚨 RACE CONDITION FIX 🚨
@@ -207,7 +223,7 @@ function useStorageService() {
     //
     // This prevents multiple parts of the app from trying to manage authentication
     // simultaneously and ensures proper state coordination.
-    
+
     // Only log auth status in development mode to reduce spam
     if (process.env.NODE_ENV === 'development') {
       console.log(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
@@ -220,20 +236,20 @@ function useStorageService() {
         if (lastUserIdRef.current !== currentUserId) {
           console.log('[👤 CLERK AUTH] ✅ User signed in with Clerk:', clerkUser);
           lastUserIdRef.current = currentUserId;
-          
+
           // Check if user signed in with Google via Clerk (has Google external account)
           const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
             (acc) => acc.provider.startsWith("google")
           );
-          
+
           if (wasGoogleClerkLogin) {
             // Only auto-connect to Google Drive if user is on a page that needs books
             // Don't auto-connect on admin pages or other non-library pages
             const currentPath = window.location.pathname;
             const needsBooks = currentPath === '/' || currentPath.startsWith('/vocabulary') || currentPath.startsWith('/book/');
-            
+
             console.log(`[👤 CLERK AUTH] Current path: '${currentPath}', needsBooks: ${needsBooks}`);
-            
+
             if (needsBooks) {
               console.log('[👤 CLERK AUTH] ✅ User signed in with Google via Clerk - auto-connecting to Google Drive...');
               // Auto-connect to Google Drive after a small delay to ensure Clerk is fully ready
@@ -248,35 +264,32 @@ function useStorageService() {
           }
         }
       } else {
-        // User is not signed in - clear everything for security
-        console.log('User not signed in with Clerk - clearing data for security');
+        // User is not signed in
+        if (!isOnline) {
+          // OFFLINE MODE: Only load offline books if we are TRULY offline
+          const offlineBooks = getOfflineBooks();
 
-        // Clean up blob URLs before clearing books
-        if (books.length > 0) {
-          bookCacheService.cleanupBlobUrls(books);
+          if (offlineBooks.length > 0) {
+            console.log('[useStorageService] User offline/unauthenticated but has cached books - loading offline mode');
+            // Don't clear books, instead ensure they are loaded
+            // We rely on "signOut" to explicitly clear this cache if the user truly wants to logout
+            loadOfflineBooks();
+          }
+        } else {
+          // ONLINE MODE: User is not signed in and is online -> Force fresh state for Sign In
+          console.log('User not signed in with Clerk and is Online - enforcing secure state');
+
+          // Clean up blob URLs before clearing books
+          if (books.length > 0) {
+            bookCacheService.cleanupBlobUrls(books);
+          }
+
+          setBooks([]);
+          lastUserIdRef.current = null;
         }
-
-        setBooks([]);
-        lastUserIdRef.current = null;
-
-        // SECURITY: Clear Google Drive tokens when no Clerk user
-        // This prevents token leakage if user switches accounts
-        localStorage.removeItem('wasGoogleDriveConnected');
-        authManager.signOut();
-
-        getOfflineBooksWithCovers().then(b => {
-          setBooks(b);
-          setIsLoading(false);
-        });
       }
     }
-  }, [clerkUser?.id, clerkLoaded, loadUserBooks]); // Use user ID instead of user object
-
-  useEffect(() => {
-    if (!clerkUser && clerkLoaded) {
-      loadOfflineBooks();
-    }
-  }, [clerkUser, clerkLoaded, loadOfflineBooks]);
+  }, [clerkUser?.id, clerkLoaded, loadUserBooks, loadOfflineBooks, isOnline]); // Added isOnline dependency
 
   // Listen for authentication state changes but DON'T auto-load data
   useEffect(() => {
@@ -307,8 +320,8 @@ function useStorageService() {
   }, [books]);
 
   const uploadBook = async (
-    file: File, 
-    meta: {title: string; fileType: string; cover?: Blob; processOCR?: boolean},
+    file: File,
+    meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean },
     onOCRProgress?: (progress: { page?: number; total?: number; percent?: number }) => void
   ) => {
     if (!clerkUser) {
@@ -390,7 +403,7 @@ function useStorageService() {
       toast.error('Please sign in to update book covers');
       return;
     }
-    
+
     try {
       const newCoverImageId = await bookMetadataService.updateBookCover(bookId, coverFile);
       // Refresh books to show the new cover
@@ -422,9 +435,9 @@ function useStorageService() {
   };
 
   const saveBookProgress = async (
-    bookId: string, 
-    currentChapter: number, 
-    currentPosition: number = 0, 
+    bookId: string,
+    currentChapter: number,
+    currentPosition: number = 0,
     currentPage?: number,
     totalPages?: number,
     fileType?: string
@@ -456,6 +469,24 @@ function useStorageService() {
       // SECURITY: Clear Google Drive tokens when Clerk user signs out
       // This prevents token leakage between different user sessions
       gDriveService.onClerkSignOut();
+
+      // SECURITY: Explicitly wipe all local data to prevent access by next user
+      localStorage.removeItem(OFFLINE_BOOKS_KEY);
+
+      // Clear all reading progress from localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('reading_progress_')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // Clear IndexedDB (files and covers)
+      try {
+        await clearAllCache();
+        console.log('✅ Secure logout: Local cache wiped');
+      } catch (e) {
+        console.error('Failed to wipe cache on logout:', e);
+      }
 
       // Clear persisted settings
       document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
@@ -588,8 +619,8 @@ function useStorageService() {
 
     try {
       const updatedFolder = await bookMetadataService.updateFolder(folderId, updates, clerkUser);
-      setFolders(current => 
-        current.map(folder => 
+      setFolders(current =>
+        current.map(folder =>
           folder.id === folderId ? updatedFolder : folder
         )
       );
@@ -624,8 +655,8 @@ function useStorageService() {
 
     try {
       await bookMetadataService.moveBookToFolder(bookId, folderId, clerkUser);
-      setBooks(current => 
-        current.map(book => 
+      setBooks(current =>
+        current.map(book =>
           book.id === bookId ? { ...book, folderId: folderId ?? undefined } : book
         )
       );

@@ -27,7 +27,7 @@
       "name": "ngrok tunnel",
       "type": "node-terminal",
       "request": "launch",
-      "command": "ngrok http --domain=absolutely-communal-sheepdog.ngrok-free.app 5175",
+      "command": "ngrok http --domain=absolutely-communal-sheepdog.ngrok-free.app 5173",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     }

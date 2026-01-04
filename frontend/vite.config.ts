@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
     if (process.env.VITE_BACKEND_URL) {
       return process.env.VITE_BACKEND_URL;
     }
-    
+
     // Environment-specific defaults
     switch (mode) {
       case 'production':
@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5175,
+      port: 5173,
       strictPort: true,
       ...(needsProxy && {
         proxy: {

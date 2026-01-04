@@ -1,6 +1,6 @@
 export const OFFLINE_BOOKS_KEY = 'prOfflineBooks';
 import type { BookMetadata } from '~/types';
-import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover } from '@integrations/googleDrive/services/driveCache';
+import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, getCachedFile } from '@integrations/googleDrive/services/driveCache';
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
 
 export function getOfflineBooks(): BookMetadata[] {
@@ -14,17 +14,20 @@ export function getOfflineBooks(): BookMetadata[] {
 
 export function addOfflineBook(meta: BookMetadata): void {
   const books = getOfflineBooks();
-  if (!books.find(b => b.id === meta.id)) {
-    books.push({
-      id: meta.id,
-      title: meta.title,
-      fileType: meta.fileType,
-      driveFileId: meta.driveFileId,
-      coverImageId: meta.coverImageId,
-      totalChapters: meta.totalChapters,
-    } as BookMetadata);
-    localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
+  const existingIndex = books.findIndex(b => b.id === meta.id);
+
+  // Preserve all metadata fields to ensure cache keys (which depend on modifiedTime) match
+  const bookEntry = {
+    ...meta
+  };
+
+  if (existingIndex >= 0) {
+    // Update existing entry (Crucial for refreshing driveFileId/timestamps)
+    books[existingIndex] = bookEntry;
+  } else {
+    books.push(bookEntry);
   }
+  localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
 }
 
 export function removeOfflineBook(id: string): void {
@@ -35,16 +38,37 @@ export function removeOfflineBook(id: string): void {
 export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {
   const books = getOfflineBooks();
   const result: BookMetadata[] = [];
+
   for (const b of books) {
+    // CRITICAL: Only include books that have actual CONTENT cached.
+    // Metadata alone is not enough for offline reading.
+    if (b.driveFileId) {
+      const hasContent = await getCachedFile(b.driveFileId);
+      console.log(`[Offline Library] Book "${b.title}" - driveFileId: ${b.driveFileId}, Cached: ${!!hasContent}`);
+      // TEMPORARY: Disabled filter because user reported valid books being hidden.
+      // if (!hasContent) {
+      //   continue;
+      // }
+    } else {
+      // If no driveFileId (e.g. local import?), maybe logic differs.
+      // But for now, assume filtering.
+      // continue; 
+    }
+
     let coverUrl: string | undefined;
     if (b.coverImageId) {
       let blob = await getCoverForFile(b.id);
       if (!blob) {
         blob = await getCachedCover(b.coverImageId);
         if (!blob && gDriveService.isSignedIn()) {
-          blob = await gDriveService.downloadFile(b.coverImageId);
-          if (blob) {
-            await cacheCover(b.coverImageId, blob);
+          // Only try download if we think we are online
+          try {
+            blob = await gDriveService.downloadFile(b.coverImageId);
+            if (blob) {
+              await cacheCover(b.coverImageId, blob);
+            }
+          } catch (e) {
+            // Ignore download errors in offline mode logic
           }
         }
         if (blob) {

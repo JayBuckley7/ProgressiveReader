@@ -98,7 +98,7 @@ function clearSettingsCookie(): void {
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // const dbSettings = useQuery(api.settings.get);
   // const updateSettingsMutation = useMutation(api.settings.update);
-  
+
   // Placeholder for settings - replace with Flask API calls for persistence
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
@@ -128,9 +128,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         setSettingsStorage(updated);
 
-        if (updated.uiLanguage) {
-          i18n.changeLanguage(updated.uiLanguage);
-        }
+
 
         return updated;
       });
@@ -166,7 +164,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setCurrentSettings(prev => {
               // Map comprehensive settings format back to basic Settings interface
               const basicSettingsUpdates: Partial<Settings> = {};
-              
+
               if (data.userTheme !== undefined) basicSettingsUpdates.theme = data.userTheme;
               if (data.fontSize !== undefined) basicSettingsUpdates.fontSize = parseInt(data.fontSize) || prev.fontSize;
               if (data.target_language !== undefined) basicSettingsUpdates.targetLanguage = data.target_language;
@@ -180,7 +178,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               const updated = { ...prev, ...basicSettingsUpdates };
               setSettingsCookie(updated);
               setSettingsStorage(updated);
-              
+
               // Sync accessibility settings to localStorage for JPDB integration
               localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
               localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
@@ -189,9 +187,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('hideFurigana', String(updated.hideFurigana ?? false));
               console.log('🔔 Auto-synced all accessibility settings to localStorage');
 
-              if (updated.uiLanguage) {
-                i18n.changeLanguage(updated.uiLanguage);
-              }
+
 
               // Also set JPDB API key cookies if present in cloud settings
               try {
@@ -222,8 +218,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem(k, String(v));
                   }
                 }
-              } catch {}
-              
+              } catch { }
+
               return updated;
             });
           } else {
@@ -277,7 +273,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = (updates: Partial<Settings>) => {
     console.log("Updating settings:", updates);
-    
+
     setCurrentSettings(prev => {
       const updated = { ...prev, ...updates };
       setSettingsCookie(updated);
@@ -304,9 +300,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 Synced hideFurigana to localStorage:', updated.hideFurigana);
       }
 
-      if ('uiLanguage' in updates && updated.uiLanguage) {
-        i18n.changeLanguage(updated.uiLanguage);
-      }
+
 
       // Auto-save to cloud with debouncing
       if (isAuthenticated && loadedFromCloudRef.current) {
@@ -314,17 +308,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (autoSaveTimeoutRef.current) {
           clearTimeout(autoSaveTimeoutRef.current);
         }
-        
+
         // Set a new timeout to save after 2 seconds of no changes
         autoSaveTimeoutRef.current = setTimeout(async () => {
           try {
             console.log('🔄 Auto-saving settings to cloud...');
-            
+
             // First, load existing comprehensive settings to preserve API keys and other fields
             const existingSettingsRaw = await loadSettings();
             const existingSettings = (existingSettingsRaw && typeof existingSettingsRaw === 'object') ? existingSettingsRaw : {};
             console.log('🔍 [SettingsContext] Existing settings loaded for merge:', existingSettings);
-            
+
             // Merge the basic settings with existing comprehensive settings
             const preserved = { ...existingSettings } as any;
             // Ensure JPDB API key is preserved from cookies if not yet saved in cloud
@@ -334,7 +328,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 const m2 = document.cookie.match(/(?:^|;\s*)jpdb_api_key=([^;]+)/);
                 const cookieKey = m1?.[1] || m2?.[1];
                 if (cookieKey) preserved.jpdb_api_key = cookieKey;
-              } catch {}
+              } catch { }
             }
 
             const settingsToSave = {
@@ -352,7 +346,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               lastUpdated: new Date().toISOString(),
               version: '1.0'
             };
-            
+
             console.log('🔍 [SettingsContext] Auto-saving merged settings:', settingsToSave);
             const success = await saveSettings(settingsToSave);
             if (success) {
@@ -365,46 +359,46 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           }
         }, 2000);
       }
-      
+
       return updated;
     });
   };
 
-    // Apply theme to document
-    useEffect(() => {
-        if (!settings) return;
+  // Apply theme to document
+  useEffect(() => {
+    if (!settings) return;
 
-        const root = document.documentElement;
-        root.classList.remove('user-theme-light', 'user-theme-dark', 'dark');
+    const root = document.documentElement;
+    root.classList.remove('user-theme-light', 'user-theme-dark', 'dark');
 
-        const applySystemPreference = () => {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDark) {
-                root.classList.add('dark');
-            } else {
-                root.classList.remove('dark');
-            }
-        };
+    const applySystemPreference = () => {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
 
-        if (settings.theme === 'light') {
-            root.classList.add('user-theme-light');
-        } else if (settings.theme === 'dark') {
-            root.classList.add('user-theme-dark');
-            root.classList.add('dark');
-        } else {
-            applySystemPreference();
-        }
+    if (settings.theme === 'light') {
+      root.classList.add('user-theme-light');
+    } else if (settings.theme === 'dark') {
+      root.classList.add('user-theme-dark');
+      root.classList.add('dark');
+    } else {
+      applySystemPreference();
+    }
 
-        let mediaQuery: MediaQueryList | null = null;
-        if (settings.theme === 'system') {
-            mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            mediaQuery.addEventListener('change', applySystemPreference);
-        }
+    let mediaQuery: MediaQueryList | null = null;
+    if (settings.theme === 'system') {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', applySystemPreference);
+    }
 
-        return () => {
-            mediaQuery?.removeEventListener('change', applySystemPreference);
-        };
-    }, [settings?.theme]);
+    return () => {
+      mediaQuery?.removeEventListener('change', applySystemPreference);
+    };
+  }, [settings?.theme]);
 
   // Apply font size
   useEffect(() => {
@@ -421,7 +415,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Apply custom CSS
   useEffect(() => {
     if (!settings?.customCss) return;
-    
+
     let styleElement = document.getElementById('custom-reader-styles') as HTMLStyleElement;
     if (!styleElement) {
       styleElement = document.createElement('style');
@@ -439,7 +433,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       styleElement.id = 'furigana-hide-styles';
       document.head.appendChild(styleElement);
     }
-    
+
     if (settings?.hideFurigana) {
       styleElement.textContent = `
         .jpdb-furi,

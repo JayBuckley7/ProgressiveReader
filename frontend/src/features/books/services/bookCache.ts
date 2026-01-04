@@ -17,7 +17,7 @@ class BookCacheService {
 
     // Cache for blob URLs to prevent recreating them
     private coverUrlCache = new Map<string, string>();
-    
+
     // Track active cover downloads to prevent duplicates
     private activeCoverDownloads = new Map<string, Promise<string | null>>();
 
@@ -62,7 +62,7 @@ class BookCacheService {
         // Start new download
         const downloadPromise = this.downloadAndCacheCover(bookId, coverImageId);
         this.activeCoverDownloads.set(bookId, downloadPromise);
-        
+
         try {
             const result = await downloadPromise;
             return result;
@@ -97,7 +97,7 @@ class BookCacheService {
                     }
                 }
             }
-            
+
             if (coverBlob && coverBlob.size > 0) {
                 // Validate the image
                 const isValidImage = await this.testBlobImage(coverBlob);
@@ -111,7 +111,7 @@ class BookCacheService {
                     console.warn(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
                 }
             }
-            
+
             return null;
         } catch (error) {
             console.warn(`⚠️ [Cover Cache] Failed to get cover for book ${bookId}:`, error);
@@ -119,28 +119,59 @@ class BookCacheService {
         }
     }
 
+    // Concurrency control for background downloads
+    private downloadQueue: (() => Promise<void>)[] = [];
+    private activeDownloadCount = 0;
+    private readonly CONCURRENCY_LIMIT = 3;
+
+    private async processDownloadQueue() {
+        if (this.activeDownloadCount >= this.CONCURRENCY_LIMIT || this.downloadQueue.length === 0) {
+            return;
+        }
+
+        this.activeDownloadCount++;
+        const task = this.downloadQueue.shift();
+
+        if (task) {
+            try {
+                await task();
+            } catch (err) {
+                console.warn('[Cover Cache] Error in queued download task:', err);
+            } finally {
+                this.activeDownloadCount--;
+                this.processDownloadQueue();
+            }
+        }
+    }
+
     /**
-     * Download a single cover image asynchronously with improved caching
+     * Download a single cover image asynchronously with improved caching and concurrency control
      */
     async downloadCoverAsync(
-        bookId: string, 
-        coverImageId: string, 
-        bookTitle: string, 
+        bookId: string,
+        coverImageId: string,
+        bookTitle: string,
         onCoverReady: (bookId: string, coverUrl: string) => void
     ): Promise<void> {
-        try {
-            console.log(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId})`);
-            
-            const coverUrl = await this.getPersistentCoverUrl(bookId, coverImageId);
-            if (coverUrl) {
-                console.log(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
-                onCoverReady(bookId, coverUrl);
-            } else {
-                console.warn(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
+        // Wrap the download in a queued task
+        const task = async () => {
+            try {
+                console.log(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId})`);
+
+                const coverUrl = await this.getPersistentCoverUrl(bookId, coverImageId);
+                if (coverUrl) {
+                    console.log(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
+                    onCoverReady(bookId, coverUrl);
+                } else {
+                    console.warn(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
+                }
+            } catch (error) {
+                console.warn(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
             }
-        } catch (error) {
-            console.warn(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
-        }
+        };
+
+        this.downloadQueue.push(task);
+        this.processDownloadQueue();
     }
 
     /**
@@ -150,7 +181,7 @@ class BookCacheService {
     cleanupBlobUrls(books: BookMetadata[]): void {
         // Get the set of book IDs that are still in use
         const activeBookIds = new Set(books.map(b => b.id));
-        
+
         // Clean up cached URLs for books that are no longer in the list
         for (const [bookId, coverUrl] of this.coverUrlCache.entries()) {
             if (!activeBookIds.has(bookId)) {

@@ -1,5 +1,6 @@
 import { BookMetadata, ReadingProgress } from '~/types';
-import { getCachedFile, cacheFile } from '@integrations/googleDrive/services/driveCache';
+import { getCachedFile, cacheFile, findCachedFileByPrefix } from '@integrations/googleDrive/services/driveCache';
+import { addOfflineBook } from '@features/books/utils/offlineLibrary';
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -36,28 +37,45 @@ class BookStorageService {
      */
     async downloadBook(bookId: string, metadata: BookMetadata): Promise<Blob> {
         console.log('Downloading book from user\'s google cloud storage');
-        
+
         // Check if this book is already being downloaded
         if (activeDownloads.has(bookId)) {
             console.log('Book download already in progress, waiting for existing request...');
             return activeDownloads.get(bookId)!;
         }
-        
+
         const downloadPromise = (async () => {
             try {
-                if (!gDriveService.isSignedIn()) {
-                    throw new Error('Not signed in to Google Drive');
-                }
-
                 if (!metadata.driveFileId) {
                     throw new Error('Google Drive file ID not found for this book.');
                 }
 
-                // Check IndexedDB cache first
-                const cached = await getCachedFile(metadata.driveFileId);
+                // Build cache key with version for invalidation when file updates in Drive
+                const cacheKey = metadata.modifiedTime
+                    ? `${metadata.driveFileId}_${metadata.modifiedTime}`
+                    : metadata.driveFileId;
+
+                // ALWAYS check cache first (offline-first) - works even without auth
+                let cached = await getCachedFile(cacheKey);
+
+                // Fallback: If exact key match fails (e.g. metadata.modifiedTime missing or changed),
+                // try to find by strictly the file ID prefix.
+                // This heals the "Offline Storage" corruption issue where modifiedTime was stripped.
+                if (!cached) {
+                    console.log('Exact cache key miss, trying prefix search for:', metadata.driveFileId);
+                    cached = await findCachedFileByPrefix(metadata.driveFileId);
+                }
+
                 if (cached) {
                     console.log('Retrieved book from cache');
+                    // Ensure it's in the offline index (self-healing for existing caches)
+                    addOfflineBook(metadata);
                     return cached;
+                }
+
+                // Only require auth for cache misses
+                if (!gDriveService.isSignedIn()) {
+                    throw new Error('Book not cached. Sign in to Drive to download.');
                 }
 
                 const blob = await gDriveService.downloadFile(metadata.driveFileId);
@@ -65,8 +83,11 @@ class BookStorageService {
                     throw new Error('Failed to download file from Google Drive, or file was empty.');
                 }
 
-                // Store in cache for future use
-                await cacheFile(metadata.driveFileId, blob);
+                // Store in cache with versioned key for future use
+                await cacheFile(cacheKey, blob);
+
+                // Add to offline library index so it appears when offline
+                addOfflineBook(metadata);
 
                 return blob;
             } catch (error: any) {
@@ -77,10 +98,10 @@ class BookStorageService {
                 activeDownloads.delete(bookId);
             }
         })();
-        
+
         // Store the promise to prevent duplicate requests
         activeDownloads.set(bookId, downloadPromise);
-        
+
         return downloadPromise;
     }
 
@@ -101,7 +122,7 @@ class BookStorageService {
 
             // Read file as ArrayBuffer
             const arrayBuffer = await file.arrayBuffer();
-            
+
             // Create EPUB book instance
             const book = ePub(arrayBuffer, { replacements: 'blobUrl' });
             await book.ready;
@@ -147,20 +168,20 @@ class BookStorageService {
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            
+
             if (pdf.numPages < 1) {
                 return null;
             }
-            
+
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 1 });
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            
+
             if (!context) {
                 throw new Error('Failed to get canvas context');
             }
-            
+
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             await page.render({ canvasContext: context, viewport, canvas }).promise;
@@ -224,8 +245,8 @@ class BookStorageService {
                 const checkLoaded = () => {
                     const isJSZip = url.includes('jszip');
                     const isEpub = url.includes('epub');
-                    
-                    if ((isJSZip && window.JSZip) || 
+
+                    if ((isJSZip && window.JSZip) ||
                         (isEpub && window.ePub) ||
                         (!isJSZip && !isEpub)) {
                         resolve();
@@ -241,16 +262,16 @@ class BookStorageService {
             const script = document.createElement('script');
             script.src = url;
             script.async = true;
-            
+
             script.onload = () => {
                 resolve();
             };
-            
+
             script.onerror = () => {
                 document.head.removeChild(script);
                 reject(new Error(`Failed to load script: ${url}`));
             };
-            
+
             document.head.appendChild(script);
         });
     }
@@ -261,7 +282,7 @@ class BookStorageService {
             // First try local storage for immediate access
             const localKey = `reading_progress_${bookId}`;
             const localProgress = localStorage.getItem(localKey);
-            
+
             if (localProgress) {
                 try {
                     const parsed = JSON.parse(localProgress);
@@ -285,7 +306,7 @@ class BookStorageService {
                             ...cloudProgress,
                             lastUpdated: new Date(cloudProgress.lastUpdated)
                         };
-                        
+
                         // Cache to local storage for faster access
                         localStorage.setItem(localKey, JSON.stringify(progress));
                         return progress;
@@ -315,22 +336,22 @@ class BookStorageService {
                 lastUpdated: new Date().toISOString()
             };
             localStorage.setItem(localKey, JSON.stringify(progressToStore));
-            
+
             // Also save to cloud metadata if connected
             if (gDriveService.isSignedIn()) {
                 try {
                     const metadataInfo = await gDriveService.getMetadataFile();
                     if (metadataInfo) {
                         const { fileId, data } = metadataInfo;
-                        
+
                         // Initialize progress section if it doesn't exist
                         if (!data.progress) {
                             data.progress = {};
                         }
-                        
+
                         // Update progress for this book
                         data.progress[progress.bookId] = progressToStore;
-                        
+
                         // Save back to cloud
                         const success = await gDriveService.updateMetadataFile(fileId, data);
                         if (success) {
@@ -359,9 +380,9 @@ class BookStorageService {
      * Convenient method to save reading progress for a book
      */
     async saveBookProgress(
-        bookId: string, 
-        currentChapter: number, 
-        currentPosition: number = 0, 
+        bookId: string,
+        currentChapter: number,
+        currentPosition: number = 0,
         currentPage?: number,
         totalPages?: number,
         fileType?: string
@@ -376,7 +397,7 @@ class BookStorageService {
             fileType,
             lastUpdated: new Date()
         };
-        
+
         return this.saveReadingProgress(progress);
     }
 }

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { ClerkProvider, SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/clerk-react";
 import {
   Routes,
   Route,
   useParams,
   Outlet,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +27,19 @@ import { gDriveService } from "@integrations/googleDrive/gdriveService";
 import { AdminPage } from "./features/admin/components/AdminPage";
 import ClipboardReader from "./features/clipboard/components/ClipboardReader";
 import { JLPTTestPage } from "./features/jlpt/components/JLPTTestPage";
+
+// Helper component to allow access if signed in OR has offline books
+function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
+  const { isSignedIn } = useUser();
+  const { books } = useAppData();
+
+  // Allow if signed in, OR if we have offline books (offline mode)
+  if (isSignedIn || books.length > 0) {
+    return <>{children}</>;
+  }
+
+  return <RedirectToSignIn />;
+}
 
 
 // Get Clerk publishable key from environment variable
@@ -140,21 +154,30 @@ function AppContent() {
   return (
     <SettingsProvider>
       <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
-        <SignedIn>
-          <Routes>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<BookLibrary />} />
-              <Route path="vocabulary" element={<VocabularyPage />} />
-              <Route path="clipboard" element={<ClipboardReader />} />
-              <Route path="admin" element={<AdminPage />} />
-              <Route path="jlpt-tests" element={<JLPTTestPage />} />
-            </Route>
-            <Route path="book/:bookId" element={<BookReaderRoute />} />
-          </Routes>
-        </SignedIn>
-        <SignedOut>
-          <SignedOutLayout />
-        </SignedOut>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<BookLibrary />} />
+            <Route path="vocabulary" element={
+              <AuthOrOfflineGuard>
+                <VocabularyPage />
+              </AuthOrOfflineGuard>
+            } />
+            <Route path="clipboard" element={
+              <AuthOrOfflineGuard>
+                <ClipboardReader />
+              </AuthOrOfflineGuard>
+            } />
+            <Route path="admin" element={
+              <SignedIn><AdminPage /></SignedIn>
+            } />
+            <Route path="jlpt-tests" element={<JLPTTestPage />} />
+          </Route>
+
+          <Route path="sign-in/*" element={<SignedOutLayout />} />
+          <Route path="sign-up/*" element={<SignedOutLayout />} />
+
+          <Route path="book/:bookId" element={<BookReaderRoute />} />
+        </Routes>
         <Footer />
         <DangerZone />
         <Toaster />
@@ -166,17 +189,39 @@ function AppContent() {
 
 function MainLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isJLPTTestPage = location.pathname.startsWith('/jlpt-tests');
+
+  const handleShowLogin = () => {
+    // Navigate to home if not already there since the login form is on home
+    if (location.pathname !== '/') {
+      navigate('/');
+      // Wait for navigation and render
+      setTimeout(() => {
+        const el = document.getElementById('sign-in-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      // Already on home, just scroll
+      const el = document.getElementById('sign-in-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <div>
       <TopActions
         currentPage={
           location.pathname.startsWith('/vocabulary') ? 'vocabulary' :
-          location.pathname.startsWith('/clipboard') ? 'stats' :
-          location.pathname.startsWith('/admin') ? 'admin' :
-          location.pathname.startsWith('/jlpt-tests') ? 'jlpt' : 'library'
+            location.pathname.startsWith('/clipboard') ? 'stats' :
+              location.pathname.startsWith('/admin') ? 'admin' :
+                location.pathname.startsWith('/jlpt-tests') ? 'jlpt' : 'library'
         }
+        onShowLogin={handleShowLogin}
       />
       {!isJLPTTestPage && <HeroBanner />}
       <main className="flex-1">

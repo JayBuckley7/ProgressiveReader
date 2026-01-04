@@ -22,7 +22,7 @@ interface UseBookContentReturn {
 }
 
 export function useBookContent(bookId: string, currentChapter: number = 0): UseBookContentReturn {
-  const { books } = useAppData();
+  const { books, isLoading: isAppLoading } = useAppData();
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [currentChapterContent, setCurrentChapterContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,8 +68,13 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   useEffect(() => {
     // Skip if no metadata
     if (!bookMetadata) {
+      if (isAppLoading) {
+        // Still waiting for app data to load... keep loading state
+        console.log('useBookContent: Waiting for app data to load...');
+        return;
+      }
       console.warn('useBookContent: No book metadata found for bookId:', bookId);
-      setError('Book not found');
+      setError('Book not in library. Return to library and try again.');
       setIsLoading(false);
       return;
     }
@@ -144,12 +149,12 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         console.log('Step 4: Creating processor for file type:', bookMetadata.fileType);
         let processor: EpubProcessorWrapper | TextProcessorWrapper;
         let loaded: boolean;
-        
+
         if (bookMetadata.fileType === 'epub') {
           // Use EPUB processor
           processor = new processors.EpubProcessorWrapper();
           console.log('Step 4 complete: Created EpubProcessorWrapper');
-          
+
           // Load the book with the EPUB processor
           console.log('Step 5: Loading book with EpubProcessorWrapper...');
           loaded = await processor.loadBook(arrayBuffer);
@@ -157,7 +162,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           // Default to Text processor for other types
           processor = new processors.TextProcessorWrapper();
           console.log('Step 4 complete: Created TextProcessorWrapper');
-          
+
           // Load the book with the text processor
           console.log('Step 5: Loading book with TextProcessorWrapper...');
           loaded = await processor.loadBook(arrayBuffer, { fileType: bookMetadata.fileType });

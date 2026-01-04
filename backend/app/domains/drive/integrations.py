@@ -102,9 +102,33 @@ class ClerkDriveProvider(DriveProvider):
             tokens = result[0]
 
             if tokens and len(tokens) > 0:
-                token_obj = tokens[0]
-                logger.info('🔗 [CLERK TOKEN] ✅ Successfully retrieved token object')
-                return token_obj
+                logger.info(f'🔗 [CLERK TOKEN] ✅ Retrieved {len(tokens)} token objects')
+                
+                # Check for a valid token in the list
+                current_time = time.time()
+                valid_token = None
+                
+                for t in tokens:
+                    try:
+                        exp = getattr(t, 'expires_at', None)
+                        if exp:
+                            exp_ts = float(exp)
+                            # Normalize milliseconds to seconds
+                            if exp_ts > 1000000000000:
+                                exp_ts = exp_ts / 1000
+                            
+                            if exp_ts > current_time:
+                                logger.info('🔗 [CLERK TOKEN] Found valid token (expires in future)')
+                                valid_token = t
+                                break
+                    except Exception:
+                        continue
+                
+                if valid_token:
+                    return valid_token
+                
+                logger.warning('🔗 [CLERK TOKEN] ⚠️ No valid future token found, returning first token')
+                return tokens[0]
             else:
                 logger.warning('🔗 [CLERK TOKEN] ⚠️ No tokens returned from Clerk (user may not have connected Google account)')
                 return None
@@ -201,16 +225,24 @@ class GoogleDriveIntegration:
         if not hasattr(token_obj, 'token') or not token_obj.token:
             raise ValueError("Token object has no token")
 
-        expires_in = 0
+        # Default to 1 hour if expiry is missing (standard for OAuth)
+        expires_in = 3600
         expires_at = getattr(token_obj, 'expires_at', None)
         if expires_at is not None:
             try:
                 exp_ts = int(float(expires_at))
+                # If expires_at is clearly a timestamp (large number)
+                if exp_ts > 1000000000000:  # Milliseconds (13 digits)
+                    expires_in = max(0, int(exp_ts / 1000) - int(time.time()))
+                elif exp_ts > 1000000000:  # Seconds (10 digits)
+                    expires_in = max(0, exp_ts - int(time.time()))
+                else:
+                     # Maybe it's seconds remaining property misnamed?
+                     expires_in = exp_ts
             except (TypeError, ValueError):
                 logger.warning("⚠️ Unexpected expires_at value: %r", expires_at)
-                exp_ts = int(time.time())
-            expires_in = max(0, exp_ts - int(time.time()))
-
+                # Keep default 3600
+        
         return {
             'access_token': token_obj.token,
             'expires_in': expires_in

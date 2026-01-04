@@ -12,7 +12,7 @@ class AuthManager {
     // Listen to the actual Google Drive service for auth state changes
     gDriveService.listenToSigninStatus((isSignedIn) => {
       this.notifyListeners(isSignedIn);
-      
+
       // Reset authentication state when sign-in completes or fails
       if (this.isAuthenticating) {
         this.isAuthenticating = false;
@@ -28,7 +28,7 @@ class AuthManager {
   public async ensureAuthenticated(): Promise<boolean> {
     //// console.log('[🔐 AUTH MANAGER] ensureAuthenticated() called');
     //// console.log('[🔐 AUTH MANAGER] Current sign-in status:', gDriveService.isSignedIn());
-    
+
     // If authentication is already in progress, wait for it
     if (this.isAuthenticating && this.authPromise) {
       //// //// console.log('[🔐 AUTH MANAGER] Google Drive authentication already in progress, waiting...');
@@ -39,7 +39,7 @@ class AuthManager {
     // Even if isSignedIn() returns true (which might be based on Clerk auth only)
     //// console.log('[🔐 AUTH MANAGER] Starting Google Drive authentication sequence...');
     this.isAuthenticating = true;
-    
+
     this.authPromise = this.performAuthentication();
     return this.authPromise;
   }
@@ -47,13 +47,14 @@ class AuthManager {
   private async performAuthentication(): Promise<boolean> {
     try {
       // Clear any cached auth state in gdriveService to ensure fresh check
-      gDriveService.clearAuthCache();
-      
+      // Clear any cached auth state in gdriveService to ensure fresh check - DISABLED to prevent loops
+      // gDriveService.clearAuthCache();
+
       // Check if Clerk user is authenticated first
       if (typeof window !== 'undefined' && window.Clerk) {
         const clerkUser = window.Clerk.user;
         const isClerkSignedIn = window.Clerk.session !== null;
-        
+
         if (!clerkUser || !isClerkSignedIn) {
           //// console.log('[🔐 AUTH MANAGER] ❌ Clerk user not authenticated, cannot proceed with Google Drive auth');
           return false;
@@ -73,16 +74,16 @@ class AuthManager {
       // Initialize Google Drive service safely (loads scripts and attempts session restore)
       //// console.log('[🔐 AUTH MANAGER] ✅ Clerk authenticated - initializing Google Drive service...');
       await gDriveService.safeInitialize();
-      
+
       // Check if initialization was successful
       if (!gDriveService.isSignedIn()) {
         //// console.log('[🔐 AUTH MANAGER] ❌ Could not connect to Google Drive via Clerk backend');
         return false;
       }
-      
+
       // Check if it worked
       return gDriveService.isSignedIn();
-      
+
     } catch (error) {
       console.error('[AuthManager] Authentication failed:', error);
       return false;
@@ -94,10 +95,10 @@ class AuthManager {
    */
   public onAuthStateChange(callback: (isAuthenticated: boolean) => void): () => void {
     this.listeners.push(callback);
-    
+
     // Immediately call with current state
     callback(gDriveService.isSignedIn());
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(callback);

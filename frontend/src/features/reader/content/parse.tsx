@@ -149,44 +149,44 @@ const COMMON_WORDS = new Set([
     '、', '。', '！', '？', '（', '）', '「', '」'
 ]);
 
-const SINGLE_PARTICLES = new Set(['は','が','を','に','で','と','の','へ']);
+const SINGLE_PARTICLES = new Set(['は', 'が', 'を', 'に', 'で', 'と', 'の', 'へ']);
 
 // Helper function to get appropriate color class based on mode
 function getColorClass(token: Token): string {
     const word = token.card.spelling;
-    
-    // Check if we should use local Translate (no JPDB key available)
+
+    // Check if we should use local translation (no JPDB key OR offline)
     const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
-    const shouldUseLocalTranslation = !jpdbApiKey;
-    
+    const shouldUseLocalTranslation = !jpdbApiKey || !navigator.onLine;
+
     if (shouldUseLocalTranslation) {
         // JLPT OFFLINE MODE: Use local JLPT database for coloring
-        
+
         // Check if it's a super common word first
         if (COMMON_WORDS.has(word)) {
             return 'common-word';
         }
-        
+
         // Check for single particles (common grammar elements)
         if (word.length === 1 && SINGLE_PARTICLES.has(word)) {
             return 'common-word';
         }
-        
+
         // Look up word in JLPT database
         const jlptLevel = getJlptLevel(word);
-        
+
         if (jlptLevel) {
             // Convert JLPT level to CSS class (e.g., "N5" -> "jlpt-n5")
             return `jlpt-${jlptLevel.toLowerCase()}`;
         }
-        
+
         // Check if word has kanji that exist in database but no JLPT level
         const kanjiInfo = getWordKanjiInfo(word);
         if (kanjiInfo.length > 0) {
             // Word has kanji in database but no JLPT level - give it gray highlighting
             return 'jlpt-unknown';
         }
-        
+
         // Word not found in JLPT database at all - don't highlight
         return 'common-word';
     } else {
@@ -198,13 +198,13 @@ function getColorClass(token: Token): string {
 
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
     console.log('🔵 [applyTokens] Function called with', fragments.length, 'fragments and', tokens.length, 'tokens');
-    
+
     fragments = fragments.filter(f => f.length > 0);
     let fragmentIndex = 0;
     let curOffset = 0;
     let fragment = fragments[fragmentIndex];
-    const text = fragments.map(x => x.node.data.replace(/\u00A0/g,' ')).join('');
-    
+    const text = fragments.map(x => x.node.data.replace(/\u00A0/g, ' ')).join('');
+
     console.log('🔵 [applyTokens] Text length:', text.length);
     console.log('🔵 [applyTokens] First 100 chars:', text.substring(0, 100));
 
@@ -215,12 +215,12 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             end: token.end,
             length: token.length
         });
-        
+
         if (!fragment) {
             console.log('🔵 [applyTokens] No fragment available - returning early');
             return;
         }
-        
+
         // Wrap all unparsed fragments that appear before the token
         while (curOffset < token.start) {
             if (fragment.end > token.start) {
@@ -259,29 +259,29 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             const baseClassName = `jpdb-word ${cardState.join(' ')}`;
             const additionalColorClass = getColorClass(token);
             const className = additionalColorClass ? `${baseClassName} ${additionalColorClass}` : baseClassName;
-            
+
             console.log('🔵 [applyTokens] Creating highlighted element for word:', token.card.spelling);
             console.log('🔵 [applyTokens] Classes:', className);
-            
+
             // Check if we're in a PDF text layer (invisible text)
             const isPdfTextLayer = fragment.node.parentElement?.closest('.textLayer') !== null;
-            
+
             const wrapper = (
-                token.rubies.length > 0 && !fragment.hasRuby ? 
-                    document.createElement('ruby') : 
+                token.rubies.length > 0 && !fragment.hasRuby ?
+                    document.createElement('ruby') :
                     document.createElement('span')
             ) as JpdbWord;
-            
+
             wrapper.className = className;
-            
+
             // If PDF text layer, ensure text stays transparent even after highlighting
             if (isPdfTextLayer) {
                 wrapper.style.color = 'transparent';
                 wrapper.style.setProperty('color', 'transparent', 'important');
             }
-            
+
             console.log('🔵 [applyTokens] Created wrapper element:', wrapper.tagName, 'with classes:', wrapper.className, 'isPdfTextLayer:', isPdfTextLayer);
-            
+
             // Add event handlers
             wrapper.addEventListener('mouseenter', (event: Event) => {
                 try {
@@ -331,7 +331,7 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                             fragment = fragments[++fragmentIndex];
                         } else {
                             const rubyTextRt = document.createElement('rt');
-                            rubyTextRt.className = 'jpdb-furi';  
+                            rubyTextRt.className = 'jpdb-furi';
                             rubyTextRt.textContent = ruby.text;
                             insertAfter(rubyTextRt, fragment.node);
                         }
@@ -352,7 +352,7 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
         unparsedWrapper.className = 'jpdb-word unparsed';
         wrap(fragment.node, unparsedWrapper);
 
-                  fragment = fragments[++fragmentIndex];
-      }
-} 
+        fragment = fragments[++fragmentIndex];
+    }
+}
 

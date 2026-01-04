@@ -42,6 +42,33 @@ export async function getCachedFile(id: string): Promise<Blob | null> {
     });
 }
 
+export async function findCachedFileByPrefix(prefix: string): Promise<Blob | null> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(CACHE_STORE_NAME, 'readonly');
+        const store = tx.objectStore(CACHE_STORE_NAME);
+        // Use a cursor to iterate keys
+        const req = store.openCursor();
+
+        req.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest).result;
+            if (cursor) {
+                const key = cursor.key.toString();
+                if (key.startsWith(prefix)) {
+                    // Found a match!
+                    resolve(cursor.value);
+                    return;
+                }
+                cursor.continue();
+            } else {
+                // End of cursor, no match found
+                resolve(null);
+            }
+        };
+        req.onerror = () => reject(req.error);
+    });
+}
+
 export async function cacheFile(id: string, blob: Blob): Promise<void> {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -116,5 +143,19 @@ export async function removeCoverForFile(fileId: string): Promise<void> {
         const req = store.delete(fileId);
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
+    });
+}
+
+export async function clearAllCache(): Promise<void> {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction([CACHE_STORE_NAME, COVER_STORE_NAME, COVER_BY_FILE_STORE_NAME], 'readwrite');
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+
+        tx.objectStore(CACHE_STORE_NAME).clear();
+        tx.objectStore(COVER_STORE_NAME).clear();
+        tx.objectStore(COVER_BY_FILE_STORE_NAME).clear();
     });
 }
