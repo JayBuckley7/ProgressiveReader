@@ -1,0 +1,23 @@
+# =============================================================================
+# EXAMPLE TERRAFORM VARIABLES FILE
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values.
+# The terraform.tfvars file is gitignored for security.
+#
+# Usage: terraform apply (will auto-load terraform.tfvars)
+# =============================================================================
+
+# REQUIRED: Your GCP Project ID
+project_id = "your-gcp-project-id"
+
+# REQUIRED: Container image to deploy
+# Format: us-central1-docker.pkg.dev/PROJECT_ID/progressive-reader/IMAGE:TAG
+container_image = "us-central1-docker.pkg.dev/your-project/progressive-reader/progressive-reader:latest"
+
+# OPTIONAL: Override defaults if needed
+# region      = "us-central1"
+# environment = "prod"
+# memory      = "1Gi"
+# cpu         = "1"
+# max_instances = 40
+# min_instances = 0
