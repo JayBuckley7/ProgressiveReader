@@ -227,11 +227,14 @@ resource "google_cloud_run_v2_service_iam_member" "allow_unauthenticated" {
   member   = "allUsers"
 }
 
+
 # =============================================================================
 # DOMAIN MAPPINGS
 # =============================================================================
 
+# PROD: progressivereader.net
 resource "google_cloud_run_domain_mapping" "main_domain" {
+  count    = var.environment == "prod" ? 1 : 0
   location = var.region
   name     = "progressivereader.net"
 
@@ -244,7 +247,9 @@ resource "google_cloud_run_domain_mapping" "main_domain" {
   }
 }
 
+# PROD: www.progressivereader.net
 resource "google_cloud_run_domain_mapping" "www_domain" {
+  count    = var.environment == "prod" ? 1 : 0
   location = var.region
   name     = "www.progressivereader.net"
 
@@ -256,4 +261,20 @@ resource "google_cloud_run_domain_mapping" "www_domain" {
     route_name = google_cloud_run_v2_service.progressive_reader.name
   }
 }
+
+# DEV: dev.progressivereader.net
+resource "google_cloud_run_domain_mapping" "dev_domain" {
+  count    = var.environment == "dev" ? 1 : 0
+  location = var.region
+  name     = "dev.progressivereader.net"
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.progressive_reader.name
+  }
+}
+
 
