@@ -145,26 +145,7 @@ resource "google_cloud_run_v2_service" "progressive_reader" {
   name     = var.service_name
   location = var.region
 
-  # Prevent Terraform from fighting with Cloud Build
-  # Cloud Build updates these on every deploy, so Terraform should ignore them
-  lifecycle {
-    ignore_changes = [
-      # Cloud Build sets these on every deploy
-      client,
-      client_version,
-      
-      # Cloud Build adds labels like commit-sha, gcb-build-id, etc.
-      labels,
-      template[0].labels,
-      
-      # Cloud Build updates the image tag on each deploy
-      template[0].containers[0].image,
-      
-      # Annotations can be modified by Cloud Build or console
-      annotations,
-      template[0].annotations,
-    ]
-  }
+  # Terraform/Spacelift is the source of truth for Cloud Run configuration
 
   template {
     # Service account for the Cloud Run service
