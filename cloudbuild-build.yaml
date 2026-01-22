@@ -1,0 +1,75 @@
+timeout: "1200s"
+
+options:
+  substitutionOption: ALLOW_LOOSE
+
+substitutions:
+  _SERVICE_NAME: "progressive-reader"   # change if needed
+  _ENVIRONMENT: "prod"
+  _COMMIT_SHA: "$COMMIT_SHA"  # Default to built-in COMMIT_SHA if not provided
+
+steps:
+  # 1) Load & parse frontend env vars (from Secret Manager) safely with jq
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Load Frontend Env Vars"
+    entrypoint: "bash"
+    args: ["ci/01-load-frontend-env.sh"]
+    env:
+      - "PROJECT_ID=${PROJECT_ID}"
+
+  # 2) Build Docker image with ONLY the frontend build args
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Build Docker Image"
+    waitFor: ["Load Frontend Env Vars"]
+    entrypoint: "bash"
+    args: ["ci/02-build-docker.sh"]
+    env:
+      - "_SERVICE_NAME=${_SERVICE_NAME}"
+      - "PROJECT_ID=${PROJECT_ID}"
+      - "_COMMIT_SHA=${_COMMIT_SHA}"
+
+  # 3) Push image with commit SHA tag
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push to Artifact Registry"
+    waitFor: ["Build Docker Image"]
+    args:
+      - "push"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
+
+  # 4) Push latest tag
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push latest tag"
+    waitFor: ["Build Docker Image"]
+    args:
+      - "push"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/progressive-reader/${_SERVICE_NAME}:latest"
+
+  # 5) Verify PR-app-config secret exists and has expected keys
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Verify PR-App Config Secret"
+    waitFor: ["Push to Artifact Registry"]
+    entrypoint: "bash"
+    args: ["ci/05-verify-secret.sh"]
+    env:
+      - "PROJECT_ID=${PROJECT_ID}"
+  
+  # 5b) Verify secret can be parsed as JSON (handles UTF-8 BOM)
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Verify Secret Parsing"
+    waitFor: ["Verify PR-App Config Secret"]
+    entrypoint: "bash"
+    args: ["ci/05-verify-secret-parsing.sh"]
+    env:
+      - "PROJECT_ID=${PROJECT_ID}"
+
+  # 5b) Verify secret can be parsed as JSON (handles UTF-8 BOM)
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Verify Secret Parsing"
+    waitFor: ["Verify PR-App Config Secret"]
+    entrypoint: "bash"
+    args: ["ci/05-verify-secret-parsing.sh"]
+    env:
+      - "PROJECT_ID=${PROJECT_ID}"
+
+images:
+  - "us-central1-docker.pkg.dev/${PROJECT_ID}/progressive-reader/${_SERVICE_NAME}:${_COMMIT_SHA}"
