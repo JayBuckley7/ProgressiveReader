@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --open --host",
+    "dev": "vite --host",
     "prebuild": "npm run types:generate",
     "build": "vite build",
     "lint": "tsc -p . --noEmit --pretty false && vite build",

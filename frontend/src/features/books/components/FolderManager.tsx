@@ -52,13 +52,14 @@ export function FolderManager({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+      <div className="app-card w-full max-w-md p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Manage Folders</h2>
+          <h2 className="text-lg font-semibold">Manage Folders</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="p-2 app-icon-button transition-colors"
+            aria-label="Close"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -68,20 +69,20 @@ export function FolderManager({
 
         {/* Create new folder */}
         <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Create New Folder</h3>
+          <h3 className="text-sm font-semibold mb-3">Create folder</h3>
           <div className="flex gap-2">
             <input
               type="text"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Folder name"
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="app-input flex-1 px-3 py-2 text-sm"
               onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
             />
             <button
               onClick={handleCreateFolder}
               disabled={!newFolderName.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-md text-sm font-medium app-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create
             </button>
@@ -90,15 +91,15 @@ export function FolderManager({
 
         {/* Folder list */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Your Folders</h3>
+          <h3 className="text-sm font-semibold mb-3">Folders</h3>
           {folders.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No folders yet</p>
+            <p className="app-muted text-center py-4">No folders yet</p>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {folders.map((folder) => (
                 <div
                   key={folder.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  className="flex items-center justify-between p-3 rounded-md border app-border bg-[var(--ui-surface-alt)]"
                 >
                   {editingFolder?.id === folder.id ? (
                     <div className="flex-1 flex gap-2">
@@ -106,18 +107,18 @@ export function FolderManager({
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-white"
+                        className="app-input flex-1 px-2 py-1 text-sm"
                         onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
                       />
                       <button
                         onClick={handleSaveEdit}
-                        className="px-2 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                        className="px-2 py-1 text-sm rounded-md app-button-primary"
                       >
                         Save
                       </button>
                       <button
                         onClick={handleCancelEdit}
-                        className="px-2 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600"
+                        className="px-2 py-1 text-sm rounded-md app-button-muted"
                       >
                         Cancel
                       </button>
@@ -125,15 +126,15 @@ export function FolderManager({
                   ) : (
                     <>
                       <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 app-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
-                        <span className="text-gray-900 dark:text-white">{folder.name}</span>
+                        <span>{folder.name}</span>
                       </div>
                       <div className="flex gap-1">
                         <button
                           onClick={() => handleStartEdit(folder)}
-                          className="p-1 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                          className="p-1.5 app-icon-button transition-colors"
                           title="Edit folder"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,7 +143,7 @@ export function FolderManager({
                         </button>
                         <button
                           onClick={() => handleDeleteFolder(folder)}
-                          className="p-1 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                          className="p-1.5 app-icon-button transition-colors text-red-600 hover:text-red-700"
                           title="Delete folder"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,4 +162,3 @@ export function FolderManager({
     </div>
   );
 }
-

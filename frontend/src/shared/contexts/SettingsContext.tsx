@@ -5,7 +5,7 @@ import { bookMetadataService } from "@features/books/services/bookMetadata";
 import { toast } from "sonner";
 import i18n from "~/i18n";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark" | "wood" | "space" | "system";
 
 interface Settings {
   theme: Theme;
@@ -369,7 +369,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (!settings) return;
 
     const root = document.documentElement;
-    root.classList.remove('user-theme-light', 'user-theme-dark', 'dark');
+    root.classList.remove(
+      'user-theme-light',
+      'user-theme-dark',
+      'user-theme-wood',
+      'user-theme-space',
+      'dark'
+    );
 
     const applySystemPreference = () => {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -382,8 +388,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     if (settings.theme === 'light') {
       root.classList.add('user-theme-light');
+    } else if (settings.theme === 'wood') {
+      root.classList.add('user-theme-wood');
     } else if (settings.theme === 'dark') {
       root.classList.add('user-theme-dark');
+      root.classList.add('dark');
+    } else if (settings.theme === 'space') {
+      root.classList.add('user-theme-space');
       root.classList.add('dark');
     } else {
       applySystemPreference();
@@ -467,4 +478,3 @@ export function useSettings() {
   }
   return context;
 }
-

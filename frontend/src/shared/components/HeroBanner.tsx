@@ -34,67 +34,44 @@ export function HeroBanner() {
   }, [isLoaded, isSignedIn]);
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
-      <div className="max-w-6xl mx-auto px-4 py-12">
+    <div className="app-hero">
+      <div className="max-w-6xl mx-auto px-4 py-3">
         <SignedIn>
-          <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">
+          <div>
+            <h1 className="text-base sm:text-lg font-medium">
               {t("hero.signedIn.welcome", {
                 name: user?.firstName || user?.username || t("hero.defaultName"),
               })}
             </h1>
-            <p className="text-xl text-blue-100 mb-6">
+            <p className="text-sm mt-1 max-w-2xl app-hero-subtle">
               {t("hero.signedIn.journey")}
             </p>
-            <div className="flex justify-center space-x-8 text-center">
-              <div>
-                <div className="text-3xl font-bold">{books.length}</div>
-                <div className="text-blue-200">{t("hero.signedIn.stats.books")}</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold">{stats.saved}</div>
-                <div className="text-blue-200">{t("hero.signedIn.stats.wordsSaved")}</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold">{stats.mastered}</div>
-                <div className="text-blue-200">{t("hero.signedIn.stats.wordsMastered")}</div>
-              </div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs app-hero-subtle">
+              <span>
+                {t("hero.signedIn.stats.books")}: <strong>{books.length}</strong>
+              </span>
+              <span>
+                {t("hero.signedIn.stats.wordsSaved")}: <strong>{stats.saved}</strong>
+              </span>
+              <span>
+                {t("hero.signedIn.stats.wordsMastered")}: <strong>{stats.mastered}</strong>
+              </span>
             </div>
           </div>
         </SignedIn>
 
         <SignedOut>
-          <div className="text-center">
-
-          <img src="/slow.gif" alt={t("hero.signedOut.animationAlt")} className="w-16 h-16 mb-4 rounded-lg shadow mx-auto" />
-            <h1 className="text-5xl font-bold mb-4 flex items-center justify-center">
+          <div>
+            <h1 className="text-base sm:text-lg font-medium">
               {t("hero.signedOut.title")}
             </h1>
-            <p className="text-xl text-blue-100 mb-8">
+            <p className="text-sm mt-1 max-w-2xl app-hero-subtle">
               {t("hero.signedOut.description")}
             </p>
-            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-                <div className="text-3xl mb-3">📖</div>
-                <h3 className="font-semibold mb-2">{t("hero.signedOut.features.smartReading.title")}</h3>
-                <p className="text-blue-100 text-sm">
-                  {t("hero.signedOut.features.smartReading.description")}
-                </p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-                <div className="text-3xl mb-3">📝</div>
-                <h3 className="font-semibold mb-2">{t("hero.signedOut.features.vocabTracking.title")}</h3>
-                <p className="text-blue-100 text-sm">
-                  {t("hero.signedOut.features.vocabTracking.description")}
-                </p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-                <div className="text-3xl mb-3">📊</div>
-                <h3 className="font-semibold mb-2">{t("hero.signedOut.features.analytics.title")}</h3>
-                <p className="text-blue-100 text-sm">
-                  {t("hero.signedOut.features.analytics.description")}
-                </p>
-              </div>
+            <div className="mt-1 text-xs app-hero-subtle">
+              {t("hero.signedOut.features.smartReading.title")} •{" "}
+              {t("hero.signedOut.features.vocabTracking.title")} •{" "}
+              {t("hero.signedOut.features.analytics.title")}
             </div>
           </div>
         </SignedOut>
@@ -102,4 +79,3 @@ export function HeroBanner() {
     </div>
   );
 }
-

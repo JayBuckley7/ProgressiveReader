@@ -64,27 +64,27 @@ export default function App() {
     <ClerkProvider
       publishableKey={clerkPubKey}
       appearance={{
-        layout: {
-          // tidy up defaults
-        },
         variables: {
-          colorPrimary: "#2563eb",
-          colorBackground: "#ffffff",
-          colorText: "#111827",
-          fontFamily: "system-ui, -apple-system, sans-serif"
+          colorPrimary: "var(--ui-accent)",
+          colorBackground: "var(--ui-surface)",
+          colorText: "var(--ui-text)",
+          colorTextSecondary: "var(--ui-muted)",
+          fontFamily:
+            '"Inter Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+          borderRadius: "10px"
         },
         elements: {
-          card: "shadow-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded-lg",
-          headerTitle: "text-gray-900 dark:text-white text-xl font-semibold",
-          headerSubtitle: "text-gray-600 dark:text-gray-300 text-sm",
-          formFieldLabel: "text-gray-700 dark:text-gray-300 text-sm font-medium",
-          formFieldInput: "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400",
-          formButtonPrimary: "bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium transition-colors",
-          socialButtonsIconButton: "border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors",
-          dividerLine: "bg-gray-200 dark:bg-gray-600",
-          dividerText: "text-gray-500 dark:text-gray-400 text-sm",
-          footerActionText: "text-gray-600 dark:text-gray-400 text-sm",
-          footerActionLink: "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium",
+          card: "app-card shadow-none",
+          headerTitle: "text-lg font-semibold",
+          headerSubtitle: "text-sm app-muted",
+          formFieldLabel: "text-sm font-medium",
+          formFieldInput: "app-input text-sm",
+          formButtonPrimary: "app-button-primary rounded-md text-sm font-medium transition-colors",
+          socialButtonsIconButton: "app-button-muted rounded-md transition-colors",
+          dividerLine: "bg-[var(--ui-border)]",
+          dividerText: "text-xs app-muted",
+          footerActionText: "text-sm app-muted",
+          footerActionLink: "text-sm font-medium underline underline-offset-4 hover:opacity-80",
           main: "space-y-4",
           formFieldRow: "space-y-1"
         }
@@ -153,7 +153,7 @@ function AppContent() {
 
   return (
     <SettingsProvider>
-      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-col min-h-screen app-shell">
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<BookLibrary />} />
@@ -235,11 +235,11 @@ function SignedOutLayout() {
   const { t } = useTranslation();
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="app-card p-6 w-full max-w-md">
+        <h2 className="text-lg font-semibold mb-2">
           {t("app.signedOut.title")}
         </h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">{t("app.signedOut.description")}</p>
+        <p className="text-sm app-muted mb-4">{t("app.signedOut.description")}</p>
         <SignInForm />
       </div>
     </div>

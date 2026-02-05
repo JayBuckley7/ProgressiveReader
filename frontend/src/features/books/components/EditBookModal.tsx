@@ -48,32 +48,30 @@ export function EditBookModal({ book, onClose, onSave }: EditBookModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md animate-slide-up"
+        className="app-card w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 md:p-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white">Edit Book Details</h2>
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white transition-colors duration-200 hover:rotate-90 transform p-1"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        <div className="px-6 py-4 border-b app-border flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Edit book</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-1.5 app-icon-button transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 md:p-6 space-y-4">
+        <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium mb-1">
               Title *
             </label>
             <input
@@ -81,14 +79,14 @@ export function EditBookModal({ book, onClose, onSave }: EditBookModalProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="app-input w-full px-3 py-2 text-sm"
               placeholder="Enter book title"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium mb-1">
               Author
             </label>
             <input
@@ -96,32 +94,29 @@ export function EditBookModal({ book, onClose, onSave }: EditBookModalProps) {
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="app-input w-full px-3 py-2 text-sm"
               placeholder="Enter author name"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 md:p-6">
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving || !title.trim()}
-              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+        <div className="px-6 py-4 border-t app-border flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md text-sm font-medium app-button-muted"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !title.trim()}
+            className="px-4 py-2 rounded-md text-sm font-medium app-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
-

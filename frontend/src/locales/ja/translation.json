@@ -45,18 +45,20 @@
     },
     "general": {
       "api": {
-        "title": "🔑 API 設定",
+        "title": "API 設定",
         "description": "無制限に翻訳するために、OpenAI API キーを追加できます",
-        "note": "💡 メモ: サーバーは共有 API キーで無料翻訳を提供します。ここに自身の OpenAI API キーを追加すると、個人利用で無制限かつ高速になります。",
+        "note": "メモ: サーバーは共有 API キーで無料翻訳を提供します。ここに自身の OpenAI API キーを追加すると、個人利用で無制限かつ高速になります。",
         "inputLabel": "OpenAI API キー（任意）",
         "placeholder": "sk-...（空欄でサーバーキーを使用）"
       },
       "theme": {
         "label": "テーマ",
         "options": {
-          "system": "🌓 システム設定",
-          "light": "☀️ ライト",
-          "dark": "🌙 ダーク"
+          "system": "システム設定",
+          "light": "ライト",
+          "dark": "ダーク",
+          "wood": "ウッド",
+          "space": "スペース"
         }
       },
       "model": {
@@ -70,16 +72,16 @@
       "targetLanguage": {
         "label": "学習対象言語",
         "options": {
-          "English": "🇬🇧 英語",
-          "Japanese": "🇯🇵 日本語"
+          "English": "英語",
+          "Japanese": "日本語"
         }
       },
       "uiLanguage": {
         "label": "UI 言語",
         "description": "インターフェースの表示言語を選択",
         "options": {
-          "en": "🇺🇸 English",
-          "ja": "🇯🇵 日本語"
+          "en": "English",
+          "ja": "日本語"
         }
       },
       "cefr": {

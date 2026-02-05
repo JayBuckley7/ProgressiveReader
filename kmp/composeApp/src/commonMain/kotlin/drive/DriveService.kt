@@ -16,10 +16,11 @@ import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import io.ktor.utils.io.jvm.javaio.toInputStream
 import io.ktor.client.request.forms.*
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import io.ktor.utils.io.core.readBytes
+import io.ktor.utils.io.readRemaining
 
 class DriveService(private val getSessionToken: () -> String?) {
     private val http = createHttpClient()
@@ -71,9 +72,8 @@ class DriveService(private val getSessionToken: () -> String?) {
             headers.append("Authorization", "Bearer $token")
         }
         if (!res.status.isSuccess()) return null
-        // Read as ByteArray
         val channel = res.bodyAsChannel()
-        return withContext(Dispatchers.IO) { channel.toInputStream().readBytes() }
+        return withContext(Dispatchers.IO) { channel.readRemaining().readBytes() }
     }
 
     suspend fun upload(filename: String, bytes: ByteArray, mimeType: String = "application/epub+zip", folderId: String? = null): Boolean {
@@ -95,5 +95,4 @@ class DriveService(private val getSessionToken: () -> String?) {
         return res.status.isSuccess()
     }
 }
-
 

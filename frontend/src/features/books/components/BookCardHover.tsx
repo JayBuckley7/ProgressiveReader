@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { BookMetadata, Folder } from '~/types';
 import { EditBookModal } from './EditBookModal';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
+import { toast } from 'sonner';
 
 interface BookCardHoverProps {
   book: BookMetadata;
@@ -28,6 +29,7 @@ export function BookCardHover({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [showCoverMenu, setShowCoverMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +54,57 @@ export function BookCardHover({
   const handleChangeCoverClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setShowFolderMenu(false);
+    setShowCoverMenu(prev => !prev);
+  };
+
+	  const handleAutoCoverLookup = async (e: React.MouseEvent) => {
+	    e.preventDefault();
+	    e.stopPropagation();
+
+	    if (isUpdatingCover) return;
+	    setShowCoverMenu(false);
+
+	    setIsUpdatingCover(true);
+	    try {
+	      const lookedUp = await bookMetadataService.lookupCover(book.title);
+	      const coverBlob =
+	        lookedUp ??
+	        (await bookMetadataService.generatePlaceholderCover(book.title, book.fileType, book.author));
+
+	      if (!lookedUp) {
+	        toast.info('No cover found online — generated a placeholder cover');
+	      }
+
+	      const mime = coverBlob.type || 'image/jpeg';
+	      const ext = mime.includes('png')
+	        ? 'png'
+	        : mime.includes('webp')
+	          ? 'webp'
+	          : mime.includes('svg')
+	            ? 'svg'
+	            : 'jpg';
+	      const safeBase = (book.title || 'cover')
+	        .trim()
+        .slice(0, 64)
+        .replace(/[^\w]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toLowerCase() || 'cover';
+      const coverFile = new File([coverBlob], `${safeBase}.${ext}`, { type: mime });
+
+      await onUpdateCover(book.id as string, coverFile);
+    } catch (error) {
+      console.error('Error looking up cover:', error);
+      toast.error('Failed to find cover');
+    } finally {
+      setIsUpdatingCover(false);
+    }
+  };
+
+  const triggerCoverFilePicker = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowCoverMenu(false);
     fileInputRef.current?.click();
   };
 
@@ -81,6 +134,11 @@ export function BookCardHover({
   };
 
   const handleCardClick = () => {
+    if (showCoverMenu || showFolderMenu) {
+      setShowCoverMenu(false);
+      setShowFolderMenu(false);
+      return;
+    }
     onSelectBook(book.id as string);
   };
 
@@ -111,63 +169,121 @@ export function BookCardHover({
     return folder ? folder.name : 'Unknown folder';
   };
 
+  const monogram = (book.title || "Book").trim().slice(0, 1).toUpperCase();
+
   return (
     <div
       className="book-item-link relative group cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setShowCoverMenu(false);
+        setShowFolderMenu(false);
+      }}
       onClick={handleCardClick}
     >
-      <div className="book-item bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden transform hover:-translate-y-1">
+      <div className="app-card overflow-hidden transition-shadow duration-150 hover:shadow-sm">
         {/* Cover Wrapper */}
-        <div className="book-cover-wrapper relative aspect-[3/4] bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+        <div
+          className={`book-cover-wrapper relative aspect-[3/4] ${book.coverUrl ? "" : "book-cover-placeholder"}`}
+        >
           {book.coverUrl ? (
             <img
               src={book.coverUrl}
               alt={book.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           ) : (
-            <div className="text-white text-4xl">📖</div>
+            <div className="relative z-10 h-full w-full p-3 flex flex-col">
+              <div className="flex items-start justify-between gap-2">
+                <span className="app-chip">{(book.fileType || "file").toUpperCase()}</span>
+              </div>
+
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-4xl font-semibold tracking-tight select-none opacity-80">
+                  {monogram}
+                </div>
+              </div>
+
+              <div className="text-xs font-medium leading-snug line-clamp-2">
+                {book.title}
+              </div>
+              {book.author ? (
+                <div className="mt-1 text-[11px] app-muted line-clamp-1">
+                  {book.author}
+                </div>
+              ) : null}
+            </div>
           )}
 
-          {/* Change Cover Button - appears on hover */}
-          <button
-            onClick={handleChangeCoverClick}
-            disabled={isUpdatingCover}
-            className={`
-              btn-change-cover absolute bottom-2 right-2 z-30
-              bg-gray-600 hover:bg-gray-500 text-white border-none
-              w-8 h-8 rounded-full flex items-center justify-center
-              opacity-80 hover:opacity-100 transition-all duration-200
-              ${isHovered ? '' : 'hidden'}
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
-            title={`Change cover for "${book.title}"`}
+          {/* Hover Actions */}
+          <div
+            className={`absolute left-2 right-2 top-2 z-30 flex items-center justify-between transition-opacity ${
+              isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
           >
-            {isUpdatingCover ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            ) : (
-              <span className="text-sm">📷</span>
-            )}
-          </button>
+            <div className="flex items-center gap-1">
+              {onMoveToFolder ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowCoverMenu(false);
+                    setShowFolderMenu(!showFolderMenu);
+                  }}
+                  className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center"
+                  title={`Move "${book.title}" to folder`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                  </svg>
+                </button>
+              ) : null}
+            </div>
 
-          {/* Edit Book Button - appears on hover, aligned with cover button */}
-          <button
-            onClick={handleEditClick}
-            className={`
-              absolute bottom-2 left-2 z-30
-              bg-gray-600 hover:bg-gray-500 text-white border-none
-              w-8 h-8 rounded-full flex items-center justify-center
-              opacity-80 hover:opacity-100 transition-all duration-200
-              ${isHovered ? '' : 'hidden'}
-            `}
-            title={`Edit details for "${book.title}"`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleChangeCoverClick}
+                disabled={isUpdatingCover}
+                className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                title={`Change cover for "${book.title}"`}
+              >
+                {isUpdatingCover ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current opacity-70"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16M14 14l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
+
+              <button
+                onClick={handleEditClick}
+                className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center"
+                title={`Edit details for "${book.title}"`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+
+              <button
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                title={`Delete "${book.title}"`}
+              >
+                {isDeleting ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current opacity-70"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
 
           {/* Hidden file input */}
           <input
@@ -178,83 +294,49 @@ export function BookCardHover({
             className="hidden"
             onClick={(e) => e.stopPropagation()}
           />
-        </div>
 
-        {/* Book Info */}
-        <div className="p-4">
-          <h3 className="book-item-title font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
-            {book.title}
-          </h3>
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>{book.fileType.toUpperCase()}</span>
-            <span>{book.totalChapters || 1} chapters</span>
-          </div>
-          <div className="text-xs text-gray-400 mt-1">
-            {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}
-          </div>
-        </div>
-
-        {/* Delete Button - appears on hover */}
-        <button
-          onClick={handleDeleteClick}
-          disabled={isDeleting}
-          className={`
-            delete-btn absolute top-2 right-2 z-10
-            bg-red-500 hover:bg-red-600 text-white border-none
-            px-2 py-1 rounded-full text-sm cursor-pointer
-            opacity-80 hover:opacity-100 transition-all duration-200
-            ${isHovered ? 'flex items-center justify-center' : 'hidden'}
-            disabled:opacity-50 disabled:cursor-not-allowed
-          `}
-          title={`Delete "${book.title}"`}
-        >
-          {isDeleting ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          )}
-        </button>
-
-        {/* Folder button - appears on hover */}
-        {onMoveToFolder && (
-          <div className="absolute top-2 left-2 z-50">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowFolderMenu(!showFolderMenu);
-              }}
-              className={`
-                bg-blue-500 hover:bg-blue-600 text-white border-none
-                px-2 py-1 rounded-full text-sm cursor-pointer
-                opacity-80 hover:opacity-100 transition-all duration-200
-                ${isHovered ? 'block' : 'hidden'}
-              `}
-              title={`Move "${book.title}" to folder`}
+          {showCoverMenu && (
+            <div
+              className="absolute top-11 right-2 z-40 w-56 app-card p-1"
+              onClick={(e) => e.stopPropagation()}
             >
-              📁
-            </button>
+              <button
+                onClick={triggerCoverFilePicker}
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors"
+              >
+                Choose image…
+              </button>
+              <button
+                onClick={handleAutoCoverLookup}
+                disabled={isUpdatingCover}
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Find cover automatically
+              </button>
+            </div>
+          )}
 
           {/* Folder Menu Dropdown */}
-          {showFolderMenu && (
-            <div className="absolute top-8 left-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg min-w-48">
-              <div className="p-2 border-b border-gray-200 dark:border-gray-600">
-                <div className="text-xs text-gray-500 dark:text-gray-400">Current: {getCurrentFolderName()}</div>
+          {onMoveToFolder && showFolderMenu && (
+            <div
+              className="absolute top-11 left-2 z-40 min-w-52 app-card p-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-2 py-1.5 text-[11px] app-muted">
+                Current: <span className="text-[color:var(--ui-text)]">{getCurrentFolderName()}</span>
               </div>
-              <div className="py-1">
+              <div className="mt-1">
                 <button
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleMoveToFolder(null);
                   }}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                    !currentFolderId ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                  className={`w-full text-left px-2 py-1.5 rounded-md text-sm app-nav-item ${
+                    !currentFolderId ? "app-nav-active" : ""
                   }`}
                 >
-                  📂 No folder
+                  No folder
                 </button>
                 {availableFolders.length > 0 ? (
                   availableFolders.map((folder) => (
@@ -265,24 +347,36 @@ export function BookCardHover({
                         e.stopPropagation();
                         handleMoveToFolder(folder.id);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                        currentFolderId === folder.id ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                      className={`w-full text-left px-2 py-1.5 rounded-md text-sm app-nav-item ${
+                        currentFolderId === folder.id ? "app-nav-active" : ""
                       }`}
                     >
-                      📁 {folder.name}
+                      {folder.name}
                     </button>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    No folders available
+                  <div className="px-2 py-1.5 text-sm app-muted">
+                    No folders
                   </div>
                 )}
               </div>
             </div>
           )}
-          </div>
-        )}
+        </div>
 
+        {/* Book Info */}
+        <div className="p-3">
+          <h3 className="book-item-title font-semibold mb-1 line-clamp-2">
+            {book.title}
+          </h3>
+          <div className="flex items-center justify-between text-xs app-muted">
+            <span>{(book.fileType || "file").toUpperCase()}</span>
+            <span>{book.totalChapters || 1} ch</span>
+          </div>
+          <div className="text-xs app-muted mt-1">
+            {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}
+          </div>
+        </div>
       </div>
 
       {showEditModal && (
@@ -295,4 +389,3 @@ export function BookCardHover({
     </div>
   );
 }
-

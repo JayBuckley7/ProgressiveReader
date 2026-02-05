@@ -1,14 +1,37 @@
+import java.io.File
+
 plugins {
-    kotlin("multiplatform") version "2.0.21"
-    id("org.jetbrains.compose") version "1.6.11"
-    id("com.android.application") version "8.5.2"
+    kotlin("multiplatform") version "2.2.21"
+    kotlin("plugin.serialization") version "2.2.21"
+    id("com.android.application") version "8.6.0"
+    id("org.jetbrains.compose") version "1.9.2"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
+}
+
+private fun readDotEnvValue(dotEnvFile: File, key: String): String? {
+    if (!dotEnvFile.exists()) return null
+
+    val prefix = "$key="
+    for (raw in dotEnvFile.readLines()) {
+        val line = raw.trim()
+        if (line.isBlank() || line.startsWith("#")) continue
+        val normalized = line.removePrefix("export ").trim()
+        if (!normalized.startsWith(prefix)) continue
+
+        var value = normalized.removePrefix(prefix).trim()
+        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.substring(1, value.length - 1)
+        } else {
+            value = value.substringBefore(" #").substringBefore("#").trim()
+        }
+        if (value.isNotBlank()) return value
+    }
+    return null
 }
 
 kotlin {
+    jvmToolchain(17)
     androidTarget()
-    iosArm64()
-    iosX64()
-    iosSimulatorArm64()
 
     sourceSets {
         val commonMain by getting {
@@ -16,36 +39,45 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+
                 implementation("io.ktor:ktor-client-core:2.3.9")
                 implementation("io.ktor:ktor-client-content-negotiation:2.3.9")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.9")
+
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
             }
         }
+
         val androidMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-okhttp:2.3.9")
                 implementation("androidx.activity:activity-compose:1.9.2")
+                implementation("androidx.core:core-ktx:1.13.1")
+                implementation("androidx.datastore:datastore-preferences:1.1.1")
                 implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
+
+                implementation("io.ktor:ktor-client-okhttp:2.3.9")
+
                 // Clerk Android SDK (Android only)
-                implementation("com.clerk.android:clerk-android:1.0.0-alpha06")
+                implementation("com.clerk:clerk-android:0.1.19")
             }
         }
-        val iosMain by creating {
-            dependsOn(commonMain)
+
+        val androidUnitTest by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-darwin:2.3.9")
+                implementation(kotlin("test"))
+                implementation("junit:junit:4.13.2")
+                // Needed for XmlPullParserFactory on the JVM (Android provides this at runtime).
+                implementation("net.sf.kxml:kxml2:2.3.0")
             }
         }
-        iosArm64Main.dependsOn(iosMain)
-        iosX64Main.dependsOn(iosMain)
-        iosSimulatorArm64Main.dependsOn(iosMain)
     }
 }
 
 android {
     namespace = "com.progressivereader.kmp"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.progressivereader.kmp"
@@ -53,18 +85,39 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+
+        val clerkKey =
+            (project.findProperty("CLERK_PUBLISHABLE_KEY") as String?)
+                ?: (project.findProperty("VITE_CLERK_PUBLISHABLE_KEY") as String?)
+                ?: System.getenv("CLERK_PUBLISHABLE_KEY")
+                ?: System.getenv("VITE_CLERK_PUBLISHABLE_KEY")
+                ?: readDotEnvValue(rootProject.file("../.env"), "CLERK_PUBLISHABLE_KEY")
+                ?: readDotEnvValue(rootProject.file("../.env"), "VITE_CLERK_PUBLISHABLE_KEY")
+                ?: ""
+
+        val escaped = clerkKey.replace("\\", "\\\\").replace("\"", "\\\"")
+        buildConfigField("String", "CLERK_PUBLISHABLE_KEY", "\"$escaped\"")
     }
 
-    buildFeatures { compose = true }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
-    packagingOptions {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
     }
 }
 
-compose.desktop {
-    application {}
+configurations.all {
+    // Clerk uses Custom Tabs; pin browser to avoid dependency mismatches.
+    resolutionStrategy.force("androidx.browser:browser:1.8.0")
 }
-
-

@@ -1,15 +1,11 @@
 package com.progressivereader.kmp.reader
 
-data class EpubTocItem(
-    val title: String,
+data class EpubChapter(
     val href: String,
-    val index: Int
+    val title: String,
 )
 
 data class EpubBook(
     val title: String,
-    val chapters: List<String>, // HTML strings
-    val toc: List<EpubTocItem>
+    val chapters: List<EpubChapter>,
 )
-
-

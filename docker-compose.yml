@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  backend:
+    image: python:3.11-slim
+    working_dir: /app/backend
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             FLASK_ENV=development FLASK_DEBUG=1 python run.py"
+    volumes:
+      - ./backend:/app/backend
+      - ./env_dev.json:/app/env_dev.json:ro
+      - ./.env:/app/.env:ro
+      - backend_pip_cache:/root/.cache/pip
+    environment:
+      - APP_CONFIG_PATH=/app/env_dev.json
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    ports:
+      - "5000:5000"
+
+  frontend:
+    image: node:20
+    working_dir: /app/frontend
+    command: >
+      sh -c "npm install &&
+             npm run dev"
+    volumes:
+      - ./frontend:/app/frontend
+      - ./scripts:/app/scripts
+      - ./backend/app:/app/backend/app
+      - ./.env:/app/.env:ro
+      - ./env_dev.json:/app/env_dev.json:ro
+      - frontend_node_modules:/app/frontend/node_modules
+    environment:
+      - VITE_BACKEND_URL=http://backend:5000
+    ports:
+      - "5173:5173"
+      - "8080:5173"
+    depends_on:
+      - backend
+
+volumes:
+  frontend_node_modules:
+  backend_pip_cache:

@@ -26,11 +26,10 @@ const cookieKeys = {
   jpdbApiKey: "jpdbApiKey",
 };
 
-// Tab configuration with icons
 const tabs = [
-  { id: "general", icon: "⚙️" },
-  { id: "highlight", icon: "🎌" },
-  { id: "accessibility", icon: "♿" },
+  { id: "general" },
+  { id: "highlight" },
+  { id: "accessibility" },
 ] as const;
 
 export function SettingsModal({ onClose, onTranslate, translating }: {
@@ -38,12 +37,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     onTranslate: (useCefr: boolean) => void;
     translating: boolean;
 }) {
-    const { settings, updateSettings } = useSettings();
-    const { saveSettings, loadSettings, isAuthenticated } = useAppData();
+	const { settings, updateSettings } = useSettings();
+	const { saveSettings, loadSettings, isAuthenticated } = useAppData();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"general" | "highlight" | "accessibility">("general");
-    const [isCloudLoading, setIsCloudLoading] = useState(false);
-    const [isApiConfigExpanded, setIsApiConfigExpanded] = useState(false);
+	const [isCloudLoading, setIsCloudLoading] = useState(false);
+	const [cloudAction, setCloudAction] = useState<"save" | "load" | null>(null);
+	const [isApiConfigExpanded, setIsApiConfigExpanded] = useState(false);
 
   const [localState, setLocalState] = useState(() => ({
     openaiKey: localStorage.getItem(localKeys.openaiKey) || "",
@@ -89,7 +89,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       document.cookie = `jpdb_api_key=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
     }
     
-    console.log('🔔 Synced all settings to localStorage and cookies');
+    console.log('Synced all settings to localStorage and cookies');
   }, [localState, jpdbApiKey]);
 
   // Note: Parser selection is now automatic based on JPDB API key presence
@@ -197,135 +197,120 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     if (!isAuthenticated) {
       toast.error(t('settings.toasts.save.signInRequired'));
       return;
-    }
-    
-    setIsCloudLoading(true);
-    try {
-      const settingsToSave = createSettingsObject();
-      console.log('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
-      const success = await saveSettings(settingsToSave);
+	    }
+	    
+	    setIsCloudLoading(true);
+	    setCloudAction("save");
+	    try {
+	      const settingsToSave = createSettingsObject();
+	      console.log('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
+	      const success = await saveSettings(settingsToSave);
       if (success) {
         toast.success(t('settings.toasts.save.success'));
       } else {
         toast.error(t('settings.toasts.save.failure'));
       }
-    } catch (error) {
-      console.error('Cloud save error:', error);
-      toast.error(t('settings.toasts.save.failure'));
-    } finally {
-      setIsCloudLoading(false);
-    }
-  };
+	    } catch (error) {
+	      console.error('Cloud save error:', error);
+	      toast.error(t('settings.toasts.save.failure'));
+	    } finally {
+	      setIsCloudLoading(false);
+	      setCloudAction(null);
+	    }
+	  };
 
   // Manual cloud load functionality (overwrite current settings)
   const handleCloudLoad = async () => {
     if (!isAuthenticated) {
       toast.error(t('settings.toasts.load.signInRequired'));
       return;
-    }
-    
-    setIsCloudLoading(true);
-    try {
-      const cloudSettings = await loadSettings();
-      console.log('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
-      if (cloudSettings && Object.keys(cloudSettings).length > 0) {
+	    }
+	    
+	    setIsCloudLoading(true);
+	    setCloudAction("load");
+	    try {
+	      const cloudSettings = await loadSettings();
+	      console.log('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
+	      if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
         toast.success(t('settings.toasts.load.success'));
       } else {
         toast.info(t('settings.toasts.load.missing'));
       }
-    } catch (error: any) {
-      if (error.message !== 'UNAUTHORIZED') {
-        console.error('Cloud load error:', error);
-        toast.error(t('settings.toasts.load.failure'));
-      }
-    } finally {
-      setIsCloudLoading(false);
-    }
-  };
+	    } catch (error: any) {
+	      if (error.message !== 'UNAUTHORIZED') {
+	        console.error('Cloud load error:', error);
+	        toast.error(t('settings.toasts.load.failure'));
+	      }
+	    } finally {
+	      setIsCloudLoading(false);
+	      setCloudAction(null);
+	    }
+	  };
 
 
 
     return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[calc(100vh-1rem)] sm:max-h-[90vh] overflow-hidden animate-slide-up flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 sm:p-4 md:p-6 flex-shrink-0">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{t("settings.title")}</h2>
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white transition-colors duration-200 hover:rotate-90 transform p-1"
-            >
-              <svg className="w-5 sm:w-6 h-5 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+	      <div className="app-card w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[calc(100vh-1rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
+	        <div className="px-4 sm:px-6 py-4 border-b app-border flex-shrink-0 flex justify-between items-center">
+	          <h2 className="text-lg sm:text-xl font-semibold">{t("settings.title")}</h2>
+	          <button
+	            onClick={onClose}
+	            className="text-sm font-medium app-muted hover:text-[var(--ui-text)] transition-colors"
+	          >
+	            {t("settings.footer.close")}
+	          </button>
+	        </div>
+
+        {/* Tab Navigation */}
+        <div className="border-b app-border flex-shrink-0">
+          <div className="flex gap-1 p-2 overflow-x-auto scrollbar-hide">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors app-nav-item ${
+                  activeTab === tab.id ? "app-nav-active" : ""
+                }`}
+                onClick={() => setActiveTab(tab.id as any)}
+              >
+                {t(`settings.tabs.${tab.id}`)}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div className="flex gap-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                className={`
-                  flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5
-                  rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap
-                  transition-all duration-200 transform flex-shrink-0
-                  ${activeTab === tab.id
-                    ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md scale-105'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
-                  }
-                `}
-                onClick={() => setActiveTab(tab.id as any)}
-              >
-                <span className="text-sm sm:text-base md:text-lg">{tab.icon}</span>
-                <span className="hidden sm:inline">{t(`settings.tabs.${tab.id}`)}</span>
-              </button>
-            ))}
-                            </div>
-                            </div>
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
-          {activeTab === "general" && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <button
-                  onClick={() => setIsApiConfigExpanded(!isApiConfigExpanded)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors"
-                >
-                  <div>
-                    <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">{t("settings.general.api.title")}</h3>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      {t("settings.general.api.description")}
-                    </p>
-                  </div>
-                  <svg 
-                    className={`w-5 h-5 text-blue-600 dark:text-blue-400 transform transition-transform ${isApiConfigExpanded ? 'rotate-180' : ''}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {isApiConfigExpanded && (
-                  <div className="px-4 pb-4 border-t border-blue-200 dark:border-blue-700">
-                    <div className="pt-4 space-y-4">
-                      <div className="bg-blue-100 dark:bg-blue-800/40 rounded-lg p-3">
-                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                          {t("settings.general.api.note")}
-                        </p>
-                      </div>
-
-                      <TextInput
-                        label={t("settings.general.api.inputLabel")}
-                        value={localState.openaiKey}
-                        onChange={v => handleChange("openaiKey", v)}
+	          {activeTab === "general" && (
+	            <div className="space-y-6 animate-fade-in">
+	              <div className="app-card overflow-hidden">
+	                <button
+	                  onClick={() => setIsApiConfigExpanded(!isApiConfigExpanded)}
+	                  aria-expanded={isApiConfigExpanded}
+	                  className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[var(--ui-surface-alt)] transition-colors"
+	                >
+	                  <div>
+	                    <h3 className="text-sm font-semibold">{t("settings.general.api.title")}</h3>
+	                    <p className="text-xs app-muted mt-1">
+	                      {t("settings.general.api.description")}
+	                    </p>
+	                  </div>
+	                  <span className="text-lg leading-none font-medium app-muted select-none">
+	                    {isApiConfigExpanded ? "–" : "+"}
+	                  </span>
+	                </button>
+	                
+	                {isApiConfigExpanded && (
+	                  <div className="px-4 pb-4 border-t app-border">
+	                    <div className="pt-4 space-y-3">
+	                      <p className="text-xs app-muted leading-relaxed">
+	                        {t("settings.general.api.note")}
+	                      </p>
+	                      <TextInput
+	                        label={t("settings.general.api.inputLabel")}
+	                        value={localState.openaiKey}
+	                        onChange={v => handleChange("openaiKey", v)}
                         placeholder={t("settings.general.api.placeholder")}
                         type="password"
                       />
@@ -342,7 +327,9 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                   options={[
                     { value: "system", label: t("settings.general.theme.options.system") },
                     { value: "light", label: t("settings.general.theme.options.light") },
-                    { value: "dark", label: t("settings.general.theme.options.dark") }
+                    { value: "dark", label: t("settings.general.theme.options.dark") },
+                    { value: "wood", label: t("settings.general.theme.options.wood") },
+                    { value: "space", label: t("settings.general.theme.options.space") }
                   ]}
                 />
                 <SelectInput
@@ -377,7 +364,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       { value: "ja", label: t("settings.general.uiLanguage.options.ja") }
                     ]}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs app-muted">
                     {t("settings.general.uiLanguage.description")}
                   </p>
                 </div>
@@ -426,25 +413,25 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
             </div>
           )}
 
-          {activeTab === "highlight" && (
-            <div className="space-y-6 animate-fade-in">
-              {/* JPDB API key section - always visible */}
-              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-2">{t("settings.highlight.jpdb.title")}</h3>
-                <p className="text-xs text-purple-600 dark:text-purple-400 mb-3">
-                  {t("settings.highlight.jpdb.description")}
-                  <br />
-                  {t("settings.highlight.jpdb.linkPrefix")}
-                  <a
-                    href="https://jpdb.io/settings#:~:text=in%20the%20future.-,Account%20information,-Username"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-purple-800 dark:hover:text-purple-200"
-                  >
-                    {t("settings.highlight.jpdb.linkText")}
-                  </a>
-                  {t("settings.highlight.jpdb.linkSuffix")}
-                </p>
+	          {activeTab === "highlight" && (
+	            <div className="space-y-6 animate-fade-in">
+	              {/* JPDB API key section - always visible */}
+	              <div className="app-card p-4">
+	                <h3 className="text-sm font-semibold mb-2">{t("settings.highlight.jpdb.title")}</h3>
+	                <p className="text-xs app-muted mb-3 leading-relaxed">
+	                  {t("settings.highlight.jpdb.description")}
+	                  <br />
+	                  {t("settings.highlight.jpdb.linkPrefix")}
+	                  <a
+	                    href="https://jpdb.io/settings#:~:text=in%20the%20future.-,Account%20information,-Username"
+	                    target="_blank"
+	                    rel="noopener noreferrer"
+	                    className="underline underline-offset-4 hover:opacity-90"
+	                  >
+	                    {t("settings.highlight.jpdb.linkText")}
+	                  </a>
+	                  {t("settings.highlight.jpdb.linkSuffix")}
+	                </p>
                 <TextInput
                   label={t("settings.highlight.jpdb.inputLabel")}
                   value={jpdbApiKey}
@@ -559,55 +546,36 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                 />
               </div>
 
-              {/* Auto-save Info */}
-              {isAuthenticated && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-blue-600 dark:text-blue-400">🔄</span>
-                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t("settings.accessibility.cloudStatus.title")}</span>
-                  </div>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">{t("settings.accessibility.cloudStatus.description")}</p>
-                </div>
-              )}
+	              {/* Auto-save Info */}
+	              {isAuthenticated && (
+	                <div className="app-card p-3 mb-4">
+	                  <div className="text-sm font-medium">{t("settings.accessibility.cloudStatus.title")}</div>
+	                  <p className="text-xs app-muted mt-1 leading-relaxed">{t("settings.accessibility.cloudStatus.description")}</p>
+	                </div>
+	              )}
 
               <div className="flex flex-wrap gap-3">
                 {/* Cloud Storage Buttons */}
                 {isAuthenticated && (
                   <>
-                    <button
-                      onClick={handleCloudSave}
-                      disabled={isCloudLoading}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isCloudLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                          <span>{t("settings.accessibility.buttons.saving")}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>☁️</span>
-                          {t("settings.accessibility.buttons.forceSave")}
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleCloudLoad}
-                      disabled={isCloudLoading}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isCloudLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                          <span>{t("settings.accessibility.buttons.loading")}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>📥</span>
-                          {t("settings.accessibility.buttons.reload")}
-                        </>
-                      )}
-                    </button>
+	                    <button
+	                      onClick={handleCloudSave}
+	                      disabled={isCloudLoading}
+	                      className="px-4 py-2 rounded-md text-sm font-medium app-button-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+	                    >
+	                      {cloudAction === "save"
+	                        ? t("settings.accessibility.buttons.saving")
+	                        : t("settings.accessibility.buttons.forceSave")}
+	                    </button>
+	                    <button
+	                      onClick={handleCloudLoad}
+	                      disabled={isCloudLoading}
+	                      className="px-4 py-2 rounded-md text-sm font-medium app-button-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+	                    >
+	                      {cloudAction === "load"
+	                        ? t("settings.accessibility.buttons.loading")
+	                        : t("settings.accessibility.buttons.reload")}
+	                    </button>
                   </>
                 )}
                 
@@ -630,12 +598,11 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                     
                     // Show success message
                     toast.success(t('settings.toasts.export.success'));
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
-                >
-                  <span>📋</span>
-                  {t("settings.accessibility.buttons.export")}
-                </button>
+	                  }}
+	                  className="px-4 py-2 rounded-md text-sm font-medium app-button-muted transition-colors"
+	                >
+	                  {t("settings.accessibility.buttons.export")}
+	                </button>
                 <button
                   onClick={() => {
                     // Create file input element
@@ -667,78 +634,45 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       }
                     };
                     input.click();
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
-                >
-                  <span>📁</span>
-                  {t("settings.accessibility.buttons.import")}
-                </button>
+	                  }}
+	                  className="px-4 py-2 rounded-md text-sm font-medium app-button-muted transition-colors"
+	                >
+	                  {t("settings.accessibility.buttons.import")}
+	                </button>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 md:p-6 flex-shrink-0">
+        <div className="border-t app-border p-3 sm:p-4 md:p-6 flex-shrink-0">
           <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-3">
             <div className="flex flex-row gap-2 sm:gap-3">
               <button
                 onClick={() => onTranslate(false)}
                 disabled={translating}
-                className="
-                  flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5
-                  bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium
-                  rounded-lg text-xs sm:text-sm md:text-base whitespace-nowrap
-                  hover:from-blue-600 hover:to-blue-700 focus:ring-4 focus:ring-blue-500/30
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
-                  transform hover:scale-105 active:scale-95
-                "
+                className="flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm md:text-base font-medium whitespace-nowrap app-button-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {translating ? (
-                  <span className="flex items-center justify-center gap-1 sm:gap-2">
-                    <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <span className="hidden sm:inline">{t("settings.footer.translating")}</span>
-                    <span className="sm:hidden">...</span>
-                  </span>
-                ) : t("settings.footer.translate")}
+                {translating ? t("settings.footer.translating") : t("settings.footer.translate")}
               </button>
               <button
                 onClick={() => onTranslate(true)}
                 disabled={translating}
-                className="
-                  flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 
-                  bg-gradient-to-r from-purple-500 to-purple-600 text-white font-medium 
-                  rounded-lg text-xs sm:text-sm md:text-base whitespace-nowrap
-                  hover:from-purple-600 hover:to-purple-700 focus:ring-4 focus:ring-purple-500/30
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
-                  transform hover:scale-105 active:scale-95
-                "
+                className="flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm md:text-base font-medium whitespace-nowrap app-button-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {translating ? (
-                  <span className="flex items-center justify-center gap-1 sm:gap-2">
-                    <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <span className="hidden sm:inline">{t("settings.footer.translating")}</span>
-                    <span className="sm:hidden">...</span>
-                  </span>
-                ) : <span className="hidden sm:inline">{t("settings.footer.translateCefr")}</span>}
-                {!translating && <span className="sm:hidden">{t("settings.footer.translateShort")}</span>}
+                  t("settings.footer.translating")
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">{t("settings.footer.translateCefr")}</span>
+                    <span className="sm:hidden">{t("settings.footer.translateShort")}</span>
+                  </>
+                )}
               </button>
             </div>
             <button
               onClick={onClose}
-              className="
-                px-3 sm:px-4 md:px-6 py-2 sm:py-2.5
-                bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300
-                font-medium rounded-lg text-xs sm:text-sm md:text-base
-                hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-4 focus:ring-gray-500/30
-                transition-all duration-200 transform hover:scale-105 active:scale-95
-              "
+              className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm md:text-base font-medium app-button-muted transition-colors"
             >
               {t("settings.footer.close")}
             </button>
@@ -770,29 +704,19 @@ function TextInput({
   min?: string;
   max?: string;
 }) {
-  const inputClasses = `
-    w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
-    bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-    placeholder-gray-400 dark:placeholder-gray-500
-    focus:ring-2 focus:ring-blue-500 focus:border-transparent
-    transition-all duration-200
-  `;
-
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        {label}
-      </label>
+      <label className="app-form-label">{label}</label>
       {multiline ? (
         <textarea
-          className={`${inputClasses} min-h-[100px] resize-y`}
+          className="app-input w-full px-3 py-2 text-sm leading-5 min-h-[110px] resize-y placeholder:opacity-70"
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
         />
       ) : (
         <input
-          className={inputClasses}
+          className="app-input w-full px-3 py-2 text-sm leading-5 placeholder:opacity-70"
           value={value}
           type={type}
           onChange={e => onChange(e.target.value)}
@@ -822,16 +746,9 @@ function SelectInput({
 
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        {label}
-      </label>
+      <label className="app-form-label">{label}</label>
       <select
-        className="
-          w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600
-          bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-          focus:ring-2 focus:ring-blue-500 focus:border-transparent
-          transition-all duration-200 cursor-pointer
-        "
+        className="app-input w-full px-3 py-2 text-sm leading-5 cursor-pointer"
         value={value}
         onChange={e => onChange(e.target.value)}
       >
@@ -861,12 +778,8 @@ function SliderInput({
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {label}
-        </label>
-        <span className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-          {value}{unit}
-        </span>
+        <label className="app-form-label">{label}</label>
+        <span className="app-chip font-mono">{value}{unit}</span>
       </div>
       <input
         type="range"
@@ -874,12 +787,9 @@ function SliderInput({
         max={max}
         value={value}
         onChange={e => onChange(parseInt(e.target.value))}
-        className="
-          w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer
-          slider:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-        "
+        className="app-range"
       />
-      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-xs app-muted">
         <span>{min}{unit}</span>
         <span>{max}{unit}</span>
       </div>
@@ -899,23 +809,17 @@ function CheckboxInput({
   description?: string;
 }) {
   return (
-    <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200 cursor-pointer">
+    <label className="flex items-start gap-3 cursor-pointer">
       <input
         type="checkbox"
         checked={checked}
         onChange={e => onChange(e.target.checked)}
-        className="
-          mt-0.5 w-5 h-5 text-blue-600 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600
-          rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0
-          transition-all duration-200 cursor-pointer
-        "
+        className="app-checkbox mt-0.5 cursor-pointer"
       />
       <div className="flex-1">
-        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          {label}
-        </div>
+        <div className="text-sm font-medium">{label}</div>
         {description && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <div className="text-xs app-muted mt-0.5 leading-relaxed">
             {description}
           </div>
         )}

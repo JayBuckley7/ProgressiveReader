@@ -39,43 +39,58 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     if (wasGoogleClerkLogin) {
       // User signed in with Google - show auto-connecting message with manual option
       return (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🔄</div>
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            {t("bookLibrary.googleConnecting.title")}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {t("bookLibrary.googleConnecting.description")}
-          </p>
-          <div className="flex justify-center mb-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex justify-center py-12">
+          <div className="w-full max-w-lg app-card p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg book-cover-placeholder">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 014-4h1a5 5 0 019.9 1H19a4 4 0 010 8H7a4 4 0 01-4-4z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold mb-2">
+              {t("bookLibrary.googleConnecting.title")}
+            </h2>
+            <p className="text-sm app-muted mb-6">
+              {t("bookLibrary.googleConnecting.description")}
+            </p>
+            <div className="flex justify-center mb-4">
+              <div className="app-muted animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
+            </div>
+            <p className="text-sm app-muted mb-4">
+              {t("bookLibrary.googleConnecting.takingTooLong")}
+            </p>
+            <button
+              onClick={async () => {
+                console.log("Manual Google Drive connection requested");
+                await connectToGoogleDriveAndLoad();
+              }}
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors app-button-primary"
+            >
+              {t("bookLibrary.googleConnecting.manualButton")}
+            </button>
           </div>
-          <p className="text-sm text-gray-400 mb-4">{t("bookLibrary.googleConnecting.takingTooLong")}</p>
-          <button
-            onClick={async () => {
-              console.log('Manual Google Drive connection requested');
-              await connectToGoogleDriveAndLoad();
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {t("bookLibrary.googleConnecting.manualButton")}
-          </button>
         </div>
       );
     } else {
       // User didn't sign in with Google - show explanation
       return (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">📱</div>
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            {t("bookLibrary.localMode.title")}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {t("bookLibrary.localMode.description")}
-          </p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
-            {t("bookLibrary.localMode.info")}
-          </p>
+        <div className="flex justify-center py-12">
+          <div className="w-full max-w-lg app-card p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg book-cover-placeholder">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 20h8" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold mb-2">
+              {t("bookLibrary.localMode.title")}
+            </h2>
+            <p className="text-sm app-muted mb-4">
+              {t("bookLibrary.localMode.description")}
+            </p>
+            <p className="text-sm app-muted">
+              {t("bookLibrary.localMode.info")}
+            </p>
+          </div>
         </div>
       );
     }
@@ -122,16 +137,16 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-7">
       {(isAuthenticated || books.length > 0) && (
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t("bookLibrary.title")}</h1>
+            <h1 className="text-2xl font-semibold">{t("bookLibrary.title")}</h1>
             {isAuthenticated && (
               <>
                 <button
                   onClick={openCloudFolder}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-2 app-icon-button transition-colors"
                   title={t("bookLibrary.buttons.openCloud")}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +158,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                     console.log('sync library button clicked');
                     syncBooks();
                   }}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-2 app-icon-button transition-colors"
                   title={t("bookLibrary.buttons.sync")}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,7 +167,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                 </button>
                 <button
                   onClick={() => setShowFolderManager(true)}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-2 app-icon-button transition-colors"
                   title={t("bookLibrary.buttons.manageFolders")}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +181,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
           <div className="flex gap-4 items-center">
             <button
               onClick={() => setShowMassUpload(true)}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover flex items-center gap-2"
+              className="px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 app-button-primary"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -175,7 +190,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              className="p-2 app-icon-button transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -192,31 +207,40 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
       {/* Main content rendering logic */}
       {/* Main content rendering logic */}
       {isLoading ? (
-        <div className="text-center py-16">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex justify-center py-12">
+          <div className="w-full max-w-md app-card p-6 text-center">
+            <div className="flex justify-center">
+              <div className="app-muted animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
+            </div>
+            <p className="mt-4 text-sm app-muted">{t("bookLibrary.loading.description")}</p>
           </div>
-          <p className="mt-4 text-gray-500">{t("bookLibrary.loading.description")}</p>
         </div>
       ) : !isAuthenticated && books.length === 0 ? (
         !isOnline && books.length === 0 ? (
           <div className="flex justify-center py-12">
-            <div className="text-center">
-              <div className="text-6xl mb-4 text-gray-400">📡</div>
-              <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <div className="w-full max-w-lg app-card p-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg book-cover-placeholder">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold mb-2">
                 {t("bookLibrary.offline.title", "No Offline Books Found")}
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              <p className="text-sm app-muted max-w-md mx-auto">
                 {t("bookLibrary.offline.description", "You are offline and have no saved books. Please connect to the internet and sign in to access your library.")}
               </p>
             </div>
           </div>
         ) : (
           <div className="flex justify-center py-12" id="sign-in-section">
-            <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
+            <div className="w-full max-w-md app-card p-6">
+              <h2 className="text-lg font-semibold mb-2 text-center">
                 {t("bookLibrary.signInPrompt.title") || "Sign in to your library"}
               </h2>
+              <p className="text-sm app-muted mb-6 text-center">
+                {t("bookLibrary.signInPrompt.description") || "Sign in to view and manage your books"}
+              </p>
               <SignInForm />
             </div>
           </div>
@@ -234,39 +258,53 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
       ) : !isDriveConnected ? (
         renderNotConnectedState()
       ) : (isDriveBookLoading) && isDriveConnected ? (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+        <div className="flex justify-center py-12">
+          <div className="w-full max-w-md app-card p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg book-cover-placeholder">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3v5h5" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold mb-2">
             {t("bookLibrary.loading.title")}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-sm app-muted mb-6">
             {t("bookLibrary.loading.description")}
           </p>
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex justify-center">
+              <div className="app-muted animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+        <div className="flex justify-center py-12">
+          <div className="w-full max-w-lg app-card p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg book-cover-placeholder">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3v5h5" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold mb-2">
             {t("bookLibrary.empty.title")}
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-sm app-muted mb-4">
             {t("bookLibrary.empty.description")}
           </p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
+            <p className="text-sm app-muted mb-6">
             {t("bookLibrary.empty.supportedFormats")}
           </p>
-          <button
+            <button
             onClick={() => setShowMassUpload(true)}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover flex items-center gap-2"
+              className="px-6 py-3 rounded-md text-sm font-medium flex items-center gap-2 app-button-primary"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             {t("bookLibrary.buttons.uploadFirst")}
           </button>
+          </div>
         </div>
       )}
 

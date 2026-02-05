@@ -5,8 +5,8 @@ import androidx.compose.runtime.Composable
 @Composable
 expect fun HtmlContent(
     html: String,
+    baseUrl: String?,
     darkMode: Boolean,
     fontSizeSp: Float
 )
-
 

@@ -45,18 +45,20 @@
     },
     "general": {
       "api": {
-        "title": "🔑 API Configuration",
+        "title": "API Configuration",
         "description": "Optional: Bring your own OpenAI API key for unlimited translations",
-        "note": "💡 Note: The server provides free translations with shared API keys. You can add your own OpenAI API key here for unlimited personal usage and faster responses.",
+        "note": "Note: The server provides free translations with shared API keys. You can add your own OpenAI API key here for unlimited personal usage and faster responses.",
         "inputLabel": "OpenAI API Key (Optional)",
         "placeholder": "sk-... (leave empty to use server key)"
       },
       "theme": {
         "label": "Theme",
         "options": {
-          "system": "🌓 System Default",
-          "light": "☀️ Light",
-          "dark": "🌙 Dark"
+          "system": "System Default",
+          "light": "Light",
+          "dark": "Dark",
+          "wood": "Wood",
+          "space": "Space"
         }
       },
       "model": {
@@ -70,16 +72,16 @@
       "targetLanguage": {
         "label": "Target Language",
         "options": {
-          "English": "🇬🇧 English",
-          "Japanese": "🇯🇵 Japanese"
+          "English": "English",
+          "Japanese": "Japanese"
         }
       },
       "uiLanguage": {
         "label": "UI Language",
         "description": "Choose the language for the interface",
         "options": {
-          "en": "🇺🇸 English",
-          "ja": "🇯🇵 日本語"
+          "en": "English",
+          "ja": "日本語"
         }
       },
       "cefr": {

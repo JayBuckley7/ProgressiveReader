@@ -6,11 +6,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.viewinterop.AndroidView
 
 @Composable
-actual fun HtmlContent(html: String, darkMode: Boolean, fontSizeSp: Float) {
+actual fun HtmlContent(
+    html: String,
+    baseUrl: String?,
+    darkMode: Boolean,
+    fontSizeSp: Float,
+) {
     AndroidView(factory = { ctx ->
         WebView(ctx).apply {
             settings.javaScriptEnabled = false
+            settings.domStorageEnabled = false
             settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            settings.blockNetworkLoads = true
+            settings.allowFileAccess = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             setBackgroundColor(0)
         }
     }, update = { webView ->
@@ -20,8 +29,6 @@ actual fun HtmlContent(html: String, darkMode: Boolean, fontSizeSp: Float) {
             img { max-width: 100%; height: auto; }
         """.trimIndent()
         val doc = "<html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><style>$css</style></head><body>$html</body></html>"
-        webView.loadDataWithBaseURL(null, doc, "text/html", "utf-8", null)
+        webView.loadDataWithBaseURL(baseUrl, doc, "text/html", "utf-8", null)
     })
 }
-
-
