@@ -1014,6 +1014,32 @@ class BookMetadataService {
         return await gDriveService.loadVocab();
     }
 
+    /**
+     * Save grammar progress to cloud storage
+     */
+    async saveGrammarProgress(knownIds: string[]): Promise<void> {
+        const isAuthenticated = await authManager.ensureAuthenticated();
+        if (!isAuthenticated) {
+            console.log('saveGrammarProgress: Authentication failed, cannot save grammar progress');
+            return;
+        }
+
+        await gDriveService.saveGrammarProgress(knownIds);
+    }
+
+    /**
+     * Load grammar progress from cloud storage
+     */
+    async loadGrammarProgress(): Promise<string[] | null> {
+        const isAuthenticated = await authManager.ensureAuthenticated();
+        if (!isAuthenticated) {
+            console.log('loadGrammarProgress: Authentication failed, cannot load grammar progress');
+            return null;
+        }
+
+        return await gDriveService.loadGrammarProgress();
+    }
+
     // Folder management methods
     async createFolder(name: string, parentId?: string, clerkUser?: any): Promise<Folder> {
         const provider = this.detectProviderFromClerkUser(clerkUser);

@@ -1,12 +1,15 @@
 """Flask application factory that registers blueprints and routes."""
-import os
-import logging
-from flask import Flask, send_from_directory, jsonify, redirect, url_for, request
-from flask_cors import CORS
-from config import Config
-from .models import db
-from dotenv import load_dotenv
+from __future__ import annotations
+
 import json
+import logging
+import os
+from typing import TYPE_CHECKING
+
+from config import Config
+
+if TYPE_CHECKING:
+    from flask import Flask
 
 # Define a filter for logging
 class FilterImageRequests(logging.Filter):
@@ -19,6 +22,14 @@ class FilterImageRequests(logging.Filter):
 
 
 def create_app(config_class=Config) -> Flask:
+    # Import Flask and related dependencies lazily so domain modules can be
+    # imported in lightweight unit tests without requiring the full web stack.
+    from dotenv import load_dotenv
+    from flask import Flask, send_from_directory, jsonify, request
+    from flask_cors import CORS
+
+    from .models import db
+
     load_dotenv()
 
     # Load additional configuration from a mounted secret if available

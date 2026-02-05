@@ -18,30 +18,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 
 private val LightColors =
     lightColorScheme(
-        primary = Color(0xFF11151C),
-        onPrimary = Color(0xFFFFFFFF),
-        background = Color(0xFFF6F7F9),
-        onBackground = Color(0xFF11151C),
-        surface = Color(0xFFFFFFFF),
-        onSurface = Color(0xFF11151C),
-        surfaceVariant = Color(0xFFF0F2F5),
-        onSurfaceVariant = Color(0xFF55606F),
-        outline = Color(0xFFE2E4E8),
-        secondary = Color(0xFF11151C),
+        primary = Color(0xFF14181F), // --ui-accent
+        onPrimary = Color(0xFFFFFFFF), // --ui-accent-contrast
+        background = Color(0xFFF7F6F2), // --ui-bg
+        onBackground = Color(0xFF14181F), // --ui-text
+        surface = Color(0xFFFFFFFF), // --ui-surface
+        onSurface = Color(0xFF14181F), // --ui-text
+        surfaceVariant = Color(0xFFF1F0EA), // --ui-surface-alt
+        onSurfaceVariant = Color(0xFF5B6472), // --ui-muted
+        outline = Color(0xFFE6E2D8), // --ui-border
+        secondary = Color(0xFF14181F),
         onSecondary = Color(0xFFFFFFFF),
     )
 
 private val DarkColors =
     darkColorScheme(
-        primary = Color(0xEBFFFFFF), // rgba(255,255,255,0.92)
-        onPrimary = Color(0xFF0E1114),
-        background = Color(0xFF0E1114),
-        onBackground = Color(0xEBFFFFFF),
-        surface = Color(0xFF14181D),
-        onSurface = Color(0xEBFFFFFF),
-        surfaceVariant = Color(0xFF10161B),
-        onSurfaceVariant = Color(0xA3FFFFFF), // rgba(255,255,255,0.64)
-        outline = Color(0x14FFFFFF), // rgba(255,255,255,0.08)
+        primary = Color(0xEBFFFFFF), // --ui-accent (rgba 255,255,255,0.92)
+        onPrimary = Color(0xFF0E1114), // --ui-accent-contrast
+        background = Color(0xFF0E1114), // --ui-bg
+        onBackground = Color(0xEBFFFFFF), // --ui-text
+        surface = Color(0xFF14181D), // --ui-surface
+        onSurface = Color(0xEBFFFFFF), // --ui-text
+        surfaceVariant = Color(0xFF10161B), // --ui-surface-alt
+        onSurfaceVariant = Color(0xA3FFFFFF), // --ui-muted (rgba 255,255,255,0.64)
+        outline = Color(0x14FFFFFF), // --ui-border (rgba 255,255,255,0.08)
         secondary = Color(0xEBFFFFFF),
         onSecondary = Color(0xFF0E1114),
     )

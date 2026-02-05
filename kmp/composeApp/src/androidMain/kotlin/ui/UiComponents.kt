@@ -223,6 +223,7 @@ fun CoverArt(
     coverPath: String?,
     title: String,
     modifier: Modifier = Modifier,
+    typeLabel: String = "EPUB",
 ) {
     val imageState = produceState<ImageBitmap?>(initialValue = null, coverPath) {
         value =
@@ -241,12 +242,16 @@ fun CoverArt(
             contentScale = ContentScale.Crop,
         )
     } else {
-        CoverPlaceholder(title = title, modifier = modifier)
+        CoverPlaceholder(title = title, typeLabel = typeLabel, modifier = modifier)
     }
 }
 
 @Composable
-fun CoverPlaceholder(title: String, modifier: Modifier = Modifier) {
+fun CoverPlaceholder(
+    title: String,
+    typeLabel: String,
+    modifier: Modifier = Modifier,
+) {
     val shape = MaterialTheme.shapes.medium
     val border = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
     val gradient =
@@ -268,7 +273,7 @@ fun CoverPlaceholder(title: String, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start,
         ) {
-            AppChip(text = "EPUB")
+            AppChip(text = typeLabel.trim().ifBlank { "EPUB" })
             Spacer(Modifier.height(8.dp))
             Text(
                 text = title.trim().ifBlank { "Book" }.take(1).uppercase(),

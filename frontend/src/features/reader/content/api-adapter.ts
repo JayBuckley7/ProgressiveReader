@@ -81,31 +81,22 @@ export function loadConfig(): JpHighlighterConfig {
     
     // Load from cookies
     const getCookie = (name: string): string | undefined => {
-        console.log(`Attempting to retrieve cookie '${name}'`);
-        // console.log('All cookies:', document.cookie);
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
-        console.log(`Parts found for ${name}:`, parts.length);
         if (parts.length === 2) {
-            const cookieValue = parts.pop()?.split(';').shift();
-            console.log(`Found value for ${name}:`, cookieValue, typeof cookieValue, 'length:', cookieValue?.length || 0);
-            return cookieValue;
+            return parts.pop()?.split(';').shift();
         }
-        console.log(`No cookie found for ${name}`);
         return undefined;
     };
     
     // Try different methods to get the API key
     const apiKeyFromCookie = getCookie('jpdb_api_key');
-    console.log('Raw API key from cookie "jpdb_api_key":', apiKeyFromCookie, typeof apiKeyFromCookie);
     
     // Try an alternate cookie name for backward compatibility
     const apiKeyFromAltCookie = getCookie('jpdbApiKey');
-    console.log('API key from alternate cookie "jpdbApiKey":', apiKeyFromAltCookie);
     
     // Assign API key with fallbacks
     loadedConfig.apiKey = apiKeyFromCookie || apiKeyFromAltCookie || '';
-    console.log('Final loadedConfig.apiKey value:', loadedConfig.apiKey, 'length:', loadedConfig.apiKey.length);
     
     // Load from localStorage
     try {
@@ -117,23 +108,17 @@ export function loadConfig(): JpHighlighterConfig {
         loadedConfig.forqOnMine = (localStorage.getItem('forqOnMine') === 'true') || (localStorage.getItem('jpdb_forq_on_mine') === 'true');
         
         // Load showPopupOnHover from localStorage - using the key from settingsModal.js
-        console.log('LOADING CONFIG - checking showPopupOnHover value in localStorage');
         const showPopupOnHoverStored = localStorage.getItem('showPopupOnHover');
-        console.log('Raw value from localStorage:', showPopupOnHoverStored, typeof showPopupOnHoverStored);
         
         // Clear/explicit handling of the boolean value
         if (showPopupOnHoverStored !== null) {
             // Convert string to boolean properly
             loadedConfig.showPopupOnHover = showPopupOnHoverStored === 'true';
-            console.log('Setting showPopupOnHover to:', loadedConfig.showPopupOnHover);
         } else {
             // If not found with the direct key, try with 'jpdb_' prefix for backward compatibility or alternate save location
             const showPopupOnHoverStoredPrefixed = localStorage.getItem('jpdb_show_popup_on_hover');
             if (showPopupOnHoverStoredPrefixed !== null) {
                 loadedConfig.showPopupOnHover = showPopupOnHoverStoredPrefixed === 'true';
-                console.log('Setting showPopupOnHover from prefixed key to:', loadedConfig.showPopupOnHover);
-            } else {
-                console.log('Using default showPopupOnHover value:', loadedConfig.showPopupOnHover);
             }
         }
 
@@ -147,7 +132,6 @@ export function loadConfig(): JpHighlighterConfig {
                 try {
                     // Try to parse as JSON first (new format)
                     const parsedKeybind = JSON.parse(storedValue);
-                    console.log(`Loading keybind ${keybindKey} from localStorage:`, parsedKeybind);
                     
                     // Convert to the format expected by the Keybind interface
                     if (parsedKeybind) {
@@ -165,8 +149,6 @@ export function loadConfig(): JpHighlighterConfig {
                     }
                 } catch (e) {
                     // If not JSON or parsing fails, treat as a legacy string value
-                    console.log(`Keybind ${keybindKey} is in legacy format:`, storedValue);
-                    
                     // For legacy string, assume it's just the code with no modifiers
                     if (storedValue === 'None') {
                         (loadedConfig as any)[keybindKey] = { code: 'None', modifiers: [] };
@@ -176,7 +158,6 @@ export function loadConfig(): JpHighlighterConfig {
                 }
             } else {
                 // Leave as undefined to get default fallback when spread in the next step
-                console.log(`No stored value for ${keybindKey}, using default`);
             }
         });
 
@@ -208,17 +189,13 @@ export function loadConfig(): JpHighlighterConfig {
 export async function parseText(textSegments: string[]): Promise<Token[]> {
     const currentConfig = getCurrentConfig(); // Get current config
     try {
-        console.log('parseText called with', textSegments.length, 'segments');
-
         if (!currentConfig.apiKey) {
-            console.log('No JPDB API key available, using local parser');
-            const text = textSegments.join(' ');
+            // Keep segment concatenation aligned with how we compute global offsets for highlighting (no separator).
+            const text = textSegments.join('');
             const tokens = await parseWithLocalLookup(text);
             vocabBank.updateFromTokens(tokens);
             return tokens;
         }
-        
-        console.log(`Sending ${textSegments.length} text segments to JPDB API. API Key exists:`, !!currentConfig.apiKey);
         
         const processedTokens = await getJpdbData({
             text_segments: textSegments,
@@ -238,13 +215,6 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
             })),
             card: pt.card as Card, // Assuming card structure matches
         }));
-        
-        console.log(`Received ${tokens.length} tokens from API`);
-        
-        // Log some sample tokens for debugging
-        if (tokens.length > 0) {
-            console.log('Sample token:', JSON.stringify(tokens[0]));
-        }
 
         // Update vocabulary bank
         vocabBank.updateFromTokens(tokens);
@@ -379,4 +349,3 @@ function updateUIForCard(card: Card, newState: CardState) {
     
     idx.className = className;
 } 
-

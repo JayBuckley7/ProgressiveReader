@@ -40,41 +40,70 @@ export async function* translateChapterStream(
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
   let accumulated = '';
+  let totalBytes = 0;
+  let readCount = 0;
+
+  // Safety valves: prevents runaway memory if the stream never terminates.
+  const MAX_TOTAL_BYTES = 8 * 1024 * 1024; // 8MB of streamed payload
+  const MAX_READ_COUNT = 20_000;
 
   try {
     while (true) {
+      readCount += 1;
+      if (readCount > MAX_READ_COUNT) {
+        await reader.cancel().catch(() => {});
+        throw new Error('Translation stream exceeded maximum read iterations');
+      }
+
       const { value, done } = await reader.read();
       if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split('\n\n');
+      if (value) {
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_TOTAL_BYTES) {
+          await reader.cancel().catch(() => {});
+          throw new Error('Translation stream exceeded maximum size');
+        }
+        buffer += decoder.decode(value, { stream: true });
+      }
+
+      const parts = buffer.split(/\r?\n\r?\n/);
       buffer = parts.pop() || '';
 
       for (const part of parts) {
-        if (part.startsWith('data: ')) {
-          const data = part.slice(6);
+        const lines = part.split(/\r?\n/);
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+
+          const data = line.slice(5).trimStart();
           if (data === '[DONE]') {
-            if (onComplete) {
-              onComplete(accumulated);
-            }
+            onComplete?.(accumulated);
+            await reader.cancel().catch(() => {});
             return;
           }
 
           try {
             const parsed = JSON.parse(data);
-            if (parsed.content) {
+
+            // Some mocks may JSON-encode the sentinel.
+            if (parsed === '[DONE]') {
+              onComplete?.(accumulated);
+              await reader.cancel().catch(() => {});
+              return;
+            }
+
+            if (parsed?.content) {
               accumulated += parsed.content;
               yield parsed.content;
-              if (onChunk) {
-                onChunk(parsed.content);
-              }
+              onChunk?.(parsed.content);
             }
-            if (parsed.complete && parsed.translated_text) {
-              if (onComplete) {
-                onComplete(parsed.translated_text);
-              }
+
+            if (parsed?.complete) {
+              onComplete?.(parsed.translated_text || accumulated);
+              await reader.cancel().catch(() => {});
+              return;
             }
-          } catch (e) {
+          } catch {
             // Ignore parse errors for malformed SSE chunks
           }
         }
@@ -83,29 +112,27 @@ export async function* translateChapterStream(
 
     // Handle any remaining buffer
     if (buffer) {
-      if (buffer.startsWith('data: ')) {
-        const data = buffer.slice(6);
+      const lines = buffer.split(/\r?\n/);
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trimStart();
+        if (data === '[DONE]') break;
         try {
           const parsed = JSON.parse(data);
-          if (parsed.content) {
+          if (parsed?.content) {
             accumulated += parsed.content;
             yield parsed.content;
-            if (onChunk) {
-              onChunk(parsed.content);
-            }
+            onChunk?.(parsed.content);
           }
-        } catch (e) {
+        } catch {
           // Ignore parse errors
         }
       }
     }
 
-    if (onComplete) {
-      onComplete(accumulated);
-    }
+    onComplete?.(accumulated);
   } finally {
     reader.releaseLock();
   }
 }
-
 

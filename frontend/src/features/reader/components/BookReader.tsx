@@ -6,7 +6,7 @@ import { SettingsModal } from "@shared/components/SettingsModal";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { bookStorageService } from "@features/books/services/bookStorage";
 import { useBookContent } from "@features/reader/hooks/useBookContent";
-import { initialize as initializeJpdb, highlightContent } from "@features/reader/services/jpdbInitializer";
+import { initialize as initializeJpdb, highlightContent, removeJpdbHighlighting } from "@features/reader/services/jpdbInitializer";
 import { loadConfig as loadJpdbConfig } from "@features/reader/content/api-adapter";
 import { parseHtmlToJsx } from "@features/reader/utils/htmlToJsx";
 import { useSwipe } from "@features/reader/hooks/useSwipe";
@@ -223,9 +223,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     const link = target.closest('a');
     
     if (!link || !link.href) return;
-    
-    console.log('🔗 Link clicked:', link.href, 'text:', link.textContent);
-    
+
+    // If the user is selecting text, don't treat this as a link click.
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // Check if this is an internal EPUB link
     const href = link.getAttribute('href') || '';
     const isInternalLink = href.startsWith('#') || 
@@ -235,11 +241,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
                          href.includes('.html#');
     
     if (!isInternalLink) {
-      console.log('🔗 External link, allowing default behavior');
       return; // Let external links work normally
     }
     
-    console.log('🔗 Internal EPUB link detected, preventing default and finding target chapter');
     e.preventDefault();
     e.stopPropagation();
     
@@ -263,7 +267,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       
       if (chapterMatch) {
         targetChapter = chapterMatch.index;
-        console.log('🔗 Found target chapter by href match:', targetChapter, chapterMatch.title);
       }
     }
     
@@ -276,7 +279,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         const chapterNum = parseInt(chapterMatch[1], 10);
         if (chapterNum >= 1 && chapterNum <= currentBookContent.totalChapters) {
           targetChapter = chapterNum - 1; // Convert to 0-based index
-          console.log('🔗 Found target chapter by number parsing:', targetChapter);
         }
       }
     }
@@ -284,12 +286,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     // Method 3: Look for anchor in current or nearby chapters
     if (targetChapter === -1 && href.startsWith('#')) {
       const anchorId = href.substring(1);
-      console.log('🔗 Looking for anchor:', anchorId, 'in nearby chapters');
       
       // Check current chapter first
       const currentContent = contentEl.innerHTML;
       if (currentContent.includes(`id="${anchorId}"`)) {
-        console.log('🔗 Anchor found in current chapter, scrolling to element');
         const anchorEl = contentEl.querySelector(`#${anchorId}`);
         if (anchorEl) {
           anchorEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -298,15 +298,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       }
       
       // TODO: Search other chapters if needed (more complex implementation)
-      console.log('🔗 Anchor not found in current chapter');
     }
     
     // Navigate to the target chapter if found
     if (targetChapter >= 0 && targetChapter < currentBookContent.totalChapters) {
-      console.log('🔗 ✅ Navigating to chapter:', targetChapter);
       updateChapterRef.current(targetChapter);
     } else {
-      console.log('🔗 ❌ Could not find target chapter for link:', href);
       // Show a helpful message to the user
       alert(`Unable to navigate to: ${link.textContent || href}\n\nThis link could not be mapped to a chapter in the current book structure.`);
     }
@@ -330,7 +327,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (jpdbInitRef.current) return;
     jpdbInitRef.current = true;
     if (contentRef.current) {
-      console.log('🎯 Initializing JPDB once on component mount');
       initializeJpdb(contentRef.current);
     }
   }, []);
@@ -338,65 +334,25 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Apply JPDB highlighting when enabled or when content changes while enabled
   // Use useLayoutEffect to coordinate with React's rendering cycle and avoid DOM conflicts
   useLayoutEffect(() => {
-    console.log('🔍 JPDB highlighting effect triggered:', {
-      jpdbHighlighted,
-      hasContentRef: !!contentRef.current,
-      hasCurrentChapterContent: !!currentChapterContent,
-      contentRefInnerHTML: contentRef.current?.innerHTML?.substring(0, 100) + '...'
-    });
-    
     if (jpdbHighlighted && contentRef.current && currentChapterContent) {
       // Use requestAnimationFrame to ensure React has finished updating the DOM
       const frameId = requestAnimationFrame(() => {
-        if (!contentRef.current) return;
-        
-        console.log('🎯 CONDITIONS MET - Applying JPDB highlighting to content...');
-        console.log('🎯 Content element:', contentRef.current);
-        console.log('🎯 Content element children:', contentRef.current.children.length);
-        console.log('🎯 Content element text length:', contentRef.current.textContent?.length || 0);
-        
-        try {
-          console.log('🎯 Calling highlightContent function...');
-          highlightContent(contentRef.current).then(() => {
-            console.log('🎯 ✅ highlightContent completed successfully');
-          }).catch((error) => {
-            console.error('🎯 ❌ highlightContent failed:', error);
-          });
-        } catch (error) {
-          console.error('🎯 ❌ Error calling highlightContent:', error);
-        }
+        const el = contentRef.current;
+        if (!el) return;
+        highlightContent(el).catch((error) => {
+          console.error('highlightContent failed:', error);
+        });
       });
       
       return () => cancelAnimationFrame(frameId);
     } else if (!jpdbHighlighted && contentRef.current) {
       // Clear highlighting when disabled
-      console.log('🎯 Removing JPDB highlighting...');
-      const jpdbElements = contentRef.current.querySelectorAll('.jpdb-word');
-      console.log('🎯 Found', jpdbElements.length, 'jpdb-word elements to remove');
-      jpdbElements.forEach(el => {
-        const parent = el.parentNode;
-        if (parent) {
-          // Replace highlighted element with its text content
-          parent.replaceChild(document.createTextNode(el.textContent || ''), el);
-        }
-      });
-      // Normalize text nodes after removing highlights
-      if (contentRef.current.normalize) {
-        contentRef.current.normalize();
-      }
-      console.log('🎯 Highlighting removal completed');
-    } else {
-      console.log('🎯 ❌ CONDITIONS NOT MET:', {
-        jpdbHighlighted,
-        hasContentRef: !!contentRef.current,
-        hasCurrentChapterContent: !!currentChapterContent
-      });
+      removeJpdbHighlighting(contentRef.current);
     }
   }, [jpdbHighlighted, currentChapterContent]);
 
   const nextChapter = useCallback(() => {
     if (bookContent && chapter < bookContent.totalChapters - 1) {
-      console.log('Moving to next chapter, clearing any translated content');
       clearTranslation();
       updateChapter(chapter + 1);
     }
@@ -404,7 +360,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
   const prevChapter = useCallback(() => {
     if (chapter > 0) {
-      console.log('Moving to previous chapter, clearing any translated content');
       clearTranslation();
       updateChapter(chapter - 1);
     }
@@ -455,16 +410,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 
 
   const toggleJpdbHighlight = useCallback(() => {
-    console.log('🎯 JPDB highlight button clicked, current state:', jpdbHighlighted);
-    
     setJpdbHighlighted(prev => {
       const newState = !prev;
-      console.log('🎯 Setting JPDB highlight state to:', newState);
       
       // If enabling highlighting, ensure JPDB config is reloaded to get latest settings
       // No need to re-initialize - just reload config since initialization already happened
       if (newState) {
-        console.log('🎯 Reloading JPDB config for latest settings...');
         loadJpdbConfig(); // Just reload config, don't re-initialize
       }
       
@@ -570,4 +521,3 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 }
 
 export default BookReader;
-

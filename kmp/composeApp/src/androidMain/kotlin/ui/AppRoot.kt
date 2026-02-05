@@ -1,5 +1,14 @@
 package com.progressivereader.kmp.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Style
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import com.clerk.api.Clerk
@@ -22,6 +31,11 @@ fun AppRoot(
     onUpdateDriveFolderId: suspend (String?) -> Unit,
     onUpdateReaderDarkMode: suspend (Boolean) -> Unit,
     onUpdateReaderFontSizeSp: suspend (Float) -> Unit,
+    onUpdateReaderTtsRate: suspend (Float) -> Unit,
+    onUpdateReaderJpdbApiKey: suspend (String?) -> Unit,
+    onUpdateReaderCefrLevel: suspend (String) -> Unit,
+    onUpdateReaderJpdbHighlightEnabled: suspend (Boolean) -> Unit,
+    onUpdateReaderTranslationTargetLang: suspend (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -33,8 +47,25 @@ fun AppRoot(
                 bookCache = bookCache,
                 epubRepository = epubRepository,
                 onOpenReader = { bookId -> navigator.push(Screen.Reader(bookId)) },
-                onOpenSettings = { navigator.push(Screen.Settings) },
+                onOpenSettings = { navigator.reset(Screen.Settings(showBack = false)) },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
+                bottomBar = { AppBottomBar(current = Screen.Library, onSelect = { navigator.reset(it) }) },
+            )
+
+        Screen.Vocabulary ->
+            VocabularyScreen(
+                settings = settings,
+                sessionJwt = sessionJwt,
+                onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
+                bottomBar = { AppBottomBar(current = Screen.Vocabulary, onSelect = { navigator.reset(it) }) },
+            )
+
+        Screen.Clipboard ->
+            ClipboardScreen(
+                settings = settings,
+                sessionJwt = sessionJwt,
+                onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
+                bottomBar = { AppBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) },
             )
 
         is Screen.Login ->
@@ -56,25 +87,35 @@ fun AppRoot(
             )
 
         is Screen.Reader ->
-            ReaderScreen(
+            ReaderHostScreen(
                 bookId = s.bookId,
                 settings = settings,
+                sessionJwt = sessionJwt,
                 bookCache = bookCache,
                 epubRepository = epubRepository,
                 onBack = { navigator.pop() },
+                onOpenSettings = { navigator.push(Screen.Settings(showBack = true)) },
                 onSetDarkMode = { enabled -> scope.launch { onUpdateReaderDarkMode(enabled) } },
                 onSetFontSizeSp = { sp -> scope.launch { onUpdateReaderFontSizeSp(sp) } },
+                onSetTtsRate = { rate -> scope.launch { onUpdateReaderTtsRate(rate) } },
+                onSetJpdbHighlightEnabled = { enabled -> scope.launch { onUpdateReaderJpdbHighlightEnabled(enabled) } },
             )
 
-        Screen.Settings ->
+        is Screen.Settings ->
             SettingsScreen(
                 settings = settings,
                 sessionJwt = sessionJwt,
+                showBack = s.showBack,
                 onBack = { navigator.pop() },
                 onUpdateBackendBaseUrl = { url -> scope.launch { onUpdateBackendBaseUrl(url) } },
                 onUpdateDriveFolderId = { folderId -> scope.launch { onUpdateDriveFolderId(folderId) } },
                 onUpdateReaderDarkMode = { enabled -> scope.launch { onUpdateReaderDarkMode(enabled) } },
                 onUpdateReaderFontSizeSp = { sp -> scope.launch { onUpdateReaderFontSizeSp(sp) } },
+                onUpdateReaderTtsRate = { rate -> scope.launch { onUpdateReaderTtsRate(rate) } },
+                onUpdateReaderJpdbApiKey = { key -> scope.launch { onUpdateReaderJpdbApiKey(key) } },
+                onUpdateReaderCefrLevel = { level -> scope.launch { onUpdateReaderCefrLevel(level) } },
+                onUpdateReaderJpdbHighlightEnabled = { enabled -> scope.launch { onUpdateReaderJpdbHighlightEnabled(enabled) } },
+                onUpdateReaderTranslationTargetLang = { lang -> scope.launch { onUpdateReaderTranslationTargetLang(lang) } },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 onSignOut = {
                     scope.launch {
@@ -83,6 +124,50 @@ fun AppRoot(
                         navigator.reset(Screen.Library)
                     }
                 },
+                bottomBar =
+                    if (s.showBack) {
+                        null
+                    } else {
+                        { AppBottomBar(current = Screen.Settings(showBack = false), onSelect = { navigator.reset(it) }) }
+                    },
             )
+    }
+}
+
+@Composable
+private fun AppBottomBar(
+    current: Screen,
+    onSelect: (Screen) -> Unit,
+) {
+    fun select(screen: Screen) {
+        if (screen == current) return
+        onSelect(screen)
+    }
+
+    NavigationBar {
+        NavigationBarItem(
+            selected = current is Screen.Library,
+            onClick = { select(Screen.Library) },
+            icon = { Icon(Icons.Outlined.MenuBook, contentDescription = "Library") },
+            label = { Text("Library") },
+        )
+        NavigationBarItem(
+            selected = current is Screen.Vocabulary,
+            onClick = { select(Screen.Vocabulary) },
+            icon = { Icon(Icons.Outlined.Style, contentDescription = "Vocabulary") },
+            label = { Text("Vocab") },
+        )
+        NavigationBarItem(
+            selected = current is Screen.Clipboard,
+            onClick = { select(Screen.Clipboard) },
+            icon = { Icon(Icons.Outlined.ContentPaste, contentDescription = "Clipboard") },
+            label = { Text("Clipboard") },
+        )
+        NavigationBarItem(
+            selected = current is Screen.Settings && (current as Screen.Settings).showBack.not(),
+            onClick = { select(Screen.Settings(showBack = false)) },
+            icon = { Icon(Icons.Outlined.Settings, contentDescription = "Settings") },
+            label = { Text("Settings") },
+        )
     }
 }

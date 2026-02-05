@@ -1,31 +1,20 @@
 // JPDB Highlighter Initialization Service
-import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers } from '@features/reader/content/parse';
-import { getCurrentConfig, loadConfig, parseText, JpHighlighterConfig } from '@features/reader/content/api-adapter';
-import { JpdbWord, getJpdbData } from '@features/reader/content/word';
+import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers, reverseIndex } from '@features/reader/content/parse';
+import { getCurrentConfig, loadConfig, parseText } from '@features/reader/content/api-adapter';
+import { JpdbWord, getJpdbData, getSentences } from '@features/reader/content/word';
 import { showError } from '@shared/components/toast';
-import { Popup } from '@features/reader/components/popup';
 import { showDefinitionPopup, hideDefinitionPopup } from '@features/reader/components/JpdbPopup';
 import { Keybind } from '~/types';
 import Logger from '@shared/utils/logger';
 
 let currentHover: [JpdbWord, number, number] | null = null;
 let popupKeyHeld = false; // Add popupKeyHeld state
-let popupHovered = false; // Track if mouse is over popup
 
 // Track initialization state and event listener references
 let isInitialized = false;
-let globalMousedownHandler: ((event: MouseEvent) => void) | null = null;
-
-// Function to set popup hover state (called from popup)
-function setPopupHovered(hovered: boolean): void {
-    popupHovered = hovered;
-}
 
 // Initialize logger debug state from a global flag if present
 Logger.setDebug((window as any).jpHighlighterDebug === true);
-
-// Use the imported config, explicitly typed
-let config: JpHighlighterConfig = getCurrentConfig(); // Change const to let so we can reassign
 
 // Helper to check if event matches a hotkey
 function matchesHotkey(event: KeyboardEvent | MouseEvent, hotkey: Keybind | undefined): boolean {
@@ -173,7 +162,7 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
     let globalOffset = 0;
     
     // This is a simplified version that doesn't handle all edge cases
-    function processNode(node: Node) {
+    function processNode(node: Node, inRuby: boolean) {
         const category = displayCategory(node);
         
         if (category === 'text') {
@@ -185,18 +174,20 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
                     end: globalOffset + length,
                     length,
                     node: node as Text,
-                    hasRuby: false
+                    hasRuby: inRuby
                 });
                 globalOffset += length;
             }
-        } else if (category === 'inline' || category === 'ruby') {
-            Array.from(node.childNodes).forEach(processNode);
+        } else if (category === 'inline') {
+            Array.from(node.childNodes).forEach((child) => processNode(child, inRuby));
+        } else if (category === 'ruby') {
+            Array.from(node.childNodes).forEach((child) => processNode(child, true));
         } else if (category === 'block') {
             if (currentParagraph.length > 0) {
                 paragraphs.push([...currentParagraph]);
                 currentParagraph = [];
             }
-            Array.from(node.childNodes).forEach(processNode);
+            Array.from(node.childNodes).forEach((child) => processNode(child, inRuby));
             if (currentParagraph.length > 0) {
                 paragraphs.push([...currentParagraph]);
                 currentParagraph = [];
@@ -204,7 +195,7 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
         }
     }
     
-    processNode(contentElement);
+    processNode(contentElement, false);
     
     if (currentParagraph.length > 0) {
         paragraphs.push(currentParagraph);
@@ -213,79 +204,76 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
     return paragraphs;
 }
 
+export function removeJpdbHighlighting(contentElement: HTMLElement): void {
+    try {
+        reverseIndex.clear();
+
+        // Remove any injected ruby text (furigana) nodes inside jpdb wrappers.
+        const injectedRt = contentElement.querySelectorAll('.jpdb-word rt');
+        injectedRt.forEach((node) => node.parentNode?.removeChild(node));
+
+        // Unwrap all JPDB wrappers, restoring original text nodes.
+        const wrappers = Array.from(contentElement.querySelectorAll('.jpdb-word'));
+        for (const wrapper of wrappers) {
+            const parent = wrapper.parentNode;
+            if (!parent) continue;
+            while (wrapper.firstChild) {
+                parent.insertBefore(wrapper.firstChild, wrapper);
+            }
+            parent.removeChild(wrapper);
+        }
+
+        if (contentElement.normalize) {
+            contentElement.normalize();
+        }
+    } catch (error) {
+        console.error('Error removing JPDB highlighting:', error);
+    }
+}
+
 // Main function to apply JPDB highlighting to a content element
 export async function highlightContent(contentElement: HTMLElement): Promise<void> {
-    console.log('🟡 [highlightContent] Function called with element:', contentElement);
-    console.log('🟡 [highlightContent] Element tagName:', contentElement.tagName);
-    console.log('🟡 [highlightContent] Element innerHTML length:', contentElement.innerHTML.length);
-    console.log('🟡 [highlightContent] Element textContent length:', contentElement.textContent?.length || 0);
-    
     Logger.log('highlightContent called', contentElement);
+
+    // Ensure the DOM is clean before applying highlights (prevents nesting on re-run).
+    removeJpdbHighlighting(contentElement);
     
     // CRITICAL: Set hover handlers FIRST, before any DOM processing
-    console.log('🏗️ Setting hover handlers at start of highlightContent');
     setWordHoverHandlers(onWordHoverStart, onWordHoverStop);
     
-    let currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
-    console.log('🟡 [highlightContent] Config loaded:', {
-        hasApiKey: !!currentConfig.apiKey,
-        apiKeyLength: currentConfig.apiKey?.length || 0
-    });
+    const currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
     
     Logger.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));
     Logger.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
     Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
     
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
-        console.log('🟡 [highlightContent] No JPDB API Key - using fallback');
         Logger.warn('JPDB API Key is not set. Falling back to local translation');
         // Do not abort here. parseText() will handle local translation fallback when no API key
         // is configured.
     }
     
-    // Store original content for later restoration
-    // Only set data-original-content if it hasn't been set already
-    // This allows the calling component (BookReader) to set the appropriate content
-    // (e.g., translated content when highlighting translations)
-    if (!contentElement.getAttribute('data-original-content')) {
-        const originalContent = contentElement.innerHTML;
-        contentElement.setAttribute('data-original-content', originalContent);
-        Logger.log('Stored original content for restoration');
-    } else {
-        Logger.log('data-original-content already set, preserving existing value');
-    }
-    
     try {
-        console.log('🟡 [highlightContent] Starting text processing...');
         const textSegments = extractCleanTextSegments(contentElement);
-        console.log('🟡 [highlightContent] Extracted text segments:', textSegments.length);
-        console.log('🟡 [highlightContent] First few segments:', textSegments.slice(0, 3));
         
         Logger.log(`Extracted ${textSegments.length} text segments`);
         
         if (!textSegments || textSegments.length === 0) {
-            console.log('🟡 [highlightContent] ❌ No text segments found - early return');
             Logger.log('No text segments to highlight.');
             return;
         }
         
-        console.log('🟡 [highlightContent] Setting cursor to wait...');
         document.body.style.cursor = 'wait';
         
-        console.log('🟡 [highlightContent] Creating paragraph fragments...');
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
-        console.log('🟡 [highlightContent] Created paragraphs:', paragraphs.length);
         Logger.log(`Created ${paragraphs.length} paragraph fragments`);
 
-        console.log('🟡 [highlightContent] Calling parseText...');
-        let tokens = await parseText(textSegments); // Tokens have global offsets
-        console.log('🟡 [highlightContent] Received tokens:', tokens.length);
+        const tokens = await parseText(textSegments); // Tokens have global offsets
 
         Logger.log(`Received ${tokens.length} tokens from API`);
         
         for (const paragraph of paragraphs) { // A paragraph is a Fragment[]
             if (paragraph.length > 0) {
-                console.log('🟡 [highlightContent] Processing paragraph with', paragraph.length, 'fragments');
                 const globalParagraphStartOffset = paragraph[0].start;
                 const globalParagraphEndOffset = paragraph[paragraph.length - 1].end;
 
@@ -293,11 +281,8 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                 const relevantGlobalTokens = tokens.filter(token => {
                     return token.start < globalParagraphEndOffset && token.end > globalParagraphStartOffset;
                 });
-                
-                console.log('🟡 [highlightContent] Found', relevantGlobalTokens.length, 'relevant tokens for this paragraph');
 
                 if (relevantGlobalTokens.length > 0) {
-                    console.log('🟡 [highlightContent] Applying tokens to paragraph...');
                     // Make token offsets relative to this paragraph's start
                     const relativeTokens = relevantGlobalTokens.map(token => ({
                         ...token,
@@ -319,30 +304,19 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
                     }));
                     
                     if (relativeFragments.length > 0 && relativeTokens.length > 0) {
-                        console.log('🟡 [highlightContent] Calling applyTokens with', relativeTokens.length, 'tokens and', relativeFragments.length, 'fragments');
                         applyTokens(relativeFragments, relativeTokens);
-                        console.log('🟡 [highlightContent] applyTokens completed for this paragraph');
                     }
-                } else {
-                    console.log('🟡 [highlightContent] No relevant tokens for this paragraph - skipping');
                 }
             }
         }
 
     } catch (error) {
-        console.error('🟡 [highlightContent] ❌ ERROR in highlightContent:', error);
         console.error('Error in highlightContent:', error);
         showError(error instanceof Error ? error : new Error(String(error)));
-        // Restore original content if available
-        const originalContent = contentElement.getAttribute('data-original-content');
-        if (originalContent) {
-            console.log('🟡 [highlightContent] Restoring original content due to error');
-            contentElement.innerHTML = originalContent;
-        }
+        // Attempt to rollback any partial highlighting.
+        removeJpdbHighlighting(contentElement);
     } finally {
-        console.log('🟡 [highlightContent] Setting cursor back to default');
         document.body.style.cursor = 'default';
-        console.log('🟡 [highlightContent] ✅ Function completed');
     }
 }
 
@@ -358,27 +332,35 @@ function onWordHoverStart(event: MouseEvent): void {
         // Store hover information regardless of whether we show the popup
         currentHover = [jpdbWordElement, event.clientX, event.clientY];
         
-        // Only show popup on hover if the setting is enabled OR the popup key is held
+        const isClick = event.type === 'click';
+
+        // Only show popup on hover if the setting is enabled OR the popup key is held.
+        // Always show on click/tap.
         const currentConfig = getCurrentConfig();
         
-                 if (currentConfig.showPopupOnHover || popupKeyHeld) {
-             const jpdbData = getJpdbData(jpdbWordElement);
-             if (jpdbData) {
-                 // Get word data for the new popup system
-                 // jpdbData has structure: { token: Token, context: string, contextOffset: number }
-                 const wordData = {
-                     token: jpdbData.token, // Extract the actual token from jpdbData
-                     position: jpdbData.contextOffset,
-                     sentence: jpdbWordElement.textContent || undefined
-                 };
-                 
-                 // Use the new JpdbPopup system with hover intent
-                 showDefinitionPopup(jpdbWordElement.textContent || '', {
-                     x: event.clientX,
-                     y: event.clientY
-                 }, wordData);
-             }
-         }
+        if (!isClick && !(currentConfig.showPopupOnHover || popupKeyHeld)) return;
+
+        const jpdbData = getJpdbData(jpdbWordElement);
+        if (!jpdbData) return;
+
+        // jpdbData has structure: { token: Token, context: string, contextOffset: number }
+        const sentence = getSentences(jpdbData, currentConfig.contextWidth);
+        const displayWord = jpdbData.token?.card?.spelling || jpdbWordElement.textContent || '';
+        const wordData = {
+            token: jpdbData.token,
+            position: jpdbData.contextOffset,
+            sentence,
+        };
+
+        if (isClick) {
+            showDefinitionPopup(displayWord, jpdbWordElement, wordData, { pin: true });
+        } else {
+            showDefinitionPopup(
+                displayWord,
+                { x: event.clientX, y: event.clientY },
+                wordData
+            );
+        }
     } catch (error) {
         console.error('Error in onWordHoverStart:', error);
     }
@@ -409,12 +391,14 @@ function globalKeydownListener(event: KeyboardEvent) {
              const jpdbData = getJpdbData(wordElement);
              if (jpdbData) {
                  Logger.log('Showing popup because popup key was pressed while hovering a word');
+                 const sentence = getSentences(jpdbData, currentConfig.contextWidth);
+                 const displayWord = jpdbData.token?.card?.spelling || wordElement.textContent || '';
                  const wordData = {
                      token: jpdbData.token, // Extract the actual token from jpdbData
                      position: jpdbData.contextOffset,
-                     sentence: wordElement.textContent || undefined
+                     sentence
                  };
-                 showDefinitionPopup(wordElement.textContent || '', { x, y }, wordData);
+                 showDefinitionPopup(displayWord, { x, y }, wordData);
              }
          }
     }
@@ -445,52 +429,23 @@ function globalKeyupListener(event: KeyboardEvent) {
 
 // Main initialization function
 export async function initialize(contentElement: HTMLElement): Promise<void> {
-    console.log('🏗️ initialize() called, isInitialized:', isInitialized);
-    
     // If already initialized, just update config and skip event listener setup
     if (isInitialized) {
-        console.log('🏗️ Already initialized, just updating config');
         loadConfig(); // Update config
         return;
     }
     
     try {
         await waitForCSS();
-        let currentConfig = loadConfig(); // Initial config load
+        loadConfig(); // Initial config load
 
         // Remove existing event listeners to prevent duplicates
-        if (globalMousedownHandler) {
-            document.removeEventListener('mousedown', globalMousedownHandler);
-        }
         window.removeEventListener('keydown', globalKeydownListener);
         window.removeEventListener('keyup', globalKeyupListener);
 
         // Add global key listeners for hotkeys
         window.addEventListener('keydown', globalKeydownListener);
         window.addEventListener('keyup', globalKeyupListener);
-
-        // Create and store mousedown handler reference
-        globalMousedownHandler = (event: MouseEvent) => {
-            const popup = Popup.get(); // Get the singleton instance
-            const latestConfig = getCurrentConfig(); // Get latest config for this check
-            // Check if the click is outside the popup AND not a right-click (context menu)
-            // And consider touchscreen support logic
-             if (!popup.containsMouse(event) && event.button !== 2) { // event.button 2 is right-click
-                 if (latestConfig.touchscreenSupport) {
-                     // On touchscreen, click outside should hide, but only if not hovering a word
-                     // (to avoid issues with the initial touch triggering both hover and hide)
-                     if (!currentHover) {
-                        popup.fadeOut();
-                     }
-                 } else {
-                     // On desktop, any click outside hides
-                     popup.fadeOut();
-                 }
-             }
-        };
-
-        // Add global mousedown listener to hide popup (replicating jpd-breader)
-        document.addEventListener('mousedown', globalMousedownHandler);
 
         // Mark as initialized to prevent duplicate event listeners
         isInitialized = true;
@@ -513,8 +468,6 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             wireUpToggle, // Use the actual wireUpToggle function
             highlightContent, // Use the actual highlightContent function
             setDebug: Logger.setDebug, // Allow toggling debug logging
-            setPopupHovered, // Expose popup hover state setter
-            Popup // Expose the Popup for direct access if needed
         };
 
         // Apply custom CSS if provided (from original logic)
@@ -533,7 +486,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             document.head.appendChild(styleElement);
         }
         
-        Logger.log('JP Highlighter initialized with global mousedown listener for popup.');
+        Logger.log('JP Highlighter initialized.');
     } catch (error) {
         showError(error instanceof Error ? error : new Error(String(error)));
     }
@@ -546,12 +499,6 @@ export function wireUpToggle(contentElement: HTMLElement): void {
         console.warn('JLPT toggle checkbox not found');
         return;
     }
-    
-    // DO NOT set data-original-content here. 
-    // It should be set by highlightContent when it's actually about to modify the content,
-    // or if we explicitly want to save the state before the first highlight operation triggered by the toggle.
-    // const originalContent = contentElement.innerHTML; 
-    // contentElement.setAttribute('data-original-content', originalContent);
     
     toggleCheckbox.addEventListener('change', async function() {
         const isEnabled = this.checked;
@@ -568,15 +515,9 @@ export function wireUpToggle(contentElement: HTMLElement): void {
             
             if (data.success) {
                 if (isEnabled) {
-                    // highlightContent will handle setting data-original-content if it's not already set
-                    // and if it's operating on stable content due to the deferral logic in jlptHighlighter.js.
                     await highlightContent(contentElement);
                 } else {
-                    // Remove highlighting by restoring original content
-                    const savedContent = contentElement.getAttribute('data-original-content');
-                    if (savedContent) {
-                        contentElement.innerHTML = savedContent;
-                    }
+                    removeJpdbHighlighting(contentElement);
                 }
             } else {
                 alert('Error saving JLPT highlighting preference.');
@@ -588,4 +529,3 @@ export function wireUpToggle(contentElement: HTMLElement): void {
         }
     });
 }
-

@@ -236,7 +236,7 @@
     "empty": {
       "title": "まだ本がありません",
       "description": "最初の本をアップロードして始めましょう",
-      "supportedFormats": "対応形式: EPUB・TXT・DOCX・PDF"
+      "supportedFormats": "対応形式: EPUB・PDF・MOBI・DOCX・TXT・JSON"
     }
   },
   "nav": {
@@ -245,6 +245,7 @@
     "appIconAlt": "アプリのアイコン",
     "library": "ライブラリ",
     "vocabulary": "語彙",
+    "grammar": "文法",
     "clipboard": "クリップボード",
     "test": "テスト",
     "signOut": "サインアウト",
@@ -253,7 +254,37 @@
     "goLibraryAria": "ライブラリへ移動",
     "libraryPageAria": "ライブラリページ",
     "vocabularyPageAria": "語彙ページ",
+    "grammarPageAria": "文法ページ",
     "clipboardPageAria": "クリップボードページ"
+  },
+  "grammar": {
+    "header": {
+      "title": "📘 文法",
+      "subtitle": "JLPT レベル別に文法を整理"
+    },
+    "levels": {
+      "n5": "N5",
+      "n4": "N4",
+      "n3": "N3",
+      "n2": "N2",
+      "n1": "N1"
+    },
+    "sections": {
+      "count": "{{count}}件",
+      "empty": "空"
+    },
+    "empty": "{{level}} の文法ポイントがここに表示されます。",
+    "cta": "あとで追加",
+    "card": {
+      "tag": "JLPT {{level}} / 文法"
+    },
+    "markAll": "すべて既知にする",
+    "sources": {
+      "n5": "JLPT N5 - Game Gengo Textbook",
+      "n3": "JLPT N3 文法 - Game Gengo Textbook",
+      "n2": "JLPT N2 文法 - Game Gengo Textbook",
+      "n4": "JLPT N4 文法 - Game Gengo Textbook"
+    }
   },
   "reader": {
     "chapterNumber": "第{{number}}章",

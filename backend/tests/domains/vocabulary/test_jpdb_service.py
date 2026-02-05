@@ -89,7 +89,7 @@ def test_get_jpdb_data_basic_maps_token_and_vocab():
     assert t0.start == 0 and t0.length == 2 and t0.end == 2
     assert t0.card.get('spelling') == '本'
     assert t0.card.get('reading') == 'ほん'
-    assert any(r['text'] == 'ほん' for r in t0.rubies)
+    assert any(r.text == 'ほん' for r in t0.rubies)
 
 
 def test_mine_update_review_success():
@@ -99,3 +99,38 @@ def test_mine_update_review_success():
     assert svc.review_card(request=ReviewCardRequest(vid=1, sid=2, rating='good', jpdb_api_key='x'), review_url='http://example.test') == {"success": True}
 
 
+def test_get_jpdb_data_preserves_whitespace_for_offsets():
+    jpdb_data = {
+        'vocabulary': [
+            [1, 1, 0, 'C', 'c', 1000, 'noun', [['c']], ['noun'], ['known'], []],
+        ],
+        # Two segments: first has no tokens, second has one token at position 0
+        'tokens': [
+            [],
+            [[0, 0, 1, []]],
+        ],
+    }
+
+    svc = VocabularyService(_MockModuleProvider(), _MockApiProvider(jpdb_data))
+    req = GetJpdbDataRequest(text_segments=["A   B", "C"], jpdb_api_key="x")
+    out = svc.get_jpdb_data(request=req, config=_config())
+    assert len(out) == 1
+    assert out[0].start == 5  # len("A   B") in UTF-16 code units
+
+
+def test_get_jpdb_data_uses_utf16_offsets_for_symbols():
+    jpdb_data = {
+        'vocabulary': [
+            [1, 1, 0, 'C', 'c', 1000, 'noun', [['c']], ['noun'], ['known'], []],
+        ],
+        'tokens': [
+            [],
+            [[0, 0, 1, []]],
+        ],
+    }
+
+    svc = VocabularyService(_MockModuleProvider(), _MockApiProvider(jpdb_data))
+    req = GetJpdbDataRequest(text_segments=["A😀B", "C"], jpdb_api_key="x")
+    out = svc.get_jpdb_data(request=req, config=_config())
+    assert len(out) == 1
+    assert out[0].start == 4  # "😀" is two UTF-16 code units

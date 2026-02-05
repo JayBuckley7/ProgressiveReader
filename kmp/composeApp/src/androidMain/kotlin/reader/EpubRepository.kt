@@ -2,10 +2,19 @@ package com.progressivereader.kmp.reader
 
 import java.io.File
 import java.io.FileInputStream
+import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import org.xmlpull.v1.XmlPullParserFactory
+
+data class SanitizedChapterHtml(
+    val headHtml: String,
+    val bodyHtml: String,
+) {
+    fun combinedHtml(): String = headHtml + bodyHtml
+}
 
 class EpubRepository {
     suspend fun extractIfNeeded(epubFile: File, extractedDir: File) =
@@ -91,12 +100,16 @@ class EpubRepository {
             dest
         }
 
+    suspend fun loadSanitizedChapterHtml(extractedDir: File, href: String): SanitizedChapterHtml? {
+        val f = File(extractedDir, href)
+        if (!f.exists()) return null
+
+        val bytes = withContext(Dispatchers.IO) { f.readBytes() }
+        return withContext(Dispatchers.Default) { sanitizeChapterBytes(bytes) }
+    }
+
     suspend fun loadChapterHtml(extractedDir: File, href: String): String? =
-        withContext(Dispatchers.IO) {
-            val f = File(extractedDir, href)
-            if (!f.exists()) return@withContext null
-            f.readText()
-        }
+        loadSanitizedChapterHtml(extractedDir, href)?.combinedHtml()
 
     fun chapterBaseUrl(extractedDir: File, href: String): String? {
         val f = File(extractedDir, href)
@@ -108,6 +121,86 @@ class EpubRepository {
         val rootPath = root.canonicalFile.toPath()
         val childPath = child.canonicalFile.toPath()
         require(childPath.startsWith(rootPath)) { "Zip entry escapes target dir: $child" }
+    }
+
+    private fun sanitizeChapterBytes(bytes: ByteArray): SanitizedChapterHtml {
+        val decoded = decodeWithDetectedCharset(bytes)
+
+        val doc = Jsoup.parse(decoded).apply { outputSettings().prettyPrint(false) }
+        doc.select("script, iframe, object, embed, form").remove()
+
+        val headExtras =
+            buildString {
+                doc.head().select("link[rel=stylesheet], style").forEach { el ->
+                    if (el.tagName().equals("link", ignoreCase = true)) {
+                        val href = el.attr("href").trim()
+                        if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("//")) return@forEach
+                    }
+                    append(el.outerHtml())
+                }
+            }
+
+        val bodyInner = doc.body().html()
+        return SanitizedChapterHtml(headHtml = headExtras, bodyHtml = bodyInner)
+    }
+
+    private fun decodeWithDetectedCharset(bytes: ByteArray): String {
+        val sniffLen = minOf(bytes.size, 8192)
+        val sniff = String(bytes, 0, sniffLen, Charsets.ISO_8859_1)
+        val declared = detectDeclaredEncoding(sniff)
+
+        fun decodeOrNull(charsetName: String): String? =
+            runCatching { String(bytes, Charset.forName(charsetName)) }.getOrNull()
+
+        if (!declared.isNullOrBlank()) {
+            decodeOrNull(declared)?.let { return it }
+            // Common aliases found in EPUBs
+            if (declared.equals("shift_jis", ignoreCase = true) || declared.equals("shift-jis", ignoreCase = true)) {
+                decodeOrNull("windows-31j")?.let { return it }
+            }
+        }
+
+        val utf8 = String(bytes, Charsets.UTF_8)
+        if (!looksLikeBadUtf8(utf8)) return utf8
+
+        val win31j = decodeOrNull("windows-31j")
+        return if (win31j != null && replacementRatio(win31j) < replacementRatio(utf8)) win31j else utf8
+    }
+
+    private fun detectDeclaredEncoding(sniff: String): String? {
+        val xml =
+            Regex("(?i)<\\?xml[^>]*encoding\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]")
+                .find(sniff)
+                ?.groupValues
+                ?.getOrNull(1)
+        if (!xml.isNullOrBlank()) return xml.trim()
+
+        val metaCharset =
+            Regex("(?i)<meta[^>]+charset\\s*=\\s*['\\\"]?\\s*([^'\\\"\\s/>]+)")
+                .find(sniff)
+                ?.groupValues
+                ?.getOrNull(1)
+        if (!metaCharset.isNullOrBlank()) return metaCharset.trim()
+
+        val metaHttpEquiv =
+            Regex("(?i)charset\\s*=\\s*([^'\\\"\\s;>]+)")
+                .find(sniff)
+                ?.groupValues
+                ?.getOrNull(1)
+        if (!metaHttpEquiv.isNullOrBlank()) return metaHttpEquiv.trim()
+
+        return null
+    }
+
+    private fun looksLikeBadUtf8(decodedUtf8: String): Boolean {
+        if (decodedUtf8.isBlank()) return false
+        return replacementRatio(decodedUtf8) > 0.01f
+    }
+
+    private fun replacementRatio(s: String): Float {
+        if (s.isEmpty()) return 0f
+        val repl = s.count { it == '\uFFFD' }
+        return repl.toFloat() / s.length.toFloat()
     }
 
     private fun readOpfPath(extractedDir: File): String {

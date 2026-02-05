@@ -1746,6 +1746,105 @@ class GDriveService {
     }
   }
 
+  /**
+   * Save grammar progress to grammar.json in the app folder
+   */
+  public async saveGrammarProgress(knownIds: string[]): Promise<boolean> {
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Cannot save grammar progress: Clerk user not authenticated');
+      return false;
+    }
+
+    const currentAppFolderId = await this.getAppFolderId();
+    const token = await this.getAccessToken();
+    if (!token || !currentAppFolderId) {
+      console.warn('[GDriveService] Cannot save grammar progress: Not signed in, token invalid, or no folder ID.');
+      return false;
+    }
+
+    try {
+      const response = await this.gapi.client.drive.files.list({
+        q: `'${currentAppFolderId}' in parents and name='grammar.json' and trashed=false`,
+        fields: 'files(id, name)',
+        pageSize: 1,
+      });
+
+      const files = response.result.files || [];
+      const data = { known: knownIds, lastUpdated: new Date().toISOString(), version: '1.0' };
+
+      if (files.length > 0) {
+        const fileId = files[0].id;
+        return await this.updateGrammarFile(fileId, data);
+      } else {
+        const newId = await this.createGrammarFile(data);
+        return !!newId;
+      }
+    } catch (error) {
+      console.error('[GDriveService] Error saving grammar progress:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load grammar progress from grammar.json
+   */
+  public async loadGrammarProgress(): Promise<string[] | null> {
+    // CRITICAL: Check Clerk authentication first
+    if (!this.isClerkUserAuthenticated()) {
+      console.log('[GDriveService] Cannot load grammar progress: Clerk user not authenticated');
+      return null;
+    }
+
+    const currentAppFolderId = await this.getAppFolderId();
+    const token = await this.getAccessToken();
+    if (!token || !currentAppFolderId) {
+      console.warn('[GDriveService] Cannot load grammar progress: Not signed in, token invalid, or no folder ID.');
+      return null;
+    }
+
+    try {
+      const files = await this.searchFileWithRetry('grammar.json', true);
+
+      if (files.length > 0) {
+        const fileId = files[0].id;
+        const currentToken = await this.getAccessToken();
+        if (!currentToken) throw new Error('Failed to get valid access token for grammar download.');
+
+        const fetchResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+          headers: new Headers({ Authorization: `Bearer ${currentToken}` }),
+        });
+
+        if (!fetchResponse.ok) {
+          throw new Error(`Failed to download grammar progress: ${fetchResponse.status} ${fetchResponse.statusText}`);
+        }
+
+        const text = await fetchResponse.text();
+        try {
+          const content = JSON.parse(text);
+          return Array.isArray(content.known) ? content.known : [];
+        } catch {
+          console.warn('[GDriveService] Invalid JSON in grammar file');
+          return [];
+        }
+      } else {
+        console.log('[GDriveService] No grammar.json file found after retry');
+        return [];
+      }
+    } catch (error: any) {
+      console.error('[GDriveService] Error loading grammar progress:', error);
+
+      // Check if it's an authentication error
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        console.log('[GDriveService] 401 error in loadGrammarProgress - clearing invalid tokens');
+        gDriveCacheService.clearCachedTokens();
+        this.updateSigninStatus(false);
+      }
+
+      return null;
+    }
+  }
+
   private async createVocabFile(data: any): Promise<string | null> {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
@@ -1816,6 +1915,80 @@ class GDriveService {
       return true;
     } catch (error) {
       console.error('[GDriveService] Error updating vocab file:', error);
+      return false;
+    }
+  }
+
+  private async createGrammarFile(data: any): Promise<string | null> {
+    const currentAppFolderId = await this.getAppFolderId();
+    const token = await this.getAccessToken();
+    if (!token || !currentAppFolderId) {
+      return null;
+    }
+
+    const metadata = {
+      name: 'grammar.json',
+      mimeType: 'application/json',
+      parents: [currentAppFolderId],
+    };
+
+    const jsonContent = JSON.stringify(data, null, 2);
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', new Blob([jsonContent], { type: 'application/json' }));
+
+    try {
+      const currentToken = await this.getAccessToken();
+      if (!currentToken) throw new Error('Failed to get valid access token for grammar creation.');
+
+      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: new Headers({ Authorization: `Bearer ${currentToken}` }),
+        body: form,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Grammar file creation failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      const result = await response.json();
+      console.log('[GDriveService] Grammar file created successfully:', result.id);
+      return result.id;
+    } catch (error) {
+      console.error('[GDriveService] Error creating grammar file:', error);
+      return null;
+    }
+  }
+
+  private async updateGrammarFile(fileId: string, data: any): Promise<boolean> {
+    const token = await this.getAccessToken();
+    if (!token) {
+      console.warn('[GDriveService] Cannot update grammar file: No valid token');
+      return false;
+    }
+
+    const jsonContent = JSON.stringify(data, null, 2);
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: new Headers({
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }),
+        body: jsonContent,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Grammar file update failed: ${response.status} ${response.statusText} - ${errorBody}`);
+      }
+
+      console.log('[GDriveService] Grammar file updated successfully');
+      return true;
+    } catch (error) {
+      console.error('[GDriveService] Error updating grammar file:', error);
       return false;
     }
   }

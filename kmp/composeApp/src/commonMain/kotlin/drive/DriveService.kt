@@ -13,6 +13,7 @@ import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import com.progressivereader.kmp.core.FlexibleLongSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,6 +31,7 @@ class DriveService(private val getSessionToken: () -> String?) {
         val id: String,
         val name: String,
         val mimeType: String? = null,
+        @Serializable(with = FlexibleLongSerializer::class)
         val size: Long? = null,
         val modifiedTime: String? = null,
         val iconLink: String? = null,

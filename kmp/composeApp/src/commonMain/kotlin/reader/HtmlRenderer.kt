@@ -7,6 +7,6 @@ expect fun HtmlContent(
     html: String,
     baseUrl: String?,
     darkMode: Boolean,
-    fontSizeSp: Float
+    fontSizeSp: Float,
+    onUrlClick: (String) -> Boolean,
 )
-

@@ -36,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.progressivereader.kmp.settings.AppSettings
 import kotlinx.coroutines.launch
@@ -45,13 +46,20 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     settings: AppSettings,
     sessionJwt: String?,
+    showBack: Boolean,
     onBack: () -> Unit,
     onUpdateBackendBaseUrl: (String) -> Unit,
     onUpdateDriveFolderId: (String?) -> Unit,
     onUpdateReaderDarkMode: (Boolean) -> Unit,
     onUpdateReaderFontSizeSp: (Float) -> Unit,
+    onUpdateReaderTtsRate: (Float) -> Unit,
+    onUpdateReaderJpdbApiKey: (String?) -> Unit,
+    onUpdateReaderCefrLevel: (String) -> Unit,
+    onUpdateReaderJpdbHighlightEnabled: (Boolean) -> Unit,
+    onUpdateReaderTranslationTargetLang: (String) -> Unit,
     onOpenLogin: () -> Unit,
     onSignOut: () -> Unit,
+    bottomBar: (@Composable () -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -60,12 +68,22 @@ fun SettingsScreen(
     var folderId by remember { mutableStateOf(settings.driveFolderId ?: "") }
     var darkMode by remember { mutableStateOf(settings.reader.darkMode) }
     var fontSizeSp by remember { mutableStateOf(settings.reader.fontSizeSp) }
+    var ttsRate by remember { mutableStateOf(settings.reader.ttsRate) }
+    var jpdbApiKey by remember { mutableStateOf(settings.reader.jpdbApiKey ?: "") }
+    var cefrLevel by remember { mutableStateOf(settings.reader.cefrLevel) }
+    var highlightEnabled by remember { mutableStateOf(settings.reader.jpdbHighlightEnabled) }
+    var translationTargetLang by remember { mutableStateOf(settings.reader.translationTargetLang) }
 
     LaunchedEffect(settings) {
         backendUrl = settings.backendBaseUrl
         folderId = settings.driveFolderId ?: ""
         darkMode = settings.reader.darkMode
         fontSizeSp = settings.reader.fontSizeSp
+        ttsRate = settings.reader.ttsRate
+        jpdbApiKey = settings.reader.jpdbApiKey ?: ""
+        cefrLevel = settings.reader.cefrLevel
+        highlightEnabled = settings.reader.jpdbHighlightEnabled
+        translationTargetLang = settings.reader.translationTargetLang
     }
 
     Scaffold(
@@ -73,13 +91,16 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                    if (showBack) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = { bottomBar?.invoke() },
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -163,6 +184,81 @@ fun SettingsScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        Text("Reader", style = MaterialTheme.typography.titleMedium)
+
+                        OutlinedTextField(
+                            value = jpdbApiKey,
+                            onValueChange = { jpdbApiKey = it },
+                            label = { Text("JPDB API key") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        AppTonalButton(
+                            text = "Save JPDB key",
+                            onClick = {
+                                onUpdateReaderJpdbApiKey(jpdbApiKey.trim().ifBlank { null })
+                                scope.launch { snackbarHostState.showSnackbar("Saved JPDB key") }
+                            },
+                        )
+
+                        OutlinedTextField(
+                            value = cefrLevel,
+                            onValueChange = { cefrLevel = it },
+                            label = { Text("CEFR level (B1/B2/C1)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        AppTonalButton(
+                            text = "Save CEFR level",
+                            enabled = cefrLevel.isNotBlank(),
+                            onClick = {
+                                onUpdateReaderCefrLevel(cefrLevel.trim())
+                                scope.launch { snackbarHostState.showSnackbar("Saved CEFR level") }
+                            },
+                        )
+
+                        OutlinedTextField(
+                            value = translationTargetLang,
+                            onValueChange = { translationTargetLang = it },
+                            label = { Text("Translation target language") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        AppTonalButton(
+                            text = "Save target language",
+                            enabled = translationTargetLang.isNotBlank(),
+                            onClick = {
+                                onUpdateReaderTranslationTargetLang(translationTargetLang.trim())
+                                scope.launch { snackbarHostState.showSnackbar("Saved target language") }
+                            },
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text("Highlights enabled", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.weight(1f))
+                            Switch(
+                                checked = highlightEnabled,
+                                onCheckedChange = {
+                                    highlightEnabled = it
+                                    onUpdateReaderJpdbHighlightEnabled(it)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                         Text("Appearance", style = MaterialTheme.typography.titleMedium)
 
                         Row(
@@ -190,6 +286,15 @@ fun SettingsScreen(
                             valueRange = 12f..32f,
                             steps = 9,
                             onValueChangeFinished = { onUpdateReaderFontSizeSp(fontSizeSp) },
+                        )
+
+                        Text("TTS speed: ${"%.2f".format(ttsRate)}x", style = MaterialTheme.typography.bodyMedium)
+                        Slider(
+                            value = ttsRate.coerceIn(0.75f, 1.5f),
+                            onValueChange = { ttsRate = it },
+                            valueRange = 0.75f..1.5f,
+                            steps = 14,
+                            onValueChangeFinished = { onUpdateReaderTtsRate(ttsRate) },
                         )
                     }
                 }

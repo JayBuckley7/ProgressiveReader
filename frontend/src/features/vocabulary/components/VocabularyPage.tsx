@@ -152,8 +152,12 @@ export function VocabularyPage() {
   const [selectedDeckId, setSelectedDeckId] = useState<string>("");
   const [selectedDeckName, setSelectedDeckName] = useState<string>("");
 
-  const [deckVocabPairs, setDeckVocabPairs] = useState<JpdbVocabPair[]>([]);
-  const [deckVocabEntries, setDeckVocabEntries] = useState<JpdbLookupVocabularyEntry[]>([]);
+  type DeckVocabCache = {
+    deckName: string;
+    pairs: JpdbVocabPair[];
+    entries: JpdbLookupVocabularyEntry[];
+  };
+  const [deckVocabById, setDeckVocabById] = useState<Record<string, DeckVocabCache>>({});
   const [deckVocabError, setDeckVocabError] = useState<string | null>(null);
   const [isLoadingDeckVocab, setIsLoadingDeckVocab] = useState(false);
 
@@ -196,12 +200,11 @@ export function VocabularyPage() {
   };
 
   useEffect(() => {
-    setDeckVocabPairs([]);
-    setDeckVocabEntries([]);
     setDeckVocabError(null);
 
     setDueVocabEntries([]);
     setDueVocabError(null);
+    setDueVocabProgress(null);
 
     if (selectedDeckId) {
       const cached = loadCachedDue(selectedDeckId);
@@ -210,6 +213,10 @@ export function VocabularyPage() {
       setSelectedDeckName("");
     }
   }, [selectedDeckId]);
+
+  const currentDeckVocab = selectedDeckId ? deckVocabById[selectedDeckId] : undefined;
+  const deckVocabPairs = currentDeckVocab?.pairs ?? [];
+  const deckVocabEntries = currentDeckVocab?.entries ?? [];
 
   const loadVocabulary = useCallback(async () => {
     setIsLoadingVocabulary(true);
@@ -306,13 +313,23 @@ export function VocabularyPage() {
       toast.error("Sign in required");
       return;
     }
+    if (deckVocabPairs.length > 0) {
+      toast.info("Deck already loaded. Use “Load more” to continue.");
+      return;
+    }
 
     setIsLoadingDeckVocab(true);
     setDeckVocabError(null);
     try {
       const pairs = await listDeckVocabulary(selectedDeckId);
-      setDeckVocabPairs(pairs);
-      setDeckVocabEntries([]);
+      setDeckVocabById((prev) => ({
+        ...prev,
+        [selectedDeckId]: {
+          deckName: selectedDeckName || prev[selectedDeckId]?.deckName || "",
+          pairs,
+          entries: [],
+        },
+      }));
 
       if (pairs.length === 0) {
         toast.info("Deck is empty");
@@ -321,7 +338,14 @@ export function VocabularyPage() {
 
       const firstChunk = pairs.slice(0, LOOKUP_BATCH_SIZE);
       const entries = await lookupVocabulary(firstChunk, DECK_LOOKUP_FIELDS);
-      setDeckVocabEntries(entries);
+      setDeckVocabById((prev) => ({
+        ...prev,
+        [selectedDeckId]: {
+          deckName: selectedDeckName || prev[selectedDeckId]?.deckName || "",
+          pairs,
+          entries,
+        },
+      }));
     } catch (err: any) {
       const message = String(err?.message || "Failed to open deck");
       setDeckVocabError(message);
@@ -339,6 +363,9 @@ export function VocabularyPage() {
     if (!deckVocabPairs.length) return;
     if (isLoadingDeckVocab) return;
 
+    const deckId = selectedDeckId;
+    if (!deckId) return;
+
     const start = deckVocabEntries.length;
     const chunk = deckVocabPairs.slice(start, start + LOOKUP_BATCH_SIZE);
     if (chunk.length === 0) return;
@@ -347,7 +374,17 @@ export function VocabularyPage() {
     setDeckVocabError(null);
     try {
       const entries = await lookupVocabulary(chunk, DECK_LOOKUP_FIELDS);
-      setDeckVocabEntries((prev) => [...prev, ...entries]);
+      setDeckVocabById((prev) => {
+        const existing = prev[deckId];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [deckId]: {
+            ...existing,
+            entries: [...existing.entries, ...entries],
+          },
+        };
+      });
     } catch (err: any) {
       const message = String(err?.message || "Failed to load vocabulary");
       setDeckVocabError(message);
@@ -391,12 +428,23 @@ export function VocabularyPage() {
     setDueVocabProgress(null);
 
     try {
-      const pairs = deckVocabPairs.length ? deckVocabPairs : await listDeckVocabulary(selectedDeckId);
-      if (!deckVocabPairs.length) setDeckVocabPairs(pairs);
+      const deckId = selectedDeckId;
+      const pairs =
+        deckVocabPairs.length > 0 ? deckVocabPairs : await listDeckVocabulary(deckId);
+      if (deckVocabPairs.length === 0) {
+        setDeckVocabById((prev) => ({
+          ...prev,
+          [deckId]: {
+            deckName: selectedDeckName || prev[deckId]?.deckName || "",
+            pairs,
+            entries: prev[deckId]?.entries ?? [],
+          },
+        }));
+      }
 
       if (pairs.length === 0) {
         setDueVocabEntries([]);
-        saveCachedDue(selectedDeckId, []);
+        saveCachedDue(deckId, []);
         toast.info("Deck is empty");
         return;
       }

@@ -240,7 +240,7 @@
     "empty": {
       "title": "No books yet",
       "description": "Upload your first book file to get started",
-      "supportedFormats": "Supported formats: EPUB, TXT, DOCX, PDF"
+      "supportedFormats": "Supported formats: EPUB, PDF, MOBI, DOCX, TXT, JSON"
     }
   },
   "nav": {
@@ -249,6 +249,7 @@
     "appIconAlt": "App icon",
     "library": "Library",
     "vocabulary": "Vocabulary",
+    "grammar": "Grammar",
     "clipboard": "Clipboard",
     "test": "Test",
     "signOut": "Sign out",
@@ -257,7 +258,37 @@
     "goLibraryAria": "Go to library",
     "libraryPageAria": "Library page",
     "vocabularyPageAria": "Vocabulary page",
+    "grammarPageAria": "Grammar page",
     "clipboardPageAria": "Clipboard page"
+  },
+  "grammar": {
+    "header": {
+      "title": "📘 Grammar",
+      "subtitle": "Organize grammar points by JLPT level"
+    },
+    "levels": {
+      "n5": "N5",
+      "n4": "N4",
+      "n3": "N3",
+      "n2": "N2",
+      "n1": "N1"
+    },
+    "sections": {
+      "count": "{{count}} items",
+      "empty": "Empty"
+    },
+    "empty": "Grammar points for {{level}} will appear here.",
+    "cta": "Add items later",
+    "card": {
+      "tag": "JLPT {{level}} / Grammar"
+    },
+    "markAll": "Mark all known",
+    "sources": {
+      "n5": "JLPT N5 - Game Gengo Textbook",
+      "n3": "JLPT N3 Grammar - Game Gengo Textbook",
+      "n2": "JLPT N2 Grammar - Game Gengo Textbook",
+      "n4": "JLPT N4 Grammar - Game Gengo Textbook"
+    }
   },
   "reader": {
     "chapterNumber": "Chapter {{number}}",

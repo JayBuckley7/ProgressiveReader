@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderWithProviders } from '../test-utils';
 import ClipboardReader from '@features/clipboard/components/ClipboardReader';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 describe('Clipboard integration: paste and save', () => {
@@ -11,13 +11,13 @@ describe('Clipboard integration: paste and save', () => {
 
     // Simulate paste via button (uses navigator.clipboard.readText)
     // Fallback: dispatch paste event
-    const pasteArea = screen.getByPlaceholderText(/paste|貼り付け/i);
+    const pasteArea = screen.getByRole('textbox');
     const text = 'Hello world';
-    const pasteEvent = new ClipboardEvent('paste', {
-      clipboardData: new DataTransfer(),
-    } as any);
-    pasteEvent.clipboardData?.setData('text', text);
-    pasteArea.dispatchEvent(pasteEvent);
+    fireEvent.paste(pasteArea, {
+      clipboardData: {
+        getData: () => text,
+      },
+    });
 
     await waitFor(() => {
       expect(screen.getAllByText(/Entry|項目/)[0]).toBeInTheDocument();
@@ -30,5 +30,3 @@ describe('Clipboard integration: paste and save', () => {
     });
   });
 });
-
-

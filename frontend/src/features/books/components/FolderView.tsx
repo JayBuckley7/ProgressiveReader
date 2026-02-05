@@ -54,17 +54,15 @@ export function FolderView({
       });
     }
 
-    // Books grouped by folder - only show shelves with books
+    // Books grouped by folder - show folders even if empty (for navigation parity)
     folders.forEach(folder => {
       const folderBooks = books.filter(book => book.folderId === folder.id);
-      if (folderBooks.length > 0) {
-        sections.push({
-          title: folder.name,
-          books: folderBooks,
-          id: folder.id,
-          isEmpty: false
-        });
-      }
+      sections.push({
+        title: folder.name,
+        books: folderBooks,
+        id: folder.id,
+        isEmpty: folderBooks.length === 0
+      });
     });
 
     // FALLBACK: If we have books with folder IDs but no folder metadata, create virtual folders
@@ -98,12 +96,16 @@ export function FolderView({
           const isCollapsed = collapsedShelves.has(shelf.id);
           
           return (
-            <div key={shelf.id} className="app-card overflow-hidden">
+            <div key={shelf.id} className="app-card overflow-visible">
               {/* Shelf Header */}
               <button
                 onClick={() => toggleShelf(shelf.id)}
                 aria-expanded={!isCollapsed}
-                className="w-full px-5 py-3 flex items-center justify-between transition-colors hover:bg-[var(--ui-surface-alt)]"
+                className={`w-full px-5 py-3 flex items-center justify-between transition-colors hover:bg-[var(--ui-surface-alt)] ${
+                  isCollapsed
+                    ? "rounded-tl-[10px] rounded-tr-[8px] rounded-bl-[6px] rounded-br-[8px]"
+                    : "rounded-tl-[10px] rounded-tr-[8px]"
+                }`}
               >
                 <div className="text-left">
                   <h2 className="text-base sm:text-lg font-semibold">{shelf.title}</h2>
@@ -129,28 +131,34 @@ export function FolderView({
                              {/* Collapsible Shelf Content */}
                {!isCollapsed && (
                  <div className="px-5 pb-5">
-                   <div
-                     className={`grid gap-4 ${
-                       density === "compact"
-                         ? "grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-9"
-                         : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8"
-                     }`}
-                   >
-                     {shelf.books.map((book) => (
-                       <div key={book.id} className="group">
-                         <BookCardHover
-                           book={book}
-                           onSelectBook={onSelectBook}
-                           onDeleteBook={onDeleteBook}
-                           onUpdateCover={onUpdateCover}
-                           onMoveToFolder={handleMoveBook}
-                           availableFolders={folders}
-                           currentFolderId={book.folderId || null}
-                           density={density}
-                         />
-                       </div>
-                     ))}
-                   </div>
+                   {shelf.books.length === 0 ? (
+                     <div className="text-sm app-muted py-3">
+                       No books in this folder yet.
+                     </div>
+                   ) : (
+                     <div
+                       className={`grid gap-4 ${
+                         density === "compact"
+                           ? "grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-9"
+                           : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8"
+                       }`}
+                     >
+                       {shelf.books.map((book) => (
+                         <div key={book.id} className="group">
+                           <BookCardHover
+                             book={book}
+                             onSelectBook={onSelectBook}
+                             onDeleteBook={onDeleteBook}
+                             onUpdateCover={onUpdateCover}
+                             onMoveToFolder={handleMoveBook}
+                             availableFolders={folders}
+                             currentFolderId={book.folderId || null}
+                             density={density}
+                           />
+                         </div>
+                       ))}
+                     </div>
+                   )}
                  </div>
                )}
             </div>

@@ -41,12 +41,6 @@ function renderPitchReact(reading: string, pitch: string): React.ReactElement {
   }
 }
 
-// Helper function to check if we should use local translation (no JPDB key available)
-function shouldUseLocalTranslation(): boolean {
-    const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
-    return !jpdbApiKey;
-}
-
 type WordData = {
     token: Token;
     position: number;
@@ -63,6 +57,7 @@ type PopupState = {
 let setPopup: React.Dispatch<React.SetStateAction<PopupState>> | null = null;
 let hideTimeout: number | null = null;
 let isPopupHovered = false;
+let isPopupPinned = false;
 
 const HIDE_DELAY = 1500; // ms delay before hiding popup when mouse leaves
 
@@ -75,9 +70,11 @@ function clearHideTimeout() {
 
 function scheduleHide() {
     clearHideTimeout();
+    if (isPopupPinned) return;
     if (!isPopupHovered) {
         hideTimeout = window.setTimeout(() => {
             if (setPopup) {
+                isPopupPinned = false;
                 setPopup(null);
             }
         }, HIDE_DELAY);
@@ -85,12 +82,14 @@ function scheduleHide() {
 }
 
 function calculatePopupPosition(x: number, y: number) {
-  const popupWidth = 384; // ~24em * 16px
-  const popupHeight = 300; // approximate
   const margin = 10;
 
+  // Approximate popup bounds for collision detection. The actual popup is responsive.
+  const popupWidth = Math.min(448, window.innerWidth - margin * 2);
+  const popupHeight = Math.min(480, window.innerHeight - margin * 2);
+
   let adjustedX = x;
-  let adjustedY = y + 2; // small offset from word
+  let adjustedY = y + 8; // small offset from word
 
   if (adjustedX + popupWidth > window.innerWidth - margin) {
     adjustedX = window.innerWidth - popupWidth - margin;
@@ -111,10 +110,12 @@ function calculatePopupPosition(x: number, y: number) {
 export function showDefinitionPopup(
     word: string,
     anchorOrPosition: Element | { x: number; y: number },
-    wordData?: WordData
+    wordData?: WordData,
+    options?: { pin?: boolean }
 ) {
     if (!setPopup) return;
     clearHideTimeout();
+    isPopupPinned = Boolean(options?.pin);
 
     let x = 0;
     let y = 0;
@@ -158,7 +159,7 @@ export function JpdbPopupController() {
 
   const handlePopupMouseLeave = () => {
     isPopupHovered = false;
-    scheduleHide();
+    if (!isPopupPinned) scheduleHide();
   };
 
   // Handle click outside to close popup
@@ -171,6 +172,7 @@ export function JpdbPopupController() {
       const popupElement = document.querySelector('[data-jpdb-popup]');
       
       if (popupElement && !popupElement.contains(target) && setPopup) {
+        isPopupPinned = false;
         setPopup(null);
       }
     };
@@ -196,8 +198,35 @@ export function JpdbPopupController() {
 
   const card = popup.wordData?.token?.card;
   const token = popup.wordData?.token;
-  const isOfflineMode = shouldUseLocalTranslation();
   const config = getCurrentConfig();
+
+  const isOfflineMode = !config.apiKey || !navigator.onLine;
+
+  const surfaceWord = token?.card?.spelling || popup.word;
+  const reading = token?.card?.reading || "";
+  const showReading = Boolean(reading && reading !== surfaceWord);
+
+  const states = (card?.state || []).filter(Boolean);
+  const hasNeverForget = states.includes('never-forget');
+  const hasBlacklisted = states.includes('blacklisted');
+
+  const posText = token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0
+    ? Array.from(new Set(token.card.meanings.flatMap((m) => m.partOfSpeech || []))).join(', ')
+    : "";
+
+  const rubySegments = (() => {
+    const rubies = token?.rubies || [];
+    if (!rubies.length) return [];
+    return rubies
+      .filter((r) => typeof r.text === 'string' && r.text.length > 0 && Number.isFinite(r.start) && Number.isFinite(r.length) && r.length > 0)
+      .slice()
+      .sort((a, b) => a.start - b.start)
+      .map((r) => ({
+        base: surfaceWord.slice(r.start, r.start + r.length),
+        ruby: r.text as string,
+      }))
+      .filter((seg) => seg.base.length > 0);
+  })();
 
 
   const handleMineWord = async () => {
@@ -242,208 +271,232 @@ export function JpdbPopupController() {
   return (
     <div
       data-jpdb-popup
-      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden cursor-pointer"
-      style={{ 
-        top: popup.y, 
+      className="fixed z-50 rounded-2xl shadow-2xl overflow-hidden cursor-default border border-neutral-700 bg-gradient-to-b from-neutral-900 to-neutral-800 text-neutral-100 backdrop-blur-sm flex flex-col"
+      style={{
+        top: popup.y,
         left: popup.x,
-        maxWidth: '24em',
-        maxHeight: '40vh'
+        width: 'min(28rem, 92vw)',
+        maxHeight: 'min(30rem, 55vh)',
       }}
       onMouseEnter={handlePopupMouseEnter}
       onMouseLeave={handlePopupMouseLeave}
-      onClick={handlePopupClick}
     >
-      {/* JPDB-style compact layout */}
-      <div className="p-3">
-        {/* Action Buttons - FIRST THING IN POPUP */}
-        {!isOfflineMode && card && config.apiKey && (
-          <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
-            {/* Row: Add / Blacklist / Never forget */}
-            <div className="flex gap-2 text-xs mb-2">
-              <button
-                onClick={handleMineWord}
-                disabled={isLoading}
-                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
-                title="Add word to mining deck"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => handleUpdateWordState('blacklist', card.state.includes('blacklisted'))}
-                disabled={isLoading}
-                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded disabled:opacity-50"
-                title={card.state.includes('blacklisted') ? 'Remove from blacklist' : 'Add to blacklist'}
-              >
-                {card.state.includes('blacklisted') ? 'Remove blacklist' : 'Blacklist'}
-              </button>
-              <button
-                onClick={() => handleUpdateWordState('never-forget', card.state.includes('never-forget'))}
-                disabled={isLoading}
-                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
-                title={card.state.includes('never-forget') ? 'Unmark as never forget' : 'Mark as never forget'}
-              >
-                {card.state.includes('never-forget') ? 'Unmark never forget' : 'Never forget'}
-              </button>
-            </div>
-
-            {/* Review Buttons (always visible in old design) */}
-            <div className="flex gap-2 text-xs">
-              <button
-                onClick={() => handleReviewCard('nothing')}
-                disabled={isLoading}
-                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50"
-                title="I don't know this word at all"
-              >
-                Nothing
-              </button>
-              <button
-                onClick={() => handleReviewCard('something')}
-                disabled={isLoading}
-                className="px-3 py-1 bg-red-400 hover:bg-red-500 text-white rounded disabled:opacity-50"
-                title="I recognize this word but don't know the meaning"
-              >
-                Something
-              </button>
-              <button
-                onClick={() => handleReviewCard('hard')}
-                disabled={isLoading}
-                className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded disabled:opacity-50"
-                title="I know this word but it was difficult"
-              >
-                Hard
-              </button>
-              <button
-                onClick={() => handleReviewCard('good')}
-                disabled={isLoading}
-                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
-                title="I know this word well"
-              >
-                Good
-              </button>
-              <button
-                onClick={() => handleReviewCard('easy')}
-                disabled={isLoading}
-                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded disabled:opacity-50"
-                title="This word is very easy for me"
-              >
-                Easy
-              </button>
-            </div>
-
-            {isLoading && (
-              <div className="text-center text-xs text-gray-500 dark:text-gray-400">Processing...</div>
-            )}
-          </div>
-        )}
-
-        {/* Header: Word + Reading */}
-        <div className="mb-2">
-          <strong className="text-lg font-bold text-gray-900 dark:text-gray-100">
-            {popup.word}
-            {token?.card?.reading && token.card.reading !== popup.word && (
-              <span className="text-base font-normal text-gray-600 dark:text-gray-400"> ({token.card.reading})</span>
-            )}
-          </strong>
-        </div>
-
-        {/* States on one line, compact */}
-        {card && card.state && card.state.length > 0 && (
-          <div className="mb-2 text-sm text-gray-600 dark:text-gray-400">{card.state.join(' ')}</div>
-        )}
-
-        {/* Frequency + Pitch compact line */}
-        <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
-          <div className="flex items-center gap-2 flex-wrap">
-            {token?.card?.frequencyRank && (
-              <span>Top {token.card.frequencyRank.toLocaleString()}</span>
-            )}
-            {token && !isOfflineMode && token.card?.pitchAccent && token.card.pitchAccent.length > 0 && (
-              <>
-                {token.card.pitchAccent.map((pitch, index) => (
-                  <span key={index}>{renderPitchReact(token.card?.reading || popup.word, pitch)}</span>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Parts of Speech - compact, comma separated */}
-        {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
-          <div className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-            {Array.from(new Set(token.card.meanings.flatMap((m) => m.partOfSpeech || []))).join(', ')}
-          </div>
-        )}
-
-        {/* Offline mode: JLPT info compact */}
-        {token && isOfflineMode && (() => {
-          const jlptLevel = getJlptLevel(popup.word);
-          const kunReading = getKunReading(popup.word);
-          const onReading = getOnReading(popup.word);
-          if (jlptLevel || kunReading || onReading) {
-            return (
-              <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
-                {jlptLevel && <>JLPT {jlptLevel}</>}
-                {kunReading && <>, Kun: {kunReading}</>}
-                {onReading && <>, On: {onReading}</>}
+      <div className="p-3 overflow-y-auto min-h-0">
+        <div className="flex items-start justify-between gap-3">
+          {!isOfflineMode && card && config.apiKey ? (
+            <div className="flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleMineWord}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-blue-500/80 text-blue-300 bg-black/20 shadow-[0_0_10px_rgba(59,130,246,0.35)] hover:bg-blue-500/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title="Add word to mining deck"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => handleUpdateWordState('never-forget', hasNeverForget)}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-lime-500/80 text-lime-300 bg-black/20 shadow-[0_0_10px_rgba(132,204,22,0.35)] hover:bg-lime-500/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title={hasNeverForget ? 'Remove never-forget' : 'Mark never-forget'}
+                >
+                  Forget
+                </button>
+                <button
+                  onClick={() => handleUpdateWordState('blacklist', hasBlacklisted)}
+                  disabled={isLoading}
+                  className={`px-2.5 py-1 rounded-md border bg-black/20 disabled:opacity-50 text-xs sm:text-sm ${
+                    hasBlacklisted
+                      ? 'border-red-500/80 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.35)] hover:bg-red-500/10'
+                      : 'border-neutral-500/70 text-neutral-300 hover:bg-white/5'
+                  }`}
+                  title={hasBlacklisted ? 'Remove blacklist' : 'Add to blacklist'}
+                >
+                  Blacklist
+                </button>
               </div>
-            );
-          }
-          return null;
-        })()}
 
-        {/* Meanings - clean numbered list */}
-        {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
-          <div className="text-sm text-gray-700 dark:text-gray-300">
-            <ol className="list-decimal list-inside space-y-1 ml-4">
-              {token.card.meanings.flatMap((meaning, meaningIndex) =>
-                (meaning.glosses || []).map((gloss, glossIndex) => (
-                  <li key={`m${meaningIndex}-g${glossIndex}`}>{gloss}</li>
-                ))
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleReviewCard('nothing')}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-red-500/80 text-red-300 bg-black/20 shadow-[0_0_10px_rgba(239,68,68,0.25)] hover:bg-red-500/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title="I don't know this word at all"
+                >
+                  nothing
+                </button>
+                <button
+                  onClick={() => handleReviewCard('something')}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-rose-400/80 text-rose-200 bg-black/20 shadow-[0_0_10px_rgba(251,113,133,0.25)] hover:bg-rose-400/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title="I recognize this word but don't know the meaning"
+                >
+                  something
+                </button>
+                <button
+                  onClick={() => handleReviewCard('hard')}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-orange-400/80 text-orange-200 bg-black/20 shadow-[0_0_10px_rgba(251,146,60,0.25)] hover:bg-orange-400/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title="I know this word but it was difficult"
+                >
+                  hard
+                </button>
+                <button
+                  onClick={() => handleReviewCard('good')}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-green-500/80 text-green-200 bg-black/20 shadow-[0_0_10px_rgba(34,197,94,0.25)] hover:bg-green-500/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title="I know this word well"
+                >
+                  okay
+                </button>
+                <button
+                  onClick={() => handleReviewCard('easy')}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-md border border-sky-400/80 text-sky-200 bg-black/20 shadow-[0_0_10px_rgba(56,189,248,0.25)] hover:bg-sky-400/10 disabled:opacity-50 text-xs sm:text-sm"
+                  title="This word is very easy for me"
+                >
+                  easy
+                </button>
+              </div>
+
+              {isLoading && (
+                <div className="text-xs text-neutral-400">Processing…</div>
               )}
-            </ol>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="text-sm text-neutral-300">
+              {isOfflineMode ? 'Enter your JPDB key to enable actions.' : 'Please set your JPDB API key in settings.'}
+            </div>
+          )}
 
-        {/* Offline mode meanings */}
-        {token && isOfflineMode && (() => {
-          const jlptMeaning = getMeaning(popup.word);
-          if (jlptMeaning) {
-            return (
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <div className="ml-4">{jlptMeaning}</div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              isPopupPinned = false;
+              setPopup(null);
+            }}
+            className="shrink-0 w-9 h-9 rounded-xl border border-neutral-700 bg-neutral-900/60 shadow-inner text-red-500 hover:text-red-400 hover:bg-neutral-800/60"
+            title="Close"
+          >
+            <span className="text-xl leading-none">×</span>
+          </button>
+        </div>
+
+        <div className="mt-3 flex gap-4">
+          <div className="flex-1 min-w-0">
+            {showReading && (
+              <div className="text-blue-300 text-sm leading-tight">{reading}</div>
+            )}
+            <div className="text-blue-400 text-3xl font-semibold leading-none tracking-wide">
+              {surfaceWord}
+            </div>
+
+            {rubySegments.length > 0 && (
+              <div className="mt-3">
+                <div className="border-b border-dashed border-neutral-600/70 mb-3" />
+                <div className="flex flex-wrap gap-3">
+                  {rubySegments.map((seg, idx) => (
+                    <div key={`${seg.base}-${idx}`} className="flex flex-col items-center">
+                      <div className="text-sky-300 text-sm leading-none mb-1">{seg.ruby}</div>
+                      <div className="px-2.5 py-1 rounded-md bg-neutral-900/50 border border-neutral-700 text-lg">
+                        {seg.base}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            );
-          }
-          return <div className="text-xs opacity-75 text-gray-500">No dictionary information available</div>;
-        })()}
+            )}
+
+            {token && !isOfflineMode && token.card?.pitchAccent && token.card.pitchAccent.length > 0 && (
+              <div className="mt-3 text-sm text-neutral-200">
+                {token.card.pitchAccent.map((pitch, index) => (
+                  <span key={index}>{renderPitchReact(reading || surfaceWord, pitch)}</span>
+                ))}
+              </div>
+            )}
+
+            {posText && (
+              <div className="mt-3 text-sm text-neutral-200 underline underline-offset-4">
+                {posText}
+              </div>
+            )}
+
+            {/* Meanings */}
+            {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
+              <ol className="mt-3 text-base text-neutral-100 list-decimal list-inside space-y-1">
+                {token.card.meanings.flatMap((meaning, meaningIndex) =>
+                  (meaning.glosses || []).map((gloss, glossIndex) => (
+                    <li key={`m${meaningIndex}-g${glossIndex}`} className="font-serif font-medium">
+                      {gloss}
+                    </li>
+                  ))
+                )}
+              </ol>
+            )}
+
+            {/* Offline mode meanings */}
+            {token && isOfflineMode && (() => {
+              const jlptMeaning = getMeaning(popup.word);
+              if (jlptMeaning) {
+                return (
+                  <div className="mt-3 text-base text-neutral-200">
+                    {jlptMeaning}
+                  </div>
+                );
+              }
+              return (
+                <div className="mt-3 text-sm text-neutral-400">
+                  No dictionary information available
+                </div>
+              );
+            })()}
+
+            {/* Offline mode: JLPT info compact */}
+            {token && isOfflineMode && (() => {
+              const jlptLevel = getJlptLevel(popup.word);
+              const kunReading = getKunReading(popup.word);
+              const onReading = getOnReading(popup.word);
+              if (jlptLevel || kunReading || onReading) {
+                return (
+                  <div className="mt-4 text-sm text-neutral-300">
+                    {jlptLevel && <>JLPT {jlptLevel}</>}
+                    {kunReading && <>, Kun: {kunReading}</>}
+                    {onReading && <>, On: {onReading}</>}
+                  </div>
+                );
+              }
+              return null;
+            })()}
+          </div>
+
+          <div className="w-28 shrink-0 text-right">
+            <div className="space-y-2 text-sm">
+              {hasNeverForget && (
+                <div className="text-lime-300 underline underline-offset-4">never-forget</div>
+              )}
+              {hasBlacklisted && (
+                <div className="text-red-300 underline underline-offset-4">blacklisted</div>
+              )}
+              {token?.card?.frequencyRank && (
+                <div className="text-neutral-200 text-base font-medium">Top {token.card.frequencyRank.toLocaleString()}</div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* JPDB API key required message */}
-      {isOfflineMode && (
-        <div className="p-3 text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400">
-          enter you JPDB key to save vocab as you go.
-        </div>
-      )}
-
-      {/* No API key message */}
-      {!isOfflineMode && !config.apiKey && (
-        <div className="p-3 text-sm text-gray-600 dark:text-gray-300">
-          Please set your JPDB API key in settings to use these features
-        </div>
-      )}
-
-      {/* Close button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setPopup(null);
-        }}
-        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-        title="Close popup"
-      >
-        ✕
-      </button>
+      <div className="px-3 pb-3 pt-2 shrink-0 border-t border-neutral-700/50 bg-neutral-900/40">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePopupClick();
+          }}
+          className="text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-4"
+          title="Open on jpdb.io"
+        >
+          Open on JPDB
+        </button>
+      </div>
     </div>
   );
 }
-

@@ -2,22 +2,9 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 
 // Utility: create a minimal SSE stream response
-function sseResponse(events: Array<Record<string, any>>, delayMs = 0): Response {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      (async () => {
-        for (const ev of events) {
-          const chunk = `data: ${JSON.stringify(ev)}\n\n`;
-          controller.enqueue(encoder.encode(chunk));
-          if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
-        }
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
-      })();
-    },
-  });
-  return new Response(stream as any, {
+function sseResponse(events: Array<Record<string, any>>): HttpResponse {
+  const body = events.map((ev) => `data: ${JSON.stringify(ev)}\n\n`).join('') + 'data: [DONE]\n\n';
+  return new HttpResponse(body, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -34,7 +21,6 @@ export const server = setupServer(
       { status: 'started' },
       { content: '<p>Mock Translation</p>' },
       { complete: true, translated_text: '<div>Mock Translation</div>' },
-      '[DONE]',
     ]);
   }),
 
@@ -55,6 +41,9 @@ export const server = setupServer(
   }),
 
   // Vocabulary domain routes
+  // Vocabulary: list user vocabulary
+  http.get('/api/vocabulary', async () => HttpResponse.json([])),
+
   // Vocabulary due cards
   http.post('/api/due_cards', async () => {
     return HttpResponse.json([
@@ -69,6 +58,32 @@ export const server = setupServer(
       { id: '1', name: 'My Deck', words: 100 },
       { id: '2', name: 'Another Deck', words: 50 },
     ]);
+  }),
+
+  // JPDB: deck vocabulary list (pairs)
+  http.post('/api/jpdb/deck/list-vocabulary', async () => {
+    return HttpResponse.json({ vocabulary: [[1, 1], [2, 2]] });
+  }),
+
+  // JPDB: lookup vocabulary details
+  http.post('/api/jpdb/lookup-vocabulary', async ({ request }) => {
+    const body = await request.json().catch(() => ({} as any));
+    const list = Array.isArray((body as any).list) ? (body as any).list : [];
+    const fields = Array.isArray((body as any).fields) ? (body as any).fields : [];
+    const now = Date.now();
+
+    const byKey: Record<string, any> = {
+      '1/1': { spelling: '誰', reading: 'だれ', meanings: ['who'], due_at: now - 1000, card_state: ['due'] },
+      '2/2': { spelling: '水', reading: 'みず', meanings: ['water'], due_at: now - 1000, card_state: ['due'] },
+    };
+
+    const vocabulary_info = list.map((pair: any) => {
+      const key = `${pair?.[0]}/${pair?.[1]}`;
+      const entry = byKey[key] || {};
+      return fields.map((field: string) => (entry as any)[field] ?? null);
+    });
+
+    return HttpResponse.json({ vocabulary_info });
   }),
 
   // Vocabulary: add word (now with schema validation)
@@ -135,5 +150,3 @@ export const server = setupServer(
     });
   }),
 );
-
-

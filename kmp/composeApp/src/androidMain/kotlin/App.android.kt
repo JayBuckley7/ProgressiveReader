@@ -91,6 +91,11 @@ actual fun App() {
             onUpdateDriveFolderId = { folderId -> settingsStore.setDriveFolderId(folderId) },
             onUpdateReaderDarkMode = { enabled -> settingsStore.setReaderDarkMode(enabled) },
             onUpdateReaderFontSizeSp = { sp -> settingsStore.setReaderFontSizeSp(sp) },
+            onUpdateReaderTtsRate = { rate -> settingsStore.setReaderTtsRate(rate) },
+            onUpdateReaderJpdbApiKey = { key -> settingsStore.setReaderJpdbApiKey(key) },
+            onUpdateReaderCefrLevel = { level -> settingsStore.setReaderCefrLevel(level) },
+            onUpdateReaderJpdbHighlightEnabled = { enabled -> settingsStore.setReaderJpdbHighlightEnabled(enabled) },
+            onUpdateReaderTranslationTargetLang = { lang -> settingsStore.setReaderTranslationTargetLang(lang) },
         )
     }
 }

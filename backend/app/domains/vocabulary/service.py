@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 
 from .integrations import JpdbProvider, JpdbApiProvider
-from .repository import VocabularyRepository
 from .schemas import (
     DueCard,
     Deck,
@@ -16,17 +15,27 @@ from .schemas import (
     Vocabulary as VocabularySchema,
 )
 
+if TYPE_CHECKING:
+    from .repository import VocabularyRepository
+
 
 class VocabularyService:
     def __init__(
         self,
         provider: JpdbProvider,
         api_provider: Optional[JpdbApiProvider] = None,
-        repository: Optional[VocabularyRepository] = None,
+        repository: Optional["VocabularyRepository"] = None,
     ) -> None:
         self._provider = provider
         self._api_provider = api_provider
-        self._repository = repository or VocabularyRepository()
+        self._repository = repository
+
+    def _get_repository(self) -> "VocabularyRepository":
+        if self._repository is None:
+            from .repository import VocabularyRepository
+
+            self._repository = VocabularyRepository()
+        return self._repository
 
     def get_due_cards(self, *, username: Optional[str], password: Optional[str], cookie_string: Optional[str]) -> List[DueCard]:
         return self._provider.fetch_due_cards(username=username, password=password, cookie_string=cookie_string)
@@ -44,12 +53,17 @@ class VocabularyService:
         assert self._api_provider is not None, "JpdbApiProvider not configured"
 
         text_segments_raw = request.text_segments
-        # Normalize segments (trim whitespace and collapse)
+        # Keep segments as-is for correct token offsets.
+        # JPDB returns token positions/lengths in UTF-16 code units (see integrations.py),
+        # and the frontend applies offsets using JS string indices (also UTF-16).
+        # Collapsing whitespace or otherwise normalizing text will desync highlighting.
         all_clean_segments: List[str] = []
         for segment_text in text_segments_raw:
-            normalized_segment = " ".join(segment_text.split())
-            if normalized_segment:
-                all_clean_segments.append(normalized_segment)
+            if not isinstance(segment_text, str):
+                continue
+            if segment_text.strip() == "":
+                continue
+            all_clean_segments.append(segment_text)
 
         if not all_clean_segments:
             return []
@@ -62,6 +76,10 @@ class VocabularyService:
 
         def _utf8_len(s: str) -> int:
             return len(s.encode('utf-8'))
+
+        def _utf16_len(s: str) -> int:
+            # Number of UTF-16 code units (no BOM with utf-16-le).
+            return len(s.encode('utf-16-le')) // 2
 
         def _split_by_bytes(s: str, max_bytes: int) -> List[str]:
             chunks: List[str] = []
@@ -216,12 +234,12 @@ class VocabularyService:
                         current_offset_in_token_surface = 0
                         for part in furigana_data:
                             if isinstance(part, str):
-                                current_offset_in_token_surface += len(part)
+                                current_offset_in_token_surface += _utf16_len(part)
                             elif isinstance(part, list) and len(part) == 2:
                                 base_text_segment_part, ruby_text = part
                                 if isinstance(base_text_segment_part, str) and isinstance(ruby_text, str):
                                     ruby_seg_start = current_offset_in_token_surface
-                                    ruby_seg_length = len(base_text_segment_part)
+                                    ruby_seg_length = _utf16_len(base_text_segment_part)
                                     rubies.append({
                                         'text': ruby_text,
                                         'start': ruby_seg_start,
@@ -242,10 +260,10 @@ class VocabularyService:
                         card=card_data,
                         rubies=rubies,
                     ))
-                character_offset_within_this_api_batch += len(current_segment_text)
+                character_offset_within_this_api_batch += _utf16_len(current_segment_text)
 
-            chars_processed_in_this_batch = sum(len(s) for s in segments_for_this_batch)
-            global_offset_processed_across_batches += chars_processed_in_this_batch
+            units_processed_in_this_batch = sum(_utf16_len(s) for s in segments_for_this_batch)
+            global_offset_processed_across_batches += units_processed_in_this_batch
 
         return all_processed
 
@@ -269,7 +287,7 @@ class VocabularyService:
 
     def add_vocabulary_word(self, *, request: AddVocabularyWordRequest, user_id: Optional[str]) -> VocabularySchema:
         """Add a vocabulary word to the user's collection."""
-        return self._repository.add_vocabulary_word(
+        return self._get_repository().add_vocabulary_word(
             user_id=user_id,
             word=request.word,
             translation=request.translation,
@@ -281,7 +299,7 @@ class VocabularyService:
 
     def toggle_mastered(self, *, user_id: Optional[str], word_id: int, mastered: bool) -> Optional[VocabularySchema]:
         """Toggle mastered status for a vocabulary word."""
-        return self._repository.toggle_mastered(user_id=user_id, word_id=word_id, mastered=mastered)
+        return self._get_repository().toggle_mastered(user_id=user_id, word_id=word_id, mastered=mastered)
 
     def get_user_vocabulary(
         self,
@@ -292,12 +310,10 @@ class VocabularyService:
         book_id: Optional[str] = None,
     ) -> List[VocabularySchema]:
         """Get user's vocabulary words with optional filters."""
-        return self._repository.get_user_vocabulary(
+        return self._get_repository().get_user_vocabulary(
             user_id=user_id,
             language=language,
             mastered=mastered,
             book_id=book_id,
         )
-
-
 

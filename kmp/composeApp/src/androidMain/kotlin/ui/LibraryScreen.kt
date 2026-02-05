@@ -95,6 +95,7 @@ fun LibraryScreen(
     onOpenReader: (bookId: String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenLogin: () -> Unit,
+    bottomBar: (@Composable () -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -368,7 +369,7 @@ fun LibraryScreen(
         val files =
             result
                 .getOrDefault(emptyList())
-                .filter { it.isEpub() }
+                .filter { it.isSupportedBook() }
                 .sortedBy { it.name.lowercase() }
         folderBooks[folder.id] = files
         folderLoading[folder.id] = false
@@ -437,6 +438,7 @@ fun LibraryScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = { bottomBar?.invoke() },
     ) { padding ->
         if (showSignedOutLanding) {
             SignedOutLanding(
@@ -467,7 +469,7 @@ fun LibraryScreen(
                     InfoBanner(
                         icon = Icons.Outlined.Login,
                         title = "Guest mode",
-                        body = "Sign in to browse Drive and download new EPUBs.",
+                        body = "Sign in to browse Drive and download new books.",
                         actionLabel = "Sign in",
                         onAction = onOpenLogin,
                     )
@@ -499,12 +501,12 @@ fun LibraryScreen(
                 files.isEmpty() -> item { Text("No files found.") }
                 else -> {
                     val folders = files.filter { it.isFolder() }
-                    val rootEpubs = files.filter { it.isEpub() }
+                    val rootBooks = files.filter { it.isSupportedBook() }
 
                     item {
                         ShelfSection(
                             title = "My Books",
-                            subtitle = if (rootEpubs.isEmpty()) "No EPUBs in root folder." else "${rootEpubs.size} books",
+                            subtitle = if (rootBooks.isEmpty()) "No books in root folder." else "${rootBooks.size} books",
                             collapsed = collapsedShelves.contains("root"),
                             onToggle = {
                                 collapsedShelves =
@@ -513,7 +515,7 @@ fun LibraryScreen(
                         ) {
                                 BookGrid(
                                     books =
-                                        rootEpubs.map { file ->
+                                        rootBooks.map { file ->
                                             DriveBookCardData(
                                                 file = file,
                                                 cachedEntry = cachedById[file.id],
@@ -530,12 +532,13 @@ fun LibraryScreen(
                                             error = null
                                         downloadingId = file.id
                                         try {
+                                            val destFile = bookCache.contentFile(file.id, file.mimeType, file.name)
                                             val ok =
                                                 downloadDriveFileTo(
                                                     http = http,
                                                     jwt = sessionJwt!!,
                                                     fileId = file.id,
-                                                    dest = bookCache.epubFile(file.id),
+                                                    dest = destFile,
                                                 )
                                             if (!ok) {
                                                 error = "Download failed (${Config.baseUrl})."
@@ -546,16 +549,19 @@ fun LibraryScreen(
                                                 bookCache.extractedDir(file.id).deleteRecursively()
                                             }
 
-                                            epubRepository.extractIfNeeded(
-                                                epubFile = bookCache.epubFile(file.id),
-                                                extractedDir = bookCache.extractedDir(file.id),
-                                            )
-
                                             val coverFile =
-                                                epubRepository.extractCoverIfNeeded(
-                                                    extractedDir = bookCache.extractedDir(file.id),
-                                                    bookDir = bookCache.bookDir(file.id),
-                                                )
+                                                if (file.isEpub()) {
+                                                    epubRepository.extractIfNeeded(
+                                                        epubFile = bookCache.epubFile(file.id),
+                                                        extractedDir = bookCache.extractedDir(file.id),
+                                                    )
+                                                    epubRepository.extractCoverIfNeeded(
+                                                        extractedDir = bookCache.extractedDir(file.id),
+                                                        bookDir = bookCache.bookDir(file.id),
+                                                    )
+                                                } else {
+                                                    null
+                                                }
 
                                             val now = isoNowUtc()
                                             val existing = bookCache.loadIndex()
@@ -604,7 +610,7 @@ fun LibraryScreen(
                                 when {
                                     isLoading -> "Loading…"
                                     folderFiles == null -> "Tap to load"
-                                    folderFiles.isEmpty() -> "No EPUBs"
+                                    folderFiles.isEmpty() -> "No books"
                                     else -> "${folderFiles.size} books"
                                 },
                             leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
@@ -645,12 +651,13 @@ fun LibraryScreen(
                                             error = null
                                             downloadingId = file.id
                                             try {
+                                                val destFile = bookCache.contentFile(file.id, file.mimeType, file.name)
                                                 val ok =
                                                     downloadDriveFileTo(
                                                         http = http,
                                                         jwt = sessionJwt!!,
                                                         fileId = file.id,
-                                                        dest = bookCache.epubFile(file.id),
+                                                        dest = destFile,
                                                     )
                                                 if (!ok) {
                                                     error = "Download failed (${Config.baseUrl})."
@@ -661,16 +668,19 @@ fun LibraryScreen(
                                                     bookCache.extractedDir(file.id).deleteRecursively()
                                                 }
 
-                                                epubRepository.extractIfNeeded(
-                                                    epubFile = bookCache.epubFile(file.id),
-                                                    extractedDir = bookCache.extractedDir(file.id),
-                                                )
-
-                                            val coverFile =
-                                                epubRepository.extractCoverIfNeeded(
-                                                    extractedDir = bookCache.extractedDir(file.id),
-                                                    bookDir = bookCache.bookDir(file.id),
-                                                )
+                                                val coverFile =
+                                                    if (file.isEpub()) {
+                                                        epubRepository.extractIfNeeded(
+                                                            epubFile = bookCache.epubFile(file.id),
+                                                            extractedDir = bookCache.extractedDir(file.id),
+                                                        )
+                                                        epubRepository.extractCoverIfNeeded(
+                                                            extractedDir = bookCache.extractedDir(file.id),
+                                                            bookDir = bookCache.bookDir(file.id),
+                                                        )
+                                                    } else {
+                                                        null
+                                                    }
 
                                                 val now = isoNowUtc()
                                                 val existing = bookCache.loadIndex()
@@ -798,10 +808,12 @@ private fun LibraryBookCard(
                 .clickable(enabled = isCached && !isBusy) { onOpen() },
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val typeLabel = if (file.isPdf()) "PDF" else "EPUB"
             CoverArt(
                 coverPath = coverPath,
                 title = file.name,
                 modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f),
+                typeLabel = typeLabel,
             )
 
             Text(
@@ -856,7 +868,7 @@ private fun LazyListScope.cachedShelves(
 ) {
     when {
         cachedIndex == null -> item { CircularProgressIndicator() }
-        cachedIndex.books.isEmpty() -> item { AppMutedText("No cached books yet. Go online and download an EPUB.") }
+        cachedIndex.books.isEmpty() -> item { AppMutedText("No cached books yet. Go online and download a book.") }
         else -> {
             val grouped =
                 cachedIndex.books.groupBy { it.parentFolderName ?: "My Books" }
@@ -985,9 +997,9 @@ private fun SignedOutLanding(
                     AppMutedText(
                         text =
                             if (isOnline) {
-                                "Sign in to browse your Google Drive library, download EPUBs for offline reading, and pick up where you left off."
+                                "Sign in to browse your Google Drive library, download books for offline reading, and pick up where you left off."
                             } else {
-                                "You're offline. Download EPUBs when online to read them here later."
+                                "You're offline. Download books when online to read them here later."
                             },
                     )
                     AppMutedText("Offline Reading • Bookmarks • Progress")
@@ -1055,6 +1067,14 @@ private fun DriveService.DriveFile.isEpub(): Boolean {
     val mt = mimeType ?: return false
     return mt.equals("application/epub+zip", ignoreCase = true) || mt.contains("epub", ignoreCase = true)
 }
+
+private fun DriveService.DriveFile.isPdf(): Boolean {
+    if (name.endsWith(".pdf", ignoreCase = true)) return true
+    val mt = mimeType ?: return false
+    return mt.equals("application/pdf", ignoreCase = true) || mt.contains("pdf", ignoreCase = true)
+}
+
+private fun DriveService.DriveFile.isSupportedBook(): Boolean = isEpub() || isPdf()
 
 private suspend fun downloadDriveFileTo(
     http: HttpClient,

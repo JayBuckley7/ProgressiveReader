@@ -7,8 +7,10 @@ import androidx.compose.runtime.remember
 sealed interface Screen {
     data class Login(val autoStartSignIn: Boolean = false) : Screen
     data object Library : Screen
+    data object Vocabulary : Screen
+    data object Clipboard : Screen
     data class Reader(val bookId: String) : Screen
-    data object Settings : Screen
+    data class Settings(val showBack: Boolean = false) : Screen
 }
 
 class Navigator(initial: Screen) {
@@ -27,6 +29,8 @@ class Navigator(initial: Screen) {
         stack.clear()
         stack.add(s)
     }
+
+    fun canPop(): Boolean = stack.size > 1
 }
 
 @Composable

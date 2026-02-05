@@ -113,24 +113,15 @@ function wrap(node: Node, wrapper: HTMLElement) {
 export const reverseIndex = new Map<string, { className: string; elements: JpdbWord[] }>();
 
 // Function that will be hooked up to event handlers
-let onWordHoverStart: (event: MouseEvent) => void = () => {
-    console.log('🔧 DEFAULT onWordHoverStart called - this should not happen!');
-};
-let onWordHoverStop: (event?: MouseEvent) => void = () => {
-    console.log('🔧 DEFAULT onWordHoverStop called - this should not happen!');
-};
+let onWordHoverStart: (event: MouseEvent) => void = () => {};
+let onWordHoverStop: (event?: MouseEvent) => void = () => {};
 
 export function setWordHoverHandlers(
     startHandler: (e: MouseEvent) => void,
     stopHandler: () => void
 ) {
-    console.log('🔧 setWordHoverHandlers called with:', typeof startHandler, typeof stopHandler);
-    console.log('🔧 startHandler function name:', startHandler.name);
-    console.log('🔧 startHandler function toString:', startHandler.toString().substring(0, 200));
     onWordHoverStart = startHandler;
     onWordHoverStop = stopHandler;
-    console.log('🔧 Handlers set, onWordHoverStart is now:', typeof onWordHoverStart);
-    console.log('🔧 onWordHoverStart function name after assignment:', onWordHoverStart.name);
 }
 
 // List of super common words that should not be colored (particles, basic grammar, etc.)
@@ -156,8 +147,8 @@ function getColorClass(token: Token): string {
     const word = token.card.spelling;
 
     // Check if we should use local translation (no JPDB key OR offline)
-    const jpdbApiKey = document.cookie.match(/jpdbApiKey=([^;]+)/)?.[1] || "";
-    const shouldUseLocalTranslation = !jpdbApiKey || !navigator.onLine;
+    const config = getCurrentConfig();
+    const shouldUseLocalTranslation = !config.apiKey || !navigator.onLine;
 
     if (shouldUseLocalTranslation) {
         // JLPT OFFLINE MODE: Use local JLPT database for coloring
@@ -197,27 +188,14 @@ function getColorClass(token: Token): string {
 }
 
 export function applyTokens(fragments: Paragraph, tokens: Token[]) {
-    console.log('🔵 [applyTokens] Function called with', fragments.length, 'fragments and', tokens.length, 'tokens');
-
     fragments = fragments.filter(f => f.length > 0);
     let fragmentIndex = 0;
     let curOffset = 0;
     let fragment = fragments[fragmentIndex];
     const text = fragments.map(x => x.node.data.replace(/\u00A0/g, ' ')).join('');
 
-    console.log('🔵 [applyTokens] Text length:', text.length);
-    console.log('🔵 [applyTokens] First 100 chars:', text.substring(0, 100));
-
     for (const token of tokens) {
-        console.log('🔵 [applyTokens] Processing token:', {
-            spelling: token.card.spelling,
-            start: token.start,
-            end: token.end,
-            length: token.length
-        });
-
         if (!fragment) {
-            console.log('🔵 [applyTokens] No fragment available - returning early');
             return;
         }
 
@@ -260,9 +238,6 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             const additionalColorClass = getColorClass(token);
             const className = additionalColorClass ? `${baseClassName} ${additionalColorClass}` : baseClassName;
 
-            console.log('🔵 [applyTokens] Creating highlighted element for word:', token.card.spelling);
-            console.log('🔵 [applyTokens] Classes:', className);
-
             // Check if we're in a PDF text layer (invisible text)
             const isPdfTextLayer = fragment.node.parentElement?.closest('.textLayer') !== null;
 
@@ -280,8 +255,6 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 wrapper.style.setProperty('color', 'transparent', 'important');
             }
 
-            console.log('🔵 [applyTokens] Created wrapper element:', wrapper.tagName, 'with classes:', wrapper.className, 'isPdfTextLayer:', isPdfTextLayer);
-
             // Add event handlers
             wrapper.addEventListener('mouseenter', (event: Event) => {
                 try {
@@ -292,6 +265,17 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             });
             wrapper.addEventListener('mouseleave', (event: Event) => {
                 onWordHoverStop(event as MouseEvent);
+            });
+            wrapper.addEventListener('click', (event: Event) => {
+                // Allow links to function normally.
+                if (wrapper.closest('a')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                try {
+                    onWordHoverStart(event as MouseEvent);
+                } catch (error) {
+                    console.error('Error in onWordHoverStart:', error);
+                }
             });
 
             const idx = reverseIndex.get(`${token.card.vid}/${token.card.sid}`);
@@ -304,12 +288,9 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
             wrapper.jpdbData = {
                 token,
                 context: text,
-                contextOffset: curOffset,
+                contextOffset: token.start,
             };
-
-            console.log('🔵 [applyTokens] About to wrap fragment with highlighted element');
             wrap(fragment.node, wrapper);
-            console.log('🔵 [applyTokens] ✅ Fragment wrapped successfully - element should now be in DOM');
 
             if (!fragment.hasRuby) {
                 for (const ruby of token.rubies) {
@@ -355,4 +336,3 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
         fragment = fragments[++fragmentIndex];
     }
 }
-

@@ -18,6 +18,11 @@ class AppSettingsStore(private val context: Context) {
         val driveFolderId = stringPreferencesKey("drive_folder_id")
         val darkMode = booleanPreferencesKey("reader_dark_mode")
         val fontSizeSp = floatPreferencesKey("reader_font_size_sp")
+        val ttsRate = floatPreferencesKey("reader_tts_rate")
+        val jpdbApiKey = stringPreferencesKey("reader_jpdb_api_key")
+        val cefrLevel = stringPreferencesKey("reader_cefr_level")
+        val jpdbHighlightEnabled = booleanPreferencesKey("reader_jpdb_highlight_enabled")
+        val translationTargetLang = stringPreferencesKey("reader_translation_target_lang")
     }
 
     val settingsFlow: Flow<AppSettings> =
@@ -41,6 +46,28 @@ class AppSettingsStore(private val context: Context) {
         context.dataStore.edit { it[Keys.fontSizeSp] = fontSizeSp }
     }
 
+    suspend fun setReaderTtsRate(rate: Float) {
+        context.dataStore.edit { it[Keys.ttsRate] = rate.coerceIn(0.5f, 2.0f) }
+    }
+
+    suspend fun setReaderJpdbApiKey(apiKey: String?) {
+        context.dataStore.edit {
+            if (apiKey.isNullOrBlank()) it.remove(Keys.jpdbApiKey) else it[Keys.jpdbApiKey] = apiKey
+        }
+    }
+
+    suspend fun setReaderCefrLevel(level: String) {
+        context.dataStore.edit { it[Keys.cefrLevel] = level.trim().ifBlank { "B1" } }
+    }
+
+    suspend fun setReaderJpdbHighlightEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.jpdbHighlightEnabled] = enabled }
+    }
+
+    suspend fun setReaderTranslationTargetLang(lang: String) {
+        context.dataStore.edit { it[Keys.translationTargetLang] = lang.trim().ifBlank { "English" } }
+    }
+
     private fun Preferences.toAppSettings(): AppSettings {
         val backend = this[Keys.backendBaseUrl] ?: "http://10.0.2.2:5000"
         val folderId = this[Keys.driveFolderId]
@@ -48,6 +75,11 @@ class AppSettingsStore(private val context: Context) {
             ReaderSettings(
                 darkMode = this[Keys.darkMode] ?: true,
                 fontSizeSp = this[Keys.fontSizeSp] ?: 18f,
+                ttsRate = this[Keys.ttsRate] ?: 1.0f,
+                cefrLevel = this[Keys.cefrLevel] ?: "B1",
+                jpdbApiKey = this[Keys.jpdbApiKey],
+                jpdbHighlightEnabled = this[Keys.jpdbHighlightEnabled] ?: false,
+                translationTargetLang = this[Keys.translationTargetLang] ?: "English",
             )
         return AppSettings(
             backendBaseUrl = backend,

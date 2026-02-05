@@ -3,7 +3,7 @@ import { SignOutButton } from "@clerk/clerk-react";
 import { useState } from "react";
 
 interface TopActionsProps {
-  currentPage: "library" | "vocabulary" | "stats" | "admin" | "jlpt";
+  currentPage: "library" | "vocabulary" | "grammar" | "stats" | "admin" | "jlpt";
   onShowLogin?: () => void;
 }
 
@@ -92,6 +92,17 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   }`}
                 >
                   {t("nav.clipboard")}
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/grammar");
+                    setShowMobileMenu(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded text-sm app-nav-item ${
+                    currentPage === "grammar" ? "app-nav-active" : ""
+                  }`}
+                >
+                  {t("nav.grammar")}
                 </button>
                 <button
                   onClick={() => {
@@ -188,6 +199,15 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     }`}
                   >
                     {t("nav.clipboard")}
+                  </button>
+                  <button
+                    onClick={() => navigate("/grammar")}
+                    aria-label={t("nav.grammarPageAria")}
+                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
+                      currentPage === "grammar" ? "app-nav-active" : ""
+                    }`}
+                  >
+                    {t("nav.grammar")}
                   </button>
                   <button
                     onClick={() => navigate("/jlpt-tests")}

@@ -201,6 +201,7 @@ export function BookCardHover({
   };
 
   const monogram = (book.title || "Book").trim().slice(0, 1).toUpperCase();
+  const actionSizeClass = density === "compact" ? "h-7 w-7" : "h-8 w-8";
 
   return (
     <div
@@ -277,34 +278,30 @@ export function BookCardHover({
           {/* Hover Actions */}
           {!isMobile && (
           <div
-            className={`absolute left-2 right-2 top-2 z-30 flex items-center justify-between transition-opacity ${
+            className={`absolute left-2 right-2 top-2 z-30 flex flex-wrap items-start justify-end gap-1 transition-opacity ${
               isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
             }`}
           >
-            <div className="flex items-center gap-1">
-              {onMoveToFolder ? (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowCoverMenu(false);
-                    setShowFolderMenu(!showFolderMenu);
-                  }}
-                  className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center"
-                  title={`Move "${book.title}" to folder`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                  </svg>
-                </button>
-              ) : null}
-            </div>
-
-            <div className="flex items-center gap-1">
+            {onMoveToFolder ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCoverMenu(false);
+                  setShowFolderMenu(!showFolderMenu);
+                }}
+                className={`app-button-muted ${actionSizeClass} shrink-0 rounded-md flex items-center justify-center`}
+                title={`Move "${book.title}" to folder`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+              </button>
+            ) : null}
               <button
                 onClick={handleChangeCoverClick}
                 disabled={isUpdatingCover}
-                className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                className={`app-button-muted ${actionSizeClass} shrink-0 rounded-md flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed`}
                 title={`Change cover for "${book.title}"`}
               >
                 {isUpdatingCover ? (
@@ -318,7 +315,7 @@ export function BookCardHover({
 
               <button
                 onClick={handleEditClick}
-                className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center"
+                className={`app-button-muted ${actionSizeClass} shrink-0 rounded-md flex items-center justify-center`}
                 title={`Edit details for "${book.title}"`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,7 +326,7 @@ export function BookCardHover({
               <button
                 onClick={handleDeleteClick}
                 disabled={isDeleting}
-                className="app-button-muted h-8 w-8 rounded-md flex items-center justify-center text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className={`app-button-muted ${actionSizeClass} shrink-0 rounded-md flex items-center justify-center text-red-600 hover:text-red-700 disabled:opacity-60 disabled:cursor-not-allowed`}
                 title={`Delete "${book.title}"`}
               >
                 {isDeleting ? (
@@ -340,7 +337,6 @@ export function BookCardHover({
                   </svg>
                 )}
               </button>
-            </div>
           </div>
           )}
 

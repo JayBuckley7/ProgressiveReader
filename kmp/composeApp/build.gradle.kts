@@ -61,6 +61,12 @@ kotlin {
 
                 // Clerk Android SDK (Android only)
                 implementation("com.clerk:clerk-android:0.1.19")
+
+                // HTML parsing/sanitization + reader highlighting
+                implementation("org.jsoup:jsoup:1.17.2")
+
+                // PDF text extraction (for TTS / search parity with web)
+                implementation("com.tom-roush:pdfbox-android:2.0.27.0")
             }
         }
 
@@ -70,6 +76,8 @@ kotlin {
                 implementation("junit:junit:4.13.2")
                 // Needed for XmlPullParserFactory on the JVM (Android provides this at runtime).
                 implementation("net.sf.kxml:kxml2:2.3.0")
+                implementation("org.jsoup:jsoup:1.17.2")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
             }
         }
     }

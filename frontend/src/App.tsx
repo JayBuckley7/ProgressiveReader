@@ -26,6 +26,7 @@ import { gDriveService } from "@integrations/googleDrive/gdriveService";
 import { AdminPage } from "./features/admin/components/AdminPage";
 import ClipboardReader from "./features/clipboard/components/ClipboardReader";
 import { JLPTTestPage } from "./features/jlpt/components/JLPTTestPage";
+import GrammarPage from "./features/grammar/components/GrammarPage";
 
 // Helper component to allow access if signed in OR has offline books
 function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
@@ -166,6 +167,11 @@ function AppContent() {
                 <ClipboardReader />
               </AuthOrOfflineGuard>
             } />
+            <Route path="grammar" element={
+              <AuthOrOfflineGuard>
+                <GrammarPage />
+              </AuthOrOfflineGuard>
+            } />
             <Route path="admin" element={
               <SignedIn><AdminPage /></SignedIn>
             } />
@@ -215,6 +221,7 @@ function MainLayout() {
       <TopActions
         currentPage={
           location.pathname.startsWith('/vocabulary') ? 'vocabulary' :
+            location.pathname.startsWith('/grammar') ? 'grammar' :
             location.pathname.startsWith('/clipboard') ? 'stats' :
               location.pathname.startsWith('/admin') ? 'admin' :
                 location.pathname.startsWith('/jlpt-tests') ? 'jlpt' : 'library'

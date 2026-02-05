@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseHtmlToJsx } from "@features/reader/utils/htmlToJsx";
 import { toast } from "sonner";
-import { initialize as initializeJpdb, highlightContent } from "@features/reader/services/jpdbInitializer";
+import { initialize as initializeJpdb, highlightContent, removeJpdbHighlighting } from "@features/reader/services/jpdbInitializer";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useTranslation } from "react-i18next";
@@ -165,14 +165,7 @@ export default function ClipboardReader() {
     } else if (contentRef.current) {
       // Remove highlighting wrappers
       const el = contentRef.current;
-      const jpdbElements = el.querySelectorAll('.jpdb-word');
-      jpdbElements.forEach(node => {
-        const parent = node.parentNode;
-        if (parent) {
-          parent.replaceChild(document.createTextNode(node.textContent || ''), node);
-        }
-      });
-      if (el.normalize) el.normalize();
+      removeJpdbHighlighting(el);
     }
   }, [jpdbHighlighted, hasAnyContent, contentRevision]);
 
@@ -421,6 +414,5 @@ export default function ClipboardReader() {
     </div>
   );
 }
-
 
 

@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom';
 import { server } from './server';
 
+// Avoid loading the full ~93MB JLPT dataset in tests (it can OOM vitest/happy-dom).
+vi.mock('~/data/jlpt/kanjiapi_full.json', () => ({
+  default: { kanjis: {} },
+}));
+
 // MSW lifecycle
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
@@ -111,4 +116,3 @@ vi.mock('@shared/contexts/AppDataContext', async (orig) => {
     },
   } as any;
 });
-

@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import { BookReader } from '@features/reader/components/BookReader';
 
-vi.mock('../../hooks/useBookContent', () => ({
+vi.mock('@features/reader/hooks/useBookContent', () => ({
   useBookContent: () => ({
     bookContent: {
       title: 'Demo Book',
@@ -17,16 +17,17 @@ vi.mock('../../hooks/useBookContent', () => ({
   }),
 }));
 
-vi.mock('~/index.ts', () => ({
+vi.mock('@features/reader/services/jpdbInitializer', () => ({
   initialize: () => {},
   highlightContent: async () => {},
+  removeJpdbHighlighting: () => {},
 }));
 
-vi.mock('~/features/reader/content/api-adapter.ts', () => ({
+vi.mock('@features/reader/content/api-adapter', () => ({
   loadConfig: () => ({ apiKey: '' }),
 }));
 
-vi.mock('../../utils/htmlToJsx', () => ({
+vi.mock('@features/reader/utils/htmlToJsx', () => ({
   parseHtmlToJsx: (html: string) => html,
 }));
 
@@ -40,5 +41,4 @@ describe('BookReader (smoke)', () => {
     expect(translateBtn).toBeInTheDocument();
   });
 });
-
 

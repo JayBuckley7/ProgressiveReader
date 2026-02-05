@@ -38,6 +38,7 @@ data class CachedBookEntry(
 data class BookState(
     val version: Int = 1,
     val lastChapterIndex: Int = 0,
+    val lastPdfPageIndex: Int = 0,
     val bookmarks: List<Bookmark> = emptyList(),
     val readerSettingsOverride: ReaderSettings? = null,
 )
@@ -62,9 +63,24 @@ class BookCache(private val context: Context) {
 
     fun bookDir(bookId: String): File = File(booksRootDir(), bookId)
     fun epubFile(bookId: String): File = File(bookDir(bookId), "book.epub")
+    fun pdfFile(bookId: String): File = File(bookDir(bookId), "book.pdf")
     fun extractedDir(bookId: String): File = File(bookDir(bookId), "extracted")
     fun stateFile(bookId: String): File = File(bookDir(bookId), "state.json")
     fun coverFile(bookId: String, ext: String = "jpg"): File = File(bookDir(bookId), "cover.$ext")
+
+    fun contentFile(bookId: String, mimeType: String?, filename: String): File =
+        if (isPdf(mimeType = mimeType, filename = filename)) {
+            pdfFile(bookId)
+        } else {
+            epubFile(bookId)
+        }
+
+    fun cachedContentFile(entry: CachedBookEntry): File =
+        contentFile(
+            bookId = entry.id,
+            mimeType = entry.mimeType,
+            filename = entry.name,
+        )
 
     fun findCoverFile(bookId: String): File? {
         val dir = bookDir(bookId)
@@ -149,5 +165,11 @@ class BookCache(private val context: Context) {
                 timeZone = TimeZone.getTimeZone("UTC")
             }
         return fmt.format(Date(epochMs))
+    }
+
+    private fun isPdf(mimeType: String?, filename: String): Boolean {
+        val mt = mimeType?.lowercase()?.trim()
+        if (mt == "application/pdf" || mt?.contains("pdf") == true) return true
+        return filename.endsWith(".pdf", ignoreCase = true)
     }
 }
