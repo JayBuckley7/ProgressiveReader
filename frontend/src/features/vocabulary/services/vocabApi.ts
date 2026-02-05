@@ -11,6 +11,14 @@ import type {
   ReviewCardRequest,
 } from '~/types/api';
 
+const getJpdbApiKeyFromCookies = (): string | undefined => {
+  if (typeof document === 'undefined') return undefined;
+  const m1 = document.cookie.match(/(?:^|;\s*)jpdbApiKey=([^;]+)/);
+  const m2 = document.cookie.match(/(?:^|;\s*)jpdb_api_key=([^;]+)/);
+  const key = (m1?.[1] || m2?.[1] || '').trim();
+  return key || undefined;
+};
+
 export async function fetchDueCards(request: FetchDueCardsRequest = {}): Promise<DueCard[]> {
   const headers = await getAuthHeaders();
   const response = await fetch('/api/due_cards', {
@@ -27,10 +35,11 @@ export async function fetchDueCards(request: FetchDueCardsRequest = {}): Promise
 
 export async function fetchUserDecks(request: ListUserDecksRequest = {}): Promise<Deck[]> {
   const headers = await getAuthHeaders();
+  const jpdbApiKey = getJpdbApiKeyFromCookies();
   const response = await fetch('/api/list-user-decks', {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
+    body: JSON.stringify({ ...request, jpdbApiKey }),
   });
   if (!response.ok) {
     const message = await response.text().catch(() => '');
@@ -56,10 +65,11 @@ export interface JpdbLookupVocabularyEntry {
 
 export async function listDeckVocabulary(deckId: string | number): Promise<JpdbVocabPair[]> {
   const headers = await getAuthHeaders();
+  const jpdbApiKey = getJpdbApiKeyFromCookies();
   const response = await fetch('/api/jpdb/deck/list-vocabulary', {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: deckId }),
+    body: JSON.stringify({ id: deckId, jpdbApiKey }),
   });
   if (!response.ok) {
     const message = await response.text().catch(() => '');
@@ -74,10 +84,11 @@ export async function lookupVocabulary(
   fields: string[] = ['spelling', 'reading', 'frequency_rank', 'meanings']
 ): Promise<JpdbLookupVocabularyEntry[]> {
   const headers = await getAuthHeaders();
+  const jpdbApiKey = getJpdbApiKeyFromCookies();
   const response = await fetch('/api/jpdb/lookup-vocabulary', {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ list: pairs, fields }),
+    body: JSON.stringify({ list: pairs, fields, jpdbApiKey }),
   });
   if (!response.ok) {
     const message = await response.text().catch(() => '');
