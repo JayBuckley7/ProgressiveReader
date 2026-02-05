@@ -16,27 +16,18 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
   const fetchDecks = async () => {
     setIsLoading(true);
     try {
-      // Get JPDB credentials from localStorage
-      const jpdbUsername = localStorage.getItem('jpdbUsername') || '';
-      const jpdbPassword = localStorage.getItem('jpdbPassword') || '';
-      const jpdbCookie = localStorage.getItem('jpdbCookie') || '';
-
-      if (!jpdbUsername && !jpdbPassword && !jpdbCookie) {
-        toast.error('JPDB credentials not configured. Please check settings.');
-        return;
-      }
-      const fetchedDecks = await fetchUserDecks({
-        username: jpdbUsername || undefined,
-        password: jpdbPassword || undefined,
-        cookie: jpdbCookie || undefined,
-      });
+      // Deck listing uses JPDB API key (stored in cookies via Settings → Highlight).
+      const fetchedDecks = await fetchUserDecks({});
       setDecks(fetchedDecks);
       setIsOpen(true);
       toast.success(`Found ${fetchedDecks.length} decks`);
     } catch (error: any) {
       console.error('Error fetching decks:', error);
-      if (error.message.includes('401') || error.message.includes('Authentication')) {
-        toast.error('JPDB authentication failed. Please check your credentials in settings.');
+      const message = String(error?.message || '');
+      if (message.includes('JPDB API key not configured')) {
+        toast.error('JPDB API key not configured. Add it in Settings → Highlight.');
+      } else if (message.includes('401') || message.includes('Authentication')) {
+        toast.error('Sign in required to load decks.');
       } else {
         toast.error('Failed to fetch decks. Please try again.');
       }
@@ -149,4 +140,3 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
     </div>
   );
 }
-
