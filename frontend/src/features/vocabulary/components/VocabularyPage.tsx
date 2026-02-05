@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@clerk/clerk-react";
@@ -15,6 +15,114 @@ import {
 } from "@features/vocabulary/services/vocabApi";
 
 import { DeckSelector } from "./DeckSelector";
+
+type DueBucketKey = "overdue" | "today" | "tomorrow" | "week" | "later" | "none";
+
+const MS_DAY = 24 * 60 * 60 * 1000;
+
+function normalizeEpochMs(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+  // seconds ≈ 1.7e9, milliseconds ≈ 1.7e12, microseconds ≈ 1.7e15
+  if (value > 1e14) return Math.floor(value / 1000);
+  if (value > 1e11) return Math.floor(value);
+  return Math.floor(value * 1000);
+}
+
+function formatDueAt(value: unknown): string | null {
+  const dueAtMs = normalizeEpochMs(value);
+  if (dueAtMs === null) return null;
+  return new Date(dueAtMs).toLocaleString();
+}
+
+function formatDueDate(value: unknown): string | null {
+  const dueAtMs = normalizeEpochMs(value);
+  if (dueAtMs === null) return null;
+  return new Date(dueAtMs).toLocaleDateString();
+}
+
+function isDueEntry(entry: JpdbLookupVocabularyEntry, nowMs: number): boolean {
+  const dueAt = normalizeEpochMs((entry as any).due_at);
+  if (dueAt !== null) return dueAt <= nowMs;
+
+  const state = (entry as any).card_state;
+  if (typeof state === "string") return state.toLowerCase().includes("due");
+  if (Array.isArray(state)) {
+    return state.some((s) => typeof s === "string" && s.toLowerCase().includes("due"));
+  }
+  return false;
+}
+
+function groupDeckVocabularyByDueAt(entries: JpdbLookupVocabularyEntry[]) {
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  const startOfDayAfterTomorrow = new Date(startOfTomorrow);
+  startOfDayAfterTomorrow.setDate(startOfDayAfterTomorrow.getDate() + 1);
+
+  const startOfTodayMs = startOfToday.getTime();
+  const startOfTomorrowMs = startOfTomorrow.getTime();
+  const startOfDayAfterTomorrowMs = startOfDayAfterTomorrow.getTime();
+  const weekWindowMs = startOfTodayMs + 7 * MS_DAY;
+
+  const buckets: Record<DueBucketKey, JpdbLookupVocabularyEntry[]> = {
+    overdue: [],
+    today: [],
+    tomorrow: [],
+    week: [],
+    later: [],
+    none: [],
+  };
+
+  for (const entry of entries) {
+    const dueAtMs = normalizeEpochMs((entry as any).due_at);
+    if (dueAtMs === null) buckets.none.push(entry);
+    else if (dueAtMs < startOfTodayMs) buckets.overdue.push(entry);
+    else if (dueAtMs < startOfTomorrowMs) buckets.today.push(entry);
+    else if (dueAtMs < startOfDayAfterTomorrowMs) buckets.tomorrow.push(entry);
+    else if (dueAtMs < weekWindowMs) buckets.week.push(entry);
+    else buckets.later.push(entry);
+  }
+
+  const byWord = (a: JpdbLookupVocabularyEntry, b: JpdbLookupVocabularyEntry) =>
+    String(a.spelling || "").localeCompare(String(b.spelling || ""));
+
+  const byDueThenWord = (a: JpdbLookupVocabularyEntry, b: JpdbLookupVocabularyEntry) => {
+    const aDue = normalizeEpochMs((a as any).due_at) ?? Number.POSITIVE_INFINITY;
+    const bDue = normalizeEpochMs((b as any).due_at) ?? Number.POSITIVE_INFINITY;
+    if (aDue !== bDue) return aDue - bDue;
+    return byWord(a, b);
+  };
+
+  buckets.overdue.sort(byDueThenWord);
+  buckets.today.sort(byDueThenWord);
+  buckets.tomorrow.sort(byDueThenWord);
+  buckets.week.sort(byDueThenWord);
+  buckets.later.sort(byDueThenWord);
+  buckets.none.sort(byWord);
+
+  const labels: Record<DueBucketKey, string> = {
+    overdue: "Overdue",
+    today: "Due today",
+    tomorrow: "Due tomorrow",
+    week: "Due this week",
+    later: "Later",
+    none: "No due date",
+  };
+
+  const order: DueBucketKey[] = ["overdue", "today", "tomorrow", "week", "later", "none"];
+  const defaultOpen = new Set<DueBucketKey>(["overdue", "today"]);
+
+  return order
+    .map((key) => ({
+      key,
+      label: labels[key],
+      defaultOpen: defaultOpen.has(key),
+      entries: buckets[key],
+    }))
+    .filter((g) => g.entries.length > 0);
+}
 
 interface VocabularyWord {
   _id: string; // Was: Id<"vocabulary">
@@ -187,6 +295,7 @@ export function VocabularyPage() {
   });
 
   const LOOKUP_BATCH_SIZE = 200;
+  const DECK_LOOKUP_FIELDS = ["spelling", "reading", "frequency_rank", "meanings", "card_state", "due_at"];
 
   const openSelectedDeck = async () => {
     if (!selectedDeckId) {
@@ -211,7 +320,7 @@ export function VocabularyPage() {
       }
 
       const firstChunk = pairs.slice(0, LOOKUP_BATCH_SIZE);
-      const entries = await lookupVocabulary(firstChunk);
+      const entries = await lookupVocabulary(firstChunk, DECK_LOOKUP_FIELDS);
       setDeckVocabEntries(entries);
     } catch (err: any) {
       const message = String(err?.message || "Failed to open deck");
@@ -237,7 +346,7 @@ export function VocabularyPage() {
     setIsLoadingDeckVocab(true);
     setDeckVocabError(null);
     try {
-      const entries = await lookupVocabulary(chunk);
+      const entries = await lookupVocabulary(chunk, DECK_LOOKUP_FIELDS);
       setDeckVocabEntries((prev) => [...prev, ...entries]);
     } catch (err: any) {
       const message = String(err?.message || "Failed to load vocabulary");
@@ -257,31 +366,10 @@ export function VocabularyPage() {
     return spelling.includes(needle) || reading.includes(needle) || meanings.includes(needle);
   });
 
-  const normalizeEpochMs = (value: unknown): number | null => {
-    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
-    // seconds ≈ 1.7e9, milliseconds ≈ 1.7e12, microseconds ≈ 1.7e15
-    if (value > 1e14) return Math.floor(value / 1000);
-    if (value > 1e11) return Math.floor(value);
-    return Math.floor(value * 1000);
-  };
-
-  const isDueEntry = (entry: JpdbLookupVocabularyEntry, nowMs: number): boolean => {
-    const dueAt = normalizeEpochMs((entry as any).due_at);
-    if (dueAt !== null) return dueAt <= nowMs;
-
-    const state = (entry as any).card_state;
-    if (typeof state === "string") return state.toLowerCase().includes("due");
-    if (Array.isArray(state)) {
-      return state.some((s) => typeof s === "string" && s.toLowerCase().includes("due"));
-    }
-    return false;
-  };
-
-  const formatDueAt = (value: unknown): string | null => {
-    const dueAtMs = normalizeEpochMs(value);
-    if (dueAtMs === null) return null;
-    return new Date(dueAtMs).toLocaleString();
-  };
+  const groupedDeckVocabulary = useMemo(
+    () => groupDeckVocabularyByDueAt(filteredDeckVocabulary),
+    [filteredDeckVocabulary]
+  );
 
   const DUE_SCAN_FIELDS = ["due_at", "card_state"];
   const DUE_DETAIL_FIELDS = ["spelling", "reading", "meanings", "card_state", "due_at"];
@@ -509,26 +597,57 @@ export function VocabularyPage() {
         )}
 
         {deckVocabEntries.length > 0 && (
-          <div className="mt-5 grid gap-3">
-            {filteredDeckVocabulary.slice(0, 250).map((entry) => (
-              <div key={`${entry.vid}:${entry.sid}`} className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <div className="flex items-baseline gap-3">
-                    <div className="text-lg font-semibold text-gray-900 dark:text-white">{String(entry.spelling || "")}</div>
-                    {entry.reading ? (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">{String(entry.reading)}</div>
-                    ) : null}
-                  </div>
-                  {typeof entry.frequency_rank === "number" ? (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">#{entry.frequency_rank}</div>
-                  ) : null}
+          <div className="mt-5 space-y-3">
+            {groupedDeckVocabulary.map((group) => (
+              <details
+                key={group.key}
+                open={group.defaultOpen}
+                className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700"
+              >
+                <summary className="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="font-semibold text-gray-900 dark:text-white">{group.label}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{group.entries.length}</div>
+                </summary>
+                <div className="px-4 pb-4 grid gap-3">
+                  {group.entries.map((entry) => {
+                    const dueDate = formatDueDate((entry as any).due_at);
+                    return (
+                      <div
+                        key={`${entry.vid}:${entry.sid}`}
+                        className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="flex items-baseline gap-3">
+                              <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {String(entry.spelling || "")}
+                              </div>
+                              {entry.reading ? (
+                                <div className="text-sm text-gray-600 dark:text-gray-300">
+                                  {String(entry.reading)}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            {dueDate ? (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">Due {dueDate}</div>
+                            ) : null}
+                            {typeof entry.frequency_rank === "number" ? (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">#{entry.frequency_rank}</div>
+                            ) : null}
+                          </div>
+                        </div>
+                        {Array.isArray(entry.meanings) && entry.meanings.length > 0 ? (
+                          <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                            {entry.meanings.slice(0, 2).join("; ")}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
-                {Array.isArray(entry.meanings) && entry.meanings.length > 0 ? (
-                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                    {entry.meanings.slice(0, 2).join("; ")}
-                  </div>
-                ) : null}
-              </div>
+              </details>
             ))}
           </div>
         )}
@@ -859,4 +978,3 @@ function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
 }
 
 export default VocabularyPage;
-
