@@ -2,6 +2,7 @@ package com.progressivereader.kmp.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import com.clerk.api.Clerk
 import com.progressivereader.kmp.navigation.Navigator
 import com.progressivereader.kmp.navigation.Screen
 import com.progressivereader.kmp.offline.BookCache
@@ -30,22 +31,28 @@ fun AppRoot(
                 settings = settings,
                 sessionJwt = sessionJwt,
                 bookCache = bookCache,
+                epubRepository = epubRepository,
                 onOpenReader = { bookId -> navigator.push(Screen.Reader(bookId)) },
                 onOpenSettings = { navigator.push(Screen.Settings) },
-                onOpenLogin = { navigator.push(Screen.Login) },
+                onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
             )
 
-        Screen.Login ->
+        is Screen.Login ->
             LoginScreen(
                 onBack = { navigator.pop() },
                 onContinueAsGuest = {
-                    scope.launch { onSetSessionJwt(null) }
-                    navigator.reset(Screen.Library)
+                    scope.launch {
+                        onSetSessionJwt(null)
+                        navigator.reset(Screen.Library)
+                    }
                 },
                 onSignedIn = { jwt ->
-                    scope.launch { onSetSessionJwt(jwt) }
-                    navigator.reset(Screen.Library)
+                    scope.launch {
+                        onSetSessionJwt(jwt)
+                        navigator.reset(Screen.Library)
+                    }
                 },
+                autoStartSignIn = s.autoStartSignIn,
             )
 
         is Screen.Reader ->
@@ -68,12 +75,14 @@ fun AppRoot(
                 onUpdateDriveFolderId = { folderId -> scope.launch { onUpdateDriveFolderId(folderId) } },
                 onUpdateReaderDarkMode = { enabled -> scope.launch { onUpdateReaderDarkMode(enabled) } },
                 onUpdateReaderFontSizeSp = { sp -> scope.launch { onUpdateReaderFontSizeSp(sp) } },
-                onOpenLogin = { navigator.push(Screen.Login) },
+                onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 onSignOut = {
-                    scope.launch { onSetSessionJwt(null) }
-                    navigator.reset(Screen.Library)
+                    scope.launch {
+                        runCatching { Clerk.signOut() }
+                        onSetSessionJwt(null)
+                        navigator.reset(Screen.Library)
+                    }
                 },
             )
     }
 }
-

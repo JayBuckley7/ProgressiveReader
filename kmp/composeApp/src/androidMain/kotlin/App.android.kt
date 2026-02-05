@@ -4,8 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.clerk.api.Clerk
+import com.clerk.api.network.serialization.ClerkResult
+import com.clerk.api.session.fetchToken
 import com.progressivereader.kmp.core.Config
 import com.progressivereader.kmp.navigation.Screen
 import com.progressivereader.kmp.navigation.rememberNavigator
@@ -27,11 +32,53 @@ actual fun App() {
     val epubRepository = remember { EpubRepository() }
 
     val settings by settingsStore.settingsFlow.collectAsState(initial = AppSettings())
-    val sessionJwt by sessionStore.jwtFlow.collectAsState(initial = null)
+    val storedJwt by sessionStore.jwtFlow.collectAsState(initial = null)
+    val autoSignInEnabled by sessionStore.autoSignInEnabledFlow.collectAsState(initial = true)
+
+    var hasJwtOverride by remember { mutableStateOf(false) }
+    var jwtOverride by remember { mutableStateOf<String?>(null) }
+    val sessionJwt = if (hasJwtOverride) jwtOverride else storedJwt
+
+    LaunchedEffect(hasJwtOverride, jwtOverride, storedJwt) {
+        if (hasJwtOverride && jwtOverride == storedJwt) {
+            hasJwtOverride = false
+            jwtOverride = null
+        }
+    }
 
     LaunchedEffect(settings.backendBaseUrl) { Config.baseUrl = settings.backendBaseUrl }
 
-    ProgressiveReaderTheme {
+    suspend fun setSessionJwt(jwt: String?) {
+        hasJwtOverride = true
+        jwtOverride = jwt
+
+        if (jwt.isNullOrBlank()) sessionStore.setAutoSignInEnabled(false) else sessionStore.setAutoSignInEnabled(true)
+        sessionStore.setJwt(jwt)
+    }
+
+    LaunchedEffect(sessionJwt, autoSignInEnabled) {
+        if (!sessionJwt.isNullOrBlank()) return@LaunchedEffect
+        if (!autoSignInEnabled) return@LaunchedEffect
+
+        val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
+        if (publishableKey.isBlank()) return@LaunchedEffect
+
+        runCatching {
+            if (Clerk.isInitialized.value != true) {
+                Clerk.initialize(
+                    context = appContext,
+                    publishableKey = publishableKey,
+                )
+            }
+        }
+
+        val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
+        if (tokenRes is ClerkResult.Success) {
+            runCatching { setSessionJwt(tokenRes.value.jwt) }
+        }
+    }
+
+    ProgressiveReaderTheme(darkTheme = settings.reader.darkMode) {
         val navigator = rememberNavigator(start = Screen.Library)
         AppRoot(
             navigator = navigator,
@@ -39,7 +86,7 @@ actual fun App() {
             sessionJwt = sessionJwt,
             bookCache = bookCache,
             epubRepository = epubRepository,
-            onSetSessionJwt = { jwt -> sessionStore.setJwt(jwt) },
+            onSetSessionJwt = { jwt -> setSessionJwt(jwt) },
             onUpdateBackendBaseUrl = { url -> settingsStore.setBackendBaseUrl(url) },
             onUpdateDriveFolderId = { folderId -> settingsStore.setDriveFolderId(folderId) },
             onUpdateReaderDarkMode = { enabled -> settingsStore.setReaderDarkMode(enabled) },
@@ -47,4 +94,3 @@ actual fun App() {
         )
     }
 }
-

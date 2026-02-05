@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 
 sealed interface Screen {
-    data object Login : Screen
+    data class Login(val autoStartSignIn: Boolean = false) : Screen
     data object Library : Screen
     data class Reader(val bookId: String) : Screen
     data object Settings : Screen

@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
-import { fetchDueCards, addVocabularyWord, getUserVocabulary, toggleMastered as toggleMasteredApi, type VocabularyWord as ApiVocabularyWord } from "@features/vocabulary/services/vocabApi";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BookmarkletHelper } from "./BookmarkletHelper";
-import { DeckSelector } from "./DeckSelector";
 import { useTranslation } from "react-i18next";
-import type { DueCard } from "~/types/api";
+import { useUser } from "@clerk/clerk-react";
+
+import {
+  addVocabularyWord,
+  getUserVocabulary,
+  listDeckVocabulary,
+  lookupVocabulary,
+  toggleMastered as toggleMasteredApi,
+  type JpdbLookupVocabularyEntry,
+  type JpdbVocabPair,
+  type VocabularyWord as ApiVocabularyWord,
+} from "@features/vocabulary/services/vocabApi";
+
+import { DeckSelector } from "./DeckSelector";
 
 interface VocabularyWord {
   _id: string; // Was: Id<"vocabulary">
@@ -20,106 +30,94 @@ interface VocabularyWord {
 
 export function VocabularyPage() {
   const { t } = useTranslation();
+  const { isSignedIn } = useUser();
+
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMastered, setFilterMastered] = useState<"all" | "mastered" | "learning">("all");
 
-  const [dueCards, setDueCards] = useState<DueCard[]>([]);
-  const [showBookmarkletHelper, setShowBookmarkletHelper] = useState(false);
-  const [selectedDeckId, setSelectedDeckId] = useState<string>("");
   const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
   const [isLoadingVocabulary, setIsLoadingVocabulary] = useState(false);
+  const [vocabError, setVocabError] = useState<string | null>(null);
+
+  const [selectedDeckId, setSelectedDeckId] = useState<string>("");
+  const [selectedDeckName, setSelectedDeckName] = useState<string>("");
+
+  const [deckVocabPairs, setDeckVocabPairs] = useState<JpdbVocabPair[]>([]);
+  const [deckVocabEntries, setDeckVocabEntries] = useState<JpdbLookupVocabularyEntry[]>([]);
+  const [deckVocabError, setDeckVocabError] = useState<string | null>(null);
+  const [isLoadingDeckVocab, setIsLoadingDeckVocab] = useState(false);
+
+  const [dueVocabEntries, setDueVocabEntries] = useState<JpdbLookupVocabularyEntry[]>([]);
+  const [dueVocabError, setDueVocabError] = useState<string | null>(null);
+  const [isLoadingDueVocab, setIsLoadingDueVocab] = useState(false);
+  const [dueVocabProgress, setDueVocabProgress] = useState<{ phase: "scan" | "details"; loaded: number; total: number } | null>(null);
+
   const books: any[] = []; // TODO: Load books from backend if needed
 
-  const CACHE_KEY = "jpdb_due_cards";
-  const CACHE_TIMESTAMP_KEY = "jpdb_due_cards_ts";
-  const CACHE_VALID_MS = 24 * 60 * 60 * 1000;
+  const DUE_CACHE_VALID_MS = 15 * 60 * 1000;
+  const dueCacheKey = (deckId: string) => `jpdb_due_cards_v2:${deckId}`;
+  const dueCacheTsKey = (deckId: string) => `jpdb_due_cards_v2_ts:${deckId}`;
 
-  const loadCachedCards = () => {
-    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-    if (!timestamp) return null;
-    if (Date.now() - Number(timestamp) > CACHE_VALID_MS) {
-      localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+  const loadCachedDue = (deckId: string): JpdbLookupVocabularyEntry[] | null => {
+    if (!deckId) return null;
+    try {
+      const timestamp = localStorage.getItem(dueCacheTsKey(deckId));
+      if (!timestamp) return null;
+      if (Date.now() - Number(timestamp) > DUE_CACHE_VALID_MS) {
+        localStorage.removeItem(dueCacheKey(deckId));
+        localStorage.removeItem(dueCacheTsKey(deckId));
+        return null;
+      }
+      const payload = localStorage.getItem(dueCacheKey(deckId));
+      return payload ? (JSON.parse(payload) as JpdbLookupVocabularyEntry[]) : null;
+    } catch {
       return null;
     }
-    const payload = localStorage.getItem(CACHE_KEY);
-    return payload ? (JSON.parse(payload) as DueCard[]) : null;
   };
 
-  const saveCachedCards = (cards: DueCard[]) => {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cards));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-  };
-
-  const languages = Array.from(new Set(vocabulary.map(word => word.language)));
-  const filteredVocabulary = vocabulary.filter(word => {
-    const matchesSearch = word.word.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         word.translation.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMastered = filterMastered === "all" || 
-                           (filterMastered === "mastered" && word.mastered) ||
-                           (filterMastered === "learning" && !word.mastered);
-    return matchesSearch && matchesMastered;
-  });
-
-  const handleFetchDueCards = async () => {
+  const saveCachedDue = (deckId: string, entries: JpdbLookupVocabularyEntry[]) => {
+    if (!deckId) return;
     try {
-      const jpdbUsername = localStorage.getItem('jpdbUsername') || '';
-      const jpdbPassword = localStorage.getItem('jpdbPassword') || '';
-      const jpdbCookie = localStorage.getItem('jpdbCookie') || '';
-      if (!jpdbUsername && !jpdbPassword && !jpdbCookie) {
-        setShowBookmarkletHelper(true);
-        return;
-      }
-      const cards = await fetchDueCards({
-        username: jpdbUsername || undefined,
-        password: jpdbPassword || undefined,
-        cookie: jpdbCookie || undefined,
-      });
-      setDueCards(cards);
-      saveCachedCards(cards);
-      toast.success(t('vocabulary.dueCards.fetched', { count: cards.length }));
-    } catch (err: any) {
-      console.error('Failed to fetch due cards', err);
-      if (err.message === 'JPDB_CREDENTIALS_MISSING') {
-        toast.error('JPDB credentials not configured. Please check settings.');
-      } else if (err.message.includes('401') || err.message.includes('Authentication')) {
-        toast.error('JPDB authentication failed. Please check your credentials in settings.');
-      } else {
-        toast.error('Failed to fetch due cards. Please try again or check your connection.');
-      }
+      localStorage.setItem(dueCacheKey(deckId), JSON.stringify(entries));
+      localStorage.setItem(dueCacheTsKey(deckId), Date.now().toString());
+    } catch {
+      // ignore storage errors
     }
-  };
-
-  const handleCookieExtracted = (cookie: string) => {
-    localStorage.setItem('jpdbCookie', cookie);
-    setShowBookmarkletHelper(false);
-    toast.success('JPDB cookie saved! Now fetching due cards...');
-    setTimeout(() => {
-      handleFetchDueCards();
-    }, 500);
   };
 
   useEffect(() => {
-    const cached = loadCachedCards();
-    if (cached) {
-      setDueCards(cached);
-    }
-    
-    // Load vocabulary from backend
-    loadVocabulary();
-  }, []);
+    setDeckVocabPairs([]);
+    setDeckVocabEntries([]);
+    setDeckVocabError(null);
 
-  const loadVocabulary = async () => {
+    setDueVocabEntries([]);
+    setDueVocabError(null);
+
+    if (selectedDeckId) {
+      const cached = loadCachedDue(selectedDeckId);
+      if (cached) setDueVocabEntries(cached);
+    } else {
+      setSelectedDeckName("");
+    }
+  }, [selectedDeckId]);
+
+  const loadVocabulary = useCallback(async () => {
     setIsLoadingVocabulary(true);
+    setVocabError(null);
     try {
+      if (!isSignedIn) {
+        setVocabulary([]);
+        return;
+      }
+
       const vocab = await getUserVocabulary({
         language: selectedLanguage || undefined,
         mastered: filterMastered === "all" ? undefined : filterMastered === "mastered",
       });
-      // Convert API format to component format
-      const convertedVocab: VocabularyWord[] = vocab.map((v: ApiVocabularyWord) => ({
+
+      const converted: VocabularyWord[] = vocab.map((v: ApiVocabularyWord) => ({
         _id: v.id,
         word: v.word,
         translation: v.translation,
@@ -130,107 +128,410 @@ export function VocabularyPage() {
         mastered: v.mastered,
         _creationTime: v.createdAt ? new Date(v.createdAt).getTime() : Date.now(),
       }));
-      setVocabulary(convertedVocab);
+      setVocabulary(converted);
     } catch (error) {
-      console.error('Failed to load vocabulary:', error);
-      // Don't show error toast for initial load - vocabulary might be empty
+      console.error("Failed to load vocabulary:", error);
+      const message = error instanceof Error ? error.message : "Failed to load vocabulary";
+      setVocabError(message);
+      if (message.includes("401") || message.includes("Authentication")) {
+        toast.error("Sign in required to load vocabulary.");
+      }
     } finally {
       setIsLoadingVocabulary(false);
     }
-  };
+  }, [filterMastered, isSignedIn, selectedLanguage]);
 
   useEffect(() => {
-    loadVocabulary();
-  }, [selectedLanguage, filterMastered]);
+    void loadVocabulary();
+  }, [loadVocabulary]);
 
   const handleToggleMastered = async (wordId: string) => {
     try {
-      const word = vocabulary.find(w => w._id === wordId);
+      const word = vocabulary.find((w) => w._id === wordId);
       if (!word) return;
-      
+
       const updatedWord = await toggleMasteredApi(wordId, !word.mastered);
-      // Update local state
-      setVocabulary(prev => prev.map(w => 
-        w._id === wordId 
-          ? { ...w, mastered: updatedWord.mastered }
-          : w
-      ));
-      toast.success(`Word marked as ${updatedWord.mastered ? 'mastered' : 'learning'}`);
+      setVocabulary((prev) =>
+        prev.map((w) => (w._id === wordId ? { ...w, mastered: updatedWord.mastered } : w))
+      );
+      toast.success(`Word marked as ${updatedWord.mastered ? "mastered" : "learning"}`);
     } catch (error) {
       toast.error("Failed to update word status");
       console.error(error);
     }
   };
 
-  const getDifficultyColor = (difficulty?: string) => {
-    switch (difficulty) {
-      case "easy": return "bg-green-100 text-green-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "hard": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+  const stats = {
+    total: vocabulary.length,
+    mastered: vocabulary.filter((w) => w.mastered).length,
+    learning: vocabulary.filter((w) => !w.mastered).length,
+  };
+
+  const languages = Array.from(new Set(vocabulary.map((word) => word.language)));
+
+  const filteredVocabulary = vocabulary.filter((word) => {
+    const needle = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !needle ||
+      word.word.toLowerCase().includes(needle) ||
+      word.translation.toLowerCase().includes(needle);
+
+    const matchesMastered =
+      filterMastered === "all" ||
+      (filterMastered === "mastered" && word.mastered) ||
+      (filterMastered === "learning" && !word.mastered);
+
+    const matchesLanguage = !selectedLanguage || word.language === selectedLanguage;
+
+    return matchesSearch && matchesMastered && matchesLanguage;
+  });
+
+  const LOOKUP_BATCH_SIZE = 200;
+
+  const openSelectedDeck = async () => {
+    if (!selectedDeckId) {
+      toast.error("Select a deck first");
+      return;
+    }
+    if (!isSignedIn) {
+      toast.error("Sign in required");
+      return;
+    }
+
+    setIsLoadingDeckVocab(true);
+    setDeckVocabError(null);
+    try {
+      const pairs = await listDeckVocabulary(selectedDeckId);
+      setDeckVocabPairs(pairs);
+      setDeckVocabEntries([]);
+
+      if (pairs.length === 0) {
+        toast.info("Deck is empty");
+        return;
+      }
+
+      const firstChunk = pairs.slice(0, LOOKUP_BATCH_SIZE);
+      const entries = await lookupVocabulary(firstChunk);
+      setDeckVocabEntries(entries);
+    } catch (err: any) {
+      const message = String(err?.message || "Failed to open deck");
+      setDeckVocabError(message);
+      if (message.includes("JPDB API key not configured")) {
+        toast.error("JPDB API key not configured. Add it in Settings → Highlight.");
+      } else {
+        toast.error("Failed to open deck");
+      }
+    } finally {
+      setIsLoadingDeckVocab(false);
     }
   };
 
-  const stats = {
-    total: vocabulary.length,
-    mastered: vocabulary.filter(w => w.mastered).length,
-    learning: vocabulary.filter(w => !w.mastered).length,
+  const loadMoreDeckVocabulary = async () => {
+    if (!deckVocabPairs.length) return;
+    if (isLoadingDeckVocab) return;
+
+    const start = deckVocabEntries.length;
+    const chunk = deckVocabPairs.slice(start, start + LOOKUP_BATCH_SIZE);
+    if (chunk.length === 0) return;
+
+    setIsLoadingDeckVocab(true);
+    setDeckVocabError(null);
+    try {
+      const entries = await lookupVocabulary(chunk);
+      setDeckVocabEntries((prev) => [...prev, ...entries]);
+    } catch (err: any) {
+      const message = String(err?.message || "Failed to load vocabulary");
+      setDeckVocabError(message);
+      toast.error("Failed to load deck vocabulary");
+    } finally {
+      setIsLoadingDeckVocab(false);
+    }
+  };
+
+  const filteredDeckVocabulary = deckVocabEntries.filter((entry) => {
+    const needle = searchTerm.trim().toLowerCase();
+    if (!needle) return true;
+    const spelling = String(entry.spelling || "").toLowerCase();
+    const reading = String(entry.reading || "").toLowerCase();
+    const meanings = Array.isArray(entry.meanings) ? entry.meanings.join(" ").toLowerCase() : "";
+    return spelling.includes(needle) || reading.includes(needle) || meanings.includes(needle);
+  });
+
+  const normalizeEpochMs = (value: unknown): number | null => {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+    // seconds ≈ 1.7e9, milliseconds ≈ 1.7e12, microseconds ≈ 1.7e15
+    if (value > 1e14) return Math.floor(value / 1000);
+    if (value > 1e11) return Math.floor(value);
+    return Math.floor(value * 1000);
+  };
+
+  const isDueEntry = (entry: JpdbLookupVocabularyEntry, nowMs: number): boolean => {
+    const dueAt = normalizeEpochMs((entry as any).due_at);
+    if (dueAt !== null) return dueAt <= nowMs;
+
+    const state = (entry as any).card_state;
+    if (typeof state === "string") return state.toLowerCase().includes("due");
+    if (Array.isArray(state)) {
+      return state.some((s) => typeof s === "string" && s.toLowerCase().includes("due"));
+    }
+    return false;
+  };
+
+  const formatDueAt = (value: unknown): string | null => {
+    const dueAtMs = normalizeEpochMs(value);
+    if (dueAtMs === null) return null;
+    return new Date(dueAtMs).toLocaleString();
+  };
+
+  const DUE_SCAN_FIELDS = ["due_at", "card_state"];
+  const DUE_DETAIL_FIELDS = ["spelling", "reading", "meanings", "card_state", "due_at"];
+  const DUE_BATCH_SIZE = 400;
+
+  const handleRefreshDueCards = async () => {
+    if (!isSignedIn) {
+      toast.error("Sign in to fetch due cards.");
+      return;
+    }
+    if (!selectedDeckId) {
+      toast.error("Select a deck first.");
+      return;
+    }
+    if (isLoadingDueVocab) return;
+
+    setIsLoadingDueVocab(true);
+    setDueVocabError(null);
+    setDueVocabProgress(null);
+
+    try {
+      const pairs = deckVocabPairs.length ? deckVocabPairs : await listDeckVocabulary(selectedDeckId);
+      if (!deckVocabPairs.length) setDeckVocabPairs(pairs);
+
+      if (pairs.length === 0) {
+        setDueVocabEntries([]);
+        saveCachedDue(selectedDeckId, []);
+        toast.info("Deck is empty");
+        return;
+      }
+
+      const nowMs = Date.now();
+      const duePairs: JpdbVocabPair[] = [];
+
+      setDueVocabProgress({ phase: "scan", loaded: 0, total: pairs.length });
+      for (let i = 0; i < pairs.length; i += DUE_BATCH_SIZE) {
+        const chunk = pairs.slice(i, i + DUE_BATCH_SIZE);
+        const scan = await lookupVocabulary(chunk, DUE_SCAN_FIELDS);
+        scan.forEach((entry) => {
+          if (isDueEntry(entry, nowMs)) duePairs.push([entry.vid, entry.sid]);
+        });
+        setDueVocabProgress({
+          phase: "scan",
+          loaded: Math.min(i + DUE_BATCH_SIZE, pairs.length),
+          total: pairs.length,
+        });
+      }
+
+      if (duePairs.length === 0) {
+        setDueVocabEntries([]);
+        saveCachedDue(selectedDeckId, []);
+        toast.success("No due cards found");
+        return;
+      }
+
+      const dueEntries: JpdbLookupVocabularyEntry[] = [];
+      setDueVocabProgress({ phase: "details", loaded: 0, total: duePairs.length });
+      for (let i = 0; i < duePairs.length; i += DUE_BATCH_SIZE) {
+        const chunk = duePairs.slice(i, i + DUE_BATCH_SIZE);
+        const detail = await lookupVocabulary(chunk, DUE_DETAIL_FIELDS);
+        dueEntries.push(...detail);
+        setDueVocabProgress({
+          phase: "details",
+          loaded: Math.min(i + DUE_BATCH_SIZE, duePairs.length),
+          total: duePairs.length,
+        });
+      }
+
+      dueEntries.sort((a, b) => {
+        const aMs = normalizeEpochMs((a as any).due_at) ?? Number.POSITIVE_INFINITY;
+        const bMs = normalizeEpochMs((b as any).due_at) ?? Number.POSITIVE_INFINITY;
+        return aMs - bMs;
+      });
+
+      setDueVocabEntries(dueEntries);
+      saveCachedDue(selectedDeckId, dueEntries);
+      toast.success(`Found ${dueEntries.length} due cards`);
+    } catch (err: any) {
+      const message = String(err?.message || "Failed to fetch due cards");
+      console.error("Failed to fetch due cards", err);
+      setDueVocabError(message);
+      if (message.includes("JPDB API key not configured")) {
+        toast.error("JPDB API key not configured. Add it in Settings → Highlight.");
+      } else {
+        toast.error("Failed to fetch due cards");
+      }
+    } finally {
+      setIsLoadingDueVocab(false);
+      setDueVocabProgress(null);
+    }
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 dark:text-gray-200">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('vocabulary.header.title')}</h1>
-        <p className="text-gray-600 dark:text-gray-400">{t('vocabulary.header.subtitle')}</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t("vocabulary.header.title")}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t("vocabulary.header.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 text-center">
           <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
-          <div className="text-gray-600 dark:text-gray-400">{t('vocabulary.stats.total')}</div>
+          <div className="text-gray-600 dark:text-gray-400">{t("vocabulary.stats.total")}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 text-center">
           <div className="text-3xl font-bold text-green-600">{stats.mastered}</div>
-          <div className="text-gray-600 dark:text-gray-400">{t('vocabulary.stats.mastered')}</div>
+          <div className="text-gray-600 dark:text-gray-400">{t("vocabulary.stats.mastered")}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 text-center">
           <div className="text-3xl font-bold text-orange-600">{stats.learning}</div>
-          <div className="text-gray-600 dark:text-gray-400">{t('vocabulary.stats.learning')}</div>
+          <div className="text-gray-600 dark:text-gray-400">{t("vocabulary.stats.learning")}</div>
         </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">{t('vocabulary.dueCards.title')}</h2>
-        {dueCards.length > 0 ? (
-          <ul className="grid gap-2 mb-4">
-            {dueCards.map(card => (
-              <li key={card.id} className="flex justify-between">
-                <span>{card.term}</span>
-                <span className="text-gray-600 dark:text-gray-300">{card.meaning}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{t('vocabulary.dueCards.none')}</p>
+        <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
+          <h2 className="text-xl font-bold">{t("vocabulary.dueCards.title")}</h2>
+          {selectedDeckName ? (
+            <div className="text-sm text-gray-600 dark:text-gray-400">Deck: {selectedDeckName}</div>
+          ) : null}
+        </div>
+
+        {dueVocabError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+            {dueVocabError}
+          </div>
         )}
-        <button
-          onClick={handleFetchDueCards}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          {t('vocabulary.dueCards.fetch')}
-        </button>
+
+        {dueVocabEntries.length > 0 ? (
+          <>
+            <ul className="grid gap-2 mb-4">
+              {dueVocabEntries.slice(0, 12).map((entry) => {
+                const dueLabel = formatDueAt((entry as any).due_at);
+                return (
+                  <li key={`${entry.vid}:${entry.sid}`} className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {String(entry.spelling || "")}
+                        {entry.reading ? (
+                          <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">{String(entry.reading)}</span>
+                        ) : null}
+                      </div>
+                      {Array.isArray(entry.meanings) && entry.meanings.length > 0 ? (
+                        <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{String(entry.meanings[0])}</div>
+                      ) : null}
+                    </div>
+                    <div className="shrink-0 text-xs text-gray-500 dark:text-gray-400 text-right">
+                      {dueLabel ? `Due: ${dueLabel}` : "Due"}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {dueVocabEntries.length > 12 && (
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                + {dueVocabEntries.length - 12} more
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {selectedDeckId ? t("vocabulary.dueCards.none") : "Select a deck below to compute due cards."}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleRefreshDueCards}
+            disabled={!isSignedIn || !selectedDeckId || isLoadingDueVocab}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingDueVocab ? "Refreshing…" : t("vocabulary.dueCards.fetch")}
+          </button>
+          {dueVocabProgress && (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {dueVocabProgress.phase === "scan" ? "Scanning" : "Loading"} {dueVocabProgress.loaded}/{dueVocabProgress.total}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">{t('vocabulary.decks.title')}</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{t('vocabulary.decks.description')}</p>
-        <DeckSelector 
-          selectedDeckId={selectedDeckId}
-          onDeckSelect={(deck) => {
-            setSelectedDeckId(deck.id);
-            console.log('Selected deck:', deck);
-          }}
-        />
+        <h2 className="text-xl font-bold mb-4">{t("vocabulary.decks.title")}</h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">{t("vocabulary.decks.description")}</p>
+
+        {isSignedIn ? (
+          <DeckSelector
+            selectedDeckId={selectedDeckId}
+            onDeckSelect={(deck) => {
+              setSelectedDeckId(deck.id);
+              setSelectedDeckName(deck.name);
+            }}
+          />
+        ) : (
+          <div className="text-sm app-muted">Sign in to load JPDB decks.</div>
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            onClick={openSelectedDeck}
+            disabled={!isSignedIn || !selectedDeckId || isLoadingDeckVocab}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Open deck
+          </button>
+          <button
+            onClick={loadMoreDeckVocabulary}
+            disabled={!deckVocabPairs.length || deckVocabEntries.length >= deckVocabPairs.length || isLoadingDeckVocab}
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Load more
+          </button>
+          {deckVocabPairs.length > 0 && (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Loaded {deckVocabEntries.length}/{deckVocabPairs.length}
+            </div>
+          )}
+          {isLoadingDeckVocab && <div className="text-sm text-gray-600 dark:text-gray-400">Loading…</div>}
+        </div>
+
+        {deckVocabError && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+            {deckVocabError}
+          </div>
+        )}
+
+        {deckVocabEntries.length > 0 && (
+          <div className="mt-5 grid gap-3">
+            {filteredDeckVocabulary.slice(0, 250).map((entry) => (
+              <div key={`${entry.vid}:${entry.sid}`} className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
+                <div className="flex items-baseline justify-between gap-4">
+                  <div className="flex items-baseline gap-3">
+                    <div className="text-lg font-semibold text-gray-900 dark:text-white">{String(entry.spelling || "")}</div>
+                    {entry.reading ? (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">{String(entry.reading)}</div>
+                    ) : null}
+                  </div>
+                  {typeof entry.frequency_rank === "number" ? (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">#{entry.frequency_rank}</div>
+                  ) : null}
+                </div>
+                {Array.isArray(entry.meanings) && entry.meanings.length > 0 ? (
+                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                    {entry.meanings.slice(0, 2).join("; ")}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6 mb-6">
@@ -238,7 +539,7 @@ export function VocabularyPage() {
           <div className="flex flex-wrap gap-4 items-center">
             <input
               type="text"
-              placeholder={t('vocabulary.controls.searchPlaceholder')}
+              placeholder={t("vocabulary.controls.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
@@ -249,9 +550,11 @@ export function VocabularyPage() {
               onChange={(e) => setSelectedLanguage(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             >
-              <option value="">{t('vocabulary.controls.allLanguages')}</option>
-              {languages.map(lang => (
-                <option key={lang} value={lang}>{lang}</option>
+              <option value="">{t("vocabulary.controls.allLanguages")}</option>
+              {languages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
               ))}
             </select>
 
@@ -260,58 +563,64 @@ export function VocabularyPage() {
               onChange={(e) => setFilterMastered(e.target.value as "all" | "mastered" | "learning")}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
             >
-              <option value="all">{t('vocabulary.controls.filterAll')}</option>
-              <option value="learning">{t('vocabulary.controls.filterLearning')}</option>
-              <option value="mastered">{t('vocabulary.controls.filterMastered')}</option>
+              <option value="all">{t("vocabulary.controls.filterAll")}</option>
+              <option value="learning">{t("vocabulary.controls.filterLearning")}</option>
+              <option value="mastered">{t("vocabulary.controls.filterMastered")}</option>
             </select>
           </div>
 
           <button
             onClick={() => setShowAddForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            disabled={!isSignedIn}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t('vocabulary.controls.addWord')}
+            {t("vocabulary.controls.addWord")}
           </button>
         </div>
       </div>
 
-      {filteredVocabulary.length === 0 ? (
+      {!isSignedIn && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
+          Sign in to view and manage vocabulary. JPDB features also require your JPDB API key (Settings → Highlight).
+        </div>
+      )}
+
+      {vocabError && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+          {vocabError}
+        </div>
+      )}
+
+      {isLoadingVocabulary ? (
+        <div className="flex justify-center py-12">
+          <div className="app-muted animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
+        </div>
+      ) : filteredVocabulary.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📚</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {vocabulary.length === 0 ? t('vocabulary.empty.noneYet') : t('vocabulary.empty.noneFound')}
+            {vocabulary.length === 0 ? t("vocabulary.empty.noneYet") : t("vocabulary.empty.noneFound")}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {vocabulary.length === 0
-              ? t('vocabulary.empty.promptAdd')
-              : t('vocabulary.empty.noneFound')
-            }
+            {vocabulary.length === 0 ? t("vocabulary.empty.promptAdd") : t("vocabulary.empty.noneFound")}
           </p>
         </div>
       ) : (
         <div className="grid gap-4">
           {filteredVocabulary.map((word) => (
-            <VocabularyCard 
-              key={word._id} 
-              word={word} 
-              books={books}
-              onToggleMastered={handleToggleMastered}
-            />
+            <VocabularyCard key={word._id} word={word} books={books} onToggleMastered={handleToggleMastered} />
           ))}
         </div>
       )}
 
       {showAddForm && (
-        <AddWordModal 
-          onClose={() => setShowAddForm(false)} 
+        <AddWordModal
+          onClose={() => setShowAddForm(false)}
+          onAdded={async () => {
+            await loadVocabulary();
+            setShowAddForm(false);
+          }}
           books={books}
-        />
-      )}
-
-      {showBookmarkletHelper && (
-        <BookmarkletHelper
-          onCookieExtracted={handleCookieExtracted}
-          onClose={() => setShowBookmarkletHelper(false)}
         />
       )}
     </div>
@@ -325,13 +634,17 @@ interface VocabularyCardProps {
 }
 
 function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) {
-  const book = word.bookId ? books.find(b => b._id === word.bookId) : null;
+  const book = word.bookId ? books.find((b) => b._id === word.bookId) : null;
   const getDifficultyColor = (difficulty?: string) => {
     switch (difficulty) {
-      case "easy": return "bg-green-100 text-green-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "hard": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "easy":
+        return "bg-green-100 text-green-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "hard":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
   return (
@@ -351,9 +664,7 @@ function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) 
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {word.language}
             </span>
-            {book && (
-              <span>📖 {book.title}</span>
-            )}
+            {book && <span>📖 {book.title}</span>}
             <span>{new Date(word._creationTime).toLocaleDateString()}</span>
           </div>
           {word.context && (
@@ -379,10 +690,11 @@ function VocabularyCard({ word, books, onToggleMastered }: VocabularyCardProps) 
 
 interface AddWordModalProps {
   onClose: () => void;
+  onAdded: () => void | Promise<void>;
   books: any[];
 }
 
-function AddWordModal({ onClose, books }: AddWordModalProps) {
+function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
   const { t } = useTranslation();
   const [word, setWord] = useState("");
   const [translation, setTranslation] = useState("");
@@ -409,7 +721,7 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
         difficulty: difficulty || undefined,
       });
       toast.success("Word added successfully!");
-      onClose();
+      await onAdded();
     } catch (error) {
       toast.error("Failed to add word");
       console.error(error);
@@ -423,21 +735,50 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-height-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('vocabulary.addModal.title')}</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">✕</button>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("vocabulary.addModal.title")}</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              ✕
+            </button>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('vocabulary.addModal.labels.word')}</label>
-              <input type="text" value={word} onChange={(e) => setWord(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white" placeholder={t('vocabulary.addModal.placeholders.word')} required />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("vocabulary.addModal.labels.word")}
+              </label>
+              <input
+                type="text"
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
+                placeholder={t("vocabulary.addModal.placeholders.word")}
+                required
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('vocabulary.addModal.labels.translation')}</label>
-              <input type="text" value={translation} onChange={(e) => setTranslation(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white" placeholder={t('vocabulary.addModal.placeholders.translation')} required />
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("vocabulary.addModal.labels.translation")}
+              </label>
+              <input
+                type="text"
+                value={translation}
+                onChange={(e) => setTranslation(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
+                placeholder={t("vocabulary.addModal.placeholders.translation")}
+                required
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('vocabulary.addModal.labels.language')}</label>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("vocabulary.addModal.labels.language")}
+              </label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
+              >
                 <option value="English">English</option>
                 <option value="Spanish">Spanish</option>
                 <option value="French">French</option>
@@ -451,31 +792,63 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('vocabulary.addModal.labels.book')}</label>
-              <select value={bookId} onChange={(e) => setBookId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white">
-                <option value="">{t('vocabulary.addModal.placeholders.selectBook')}</option>
-                {books.map(book => (
-                  <option key={book._id} value={book._id}>{book.title} - {book.author}</option>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("vocabulary.addModal.labels.book")}
+              </label>
+              <select
+                value={bookId}
+                onChange={(e) => setBookId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">{t("vocabulary.addModal.placeholders.selectBook")}</option>
+                {books.map((book) => (
+                  <option key={book._id} value={book._id}>
+                    {book.title} - {book.author}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('vocabulary.addModal.labels.difficulty')}</label>
-              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard" | "")} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white">
-                <option value="">{t('vocabulary.addModal.placeholders.selectDifficulty')}</option>
-                <option value="easy">{t('vocabulary.addModal.difficultyOptions.easy')}</option>
-                <option value="medium">{t('vocabulary.addModal.difficultyOptions.medium')}</option>
-                <option value="hard">{t('vocabulary.addModal.difficultyOptions.hard')}</option>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("vocabulary.addModal.labels.difficulty")}
+              </label>
+              <select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard" | "")}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">{t("vocabulary.addModal.placeholders.selectDifficulty")}</option>
+                <option value="easy">{t("vocabulary.addModal.difficultyOptions.easy")}</option>
+                <option value="medium">{t("vocabulary.addModal.difficultyOptions.medium")}</option>
+                <option value="hard">{t("vocabulary.addModal.difficultyOptions.hard")}</option>
               </select>
             </div>
             <div>
-              <label className="block text.sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('vocabulary.addModal.labels.context')}</label>
-              <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none dark:bg-gray-700 dark:text-white" placeholder={t('vocabulary.addModal.placeholders.context')} />
+              <label className="block text.sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("vocabulary.addModal.labels.context")}
+              </label>
+              <textarea
+                value={context}
+                onChange={(e) => setContext(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none dark:bg-gray-700 dark:text-white"
+                placeholder={t("vocabulary.addModal.placeholders.context")}
+              />
             </div>
             <div className="flex space-x-3 pt-4">
-              <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">{t('vocabulary.addModal.buttons.cancel')}</button>
-              <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                {isSubmitting ? t('vocabulary.addModal.buttons.submitting') : t('vocabulary.addModal.buttons.submit')}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                {t("vocabulary.addModal.buttons.cancel")}
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? t("vocabulary.addModal.buttons.submitting") : t("vocabulary.addModal.buttons.submit")}
               </button>
             </div>
           </form>
@@ -486,5 +859,4 @@ function AddWordModal({ onClose, books }: AddWordModalProps) {
 }
 
 export default VocabularyPage;
-
 

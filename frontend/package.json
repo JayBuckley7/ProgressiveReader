@@ -8,7 +8,7 @@
     "prebuild": "npm run types:generate",
     "build": "vite build",
     "lint": "tsc -p . --noEmit --pretty false && vite build",
-    "types:generate": "python ../scripts/generate_ts_types.py",
+    "types:generate": "python3 ../scripts/generate_ts_types.py",
     "test": "npm run -s test:part1 && npm run -s test:part2",
     "test:part1": "node --max-old-space-size=4096 ./node_modules/vitest/vitest.mjs --run --exclude src/test/integration/reader.translate.test.tsx --exclude src/test/smoke/BookReader.test.tsx",
     "test:part2": "node --max-old-space-size=4096 ./node_modules/vitest/vitest.mjs --run src/test/smoke/BookReader.test.tsx src/test/integration/reader.translate.test.tsx",

@@ -4,7 +4,6 @@ import type {
   FetchDueCardsRequest, 
   Deck, 
   ListUserDecksRequest, 
-  ListUserDecksResponse,
   GetJpdbDataRequest,
   ProcessedToken,
   MineWordRequest,
@@ -26,7 +25,7 @@ export async function fetchDueCards(request: FetchDueCardsRequest = {}): Promise
   return response.json() as Promise<DueCard[]>;
 }
 
-export async function fetchUserDecks(request: ListUserDecksRequest = {}): Promise<ListUserDecksResponse> {
+export async function fetchUserDecks(request: ListUserDecksRequest = {}): Promise<Deck[]> {
   const headers = await getAuthHeaders();
   const response = await fetch('/api/list-user-decks', {
     method: 'POST',
@@ -37,8 +36,66 @@ export async function fetchUserDecks(request: ListUserDecksRequest = {}): Promis
     const message = await response.text().catch(() => '');
     throw new Error(message || `HTTP ${response.status}`);
   }
-  const decks = (await response.json()) as ListUserDecksResponse;
+  const decks = (await response.json()) as Deck[];
   return decks.map((deck) => ({ ...deck, words: deck.words ?? null }));
+}
+
+export type JpdbVocabPair = [vid: number, sid: number];
+
+export interface JpdbLookupVocabularyEntry {
+  vid: number;
+  sid: number;
+  spelling?: string;
+  reading?: string;
+  frequency_rank?: number;
+  meanings?: string[];
+  due_at?: number | null;
+  card_state?: unknown;
+  [key: string]: unknown;
+}
+
+export async function listDeckVocabulary(deckId: string | number): Promise<JpdbVocabPair[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch('/api/jpdb/deck/list-vocabulary', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: deckId }),
+  });
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+  const payload = (await response.json()) as { vocabulary: JpdbVocabPair[] };
+  return Array.isArray(payload?.vocabulary) ? payload.vocabulary : [];
+}
+
+export async function lookupVocabulary(
+  pairs: JpdbVocabPair[],
+  fields: string[] = ['spelling', 'reading', 'frequency_rank', 'meanings']
+): Promise<JpdbLookupVocabularyEntry[]> {
+  const headers = await getAuthHeaders();
+  const response = await fetch('/api/jpdb/lookup-vocabulary', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ list: pairs, fields }),
+  });
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+  const payload = (await response.json()) as { vocabulary_info: any[] };
+  const infoRows = Array.isArray(payload?.vocabulary_info) ? payload.vocabulary_info : [];
+
+  return pairs.map((pair, idx) => {
+    const row = infoRows[idx];
+    const entry: JpdbLookupVocabularyEntry = { vid: pair[0], sid: pair[1] };
+    if (Array.isArray(row)) {
+      fields.forEach((field, fieldIndex) => {
+        (entry as any)[field] = row[fieldIndex];
+      });
+    }
+    return entry;
+  });
 }
 
 export async function getJpdbData(request: GetJpdbDataRequest): Promise<ProcessedToken[]> {

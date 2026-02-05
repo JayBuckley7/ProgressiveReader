@@ -46,7 +46,7 @@ class AppSettingsStore(private val context: Context) {
         val folderId = this[Keys.driveFolderId]
         val reader =
             ReaderSettings(
-                darkMode = this[Keys.darkMode] ?: false,
+                darkMode = this[Keys.darkMode] ?: true,
                 fontSizeSp = this[Keys.fontSizeSp] ?: 18f,
             )
         return AppSettings(
@@ -56,4 +56,3 @@ class AppSettingsStore(private val context: Context) {
         )
     }
 }
-

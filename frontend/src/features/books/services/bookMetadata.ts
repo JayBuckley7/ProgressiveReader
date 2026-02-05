@@ -140,6 +140,73 @@ class BookMetadataService {
         return lines.slice(0, maxLines);
     }
 
+    private async blobToDataUrl(blob: Blob): Promise<string> {
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error('Failed to read blob'));
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    async getCachedPlaceholderCoverUrl(
+        bookId: string,
+        title: string,
+        fileType?: string,
+        author?: string
+    ): Promise<string | null> {
+        if (typeof window === 'undefined') return null;
+        const key = `prPlaceholderCover:${bookId}`;
+        const normalizedTitle = (title || '').trim();
+        const normalizedAuthor = (author || '').trim();
+        const normalizedFileType = (fileType || '').trim().toLowerCase();
+
+        try {
+            const cached = localStorage.getItem(key);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached) as {
+                        v?: number;
+                        t?: string;
+                        a?: string;
+                        f?: string;
+                        d?: string;
+                    };
+
+                    if (
+                        parsed &&
+                        typeof parsed.d === 'string' &&
+                        (parsed.t || '') === normalizedTitle &&
+                        (parsed.a || '') === normalizedAuthor &&
+                        (parsed.f || '') === normalizedFileType
+                    ) {
+                        return parsed.d;
+                    }
+                } catch {
+                    if (cached.startsWith('data:image/')) {
+                        return cached;
+                    }
+                }
+            }
+        } catch { }
+
+        const blob = await this.generatePlaceholderCover(title, fileType, author);
+        const dataUrl = await this.blobToDataUrl(blob);
+        try {
+            localStorage.setItem(
+                key,
+                JSON.stringify({
+                    v: 1,
+                    t: normalizedTitle,
+                    a: normalizedAuthor,
+                    f: normalizedFileType,
+                    d: dataUrl,
+                })
+            );
+        } catch { }
+        return dataUrl;
+    }
+
     async generatePlaceholderCover(title: string, fileType?: string, author?: string): Promise<Blob> {
         const width = 600;
         const height = 800;

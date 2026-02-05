@@ -27,6 +27,9 @@ data class CachedBookEntry(
     val mimeType: String? = null,
     val size: Long? = null,
     val modifiedTime: String? = null,
+    val parentFolderId: String? = null,
+    val parentFolderName: String? = null,
+    val coverPath: String? = null,
     val cachedAt: String,
     val lastOpenedAt: String? = null,
 )
@@ -61,6 +64,13 @@ class BookCache(private val context: Context) {
     fun epubFile(bookId: String): File = File(bookDir(bookId), "book.epub")
     fun extractedDir(bookId: String): File = File(bookDir(bookId), "extracted")
     fun stateFile(bookId: String): File = File(bookDir(bookId), "state.json")
+    fun coverFile(bookId: String, ext: String = "jpg"): File = File(bookDir(bookId), "cover.$ext")
+
+    fun findCoverFile(bookId: String): File? {
+        val dir = bookDir(bookId)
+        if (!dir.exists()) return null
+        return dir.listFiles()?.firstOrNull { it.isFile && it.name.startsWith("cover.") }
+    }
 
     suspend fun loadIndex(): BooksIndex =
         withContext(Dispatchers.IO) {
@@ -141,4 +151,3 @@ class BookCache(private val context: Context) {
         return fmt.format(Date(epochMs))
     }
 }
-

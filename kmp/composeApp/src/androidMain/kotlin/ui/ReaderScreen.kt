@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,8 +31,8 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -178,6 +177,11 @@ fun ReaderScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                     title = {
                         Column {
                             Text(
@@ -204,23 +208,25 @@ fun ReaderScreen(
                             onClick = { scope.launch { drawerState.open() } },
                         ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
 
-                        TextButton(
+                        AppTextButton(
+                            text = "A-",
                             enabled = fontSizeSp > 12f,
                             onClick = {
                                 val next = (fontSizeSp - 2f).coerceAtLeast(12f)
                                 fontSizeSp = next
                                 onSetFontSizeSp(next)
                             },
-                        ) { Text("A-") }
+                        )
 
-                        TextButton(
+                        AppTextButton(
+                            text = "A+",
                             enabled = fontSizeSp < 32f,
                             onClick = {
                                 val next = (fontSizeSp + 2f).coerceAtMost(32f)
                                 fontSizeSp = next
                                 onSetFontSizeSp(next)
                             },
-                        ) { Text("A+") }
+                        )
 
                         IconButton(
                             onClick = {
@@ -253,15 +259,17 @@ fun ReaderScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Button(
+                        AppOutlineButton(
+                            text = "Previous",
                             enabled = chapterIndex > 0,
                             onClick = { chapterIndex = (chapterIndex - 1).coerceAtLeast(0) },
-                        ) { Text("Previous") }
+                        )
 
-                        Button(
+                        AppPrimaryButton(
+                            text = "Next",
                             enabled = chapterIndex < maxIdx,
                             onClick = { chapterIndex = (chapterIndex + 1).coerceAtMost(maxIdx) },
-                        ) { Text("Next") }
+                        )
                     }
                 }
             },

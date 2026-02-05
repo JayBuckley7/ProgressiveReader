@@ -15,10 +15,7 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -90,7 +87,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -102,21 +99,21 @@ fun SettingsScreen(
 
                         if (sessionJwt.isNullOrBlank()) {
                             Text("Status: Guest", style = MaterialTheme.typography.bodyMedium)
-                            Button(onClick = onOpenLogin) { Text("Sign in") }
+                            AppPrimaryButton(text = "Sign in", onClick = onOpenLogin)
                         } else {
                             Text("Status: Signed in", style = MaterialTheme.typography.bodyMedium)
-                            FilledTonalButton(onClick = onSignOut) {
-                                Icon(Icons.Outlined.Logout, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Sign out")
-                            }
+                            AppTonalButton(
+                                text = "Sign out",
+                                onClick = onSignOut,
+                                icon = { Icon(Icons.Outlined.Logout, contentDescription = null) },
+                            )
                         }
                     }
                 }
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -133,13 +130,14 @@ fun SettingsScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        FilledTonalButton(
+                        AppTonalButton(
+                            text = "Save backend URL",
                             enabled = backendUrl.isNotBlank(),
                             onClick = {
                                 onUpdateBackendBaseUrl(backendUrl.trim())
                                 scope.launch { snackbarHostState.showSnackbar("Saved backend URL") }
                             },
-                        ) { Text("Save backend URL") }
+                        )
 
                         OutlinedTextField(
                             value = folderId,
@@ -148,23 +146,24 @@ fun SettingsScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        FilledTonalButton(
+                        AppTonalButton(
+                            text = "Save Drive folderId",
                             onClick = {
                                 onUpdateDriveFolderId(folderId.trim().ifBlank { null })
                                 scope.launch { snackbarHostState.showSnackbar("Saved Drive folderId") }
                             },
-                        ) { Text("Save Drive folderId") }
+                        )
                     }
                 }
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text("Reader", style = MaterialTheme.typography.titleMedium)
+                        Text("Appearance", style = MaterialTheme.typography.titleMedium)
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -181,6 +180,8 @@ fun SettingsScreen(
                                 },
                             )
                         }
+
+                        AppMutedText("Applies across the app and reader.")
 
                         Text("Font size: ${fontSizeSp.toInt()}sp", style = MaterialTheme.typography.bodyMedium)
                         Slider(

@@ -162,15 +162,38 @@ class GoogleDriveIntegration:
     def list_files(self, user_id: str, folder_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """List files in Google Drive, optionally filtered by folder."""
         headers = self._get_headers(user_id)
-        params = {
-            'fields': 'files(id,name,mimeType,modifiedTime,size,webViewLink,iconLink)'
-        }
-        if folder_id:
-            params['q'] = f"'{folder_id}' in parents and trashed=false"
+        q_parts = ["trashed=false"]
+        # When no folder is specified, default to listing the Drive root folder.
+        # This matches typical "library root" UX and avoids returning the entire Drive corpus.
+        if folder_id and folder_id != "root":
+            q_parts.append(f"'{folder_id}' in parents")
+        else:
+            q_parts.append("'root' in parents")
 
-        response = requests.get(f'{GDRIVE_BASE}/files', headers=headers, params=params)
-        response.raise_for_status()
-        return response.json().get('files', [])
+        params = {
+            'fields': 'nextPageToken, files(id,name,mimeType,modifiedTime,size,webViewLink,iconLink)',
+            'pageSize': 1000,
+            'q': " and ".join(q_parts),
+        }
+
+        all_files: List[Dict[str, Any]] = []
+        page_token: Optional[str] = None
+        while True:
+            if page_token:
+                params['pageToken'] = page_token
+            else:
+                params.pop('pageToken', None)
+
+            response = requests.get(f'{GDRIVE_BASE}/files', headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            all_files.extend(data.get('files', []))
+            page_token = data.get('nextPageToken')
+            if not page_token:
+                break
+
+        return all_files
 
     def upload_file(
         self,
@@ -247,4 +270,3 @@ class GoogleDriveIntegration:
             'access_token': token_obj.token,
             'expires_in': expires_in
         }
-
