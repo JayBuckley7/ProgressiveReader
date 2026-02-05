@@ -210,6 +210,10 @@
       "addBooks": "本を追加",
       "uploadFirst": "最初の本をアップロード"
     },
+    "density": {
+      "comfortable": "標準",
+      "compact": "コンパクト"
+    },
     "signInPrompt": {
       "title": "ライブラリにアクセスするにはサインイン",
       "description": "本を表示・管理するにはサインインしてください"
@@ -242,6 +246,9 @@
     "library": "ライブラリ",
     "vocabulary": "語彙",
     "clipboard": "クリップボード",
+    "test": "テスト",
+    "signOut": "サインアウト",
+    "exitOffline": "オフラインモードを終了",
     "signIn": "サインイン",
     "goLibraryAria": "ライブラリへ移動",
     "libraryPageAria": "ライブラリページ",

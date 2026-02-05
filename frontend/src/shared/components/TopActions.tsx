@@ -27,11 +27,16 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
 
   return (
     <header className="app-header">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-1.5 sm:py-2.5">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-1 sm:py-1.5">
         {/* Mobile Layout */}
         <div className="flex justify-between items-center sm:hidden">
           <button onClick={() => navigate("/")} className="flex items-center">
-            <span className="text-sm font-semibold app-brand">{t("nav.appNameShort")}</span>
+            <img
+              src="/slow.gif"
+              alt={t("nav.appNameFull")}
+              className="h-7 w-7 rounded-md object-contain"
+            />
+            <span className="sr-only">{t("nav.appNameShort")}</span>
           </button>
 
           <button
@@ -97,12 +102,14 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     currentPage === "jlpt" ? "app-nav-active" : ""
                   }`}
                 >
-                  Test
+                  {t("nav.test")}
                 </button>
 
                 <div className="pt-2 border-t app-border">
                   {isSignedIn ? (
-                    <SignOutButton className="w-full text-left px-3 py-2 rounded text-sm app-nav-item" />
+                  <SignOutButton className="w-full text-left px-3 py-2 rounded text-sm app-nav-item">
+                    {t("nav.signOut")}
+                  </SignOutButton>
                   ) : (
                     <button
                       onClick={() => {
@@ -113,7 +120,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                       }}
                       className="w-full text-left px-3 py-2 rounded text-sm app-nav-item"
                     >
-                      Exit Offline Mode
+                      {t("nav.exitOffline")}
                     </button>
                   )}
                 </div>
@@ -141,9 +148,14 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
           <button
             onClick={() => navigate("/")}
             aria-label={t("nav.goLibraryAria")}
-            className="text-lg font-semibold app-brand hover:opacity-80 transition-colors"
+                  className="text-base font-semibold app-brand hover:opacity-80 transition-colors"
           >
-            {t("nav.appNameFull")}
+            <img
+              src="/slow.gif"
+              alt={t("nav.appNameFull")}
+              className="h-8 w-8 rounded-md object-contain"
+            />
+            <span className="sr-only">{t("nav.appNameFull")}</span>
           </button>
 
           <div className="flex items-center space-x-4">
@@ -153,7 +165,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   <button
                     onClick={() => navigate("/")}
                     aria-label={t("nav.libraryPageAria")}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors app-nav-item ${
+                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
                       currentPage === "library" ? "app-nav-active" : ""
                     }`}
                   >
@@ -162,7 +174,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   <button
                     onClick={() => navigate("/vocabulary")}
                     aria-label={t("nav.vocabularyPageAria")}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors app-nav-item ${
+                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
                       currentPage === "vocabulary" ? "app-nav-active" : ""
                     }`}
                   >
@@ -171,7 +183,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   <button
                     onClick={() => navigate("/clipboard")}
                     aria-label={t("nav.clipboardPageAria")}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors app-nav-item ${
+                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
                       currentPage === "stats" ? "app-nav-active" : ""
                     }`}
                   >
@@ -180,16 +192,18 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   <button
                     onClick={() => navigate("/jlpt-tests")}
                     aria-label={t("nav.jlptTestsPageAria") || "JLPT Tests Page"}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors app-nav-item ${
+                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
                       currentPage === "jlpt" ? "app-nav-active" : ""
                     }`}
                   >
-                    Test
+                    {t("nav.test")}
                   </button>
                 </nav>
 
                 {isSignedIn ? (
-                  <SignOutButton className="px-2.5 py-1.5 rounded-md text-sm font-medium app-nav-item" />
+                  <SignOutButton className="px-2.5 py-1.5 rounded-md text-sm font-medium app-nav-item">
+                    {t("nav.signOut")}
+                  </SignOutButton>
                 ) : (
                   <button
                     onClick={() => {
@@ -200,7 +214,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     }}
                     className="px-2.5 py-1.5 rounded-md text-sm font-medium app-nav-item"
                   >
-                    Exit Offline Mode
+                    {t("nav.exitOffline")}
                   </button>
                 )}
               </>

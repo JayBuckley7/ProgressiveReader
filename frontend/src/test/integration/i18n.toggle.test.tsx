@@ -26,7 +26,7 @@ describe('i18n toggle', () => {
     );
 
     // English default
-    expect(screen.getByText(/Progressive Reader/)).toBeInTheDocument();
+    expect(screen.getByAltText(/Progressive Reader/)).toBeInTheDocument();
 
     // Toggle to Japanese
     screen.getByText('toggle-lang').click();
@@ -34,5 +34,4 @@ describe('i18n toggle', () => {
     expect(await screen.findByText(/ライブラリ/)).toBeInTheDocument();
   });
 });
-
 

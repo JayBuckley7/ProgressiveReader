@@ -9,6 +9,7 @@ interface FolderViewProps {
   onDeleteBook: (bookId: string) => void;
   onUpdateCover: (bookId: string, coverFile: File) => void;
   onMoveBookToFolder: (bookId: string, folderId: string | null) => void;
+  density?: "comfortable" | "compact";
 }
 
 export function FolderView({
@@ -17,7 +18,8 @@ export function FolderView({
   onSelectBook,
   onDeleteBook,
   onUpdateCover,
-  onMoveBookToFolder
+  onMoveBookToFolder,
+  density = "comfortable"
 }: FolderViewProps) {
   const handleMoveBook = (bookId: string, targetFolderId: string | null) => {
     onMoveBookToFolder(bookId, targetFolderId);
@@ -100,20 +102,16 @@ export function FolderView({
               {/* Shelf Header */}
               <button
                 onClick={() => toggleShelf(shelf.id)}
-                className="w-full px-5 py-4 flex items-center justify-between transition-colors hover:bg-[var(--ui-surface-alt)]"
+                aria-expanded={!isCollapsed}
+                className="w-full px-5 py-3 flex items-center justify-between transition-colors hover:bg-[var(--ui-surface-alt)]"
               >
                 <div className="text-left">
-                  <h2 className="text-lg font-semibold">
-                    {shelf.title}
-                  </h2>
-                  <p className="text-sm app-muted">
-                    {shelf.books.length} book{shelf.books.length !== 1 ? 's' : ''}
-                  </p>
+                  <h2 className="text-base sm:text-lg font-semibold">{shelf.title}</h2>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="app-chip">
-                    {shelf.books.length}
+                  <div className="app-chip whitespace-nowrap">
+                    {shelf.books.length} book{shelf.books.length !== 1 ? 's' : ''}
                   </div>
                   <svg 
                     className={`w-5 h-5 app-muted transition-transform duration-200 ${
@@ -131,7 +129,13 @@ export function FolderView({
                              {/* Collapsible Shelf Content */}
                {!isCollapsed && (
                  <div className="px-5 pb-5">
-                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+                   <div
+                     className={`grid gap-4 ${
+                       density === "compact"
+                         ? "grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-9"
+                         : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8"
+                     }`}
+                   >
                      {shelf.books.map((book) => (
                        <div key={book.id} className="group">
                          <BookCardHover
@@ -142,6 +146,7 @@ export function FolderView({
                            onMoveToFolder={handleMoveBook}
                            availableFolders={folders}
                            currentFolderId={book.folderId || null}
+                           density={density}
                          />
                        </div>
                      ))}

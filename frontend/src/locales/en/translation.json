@@ -214,6 +214,10 @@
       "addBooks": "Add Books",
       "uploadFirst": "Upload Your First Book"
     },
+    "density": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
     "signInPrompt": {
       "title": "Sign in to access your library",
       "description": "Sign in to view and manage your books"
@@ -246,6 +250,9 @@
     "library": "Library",
     "vocabulary": "Vocabulary",
     "clipboard": "Clipboard",
+    "test": "Test",
+    "signOut": "Sign out",
+    "exitOffline": "Exit Offline Mode",
     "signIn": "Sign in",
     "goLibraryAria": "Go to library",
     "libraryPageAria": "Library page",

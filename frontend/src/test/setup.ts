@@ -27,13 +27,34 @@ window.matchMedia = (query: string) => ({
 });
 
 // Mock Clerk to avoid requiring a real ClerkProvider
+const defaultClerkUser = {
+  isLoaded: true,
+  isSignedIn: true,
+  user: {
+    id: 'test-user',
+    firstName: 'Test',
+    username: 'test',
+    externalAccounts: [],
+  },
+};
+
+// Allow overriding in specific tests
+// @ts-ignore
+globalThis.__CLERK_USER_MOCK__ = defaultClerkUser;
+
 vi.mock('@clerk/clerk-react', async (orig) => {
   const actual = await orig();
+  const getUser = () => {
+    // @ts-ignore
+    return globalThis.__CLERK_USER_MOCK__ || defaultClerkUser;
+  };
   return {
     ...actual,
-    useUser: () => ({ user: null }),
-    SignedIn: ({ children }: any) => children,
-    SignedOut: ({ children }: any) => children,
+    ClerkProvider: ({ children }: any) => children,
+    SignIn: (_props: any) => null,
+    useUser: getUser,
+    SignedIn: ({ children }: any) => (getUser().isSignedIn ? children : null),
+    SignedOut: ({ children }: any) => (getUser().isSignedIn ? null : children),
     SignOutButton: (_props: any) => null,
   } as any;
 });
@@ -44,7 +65,7 @@ const defaultAppData = {
   folders: [],
   isLoading: false,
   isDriveBookLoading: false,
-  isAuthenticated: false,
+  isAuthenticated: true,
   syncBooks: async () => {},
   uploadBook: async () => ({ ok: true }),
   deleteBook: async () => {},
@@ -90,5 +111,4 @@ vi.mock('@shared/contexts/AppDataContext', async (orig) => {
     },
   } as any;
 });
-
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { BookMetadata, Folder } from '~/types';
 import { EditBookModal } from './EditBookModal';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
@@ -13,6 +13,7 @@ interface BookCardHoverProps {
   availableFolders?: Folder[];
   currentFolderId?: string | null;
   onBookUpdated?: () => void;
+  density?: "comfortable" | "compact";
 }
 
 export function BookCardHover({ 
@@ -23,7 +24,8 @@ export function BookCardHover({
   onMoveToFolder,
   availableFolders = [],
   currentFolderId,
-  onBookUpdated
+  onBookUpdated,
+  density = "comfortable"
 }: BookCardHoverProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -31,7 +33,36 @@ export function BookCardHover({
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [showCoverMenu, setShowCoverMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [placeholderUrl, setPlaceholderUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const handler = () => setIsMobile(media.matches);
+    handler();
+    media.addEventListener("change", handler);
+    return () => media.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (book.coverUrl) {
+      setPlaceholderUrl(null);
+      return;
+    }
+    bookMetadataService
+      .getCachedPlaceholderCoverUrl(book.id, book.title, book.fileType, book.author)
+      .then((url) => {
+        if (!cancelled) setPlaceholderUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPlaceholderUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [book.coverUrl, book.id, book.title, book.fileType, book.author]);
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -182,42 +213,69 @@ export function BookCardHover({
       }}
       onClick={handleCardClick}
     >
-      <div className="app-card overflow-hidden transition-shadow duration-150 hover:shadow-sm">
+      <div className="app-card transition-shadow duration-150 hover:shadow-sm">
         {/* Cover Wrapper */}
-        <div
-          className={`book-cover-wrapper relative aspect-[3/4] ${book.coverUrl ? "" : "book-cover-placeholder"}`}
-        >
-          {book.coverUrl ? (
-            <img
-              src={book.coverUrl}
-              alt={book.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="relative z-10 h-full w-full p-3 flex flex-col">
-              <div className="flex items-start justify-between gap-2">
-                <span className="app-chip">{(book.fileType || "file").toUpperCase()}</span>
-              </div>
-
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-4xl font-semibold tracking-tight select-none opacity-80">
-                  {monogram}
+        <div className="book-cover-wrapper relative aspect-[3/4] overflow-visible">
+          <div
+            className={`relative h-full w-full overflow-hidden ${book.coverUrl ? "" : "book-cover-placeholder"}`}
+          >
+            {book.coverUrl ? (
+              <img
+                src={book.coverUrl}
+                alt={book.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : placeholderUrl ? (
+              <img
+                src={placeholderUrl}
+                alt={book.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className={`relative z-10 h-full w-full flex flex-col ${density === "compact" ? "p-2" : "p-3"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="app-chip">{(book.fileType || "file").toUpperCase()}</span>
                 </div>
-              </div>
 
-              <div className="text-xs font-medium leading-snug line-clamp-2">
-                {book.title}
-              </div>
-              {book.author ? (
-                <div className="mt-1 text-[11px] app-muted line-clamp-1">
-                  {book.author}
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-4xl font-semibold tracking-tight select-none opacity-80">
+                    {monogram}
+                  </div>
                 </div>
-              ) : null}
-            </div>
+
+                <div className="text-xs font-medium leading-snug line-clamp-2">
+                  {book.title}
+                </div>
+                {book.author ? (
+                  <div className="mt-1 text-[11px] app-muted line-clamp-1">
+                    {book.author}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {isMobile && (
+            <button
+              onClick={handleChangeCoverClick}
+              disabled={isUpdatingCover}
+              className="absolute top-2 right-2 z-30 h-8 w-8 rounded-md app-button-muted flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+              title={`Change cover for "${book.title}"`}
+            >
+              {isUpdatingCover ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current opacity-70"></div>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16M14 14l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
           )}
 
           {/* Hover Actions */}
+          {!isMobile && (
           <div
             className={`absolute left-2 right-2 top-2 z-30 flex items-center justify-between transition-opacity ${
               isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -284,6 +342,7 @@ export function BookCardHover({
               </button>
             </div>
           </div>
+          )}
 
           {/* Hidden file input */}
           <input
@@ -295,7 +354,7 @@ export function BookCardHover({
             onClick={(e) => e.stopPropagation()}
           />
 
-          {showCoverMenu && (
+          {showCoverMenu && !isMobile && (
             <div
               className="absolute top-11 right-2 z-40 w-56 app-card p-1"
               onClick={(e) => e.stopPropagation()}
@@ -313,6 +372,39 @@ export function BookCardHover({
               >
                 Find cover automatically
               </button>
+            </div>
+          )}
+
+          {showCoverMenu && isMobile && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 flex items-end"
+              onClick={() => setShowCoverMenu(false)}
+            >
+              <div
+                className="w-full app-card rounded-t-2xl p-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-[var(--ui-border)]" />
+                <button
+                  onClick={triggerCoverFilePicker}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors"
+                >
+                  Choose image…
+                </button>
+                <button
+                  onClick={handleAutoCoverLookup}
+                  disabled={isUpdatingCover}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Find cover automatically
+                </button>
+                <button
+                  onClick={() => setShowCoverMenu(false)}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm app-muted hover:bg-[var(--ui-surface-alt)] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
 
@@ -365,8 +457,8 @@ export function BookCardHover({
         </div>
 
         {/* Book Info */}
-        <div className="p-3">
-          <h3 className="book-item-title font-semibold mb-1 line-clamp-2">
+        <div className={density === "compact" ? "p-2" : "p-3"}>
+          <h3 className={`book-item-title font-semibold mb-1 line-clamp-2 ${density === "compact" ? "text-sm" : ""}`}>
             {book.title}
           </h3>
           <div className="flex items-center justify-between text-xs app-muted">

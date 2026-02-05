@@ -17,7 +17,6 @@ import BookLibrary from "./features/books/components/BookLibrary";
 import { BookReader } from "./features/reader/components/BookReader";
 import { SettingsProvider } from "@shared/contexts/SettingsContext";
 import { TopActions } from "@shared/components/TopActions";
-import { HeroBanner } from "@shared/components/HeroBanner";
 import { DangerZone } from "@shared/components/DangerZone";
 import { Footer } from "@shared/components/Footer";
 import { VocabularyPage } from "./features/vocabulary/components/VocabularyPage";
@@ -190,7 +189,6 @@ function AppContent() {
 function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isJLPTTestPage = location.pathname.startsWith('/jlpt-tests');
 
   const handleShowLogin = () => {
     // Navigate to home if not already there since the login form is on home
@@ -223,7 +221,6 @@ function MainLayout() {
         }
         onShowLogin={handleShowLogin}
       />
-      {!isJLPTTestPage && <HeroBanner />}
       <main className="flex-1">
         <Outlet />
       </main>
