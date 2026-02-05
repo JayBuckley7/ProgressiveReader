@@ -171,7 +171,7 @@ class GoogleDriveIntegration:
             q_parts.append("'root' in parents")
 
         params = {
-            'fields': 'nextPageToken, files(id,name,mimeType,modifiedTime,size,webViewLink,iconLink)',
+            'fields': 'nextPageToken, files(id,name,mimeType,modifiedTime,size,webViewLink,iconLink,thumbnailLink,hasThumbnail)',
             'pageSize': 1000,
             'q': " and ".join(q_parts),
         }
@@ -194,6 +194,54 @@ class GoogleDriveIntegration:
                 break
 
         return all_files
+
+    def get_thumbnail(self, user_id: str, file_id: str, size: int = 420) -> tuple[Optional[bytes], Optional[str]]:
+        """Fetch a Drive thumbnail image for the file, if available."""
+        token = self.provider.get_access_token(user_id)
+        if not token:
+            raise ValueError("No Google access token available")
+
+        headers = {'Authorization': f'Bearer {token}'}
+        meta_res = requests.get(
+            f'{GDRIVE_BASE}/files/{file_id}',
+            headers=headers,
+            params={'fields': 'thumbnailLink,hasThumbnail'},
+            timeout=15,
+        )
+        meta_res.raise_for_status()
+        meta = meta_res.json()
+
+        thumb_link = meta.get('thumbnailLink')
+        if not thumb_link:
+            return None, None
+
+        url = self._normalize_thumbnail_url(thumb_link, size=size)
+
+        # Try fetching with Authorization header first; fall back to access_token query parameter.
+        img_res = requests.get(url, headers=headers, allow_redirects=True, timeout=15)
+        if img_res.status_code in (401, 403):
+            sep = '&' if '?' in url else '?'
+            img_res = requests.get(f'{url}{sep}access_token={token}', allow_redirects=True, timeout=15)
+
+        if img_res.status_code == 404:
+            return None, None
+        img_res.raise_for_status()
+
+        content_type = img_res.headers.get('Content-Type') or 'image/jpeg'
+        return img_res.content, content_type
+
+    def _normalize_thumbnail_url(self, url: str, size: int) -> str:
+        """Best-effort adjust Drive thumbnail URL to requested size."""
+        try:
+            import re
+
+            # Common patterns: ...=s220 or ...=w256-h256 or ...sz=s220
+            url = re.sub(r"=s\\d+", f"=s{size}", url)
+            url = re.sub(r"sz=s\\d+", f"sz=s{size}", url)
+            url = re.sub(r"=w\\d+-h\\d+", f"=w{size}-h{size}", url)
+            return url
+        except Exception:
+            return url
 
     def upload_file(
         self,

@@ -12,6 +12,8 @@ class DriveFile(BaseModel):
     size: Optional[str] = None
     webViewLink: Optional[str] = None
     iconLink: Optional[str] = None
+    thumbnailLink: Optional[str] = None
+    hasThumbnail: Optional[bool] = None
 
 
 class ListFilesRequest(BaseModel):
@@ -39,4 +41,3 @@ class HealthResponse(BaseModel):
     service: str
     clerk_secret_key_length: Optional[int] = None
     clerk_secret_key_prefix: Optional[str] = None
-

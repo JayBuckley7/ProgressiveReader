@@ -52,6 +52,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
@@ -61,10 +62,12 @@ import com.progressivereader.kmp.drive.DriveService
 import com.progressivereader.kmp.offline.BookCache
 import com.progressivereader.kmp.offline.BooksIndex
 import com.progressivereader.kmp.offline.CachedBookEntry
+import com.progressivereader.kmp.offline.DriveCoverCache
 import com.progressivereader.kmp.reader.EpubRepository
 import com.progressivereader.kmp.settings.AppSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
+import io.ktor.client.request.url
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readAvailable
@@ -76,6 +79,11 @@ import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -93,6 +101,23 @@ fun LibraryScreen(
 
     val isOnline = rememberIsOnline()
     val canUseDrive = isOnline && !sessionJwt.isNullOrBlank()
+
+    val context = LocalContext.current.applicationContext
+    val driveCoverCache = remember { DriveCoverCache(context) }
+    val remoteCoverPathById = remember { mutableStateMapOf<String, String?>() }
+    val remoteCoverLoadingById = remember { mutableStateMapOf<String, Boolean>() }
+    val coverFetchSemaphore = remember { Semaphore(permits = 4) }
+    var coverImageIdByBookId by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var lastMetadataFileIdLoaded by remember { mutableStateOf<String?>(null) }
+    var metadataLoadError by remember { mutableStateOf<String?>(null) }
+
+    val metadataJson =
+        remember {
+            Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            }
+        }
 
     val http = remember { createHttpClient() }
     val driveService = remember(sessionJwt) { DriveService { sessionJwt } }
@@ -159,11 +184,57 @@ fun LibraryScreen(
         }
     }
 
+    fun parseCoverMapFromMetadataJson(text: String): Map<String, String> {
+        val element = runCatching { metadataJson.parseToJsonElement(text) }.getOrNull() ?: return emptyMap()
+        val root = element.jsonObject
+        val covers = root["covers"]?.jsonObject ?: return emptyMap()
+        return covers.mapNotNull { (bookId, value) ->
+            val coverId = runCatching { value.jsonPrimitive.content }.getOrNull()
+            if (coverId.isNullOrBlank()) null else bookId to coverId
+        }.toMap()
+    }
+
+    suspend fun refreshMetadataIfPresent(files: List<DriveService.DriveFile>, force: Boolean) {
+        if (!canUseDrive) return
+
+        val metadataFile =
+            files.firstOrNull { it.name.equals("metadata.json", ignoreCase = true) }
+                ?: return
+
+        if (!force && metadataFile.id == lastMetadataFileIdLoaded && coverImageIdByBookId.isNotEmpty()) return
+
+        metadataLoadError = null
+        val bytes = runCatching { driveService.download(metadataFile.id) }.getOrNull()
+        if (bytes == null || bytes.isEmpty()) {
+            metadataLoadError = "Failed to load metadata.json"
+            return
+        }
+
+        val text = runCatching { bytes.toString(Charsets.UTF_8) }.getOrNull()
+        if (text.isNullOrBlank()) {
+            metadataLoadError = "Invalid metadata.json"
+            return
+        }
+
+        val covers = parseCoverMapFromMetadataJson(text)
+        if (covers.isNotEmpty()) {
+            coverImageIdByBookId = covers
+            lastMetadataFileIdLoaded = metadataFile.id
+        } else {
+            // Metadata exists but doesn't have covers; keep existing map.
+            lastMetadataFileIdLoaded = metadataFile.id
+        }
+    }
+
     suspend fun refreshDrive(force: Boolean = false) {
         error = null
         driveFetchFailed = false
         folderBooks.clear()
         folderLoading.clear()
+        if (force) {
+            remoteCoverPathById.clear()
+            remoteCoverLoadingById.clear()
+        }
         if (!canUseDrive) {
             remoteFiles = null
             return
@@ -198,7 +269,9 @@ fun LibraryScreen(
             res.onFailure(::onDriveFailure)
             if (driveFetchFailed) return
             lastDriveRootFolderIdFetched = effectiveRootFolderId
-            remoteFiles = res.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
+            val list = res.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
+            runCatching { refreshMetadataIfPresent(list, force = force) }
+            remoteFiles = list
             return
         }
 
@@ -215,16 +288,78 @@ fun LibraryScreen(
             if (driveFetchFailed) return
 
             lastDriveRootFolderIdFetched = appFolder.id
-            remoteFiles = appRes.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
+            val list = appRes.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
+            runCatching { refreshMetadataIfPresent(list, force = force) }
+            remoteFiles = list
             return
         }
 
         lastDriveRootFolderIdFetched = null
-        remoteFiles = rootFiles.sortedBy { it.name.lowercase() }
+        val list = rootFiles.sortedBy { it.name.lowercase() }
+        runCatching { refreshMetadataIfPresent(list, force = force) }
+        remoteFiles = list
     }
 
     fun cachedById(): Map<String, CachedBookEntry> =
         cachedIndex?.books?.associateBy { it.id }.orEmpty()
+
+    suspend fun ensureRemoteCover(file: DriveService.DriveFile, cachedEntry: CachedBookEntry?) {
+        if (!canUseDrive) return
+        if (!file.isEpub()) return
+
+        val fileId = file.id
+        if (remoteCoverPathById.containsKey(fileId)) return
+        if (remoteCoverLoadingById[fileId] == true) return
+
+        val localCover = coverFileForCached(bookCache, cachedEntry)
+        if (localCover?.exists() == true) return
+
+        val existing = driveCoverCache.existingCoverFile(fileId)
+        if (existing != null) {
+            remoteCoverPathById[fileId] = existing.absolutePath
+            return
+        }
+
+        val coverImageId = coverImageIdByBookId[fileId]
+
+        remoteCoverLoadingById[fileId] = true
+        try {
+            coverFetchSemaphore.withPermit {
+                val dest = driveCoverCache.coverFile(fileId)
+                if (!coverImageId.isNullOrBlank()) {
+                    val thumbRes =
+                        downloadDriveThumbnailTo(
+                            http = http,
+                            jwt = sessionJwt!!,
+                            fileId = coverImageId,
+                            dest = dest,
+                            size = 600,
+                        )
+                    if (thumbRes == ThumbnailDownloadResult.Success) {
+                        remoteCoverPathById[fileId] = dest.absolutePath
+                        return@withPermit
+                    }
+
+                    val ok = downloadDriveFileTo(http = http, jwt = sessionJwt!!, fileId = coverImageId, dest = dest)
+                    remoteCoverPathById[fileId] = if (ok && dest.exists() && dest.length() > 0) dest.absolutePath else null
+                    return@withPermit
+                }
+
+                if (file.hasThumbnail == false && file.thumbnailLink.isNullOrBlank()) {
+                    remoteCoverPathById[fileId] = null
+                    return@withPermit
+                }
+
+                when (downloadDriveThumbnailTo(http = http, jwt = sessionJwt!!, fileId = fileId, dest = dest)) {
+                    ThumbnailDownloadResult.Success -> remoteCoverPathById[fileId] = dest.absolutePath
+                    ThumbnailDownloadResult.NotFound -> remoteCoverPathById[fileId] = null
+                    ThumbnailDownloadResult.Failed -> remoteCoverPathById[fileId] = null
+                }
+            }
+        } finally {
+            remoteCoverLoadingById[fileId] = false
+        }
+    }
 
     suspend fun loadFolderBooks(folder: DriveService.DriveFile) {
         if (folderLoading[folder.id] == true) return
@@ -244,6 +379,15 @@ fun LibraryScreen(
     LaunchedEffect(sessionJwt, settings.driveFolderId) {
         initialFolderCollapseApplied = false
         collapsedShelves = setOf()
+    }
+    LaunchedEffect(sessionJwt) {
+        if (sessionJwt.isNullOrBlank()) {
+            coverImageIdByBookId = emptyMap()
+            lastMetadataFileIdLoaded = null
+            metadataLoadError = null
+            remoteCoverPathById.clear()
+            remoteCoverLoadingById.clear()
+        }
     }
     LaunchedEffect(settings.driveFolderId) {
         if (!settings.driveFolderId.isNullOrBlank()) {
@@ -367,20 +511,23 @@ fun LibraryScreen(
                                     if (collapsedShelves.contains("root")) collapsedShelves - "root" else collapsedShelves + "root"
                             },
                         ) {
-                            BookGrid(
-                                books =
-                                    rootEpubs.map { file ->
-                                        DriveBookCardData(
-                                            file = file,
-                                            cachedEntry = cachedById[file.id],
-                                            coverFile = coverFileForCached(bookCache, cachedById[file.id]),
-                                        )
-                                    },
-                                downloadingId = downloadingId,
-                                onOpen = { onOpenReader(it) },
-                                onDownload = { file, needsUpdate ->
-                                    scope.launch {
-                                        error = null
+                                BookGrid(
+                                    books =
+                                        rootEpubs.map { file ->
+                                            DriveBookCardData(
+                                                file = file,
+                                                cachedEntry = cachedById[file.id],
+                                                coverFile = coverFileForCached(bookCache, cachedById[file.id]),
+                                            )
+                                        },
+                                    downloadingId = downloadingId,
+                                    remoteCoverPathFor = { id -> remoteCoverPathById[id] },
+                                    remoteCoverAttemptedFor = { id -> remoteCoverPathById.containsKey(id) },
+                                    ensureRemoteCover = { file, cachedEntry -> ensureRemoteCover(file, cachedEntry) },
+                                    onOpen = { onOpenReader(it) },
+                                    onDownload = { file, needsUpdate ->
+                                        scope.launch {
+                                            error = null
                                         downloadingId = file.id
                                         try {
                                             val ok =
@@ -489,6 +636,9 @@ fun LibraryScreen(
                                             )
                                         },
                                     downloadingId = downloadingId,
+                                    remoteCoverPathFor = { id -> remoteCoverPathById[id] },
+                                    remoteCoverAttemptedFor = { id -> remoteCoverPathById.containsKey(id) },
+                                    ensureRemoteCover = { file, cachedEntry -> ensureRemoteCover(file, cachedEntry) },
                                     onOpen = { onOpenReader(it) },
                                     onDownload = { file, needsUpdate ->
                                         scope.launch {
@@ -569,6 +719,9 @@ fun LibraryScreen(
 private fun BookGrid(
     books: List<DriveBookCardData>,
     downloadingId: String?,
+    remoteCoverPathFor: (String) -> String?,
+    remoteCoverAttemptedFor: (String) -> Boolean,
+    ensureRemoteCover: suspend (DriveService.DriveFile, CachedBookEntry?) -> Unit,
     onOpen: (String) -> Unit,
     onDownload: (DriveService.DriveFile, Boolean) -> Unit,
 ) {
@@ -593,16 +746,22 @@ private fun BookGrid(
                 val isCached = cachedEntry != null
                 val needsUpdate =
                     isCached && !item.file.modifiedTime.isNullOrBlank() && item.file.modifiedTime != cachedEntry?.modifiedTime
-                val coverPath = item.coverFile?.absolutePath?.takeIf { item.coverFile.exists() }
+                val localCoverPath = item.coverFile?.absolutePath?.takeIf { item.coverFile.exists() }
+                val remoteCoverPath = remoteCoverPathFor(item.file.id)
+                val coverPath = localCoverPath ?: remoteCoverPath
+                val remoteCoverAttempted = remoteCoverAttemptedFor(item.file.id)
 
                 LibraryBookCard(
                     modifier = Modifier.width(cardWidth),
-                    title = item.file.name,
+                    file = item.file,
+                    cachedEntry = cachedEntry,
                     coverPath = coverPath,
                     isCached = isCached,
                     needsUpdate = needsUpdate,
                     isBusy = downloadingId == item.file.id,
                     sizeText = item.file.size?.let { formatBytes(it) },
+                    remoteCoverAttempted = remoteCoverAttempted,
+                    ensureRemoteCover = ensureRemoteCover,
                     onOpen = { onOpen(item.file.id) },
                     onDownload = { onDownload(item.file, needsUpdate) },
                 )
@@ -614,15 +773,24 @@ private fun BookGrid(
 @Composable
 private fun LibraryBookCard(
     modifier: Modifier = Modifier,
-    title: String,
+    file: DriveService.DriveFile,
+    cachedEntry: CachedBookEntry?,
     coverPath: String?,
     isCached: Boolean,
     needsUpdate: Boolean,
     isBusy: Boolean,
     sizeText: String?,
+    remoteCoverAttempted: Boolean,
+    ensureRemoteCover: suspend (DriveService.DriveFile, CachedBookEntry?) -> Unit,
     onOpen: () -> Unit,
     onDownload: () -> Unit,
 ) {
+    LaunchedEffect(file.id, remoteCoverAttempted, coverPath) {
+        if (coverPath != null) return@LaunchedEffect
+        if (remoteCoverAttempted) return@LaunchedEffect
+        ensureRemoteCover(file, cachedEntry)
+    }
+
     AppCard(
         modifier =
             modifier
@@ -632,12 +800,12 @@ private fun LibraryBookCard(
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             CoverArt(
                 coverPath = coverPath,
-                title = title,
+                title = file.name,
                 modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f),
             )
 
             Text(
-                text = title,
+                text = file.name,
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -721,6 +889,9 @@ private fun LazyListScope.cachedShelves(
                                     )
                                 },
                             downloadingId = null,
+                            remoteCoverPathFor = { _ -> null },
+                            remoteCoverAttemptedFor = { _ -> true },
+                            ensureRemoteCover = { _, _ -> },
                             onOpen = { onOpenReader(it) },
                             onDownload = { _, _ -> },
                         )
@@ -909,6 +1080,43 @@ private suspend fun downloadDriveFileTo(
             }
         }
         true
+    }
+}
+
+private enum class ThumbnailDownloadResult {
+    Success,
+    NotFound,
+    Failed,
+}
+
+private suspend fun downloadDriveThumbnailTo(
+    http: HttpClient,
+    jwt: String,
+    fileId: String,
+    dest: File,
+    size: Int = 420,
+): ThumbnailDownloadResult {
+    val res =
+        http.get("${Config.baseUrl}/drive/thumbnail/$fileId") {
+            headers.append("Authorization", "Bearer $jwt")
+            url { parameters.append("size", size.toString()) }
+        }
+
+    if (res.status.value == 404) return ThumbnailDownloadResult.NotFound
+    if (!res.status.isSuccess()) return ThumbnailDownloadResult.Failed
+
+    dest.parentFile?.mkdirs()
+    val channel = res.bodyAsChannel()
+    return withContext(Dispatchers.IO) {
+        dest.outputStream().use { os ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val read = channel.readAvailable(buffer, 0, buffer.size)
+                if (read == -1) break
+                os.write(buffer, 0, read)
+            }
+        }
+        if (dest.exists() && dest.length() > 0) ThumbnailDownloadResult.Success else ThumbnailDownloadResult.Failed
     }
 }
 

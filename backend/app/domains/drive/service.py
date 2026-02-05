@@ -64,3 +64,10 @@ class DriveService:
             logger.error(f"Error getting access token info: {e}")
             raise
 
+    def get_thumbnail(self, user_id: str, file_id: str, size: int = 420) -> tuple[bytes | None, str | None]:
+        """Get thumbnail bytes + content type for a Drive file, if available."""
+        try:
+            return self.integration.get_thumbnail(user_id, file_id, size=size)
+        except Exception as e:
+            logger.error(f"Error getting Drive thumbnail: {e}")
+            raise

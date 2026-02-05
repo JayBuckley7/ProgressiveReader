@@ -34,6 +34,8 @@ class DriveService(private val getSessionToken: () -> String?) {
         val modifiedTime: String? = null,
         val iconLink: String? = null,
         val webViewLink: String? = null,
+        val thumbnailLink: String? = null,
+        val hasThumbnail: Boolean? = null,
     )
 
     suspend fun listFiles(folderId: String?): List<DriveFile> {
@@ -95,4 +97,3 @@ class DriveService(private val getSessionToken: () -> String?) {
         return res.status.isSuccess()
     }
 }
-

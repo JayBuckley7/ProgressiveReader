@@ -130,6 +130,43 @@ def download_file(file_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 
+@drive_bp.route('/thumbnail/<file_id>', methods=['GET'])
+@require_auth
+def thumbnail_file(file_id):
+    """Return a thumbnail image for a Drive file, if available."""
+    try:
+        user_id = get_user_id()
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        size_raw = request.args.get('size')
+        try:
+            size = int(size_raw) if size_raw else 420
+            size = max(64, min(size, 1024))
+        except Exception:
+            size = 420
+
+        content, content_type = drive_service.get_thumbnail(user_id, file_id, size=size)
+        if not content:
+            return jsonify({'error': 'Thumbnail not available'}), 404
+
+        return Response(
+            content,
+            headers={
+                'Content-Type': content_type or 'image/jpeg',
+                # Allow clients to cache thumbnails; Drive thumbnails may change, but this is good enough for MVP.
+                'Cache-Control': 'private, max-age=86400',
+            },
+        )
+
+    except ValueError as e:
+        logger.error(f"Drive error: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Unexpected error fetching thumbnail: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @drive_bp.route('/files/<file_id>', methods=['DELETE'])
 @require_auth
 def delete_file(file_id):
@@ -215,4 +252,3 @@ def google_token():
             'code': 'INTERNAL_ERROR',
             'message': str(e)
         }), 500
-
