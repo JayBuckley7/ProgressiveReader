@@ -1,42 +1,44 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { I18nextProvider } from 'react-i18next'
-import App from './App.tsx'
-import './index.css'
-import i18n from './i18n'
-import { appLog } from '@shared/appLog'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { I18nextProvider } from "react-i18next";
+import App from "./App.tsx";
+import "./index.css";
+import i18n from "./i18n";
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
-appLog.debug('🔑 [CLERK DEBUG] Loaded publishable key:', PUBLISHABLE_KEY ? `${PUBLISHABLE_KEY.substring(0, 10)}...${PUBLISHABLE_KEY.substring(PUBLISHABLE_KEY.length - 5)}` : 'UNDEFINED')
-appLog.debug('🔑 [CLERK DEBUG] Key length:', PUBLISHABLE_KEY?.length || 'N/A')
-appLog.debug('🔑 [CLERK DEBUG] Key starts with pk_:', PUBLISHABLE_KEY?.startsWith('pk_') || false)
-appLog.debug('🔑 [CLERK DEBUG] All env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')))
-
-if (!PUBLISHABLE_KEY) {
-  console.error('❌ [CLERK DEBUG] Missing Publishable Key!')
-  // Show error in UI instead of throwing
-  const root = document.getElementById('root')
-  if (root) {
-    root.innerHTML = `
-      <div style="padding: 20px; text-align: center;">
-        <h1>Configuration Error</h1>
-        <p>Missing Clerk publishable key. Please check your .env file.</p>
-        <pre style="background: #f5f5f5; padding: 10px; margin: 20px 0; text-align: left;">
-VITE_CLERK_PUBLISHABLE_KEY should be set in .env file
-        </pre>
-      </div>
-    `
-  }
-  throw new Error('Missing Publishable Key')
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  throw new Error("Root element not found");
 }
 
-appLog.debug('✅ [CLERK DEBUG] Publishable key validation passed')
+const root = ReactDOM.createRoot(rootElement);
 
-async function startApp() {
+function renderFatalError(title: string, message: string, details?: string) {
+  root.render(
+    <React.StrictMode>
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <h1>{title}</h1>
+        <p>{message}</p>
+        {details ? (
+          <pre
+            style={{
+              background: "#f5f5f5",
+              padding: 10,
+              margin: "20px 0",
+              textAlign: "left",
+            }}
+          >
+            {details}
+          </pre>
+        ) : null}
+      </div>
+    </React.StrictMode>
+  );
+}
+
+function startApp() {
   try {
-    const app = (
+    root.render(
       <React.StrictMode>
         <I18nextProvider i18n={i18n}>
           <BrowserRouter>
@@ -45,33 +47,17 @@ async function startApp() {
         </I18nextProvider>
       </React.StrictMode>
     );
-
-    const rootElement = document.getElementById('root')
-    if (!rootElement) {
-      throw new Error('Root element not found')
-    }
-
-    ReactDOM.createRoot(rootElement).render(app);
   } catch (error) {
-    console.error('Failed to start app:', error)
-    const root = document.getElementById('root')
-    if (root) {
-      root.innerHTML = `
-        <div style="padding: 20px; text-align: center;">
-          <h1>App Error</h1>
-          <p>Failed to start application. Check console for details.</p>
-          <pre style="background: #f5f5f5; padding: 10px; margin: 20px 0; text-align: left;">
-${error instanceof Error ? error.message : String(error)}
-          </pre>
-        </div>
-      `
-    }
+    console.error("Failed to start app:", error);
+    renderFatalError(
+      "App Error",
+      "Failed to start application. Check console for details.",
+      error instanceof Error ? error.message : String(error)
+    );
   }
 }
 
-startApp().catch((error) => {
-  console.error('Fatal error starting app:', error)
-})
+startApp();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

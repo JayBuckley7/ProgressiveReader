@@ -2,7 +2,7 @@
 import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers, reverseIndex } from '@features/reader/content/parse';
 import { getCurrentConfig, loadConfig, parseText } from '@features/reader/content/api-adapter';
 import { JpdbWord, getJpdbData, getSentences } from '@features/reader/content/word';
-import { showError } from '@shared/components/toast';
+import { notifyError } from '@shared/utils/notify';
 import { showDefinitionPopup, hideDefinitionPopup } from '@features/reader/components/JpdbPopup';
 import { Keybind } from '~/types';
 import Logger from '@shared/utils/logger';
@@ -325,7 +325,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
 
     } catch (error) {
         console.error('Error in highlightContent:', error);
-        showError(error instanceof Error ? error : new Error(String(error)));
+        notifyError(error, { title: 'JPDB highlight error' });
         // Attempt to rollback any partial highlighting.
         removeJpdbHighlighting(contentElement);
     } finally {
@@ -502,7 +502,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
         
         Logger.log('JP Highlighter initialized.');
     } catch (error) {
-        showError(error instanceof Error ? error : new Error(String(error)));
+        notifyError(error, { title: 'JPDB highlighter error' });
     }
 }
 
@@ -534,11 +534,11 @@ export function wireUpToggle(contentElement: HTMLElement): void {
                     removeJpdbHighlighting(contentElement);
                 }
             } else {
-                alert('Error saving JLPT highlighting preference.');
+                notifyError('Error saving JLPT highlighting preference.', { title: 'JLPT highlighting' });
                 this.checked = !isEnabled;
             }
         } catch (error) {
-            showError(error instanceof Error ? error : new Error(String(error)));
+            notifyError(error, { title: 'JLPT highlighting error' });
             this.checked = !isEnabled;
         }
     });

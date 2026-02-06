@@ -87,7 +87,7 @@ class GDriveService {
         }
 
         const delayMs = this.computeRetryDelayMs(attempt, retryAfter);
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.warn(
             `[GDriveService] Metadata update transient failure (${response.status}); retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts})`
           );
@@ -99,7 +99,7 @@ class GDriveService {
           throw error;
         }
         const delayMs = this.computeRetryDelayMs(attempt, null);
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.warn(
             `[GDriveService] Metadata update request failed; retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts})`,
             error

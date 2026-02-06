@@ -52,7 +52,7 @@ function useStorageService() {
 
     try {
       isRefreshingRef.current = true;
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         appLog.debug('[useStorageService] Silently refreshing books...');
       }
 
@@ -85,7 +85,7 @@ function useStorageService() {
         booksRef.current = userBooks;
       }
 
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         appLog.debug(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
       }
 
@@ -226,7 +226,7 @@ function useStorageService() {
     // simultaneously and ensures proper state coordination.
 
     // Only log auth status in development mode to reduce spam
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       appLog.debug(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
     }
     if (clerkLoaded) {

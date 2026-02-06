@@ -16,10 +16,3 @@ export type PromiseHandle<T> = {
     resolve: (value: T | PromiseLike<T>) => void;
     reject: (reason?: any) => void;
 };
-
-export function showError(error: Error | string) {
-    console.error('Error:', error);
-    const message = error instanceof Error ? error.message : String(error);
-    alert(`Error: ${message}`);
-}
-

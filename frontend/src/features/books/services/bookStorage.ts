@@ -329,7 +329,7 @@ class BookStorageService {
 
     async saveReadingProgress(progress: ReadingProgress): Promise<void> {
         // Only log in development mode to reduce spam
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
             appLog.debug('Saving reading progress for book:', progress.bookId);
         }
         try {
@@ -391,7 +391,7 @@ class BookStorageService {
             }
 
             // Only log success in development mode
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
                 appLog.debug('Reading progress saved successfully');
             }
         } catch (error) {

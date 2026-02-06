@@ -1,11 +1,11 @@
 import { Token, Card, CardState } from '~/types';
-import { showError, Canceled } from '@shared/utils/util';
+import { Canceled } from '@shared/utils/util';
+import { notifyError } from '@shared/utils/notify';
 import { reverseIndex } from './parse.tsx';
 import { Keybind } from '~/types';
 import { vocabBank } from '@features/vocabulary/services/vocabBank';
 import { parseWithLocalLookup } from '@features/reader/utils/localTextParser';
 import { getJpdbData, mineJpdbWord, updateJpdbWordState, reviewJpdbCard } from '@features/vocabulary/services/vocabApi';
-import { appLog } from '@shared/appLog'
 
 // Helper function to convert string[] to CardState
 function toCardState(state: string[]): CardState {
@@ -223,7 +223,7 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
         return tokens;
     } catch (error) {
         console.error('Error in parseText:', error);
-        showError(error instanceof Error ? error : String(error));
+        notifyError(error, { title: 'JPDB parsing error' });
         throw new Canceled('Parsing canceled due to error');
     }
 }
@@ -251,7 +251,7 @@ export async function mineWord(card: Card, forq: boolean, sentence?: string): Pr
         }
         return result.success;
     } catch (error) {
-        showError(error instanceof Error ? error : String(error));
+        notifyError(error, { title: 'JPDB mining error' });
         return false;
     }
 }
@@ -303,7 +303,7 @@ export async function updateWordState(card: Card, flag: 'blacklist' | 'never-for
 
         return result.success;
     } catch (error) {
-        showError(error instanceof Error ? error : String(error));
+        notifyError(error, { title: 'JPDB update error' });
         return false;
     }
 }
@@ -330,7 +330,7 @@ export async function reviewCard(card: Card, rating: string): Promise<boolean> {
         
         return result.success;
     } catch (error) {
-        showError(error instanceof Error ? error : String(error));
+        notifyError(error, { title: 'JPDB review error' });
         return false;
     }
 }

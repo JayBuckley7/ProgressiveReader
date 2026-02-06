@@ -41,14 +41,14 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   >(null);
 
   // Add debug logging only in development mode
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     appLog.debug(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
   }
 
   // Memoize the book metadata to prevent unnecessary re-renders
   const bookMetadata = useMemo(() => {
     const metadata = books.find(book => book.id === bookId);
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       appLog.debug(`📚 [useBookContent] Book metadata lookup result:`, metadata ? 'Found' : 'Not found');
     }
     return metadata;
@@ -56,7 +56,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
   // Get the book processors (now directly imported)
   const getProcessors = () => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       appLog.debug('Getting processor classes...');
     }
     return {
@@ -283,7 +283,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         }
 
         // Otherwise, load chapter on-demand
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           appLog.debug('Loading chapter content on-demand:', currentChapter);
         }
         const chapterHtml = await processorRef.current.getChapterHtml(currentChapter);

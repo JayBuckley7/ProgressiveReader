@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, SignedIn, RedirectToSignIn, useUser } from "@clerk/clerk-react";
 import {
   Routes,
   Route,
@@ -20,9 +19,7 @@ import { TopActions } from "@shared/components/TopActions";
 import { DangerZone } from "@shared/components/DangerZone";
 import { Footer } from "@shared/components/Footer";
 import { VocabularyPage } from "./features/vocabulary/components/VocabularyPage";
-import { LoginModal } from "@shared/components/LoginModal";
 import { AppDataProvider, useAppData } from "@shared/contexts/AppDataContext";
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
 import { AdminPage } from "./features/admin/components/AdminPage";
 import ClipboardReader from "./features/clipboard/components/ClipboardReader";
 import { JLPTTestPage } from "./features/jlpt/components/JLPTTestPage";
@@ -102,53 +99,6 @@ export default function App() {
 
 
 function AppContent() {
-  // Clerk hooks
-  const { user: clerkUser, isSignedIn: isClerkSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const { isDriveConnected, isDriveLoading } = useAppData();
-
-  // Don't check for corrupted tokens here - let the auth flow handle it
-  // The race condition with Clerk loading was causing valid tokens to be cleared
-
-  // Disable automatic Google Drive connection from AppContent
-  // Let useStorageService handle authentication to avoid competing flows
-  // useEffect(() => {
-  //   // Only proceed if Clerk sign-in is complete, user data is available, and Drive is not already loading.
-  //   if (isClerkLoaded && isClerkSignedIn && clerkUser && !isDriveLoading) {
-  //     // Check if one of the Clerk external accounts is Google
-  //     // The exact provider string ('google', 'google_oauth2', etc.) might depend on your Clerk instance config.
-  //     // Inspect clerkUser.externalAccounts[0].provider to be sure.
-  //     const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
-  //       (acc) => acc.provider.startsWith("google") // Using startsWith for more flexibility
-  //     );
-
-  //     if (wasGoogleClerkLogin && !isDriveConnected) {
-  //       appLog.debug(
-  //         "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Waiting for automatic connection..."
-  //       );
-  //       // Try silent sign-in first, only prompt if that fails
-  //       gDriveService.signIn('');
-  //     }
-  //   }
-  // }, [
-  //   isClerkLoaded,
-  //   isClerkSignedIn,
-  //   clerkUser,
-  //   isDriveConnected,
-  //   isDriveLoading,
-  // ]);
-
-  // Prefetch JPDB due cards only after user is signed in if enabled
-  useEffect(() => {
-    if (
-      isClerkLoaded &&
-      isClerkSignedIn &&
-      localStorage.getItem('preferDueCards') === 'true'
-    ) {
-      // Removed automatic prefetching - due cards are now fetched manually only
-      // prefetchDueCards();
-    }
-  }, [isClerkLoaded, isClerkSignedIn]);
-
   return (
     <SettingsProvider>
       <GrammarProvider>
