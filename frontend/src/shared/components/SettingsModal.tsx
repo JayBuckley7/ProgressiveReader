@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useTranslation } from "react-i18next";
 import { appLog } from '@shared/appLog'
+import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -40,6 +41,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 }) {
 	const { settings, updateSettings } = useSettings();
 	const { saveSettings, loadSettings, isAuthenticated } = useAppData();
+  const { miningEnabled, underlinesEnabled, setMiningEnabled, setUnderlinesEnabled } = useGrammar();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"general" | "highlight" | "accessibility">("general");
 	const [isCloudLoading, setIsCloudLoading] = useState(false);
@@ -340,8 +342,31 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                       />
                     </div>
                   </div>
-                )}
-              </div>
+	                )}
+	              </div>
+
+                <div className="app-card p-4">
+                  <h3 className="text-sm font-semibold">Grammar</h3>
+                  <p className="text-xs app-muted mt-1">
+                    Grammar mining sends small snippets of your text to OpenAI for validation. Underlines run locally.
+                  </p>
+
+                  <div className="mt-4 space-y-4">
+                    <CheckboxInput
+                      label="AI Grammar Mining"
+                      description="Background service that searches your library (only up to your reading progress) for examples of grammar points you mark as Learning."
+                      checked={miningEnabled}
+                      onChange={setMiningEnabled}
+                    />
+
+                    <CheckboxInput
+                      label="Grammar Underlines In Reader"
+                      description="Underline grammar points you are currently Learning on the page you're reading, and show them in the JPDB popup."
+                      checked={underlinesEnabled}
+                      onChange={setUnderlinesEnabled}
+                    />
+                  </div>
+                </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <SelectInput

@@ -1,6 +1,6 @@
 import { BookMetadata } from '~/types';
+import { appLog } from '@shared/appLog';
 import {
-import { appLog } from '@shared/appLog'
     getCachedCover,
     cacheCover,
     getCoverForFile,
@@ -109,13 +109,13 @@ class BookCacheService {
                     appLog.debug(`✅ [Cover Cache] Created persistent URL for book ${bookId}`);
                     return coverUrl;
                 } else {
-                    console.warn(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
+                    appLog.debug(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
                 }
             }
 
             return null;
         } catch (error) {
-            console.warn(`⚠️ [Cover Cache] Failed to get cover for book ${bookId}:`, error);
+            appLog.debug(`⚠️ [Cover Cache] Failed to get cover for book ${bookId}:`, error);
             return null;
         }
     }
@@ -137,7 +137,7 @@ class BookCacheService {
             try {
                 await task();
             } catch (err) {
-                console.warn('[Cover Cache] Error in queued download task:', err);
+                appLog.debug('[Cover Cache] Error in queued download task:', err);
             } finally {
                 this.activeDownloadCount--;
                 this.processDownloadQueue();
@@ -164,10 +164,10 @@ class BookCacheService {
                     appLog.debug(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
                     onCoverReady(bookId, coverUrl);
                 } else {
-                    console.warn(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
+                    appLog.debug(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
                 }
             } catch (error) {
-                console.warn(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
+                appLog.debug(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
             }
         };
 
@@ -240,7 +240,7 @@ class BookCacheService {
             const img = new Image();
 
             const timeoutId = setTimeout(() => {
-                console.warn('⏰ Blob URL validation timeout');
+                appLog.debug('⏰ Blob URL validation timeout');
                 resolve(false);
             }, 3000);
 
@@ -252,7 +252,7 @@ class BookCacheService {
 
             img.onerror = () => {
                 clearTimeout(timeoutId);
-                console.warn('❌ Blob URL is not valid or not an image');
+                appLog.debug('❌ Blob URL is not valid or not an image');
                 resolve(false);
             };
 
@@ -271,7 +271,7 @@ class BookCacheService {
 
             const timeoutId = setTimeout(() => {
                 URL.revokeObjectURL(url);
-                console.warn('⏰ Image validation timeout');
+                appLog.debug('⏰ Image validation timeout');
                 resolve(false);
             }, 5000);
 
@@ -285,7 +285,7 @@ class BookCacheService {
             img.onerror = () => {
                 clearTimeout(timeoutId);
                 URL.revokeObjectURL(url);
-                console.warn('❌ Blob is not a valid image');
+                appLog.debug('❌ Blob is not a valid image');
                 resolve(false);
             };
 
@@ -295,4 +295,3 @@ class BookCacheService {
 }
 
 export const bookCacheService = new BookCacheService();
-

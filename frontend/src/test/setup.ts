@@ -6,6 +6,15 @@ vi.mock('~/data/jlpt/kanjiapi_full.json', () => ({
   default: { kanjis: {} },
 }));
 
+// Prevent GrammarProvider from probing the backend for defaults in tests.
+// Individual tests can override these keys as needed.
+try {
+  localStorage.setItem('prGrammarMiningEnabled', 'false');
+  localStorage.setItem('prGrammarUnderlinesEnabled', 'false');
+} catch {
+  // ignore
+}
+
 // MSW lifecycle
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());

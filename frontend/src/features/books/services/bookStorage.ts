@@ -341,6 +341,17 @@ class BookStorageService {
             };
             localStorage.setItem(localKey, JSON.stringify(progressToStore));
 
+            // Notify listeners (e.g. grammar miner) that progress advanced.
+            try {
+                window.dispatchEvent(
+                    new CustomEvent('pr:reading-progress-saved', {
+                        detail: { bookId: progress.bookId, progress: progressToStore }
+                    })
+                );
+            } catch {
+                // ignore
+            }
+
             // Also save to cloud metadata if connected
             if (gDriveService.isSignedIn()) {
                 const existingTimeout = this.cloudSyncTimeoutByBookId.get(progress.bookId);
@@ -398,7 +409,9 @@ class BookStorageService {
         currentPosition: number = 0,
         currentPage?: number,
         totalPages?: number,
-        fileType?: string
+        fileType?: string,
+        scrollHeight?: number,
+        viewportHeight?: number
     ): Promise<void> {
         const progress: ReadingProgress = {
             bookId,
@@ -408,6 +421,8 @@ class BookStorageService {
             currentPage,
             totalPages,
             fileType,
+            scrollHeight,
+            viewportHeight,
             lastUpdated: new Date()
         };
 

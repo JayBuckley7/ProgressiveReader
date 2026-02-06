@@ -214,6 +214,23 @@ body {
   font-weight: 500;
 }
 
+/* Grammar read-along underlines (applied to JPDB token wrappers). */
+.jpdb-word.pr-grammar-hit--candidate {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--ui-muted);
+}
+
+.jpdb-word.pr-grammar-hit--confirmed {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--ui-accent);
+}
+
 .app-icon-button {
   color: var(--ui-muted);
   border: 1px solid transparent;
@@ -544,6 +561,22 @@ html {
 /* Smooth transitions for page changes */
 .reader-content-transition {
   transition: opacity 0.2s ease-in-out;
+}
+
+/* Bilingual translation overlay (used to keep JPDB highlights working while showing translations) */
+.pr-translation {
+  margin-top: 0.35rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(75, 141, 255, 0.35);
+  opacity: 0.9;
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: rgba(55, 65, 81, 0.95); /* gray-700-ish */
+}
+
+.dark .pr-translation {
+  color: rgba(229, 231, 235, 0.9); /* gray-200-ish */
+  border-left-color: rgba(75, 141, 255, 0.45);
 }
 
 /* Settings Modal Animations */

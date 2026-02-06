@@ -31,6 +31,12 @@ export function displayCategory(node: Node): 'text' | 'ruby' | 'ruby-text' | 'in
     if (node instanceof Text || node instanceof CDATASection) {
         return 'text';
     } else if (node instanceof Element) {
+        // Translation overlays must be ignored by the tokenizer/fragments so JPDB offsets still map
+        // to the original JP content.
+        if (node.classList.contains('pr-translation') || node.hasAttribute('data-pr-translation')) {
+            return 'none';
+        }
+
         const display = getComputedStyle(node).display.split(/\s/g);
         if (display[0] === 'none') return 'none';
 

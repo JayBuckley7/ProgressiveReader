@@ -74,7 +74,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         appLog.debug('useBookContent: Waiting for app data to load...');
         return;
       }
-      console.warn('useBookContent: No book metadata found for bookId:', bookId);
+      appLog.debug('useBookContent: No book metadata found for bookId:', bookId);
       setError('Book not in library. Return to library and try again.');
       setIsLoading(false);
       return;
@@ -202,7 +202,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
         // Bail out if the user navigated away before load finished
         if (activeLoadRef.current?.requestId !== requestId) {
-          console.warn(
+          appLog.debug(
             'useBookContent: Active book changed before load completed, ignoring results for:',
             requestId
           );

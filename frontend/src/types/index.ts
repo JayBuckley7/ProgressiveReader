@@ -113,6 +113,8 @@ export interface ReadingProgress {
   totalPages?: number; // For PDFs
   lastUpdated: Date;
   fileType?: string; // Track whether it's pdf, epub, etc.
+  scrollHeight?: number; // For non-PDF scrolling progress bounds
+  viewportHeight?: number; // For non-PDF scrolling progress bounds
 }
 
 // Required to make this a module

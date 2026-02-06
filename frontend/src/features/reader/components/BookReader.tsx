@@ -26,6 +26,8 @@ import type { JpdbKnownVocabRecord, JpdbMirrorMeta } from "@features/jpdbMirror/
 import { createEnglishSwapHighlighter, type SwapHighlighter } from "@features/reader/utils/englishSwap";
 import { getRefineCacheKey, refineAmbiguousSwaps } from "@features/reader/utils/englishSwapRefine";
 import { toast } from "sonner";
+import { normalizeTranslatedHtml } from "@features/reader/utils/bilingualHtml";
+import { useGrammarReadAlong } from "@features/grammar/hooks/useGrammarReadAlong";
 
 interface BookReaderProps {
   bookId: string;
@@ -134,6 +136,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     setCurrentChapter,
   });
 
+  useGrammarReadAlong({
+    contentRef: contentRef as React.RefObject<HTMLElement>,
+    jpdbHighlighted,
+    isPdf: bookMetadata?.fileType === "pdf",
+    isTranslated,
+    contentVersion,
+  });
+
   // Load PDF data when metadata is ready
   useEffect(() => {
     if (!bookMetadata || bookMetadata.fileType !== "pdf" || !progressLoaded) return;
@@ -224,7 +234,20 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 	    && bookMetadata?.fileType !== "pdf"
 	    && Boolean(mirrorMeta && mirrorVocabById && mirrorGlossIndex);
 
-	  const activeHtml = isTranslated ? translatedContent ?? "" : currentChapterContent ?? "";
+	  const normalizedTranslatedHtml = useMemo(() => {
+	    if (!translatedContent) return null;
+	    try {
+	      return normalizeTranslatedHtml(translatedContent);
+	    } catch (e) {
+	      console.warn("Failed to normalize translated HTML; falling back to raw.", e);
+	      return translatedContent;
+	    }
+	  }, [translatedContent]);
+
+	  // Translations replace the original content (no bilingual overlay).
+	  const activeHtml = isTranslated
+	    ? (normalizedTranslatedHtml ?? translatedContent ?? "")
+	    : (currentChapterContent ?? "");
 
 	  const rawHtmlNode = useMemo(() => {
 	    if (!activeHtml) return null;
@@ -628,9 +651,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Use useLayoutEffect to coordinate with React's rendering cycle and avoid DOM conflicts
   useLayoutEffect(() => {
     const el = contentRef.current;
-    const activeHtml = isTranslated ? translatedContent : currentChapterContent;
+    const hasContent = Boolean(el && (el.textContent || "").trim());
 
-    if (jpdbHighlighted && el && activeHtml) {
+    if (jpdbHighlighted && el && hasContent && !isTranslating) {
       // Use requestAnimationFrame to ensure React has finished updating the DOM
       const frameId = requestAnimationFrame(() => {
         if (!el) return;
@@ -644,7 +667,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       // Clear highlighting when disabled
       removeJpdbHighlighting(el);
     }
-  }, [jpdbHighlighted, currentChapterContent, translatedContent, isTranslated, contentVersion]);
+  }, [jpdbHighlighted, currentChapterContent, translatedContent, isTranslated, isTranslating, contentVersion]);
 
   // Auto-enable JPDB highlighting when mix mode is enabled (one-way).
   useEffect(() => {

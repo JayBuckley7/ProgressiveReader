@@ -441,10 +441,12 @@ function useStorageService() {
     currentPosition: number = 0,
     currentPage?: number,
     totalPages?: number,
-    fileType?: string
+    fileType?: string,
+    scrollHeight?: number,
+    viewportHeight?: number
   ): Promise<void> => {
     try {
-      await bookStorageService.saveBookProgress(bookId, currentChapter, currentPosition, currentPage, totalPages, fileType);
+      await bookStorageService.saveBookProgress(bookId, currentChapter, currentPosition, currentPage, totalPages, fileType, scrollHeight, viewportHeight);
     } catch (error) {
       console.error('Error saving book progress:', error);
     }
@@ -547,7 +549,7 @@ function useStorageService() {
 
   const saveSettings = async (settings: any) => {
     if (!clerkUser) {
-      console.warn('Cannot save settings: User not authenticated');
+      appLog.debug('Cannot save settings: user not authenticated');
       return false;
     }
 
@@ -556,7 +558,7 @@ function useStorageService() {
       if (success) {
         appLog.debug('Settings saved to cloud successfully');
       } else {
-        console.warn('Failed to save settings to cloud');
+        appLog.debug('Failed to save settings to cloud');
       }
       return success;
     } catch (error) {

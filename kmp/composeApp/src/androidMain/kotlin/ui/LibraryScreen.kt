@@ -1,5 +1,7 @@
 package com.progressivereader.kmp.ui
 
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,8 +23,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Login
@@ -84,6 +89,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -132,6 +138,7 @@ fun LibraryScreen(
     var initialFolderCollapseApplied by remember { mutableStateOf(false) }
     var inferredRootFolder by remember { mutableStateOf<DriveService.DriveFile?>(null) }
     var lastDriveRootFolderIdFetched by remember { mutableStateOf<String?>(null) }
+    var isImporting by remember { mutableStateOf(false) }
 
     var virtualFolderNameById by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var virtualFolderIdByBookId by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
@@ -141,6 +148,99 @@ fun LibraryScreen(
         sessionJwt.isNullOrBlank() &&
             cachedIndex != null &&
             cachedIndex?.books?.isEmpty() == true
+
+    fun queryDisplayName(uri: Uri): String? {
+        val resolver = context.contentResolver
+        val cursor =
+            runCatching {
+                resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            }.getOrNull()
+        cursor?.use { c ->
+            if (c.moveToFirst()) {
+                val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) {
+                    val name = runCatching { c.getString(idx) }.getOrNull()
+                    if (!name.isNullOrBlank()) return name
+                }
+            }
+        }
+        return uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+    }
+
+    fun guessMimeTypeFromName(name: String): String {
+        val lower = name.lowercase(Locale.US)
+        return when {
+            lower.endsWith(".pdf") -> "application/pdf"
+            lower.endsWith(".txt") -> "text/plain"
+            lower.endsWith(".epub") -> "application/epub+zip"
+            else -> "application/octet-stream"
+        }
+    }
+
+    fun isSupportedImport(name: String, mime: String?): Boolean {
+        val lower = name.lowercase(Locale.US)
+        val mt = (mime ?: "").lowercase(Locale.US)
+        if (lower.endsWith(".epub") || mt.contains("epub")) return true
+        if (lower.endsWith(".pdf") || mt.contains("pdf")) return true
+        if (lower.endsWith(".txt") || mt.startsWith("text/")) return true
+        return false
+    }
+
+    suspend fun cacheImportedBook(
+        bookId: String,
+        filename: String,
+        mimeType: String,
+        bytes: ByteArray,
+        remoteModifiedTime: String?,
+        parentFolderId: String?,
+        parentFolderName: String?,
+    ) {
+        val destFile = bookCache.contentFile(bookId, mimeType, filename)
+        withContext(Dispatchers.IO) {
+            destFile.parentFile?.mkdirs()
+            destFile.writeBytes(bytes)
+        }
+
+        val coverFile =
+            if (filename.endsWith(".epub", ignoreCase = true) || mimeType.contains("epub", ignoreCase = true)) {
+                runCatching {
+                    epubRepository.extractIfNeeded(
+                        epubFile = bookCache.epubFile(bookId),
+                        extractedDir = bookCache.extractedDir(bookId),
+                    )
+                    epubRepository.extractCoverIfNeeded(
+                        extractedDir = bookCache.extractedDir(bookId),
+                        bookDir = bookCache.bookDir(bookId),
+                    )
+                }.getOrNull()
+            } else {
+                null
+            }
+
+        val now = isoNowUtc()
+        val existing = bookCache.loadIndex()
+        val prior = existing.books.firstOrNull { it.id == bookId }
+        val entry =
+            CachedBookEntry(
+                id = bookId,
+                name = filename,
+                mimeType = mimeType,
+                size = bytes.size.toLong(),
+                modifiedTime = remoteModifiedTime,
+                parentFolderId = parentFolderId,
+                parentFolderName = parentFolderName,
+                coverPath = coverFile?.name ?: prior?.coverPath,
+                cachedAt = now,
+                lastOpenedAt = prior?.lastOpenedAt,
+            )
+        val updated =
+            existing.copy(
+                updatedAt = now,
+                books = existing.books.filterNot { it.id == bookId } + entry,
+            )
+        bookCache.saveIndex(updated)
+        cachedIndex = updated
+    }
 
     suspend fun refreshCached() {
         val loaded = bookCache.loadIndex()
@@ -324,6 +424,94 @@ fun LibraryScreen(
         remoteFiles = list
     }
 
+    val importLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                if (isImporting || downloadingId != null) return@launch
+                isImporting = true
+                try {
+                    error = null
+                    val resolver = context.contentResolver
+                    val displayName = queryDisplayName(uri) ?: "book.epub"
+                    val resolvedMime = resolver.getType(uri)
+                    val mimeType = guessMimeTypeFromName(displayName).let { guessed ->
+                        // Prefer a useful content-resolver type when it matches supported formats.
+                        val mt = resolvedMime?.trim()?.takeIf { it.isNotBlank() } ?: guessed
+                        if (mt.equals("application/octet-stream", ignoreCase = true)) guessed else mt
+                    }
+
+                    if (!isSupportedImport(displayName, mimeType)) {
+                        snackbarHostState.showSnackbar("Unsupported file. Use EPUB, PDF, or TXT.")
+                        return@launch
+                    }
+
+                    val bytes =
+                        withContext(Dispatchers.IO) {
+                            resolver.openInputStream(uri)?.use { it.readBytes() }
+                        }
+                    if (bytes == null || bytes.isEmpty()) {
+                        snackbarHostState.showSnackbar("Failed to read file.")
+                        return@launch
+                    }
+
+                    // If signed in + online, upload to Drive first so the bookId matches Drive id.
+                    // Otherwise, import locally under a local_ UUID id.
+                    val uploadedDriveId: String? =
+                        if (canUseDrive) {
+                            val folderIdForUpload = settings.driveFolderId?.takeIf { it.isNotBlank() } ?: inferredRootFolder?.id
+                            val res =
+                                runCatching {
+                                    driveService.upload(
+                                        filename = displayName,
+                                        bytes = bytes,
+                                        mimeType = mimeType,
+                                        folderId = folderIdForUpload,
+                                    )
+                                }.getOrNull()
+                            res?.id
+                        } else {
+                            null
+                        }
+
+                    val bookId = uploadedDriveId ?: "local_${UUID.randomUUID()}"
+
+                    // Best effort: fetch the remote modifiedTime so we don't show "Update" immediately.
+                    val remoteModifiedTime: String? =
+                        if (uploadedDriveId != null) {
+                            val folderIdForLookup = settings.driveFolderId?.takeIf { it.isNotBlank() } ?: inferredRootFolder?.id
+                            val remote = runCatching { driveService.listFiles(folderId = folderIdForLookup) }.getOrNull()
+                            remote?.firstOrNull { it.id == uploadedDriveId }?.modifiedTime
+                        } else {
+                            null
+                        }
+
+                    cacheImportedBook(
+                        bookId = bookId,
+                        filename = displayName,
+                        mimeType = mimeType,
+                        bytes = bytes,
+                        remoteModifiedTime = remoteModifiedTime,
+                        parentFolderId = null,
+                        parentFolderName = null,
+                    )
+
+                    if (uploadedDriveId != null) {
+                        runCatching { refreshDrive(force = true) }
+                        snackbarHostState.showSnackbar("Uploaded and cached.")
+                    } else {
+                        snackbarHostState.showSnackbar("Imported to device.")
+                    }
+
+                    onOpenReader(bookId)
+                } catch (t: Throwable) {
+                    error = t.message ?: "Import failed"
+                } finally {
+                    isImporting = false
+                }
+            }
+        }
+
     fun cachedById(): Map<String, CachedBookEntry> =
         cachedIndex?.books?.associateBy { it.id }.orEmpty()
 
@@ -430,6 +618,19 @@ fun LibraryScreen(
                             Icon(Icons.Outlined.Refresh, contentDescription = "Refresh")
                         }
                     }
+                    if (isImporting) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).size(18.dp),
+                        )
+                    } else {
+                        IconButton(
+                            enabled = downloadingId == null,
+                            onClick = { importLauncher.launch("*/*") },
+                        ) {
+                            Icon(Icons.Outlined.CloudUpload, contentDescription = "Upload book")
+                        }
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Outlined.Settings, contentDescription = "Settings")
                     }
@@ -512,6 +713,7 @@ fun LibraryScreen(
                 files.isEmpty() -> item { Text("No files found.") }
                 else -> {
                     val allBooks = files.filter { it.isSupportedBook() }
+                    val allBookIds = allBooks.map { it.id }.toSet()
                     val visibleFolders =
                         virtualFolderNameById
                             .filterValues { name -> !name.trim().equals("JLPT", ignoreCase = true) }
@@ -727,6 +929,47 @@ fun LibraryScreen(
                                     }
                                 },
                             )
+                        }
+                    }
+
+                    // Always show cached-only books (e.g. imported locally or cached while offline).
+                    val localOnly =
+                        cachedIndex?.books
+                            ?.filter { it.id !in allBookIds }
+                            ?.sortedBy { it.name.lowercase() }
+                            .orEmpty()
+                    if (localOnly.isNotEmpty()) {
+                        item {
+                            ShelfSection(
+                                title = "On this device",
+                                subtitle = "${localOnly.size} books",
+                                collapsed = false,
+                                onToggle = {},
+                            ) {
+                                BookGrid(
+                                    books =
+                                        localOnly.map { b ->
+                                            DriveBookCardData(
+                                                file =
+                                                    DriveService.DriveFile(
+                                                        id = b.id,
+                                                        name = b.name,
+                                                        mimeType = b.mimeType,
+                                                        size = b.size,
+                                                        modifiedTime = b.modifiedTime,
+                                                    ),
+                                                cachedEntry = b,
+                                                coverFile = coverFileForCached(bookCache, b),
+                                            )
+                                        },
+                                    downloadingId = null,
+                                    remoteCoverPathFor = { _ -> null },
+                                    remoteCoverAttemptedFor = { _ -> true },
+                                    ensureRemoteCover = { _, _ -> },
+                                    onOpen = { onOpenReader(it) },
+                                    onDownload = { _, _ -> },
+                                )
+                            }
                         }
                     }
                 }

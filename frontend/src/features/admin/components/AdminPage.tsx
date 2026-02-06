@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { appLog } from "@shared/appLog";
 import {
-import { appLog } from '@shared/appLog'
   listOpenAiKeys,
   addOpenAiKey,
   removeOpenAiKey,
@@ -280,4 +280,3 @@ export function AdminPage() {
 }
 
 export default AdminPage;
-

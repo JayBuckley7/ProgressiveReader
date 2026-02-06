@@ -99,6 +99,17 @@ actual fun HtmlContent(
             body { background: ${if (darkMode) "#0E1114" else "#F7F6F2"}; color: ${if (darkMode) "rgba(255,255,255,0.92)" else "#14181F"}; }
             img { max-width: 100%; height: auto; }
 
+            /* Translation overlay (bilingual mode) */
+            .pr-translation {
+                margin-top: 0.35rem;
+                padding-left: 0.75rem;
+                border-left: 2px solid rgba(75, 141, 255, 0.35);
+                opacity: 0.9;
+                font-size: 0.95em;
+                line-height: 1.6;
+                color: ${if (darkMode) "rgba(229,231,235,0.9)" else "rgba(55,65,81,0.95)"};
+            }
+
             /* JPDB highlight styles (ported from web: frontend/src/styles.css) */
             rt { user-select: none; pointer-events: none; }
 

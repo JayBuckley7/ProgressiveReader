@@ -371,7 +371,8 @@ function onWordHoverStart(event: MouseEvent): void {
             showDefinitionPopup(
                 displayWord,
                 { x: event.clientX, y: event.clientY },
-                wordData
+                wordData,
+                { sourceElement: jpdbWordElement }
             );
         }
     } catch (error) {
@@ -411,7 +412,7 @@ function globalKeydownListener(event: KeyboardEvent) {
                      position: jpdbData.contextOffset,
                      sentence
                  };
-                 showDefinitionPopup(displayWord, { x, y }, wordData);
+                 showDefinitionPopup(displayWord, { x, y }, wordData, { sourceElement: wordElement });
              }
          }
     }

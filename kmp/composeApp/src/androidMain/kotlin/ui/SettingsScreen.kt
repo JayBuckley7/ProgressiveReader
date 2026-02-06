@@ -308,8 +308,8 @@ fun SettingsScreen(
                     lastUpdated = TranslationCache.isoNowUtc(),
                 )
             val bytes = json.encodeToString(CloudSettingsJsonOut.serializer(), payload).toByteArray(Charsets.UTF_8)
-            val ok = driveService.upload(filename = "settings.json", bytes = bytes, mimeType = "application/json", folderId = folderId)
-            if (ok) {
+            val res = driveService.upload(filename = "settings.json", bytes = bytes, mimeType = "application/json", folderId = folderId)
+            if (res != null) {
                 cloudLastSync = "Saved to Drive"
                 cloudStatus = "Saved settings to Drive."
                 if (manual) snackbarHostState.showSnackbar("Settings saved to Google Drive.")

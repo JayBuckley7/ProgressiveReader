@@ -273,6 +273,7 @@ def create_app(config_class=Config) -> Flask:
         from .domains.vocabulary.routes import vocabulary_bp
         from .domains.kanji.routes import kanji_bp
         from .domains.books.routes import books_bp
+        from .domains.grammar.routes import grammar_bp
         from .domains.admin.routes import admin_bp
         from .domains.auth.routes import auth_bp
         from .domains.drive import drive_bp as drive_domain_bp
@@ -298,6 +299,7 @@ def create_app(config_class=Config) -> Flask:
         app.register_blueprint(vocabulary_bp)
         app.register_blueprint(kanji_bp)
         app.register_blueprint(books_bp)
+        app.register_blueprint(grammar_bp)
         app.register_blueprint(admin_bp)
         app.register_blueprint(auth_bp)
         app.register_blueprint(drive_domain_bp)

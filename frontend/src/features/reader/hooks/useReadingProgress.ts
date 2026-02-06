@@ -5,6 +5,8 @@ interface ReadingProgress {
   currentChapter?: number;
   currentPosition?: number;
   currentPage?: number;
+  scrollHeight?: number;
+  viewportHeight?: number;
 }
 
 interface UseReadingProgressProps {
@@ -19,7 +21,9 @@ interface UseReadingProgressProps {
     position: number,
     currentPage?: number,
     totalPages?: number,
-    fileType?: string
+    fileType?: string,
+    scrollHeight?: number,
+    viewportHeight?: number
   ) => Promise<void>;
   setLocalChapter: (chapter: number) => void;
   setPdfCurrentPage: (page: number) => void;
@@ -112,16 +116,21 @@ export function useReadingProgress({
   const fileType = bookMetadata?.fileType;
   const saveProgress = useCallback(() => {
     if (fileType && progressLoaded && fileType !== "pdf") {
+      const el = contentRef.current;
+      const scrollHeight = el ? el.scrollHeight : undefined;
+      const viewportHeight = el ? el.clientHeight : undefined;
       saveBookProgress(
         bookId,
         chapter,
         scrollPositionRef.current,
         undefined,
         undefined,
-        fileType
+        fileType,
+        scrollHeight,
+        viewportHeight
       );
     }
-  }, [fileType, progressLoaded, saveBookProgress, bookId, chapter]);
+  }, [fileType, progressLoaded, saveBookProgress, bookId, chapter, contentRef]);
 
   const saveProgressRef = useRef(saveProgress);
   useEffect(() => {
@@ -171,4 +180,3 @@ export function useReadingProgress({
     saveProgress,
   };
 }
-

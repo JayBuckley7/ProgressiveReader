@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/clerk-react";
 import {
-import { appLog } from '@shared/appLog'
   Routes,
   Route,
   useParams,
@@ -28,6 +27,7 @@ import { AdminPage } from "./features/admin/components/AdminPage";
 import ClipboardReader from "./features/clipboard/components/ClipboardReader";
 import { JLPTTestPage } from "./features/jlpt/components/JLPTTestPage";
 import GrammarPage from "./features/grammar/components/GrammarPage";
+import { GrammarProvider } from "@features/grammar/contexts/GrammarContext";
 
 // Helper component to allow access if signed in OR has offline books
 function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
@@ -151,41 +151,43 @@ function AppContent() {
 
   return (
     <SettingsProvider>
-      <div className="flex flex-col min-h-screen app-shell">
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<BookLibrary />} />
-            <Route path="vocabulary" element={
-              <AuthOrOfflineGuard>
-                <VocabularyPage />
-              </AuthOrOfflineGuard>
-            } />
-            <Route path="clipboard" element={
-              <AuthOrOfflineGuard>
-                <ClipboardReader />
-              </AuthOrOfflineGuard>
-            } />
-            <Route path="grammar" element={
-              <AuthOrOfflineGuard>
-                <GrammarPage />
-              </AuthOrOfflineGuard>
-            } />
-            <Route path="admin" element={
-              <SignedIn><AdminPage /></SignedIn>
-            } />
-            <Route path="jlpt-tests" element={<JLPTTestPage />} />
-          </Route>
+      <GrammarProvider>
+        <div className="flex flex-col min-h-screen app-shell">
+          <Routes>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<BookLibrary />} />
+              <Route path="vocabulary" element={
+                <AuthOrOfflineGuard>
+                  <VocabularyPage />
+                </AuthOrOfflineGuard>
+              } />
+              <Route path="clipboard" element={
+                <AuthOrOfflineGuard>
+                  <ClipboardReader />
+                </AuthOrOfflineGuard>
+              } />
+              <Route path="grammar" element={
+                <AuthOrOfflineGuard>
+                  <GrammarPage />
+                </AuthOrOfflineGuard>
+              } />
+              <Route path="admin" element={
+                <SignedIn><AdminPage /></SignedIn>
+              } />
+              <Route path="jlpt-tests" element={<JLPTTestPage />} />
+            </Route>
 
-          <Route path="sign-in/*" element={<SignedOutLayout />} />
-          <Route path="sign-up/*" element={<SignedOutLayout />} />
+            <Route path="sign-in/*" element={<SignedOutLayout />} />
+            <Route path="sign-up/*" element={<SignedOutLayout />} />
 
-          <Route path="book/:bookId" element={<BookReaderRoute />} />
-        </Routes>
-        <Footer />
-        <DangerZone />
-        <Toaster />
-        <JpdbPopupController />
-      </div>
+            <Route path="book/:bookId" element={<BookReaderRoute />} />
+          </Routes>
+          <Footer />
+          <DangerZone />
+          <Toaster />
+          <JpdbPopupController />
+        </div>
+      </GrammarProvider>
     </SettingsProvider>
   );
 }

@@ -110,30 +110,43 @@ function ReaderControlsComponent({
       <div className="max-w-4xl mx-auto">
         {/* Mobile layout */}
         <div className="sm:hidden">
-          <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <button
-              onClick={onPrevChapter}
-              disabled={currentChapter === 0}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-              aria-label={t('reader.controls.prev')}
-              title={t('reader.controls.prev')}
+              onClick={() => setShowDrawer(true)}
+              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
+              aria-label={t('reader.controls.toc')}
+              title={t('reader.controls.toc')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 select-none truncate flex-1 text-center px-2">
-              {chapterTitles?.[currentChapter]?.title || `Chapter ${currentChapter + 1}`}
-            </span>
+
             <button
-              onClick={onNextChapter}
-              disabled={currentChapter + 1 >= totalChapters}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-              aria-label={t('reader.controls.next')}
-              title={t('reader.controls.next')}
+              onClick={() => setShowDrawer(true)}
+              className="flex-1 min-w-0 text-left"
+              aria-label={t('reader.controls.toc')}
+              title={t('reader.controls.toc')}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <div className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200">
+                <div className="text-xs font-medium truncate">
+                  {chapterTitles?.[currentChapter]?.title || `Chapter ${currentChapter + 1}`}
+                </div>
+                <div className="text-[11px] opacity-75">
+                  {currentChapter + 1} / {Math.max(1, totalChapters)} · Swipe left/right to turn
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={handleAddBookmark}
+              disabled={isAddingBookmark}
+              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
+              aria-label={t('reader.controls.bookmarkAdd')}
+              title={t('reader.controls.bookmarkAdd')}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M5 3a2 2 0 00-2 2v13l7-3 7 3V5a2 2 0 00-2-2H5z" />
               </svg>
             </button>
           </div>
@@ -185,27 +198,6 @@ function ReaderControlsComponent({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5L6 9H2v6h4l5 4V5z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9v6" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7v10" />
-              </svg>
-            </button>
-            <button
-              onClick={handleAddBookmark}
-              disabled={isAddingBookmark}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
-              aria-label={t('reader.controls.bookmarkAdd')}
-              title={t('reader.controls.bookmarkAdd')}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M5 3a2 2 0 00-2 2v13l7-3 7 3V5a2 2 0 00-2-2H5z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setShowDrawer(true)}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
-              aria-label={t('reader.controls.toc')}
-              title={t('reader.controls.toc')}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>
@@ -289,4 +281,3 @@ function ReaderControlsComponent({
 
 export const ReaderControls = React.memo(ReaderControlsComponent);
 export default ReaderControls;
-

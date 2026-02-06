@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { mineWord, updateWordState, reviewCard, getCurrentConfig } from "@features/reader/content/api-adapter";
 import { Card, Token } from "~/types";
 import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
+import { useGrammar } from "@features/grammar/contexts/GrammarContext";
+import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 
 // React version of the pitch renderer
 function renderPitchReact(reading: string, pitch: string): React.ReactElement {
@@ -52,6 +55,7 @@ type PopupState = {
     x: number;
     y: number;
     wordData?: WordData;
+    sourceElement?: Element | null;
 } | null;
 
 let setPopup: React.Dispatch<React.SetStateAction<PopupState>> | null = null;
@@ -111,7 +115,7 @@ export function showDefinitionPopup(
     word: string,
     anchorOrPosition: Element | { x: number; y: number },
     wordData?: WordData,
-    options?: { pin?: boolean }
+    options?: { pin?: boolean; sourceElement?: Element }
 ) {
     if (!setPopup) return;
     clearHideTimeout();
@@ -119,13 +123,16 @@ export function showDefinitionPopup(
 
     let x = 0;
     let y = 0;
+    let sourceElement: Element | null = null;
     if (anchorOrPosition instanceof Element) {
       const rect = anchorOrPosition.getBoundingClientRect();
       x = rect.left;
       y = rect.top;
+      sourceElement = anchorOrPosition;
     } else {
       x = anchorOrPosition.x;
       y = anchorOrPosition.y;
+      sourceElement = options?.sourceElement ?? null;
     }
 
     const adjusted = calculatePopupPosition(x, y);
@@ -134,7 +141,8 @@ export function showDefinitionPopup(
       word,
       x: adjusted.x,
       y: adjusted.y,
-      wordData
+      wordData,
+      sourceElement,
     });
 }
 
@@ -150,6 +158,8 @@ export function JpdbPopupController() {
   const [popup, _setPopup] = useState<PopupState>(null);
   const [isLoading, setIsLoading] = useState(false);
   setPopup = _setPopup;
+  const navigate = useNavigate();
+  const { learningSet, getGrammarPoint } = useGrammar();
 
   // Handle mouse enter/leave on the popup itself
   const handlePopupMouseEnter = () => {
@@ -201,6 +211,23 @@ export function JpdbPopupController() {
   const config = getCurrentConfig();
 
   const isOfflineMode = !config.apiKey || !navigator.onLine;
+
+  const learningGrammarPoints = useMemo<GrammarPoint[]>(() => {
+    const sourceEl = popup?.sourceElement;
+    if (!sourceEl || !(sourceEl instanceof Element)) return [];
+    const raw = (sourceEl as HTMLElement).getAttribute("data-pr-grammar-ids") || "";
+    if (!raw) return [];
+    const ids = raw
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .filter((id) => learningSet.has(id));
+    const uniq = Array.from(new Set(ids));
+    return uniq
+      .map((id) => getGrammarPoint(id))
+      .filter((p): p is GrammarPoint => Boolean(p))
+      .slice(0, 3);
+  }, [getGrammarPoint, learningSet, popup?.sourceElement]);
 
   const surfaceWord = token?.card?.spelling || popup.word;
   const reading = token?.card?.reading || "";
@@ -396,6 +423,33 @@ export function JpdbPopupController() {
 
         <div className="mt-3 flex gap-4">
           <div className="flex-1 min-w-0">
+            {learningGrammarPoints.length > 0 ? (
+              <div className="mb-4 p-3 rounded-xl border border-neutral-700 bg-neutral-950/25">
+                <div className="text-xs text-neutral-400 uppercase tracking-wide">Learning grammar</div>
+                <div className="mt-2 space-y-2">
+                  {learningGrammarPoints.map((p) => (
+                    <div key={p.id} className="min-w-0">
+                      <div className="text-sm text-neutral-100 font-medium truncate">{p.title}</div>
+                      <div className="text-xs text-neutral-400 line-clamp-2">{p.meaning}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3">
+                  <button
+                    className="text-xs text-neutral-300 hover:text-neutral-100 underline underline-offset-4"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      isPopupPinned = false;
+                      setPopup?.(null);
+                      navigate("/grammar");
+                    }}
+                  >
+                    Open grammar page
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             {showReading && (
               <div className="text-blue-300 text-sm leading-tight">{reading}</div>
             )}

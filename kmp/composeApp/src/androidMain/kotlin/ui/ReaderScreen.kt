@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +40,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -67,6 +70,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
 import com.progressivereader.kmp.jpdb.JpdbActionsService
 import com.progressivereader.kmp.jpdb.JpdbService
 import com.progressivereader.kmp.offline.BookCache
@@ -93,6 +98,43 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.jsoup.Jsoup
+
+private enum class JpdbReviewGrade(val label: String, val rating: String, val accent: Color) {
+    NOTHING("nothing", "nothing", Color(0xFFEF4444)),
+    SOMETHING("something", "something", Color(0xFFFB7185)),
+    HARD("hard", "hard", Color(0xFFF97316)),
+    OKAY("okay", "good", Color(0xFF34D399)), // JPDB calls this "okay"; backend accepts "good" and maps to grade=okay.
+    EASY("easy", "easy", Color(0xFF38BDF8)),
+}
+
+@Composable
+private fun ReviewGradeButton(
+    grade: JpdbReviewGrade,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedButton(
+        modifier = modifier,
+        enabled = enabled,
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, grade.accent.copy(alpha = if (enabled) 0.9f else 0.35f)),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                contentColor = grade.accent,
+                disabledContentColor = grade.accent.copy(alpha = 0.4f),
+            ),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = grade.label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,6 +191,7 @@ fun ReaderScreen(
 
     var highlightedBodyHtml by remember { mutableStateOf<String?>(null) }
     var highlightedSourceHash by remember { mutableStateOf<String?>(null) }
+    var highlightedForTranslatedMode by remember { mutableStateOf(false) }
     var highlightTokenById by remember { mutableStateOf<Map<String, JpdbService.ProcessedToken>>(emptyMap()) }
     var isApplyingHighlights by remember { mutableStateOf(false) }
 
@@ -190,6 +233,7 @@ fun ReaderScreen(
         epubBook = null
         highlightedBodyHtml = null
         highlightedSourceHash = null
+        highlightedForTranslatedMode = false
         highlightTokenById = emptyMap()
         isApplyingHighlights = false
         isTranslated = false
@@ -224,20 +268,27 @@ fun ReaderScreen(
     LaunchedEffect(epubBook, chapterIndex) {
         val book = epubBook ?: return@LaunchedEffect
         val chapter = book.chapters.getOrNull(chapterIndex) ?: return@LaunchedEffect
-        val sanitized = epubRepository.loadSanitizedChapterHtml(extractedDir, chapter.href)
-        chapterBodyHtml = sanitized?.bodyHtml
-        chapterHeadHtml = sanitized?.headHtml ?: ""
-        chapterSourceHash = sanitized?.bodyHtml?.let { TranslationCache.sha256Hex(it) }
-        chapterBaseUrl = epubRepository.chapterBaseUrl(extractedDir, chapter.href)
 
+        // Immediately clear state so the UI responds to a chapter change (no stale chapter flash).
+        chapterBodyHtml = null
+        chapterHeadHtml = ""
+        chapterSourceHash = null
+        chapterBaseUrl = null
         highlightedBodyHtml = null
         highlightedSourceHash = null
+        highlightedForTranslatedMode = false
         highlightTokenById = emptyMap()
         isApplyingHighlights = false
         isTranslated = false
         translatedBodyHtml = null
         isTranslating = false
         selectedTokenId = null
+
+        val sanitized = epubRepository.loadSanitizedChapterHtml(extractedDir, chapter.href)
+        chapterBodyHtml = sanitized?.bodyHtml
+        chapterHeadHtml = sanitized?.headHtml ?: ""
+        chapterSourceHash = sanitized?.bodyHtml?.let { TranslationCache.sha256Hex(it) }
+        chapterBaseUrl = epubRepository.chapterBaseUrl(extractedDir, chapter.href)
 
         val updated = bookState.copy(lastChapterIndex = chapterIndex)
         bookState = updated
@@ -261,6 +312,7 @@ fun ReaderScreen(
         if (!highlightEnabled) {
             highlightedBodyHtml = null
             highlightedSourceHash = null
+            highlightedForTranslatedMode = false
             highlightTokenById = emptyMap()
             highlightErrorKey.value = false
             return@LaunchedEffect
@@ -272,18 +324,25 @@ fun ReaderScreen(
             } else {
                 chapterBodyHtml
             } ?: run {
-                highlightedBodyHtml = null
-                highlightedSourceHash = null
-                highlightTokenById = emptyMap()
-                return@LaunchedEffect
+            highlightedBodyHtml = null
+            highlightedSourceHash = null
+            highlightedForTranslatedMode = false
+            highlightTokenById = emptyMap()
+            return@LaunchedEffect
+        }
+        val hash =
+            if (isTranslated) {
+                TranslationCache.sha256Hex(body)
+            } else {
+                chapterSourceHash ?: TranslationCache.sha256Hex(body)
             }
-        val hash = TranslationCache.sha256Hex(body)
         val key = jpdbApiKey?.trim().orEmpty()
 
         // Ensure we never display stale highlights from a different source.
-        if (highlightedSourceHash != null && highlightedSourceHash != hash) {
+        if (highlightedSourceHash != null && (highlightedSourceHash != hash || highlightedForTranslatedMode != isTranslated)) {
             highlightedBodyHtml = null
             highlightedSourceHash = null
+            highlightedForTranslatedMode = false
             highlightTokenById = emptyMap()
         }
 
@@ -303,6 +362,7 @@ fun ReaderScreen(
         if (result == null) {
             highlightedBodyHtml = null
             highlightedSourceHash = null
+            highlightedForTranslatedMode = false
             highlightTokenById = emptyMap()
             if (!highlightErrorKey.value) {
                 when {
@@ -325,6 +385,7 @@ fun ReaderScreen(
         } else {
             highlightedBodyHtml = result.html
             highlightedSourceHash = hash
+            highlightedForTranslatedMode = isTranslated
             highlightTokenById = result.tokenById
             highlightErrorKey.value = false
         }
@@ -500,16 +561,47 @@ fun ReaderScreen(
             } else {
                 chapterBodyHtml
             } ?: return
-        val hash = TranslationCache.sha256Hex(body)
+        val hash =
+            if (isTranslated) {
+                TranslationCache.sha256Hex(body)
+            } else {
+                chapterSourceHash ?: TranslationCache.sha256Hex(body)
+            }
         val cached = jpdbTokenCache.loadIfValid(chapterIndex, hash) ?: return
 
         val nextStateElement = JsonArray(nextState.map { JsonPrimitive(it) })
+        val targetVidSid: Pair<String, String>? =
+            run {
+                // Token ids are `${vid}/${sid}@${start}-${end}` when card metadata is available.
+                val prefix = tid.substringBefore("@", missingDelimiterValue = "")
+                if (prefix.contains("/")) {
+                    val parts = prefix.split("/", limit = 2)
+                    val vid = parts.getOrNull(0)?.takeIf { it.isNotBlank() }
+                    val sid = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
+                    if (vid != null && sid != null) return@run vid to sid
+                }
+
+                // Fallback: look up the token data we used to render the current highlighted HTML.
+                val token = highlightTokenById[tid]
+                val vid = (token?.card?.get("vid") as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+                val sid = (token?.card?.get("sid") as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+                if (vid != null && sid != null) vid to sid else null
+            }
         val updated =
             cached.copy(
                 createdAt = isoNowUtc(),
                 tokens =
                     cached.tokens.map { ct ->
-                        if (ct.id != tid) return@map ct
+                        val shouldUpdate =
+                            if (targetVidSid != null) {
+                                val (targetVid, targetSid) = targetVidSid
+                                val vid = (ct.card["vid"] as? JsonPrimitive)?.content
+                                val sid = (ct.card["sid"] as? JsonPrimitive)?.content
+                                vid == targetVid && sid == targetSid
+                            } else {
+                                ct.id == tid
+                            }
+                        if (!shouldUpdate) return@map ct
                         val updatedCard = JsonObject(ct.card.toMutableMap().apply { this["state"] = nextStateElement })
                         ct.copy(card = updatedCard)
                     },
@@ -528,6 +620,7 @@ fun ReaderScreen(
         if (res != null) {
             highlightedBodyHtml = res.html
             highlightedSourceHash = hash
+            highlightedForTranslatedMode = isTranslated
             highlightTokenById = res.tokenById
         }
     }
@@ -755,13 +848,19 @@ fun ReaderScreen(
                     error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                     epubBook == null -> Text("No book loaded.")
                     else -> {
-                        val baseBody = if (isTranslated) translatedBodyHtml ?: chapterBodyHtml else chapterBodyHtml
-                        val baseHash = if (isTranslated) translatedBodyHash ?: chapterSourceHash else chapterSourceHash
+                        val baseBody = if (isTranslated) translatedBodyHtml else chapterBodyHtml
+                        val baseHash =
+                            if (isTranslated) {
+                                translatedBodyHash
+                            } else {
+                                chapterSourceHash
+                            }
                         val canShowHighlights =
                             highlightEnabled &&
                                 highlightedBodyHtml != null &&
                                 highlightedSourceHash != null &&
-                                highlightedSourceHash == baseHash
+                                highlightedSourceHash == baseHash &&
+                                highlightedForTranslatedMode == isTranslated
                         val effectiveBody =
                             when {
                                 canShowHighlights -> highlightedBodyHtml
@@ -806,6 +905,33 @@ fun ReaderScreen(
                                     }
                                 },
                             )
+
+                            val showBusyOverlay = isTranslating || isApplyingHighlights
+                            if (showBusyOverlay) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.TopCenter,
+                                ) {
+                                    androidx.compose.material3.Surface(
+                                        shape = MaterialTheme.shapes.large,
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                                        tonalElevation = 2.dp,
+                                        modifier = Modifier.padding(top = 10.dp),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                            Text(
+                                                text = if (isTranslating) "Translating…" else "Applying highlights…",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -940,7 +1066,7 @@ fun ReaderScreen(
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         AppTonalButton(
-                            text = "Mine",
+                            text = "Add",
                             enabled = !isJpdbActionBusy,
                             onClick = {
                                 scope.launch {
@@ -998,43 +1124,45 @@ fun ReaderScreen(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        AppTonalButton(
-                            text = if (hasBlacklisted) "Unblacklist" else "Blacklist",
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val nextOn = !hasBlacklisted
-                                        val res =
-                                            jpdbActionsService.updateWordState(
-                                                JpdbActionsService.UpdateWordStateRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    flag = "blacklist",
-                                                    state = nextOn,
-                                                    jpdbApiKey = key,
-                                                )
+                    AppTonalButton(
+                        text = if (hasBlacklisted) "Unblacklist" else "Blacklist",
+                        enabled = !isJpdbActionBusy,
+                        onClick = {
+                            scope.launch {
+                                isJpdbActionBusy = true
+                                try {
+                                    val nextOn = !hasBlacklisted
+                                    val res =
+                                        jpdbActionsService.updateWordState(
+                                            JpdbActionsService.UpdateWordStateRequest(
+                                                vid = vid,
+                                                sid = sid,
+                                                flag = "blacklist",
+                                                state = nextOn,
+                                                jpdbApiKey = key,
                                             )
-                                        if (res?.success == true) {
-                                            val base = (res.newState ?: existingState).toMutableSet()
-                                            if (nextOn) base.add("blacklisted") else base.remove("blacklisted")
-                                            updateTokenStateAndRehighlight(tid, base.toList())
-                                            snackbarHostState.showSnackbar(if (nextOn) "Blacklisted" else "Removed blacklist")
-                                        } else {
-                                            snackbarHostState.showSnackbar("Update failed")
-                                        }
-                                    } finally {
-                                        isJpdbActionBusy = false
+                                        )
+                                    if (res?.success == true) {
+                                        val base = (res.newState ?: existingState).toMutableSet()
+                                        if (nextOn) base.add("blacklisted") else base.remove("blacklisted")
+                                        updateTokenStateAndRehighlight(tid, base.toList())
+                                        snackbarHostState.showSnackbar(if (nextOn) "Blacklisted" else "Removed blacklist")
+                                    } else {
+                                        snackbarHostState.showSnackbar("Update failed")
                                     }
+                                } finally {
+                                    isJpdbActionBusy = false
                                 }
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                        AppTonalButton(
-                            text = "Review: Good",
+                    AppMutedText("Review")
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ReviewGradeButton(
+                            grade = JpdbReviewGrade.NOTHING,
                             enabled = !isJpdbActionBusy,
                             onClick = {
                                 scope.launch {
@@ -1045,14 +1173,14 @@ fun ReaderScreen(
                                                 JpdbActionsService.ReviewCardRequest(
                                                     vid = vid,
                                                     sid = sid,
-                                                    rating = "good",
+                                                    rating = JpdbReviewGrade.NOTHING.rating,
                                                     jpdbApiKey = key,
                                                 )
                                             )
                                         if (res?.success == true && !res.newState.isNullOrEmpty()) {
                                             updateTokenStateAndRehighlight(tid, res.newState)
                                         }
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed" else "Review failed")
+                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: nothing" else "Review failed")
                                     } finally {
                                         isJpdbActionBusy = false
                                     }
@@ -1060,6 +1188,124 @@ fun ReaderScreen(
                             },
                             modifier = Modifier.weight(1f),
                         )
+
+                        ReviewGradeButton(
+                            grade = JpdbReviewGrade.SOMETHING,
+                            enabled = !isJpdbActionBusy,
+                            onClick = {
+                                scope.launch {
+                                    isJpdbActionBusy = true
+                                    try {
+                                        val res =
+                                            jpdbActionsService.reviewCard(
+                                                JpdbActionsService.ReviewCardRequest(
+                                                    vid = vid,
+                                                    sid = sid,
+                                                    rating = JpdbReviewGrade.SOMETHING.rating,
+                                                    jpdbApiKey = key,
+                                                )
+                                            )
+                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
+                                            updateTokenStateAndRehighlight(tid, res.newState)
+                                        }
+                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: something" else "Review failed")
+                                    } finally {
+                                        isJpdbActionBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        ReviewGradeButton(
+                            grade = JpdbReviewGrade.HARD,
+                            enabled = !isJpdbActionBusy,
+                            onClick = {
+                                scope.launch {
+                                    isJpdbActionBusy = true
+                                    try {
+                                        val res =
+                                            jpdbActionsService.reviewCard(
+                                                JpdbActionsService.ReviewCardRequest(
+                                                    vid = vid,
+                                                    sid = sid,
+                                                    rating = JpdbReviewGrade.HARD.rating,
+                                                    jpdbApiKey = key,
+                                                )
+                                            )
+                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
+                                            updateTokenStateAndRehighlight(tid, res.newState)
+                                        }
+                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: hard" else "Review failed")
+                                    } finally {
+                                        isJpdbActionBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ReviewGradeButton(
+                            grade = JpdbReviewGrade.OKAY,
+                            enabled = !isJpdbActionBusy,
+                            onClick = {
+                                scope.launch {
+                                    isJpdbActionBusy = true
+                                    try {
+                                        val res =
+                                            jpdbActionsService.reviewCard(
+                                                JpdbActionsService.ReviewCardRequest(
+                                                    vid = vid,
+                                                    sid = sid,
+                                                    rating = JpdbReviewGrade.OKAY.rating,
+                                                    jpdbApiKey = key,
+                                                )
+                                            )
+                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
+                                            updateTokenStateAndRehighlight(tid, res.newState)
+                                        }
+                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: okay" else "Review failed")
+                                    } finally {
+                                        isJpdbActionBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        ReviewGradeButton(
+                            grade = JpdbReviewGrade.EASY,
+                            enabled = !isJpdbActionBusy,
+                            onClick = {
+                                scope.launch {
+                                    isJpdbActionBusy = true
+                                    try {
+                                        val res =
+                                            jpdbActionsService.reviewCard(
+                                                JpdbActionsService.ReviewCardRequest(
+                                                    vid = vid,
+                                                    sid = sid,
+                                                    rating = JpdbReviewGrade.EASY.rating,
+                                                    jpdbApiKey = key,
+                                                )
+                                            )
+                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
+                                            updateTokenStateAndRehighlight(tid, res.newState)
+                                        }
+                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: easy" else "Review failed")
+                                    } finally {
+                                        isJpdbActionBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    if (isJpdbActionBusy) {
+                        AppMutedText("Processing…")
                     }
                 }
 

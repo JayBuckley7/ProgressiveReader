@@ -40,6 +40,16 @@ class DriveService(private val getSessionToken: () -> String?) {
         val hasThumbnail: Boolean? = null,
     )
 
+    @Serializable
+    data class UploadResponse(
+        val id: String,
+        val name: String? = null,
+        val mimeType: String? = null,
+        @Serializable(with = FlexibleLongSerializer::class)
+        val size: Long? = null,
+        val modifiedTime: String? = null,
+    )
+
     suspend fun listFiles(folderId: String?): List<DriveFile> {
         val token = getSessionToken() ?: return emptyList()
         val res = http.get("${Config.baseUrl}/drive/files") {
@@ -80,22 +90,32 @@ class DriveService(private val getSessionToken: () -> String?) {
         return withContext(Dispatchers.IO) { channel.readRemaining().readBytes() }
     }
 
-    suspend fun upload(filename: String, bytes: ByteArray, mimeType: String = "application/epub+zip", folderId: String? = null): Boolean {
-        val token = getSessionToken() ?: return false
-        val form = formData {
-            append("metadata", "{" + (folderId?.let { "\"parents\":[\"$it\"]," } ?: "") + "\"name\":\"$filename\"}", Headers.build {
-                append(HttpHeaders.ContentType, "application/json; charset=UTF-8")
-                append(HttpHeaders.ContentDisposition, "form-data; name=\"metadata\"")
-            })
-            append("file", bytes, Headers.build {
-                append(HttpHeaders.ContentType, mimeType)
-                append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"$filename\"")
-            })
-        }
+    suspend fun upload(
+        filename: String,
+        bytes: ByteArray,
+        mimeType: String = "application/epub+zip",
+        folderId: String? = null,
+    ): UploadResponse? {
+        val token = getSessionToken() ?: return null
+
+        // Backend expects `file` and optionally `folderId` in multipart form fields.
+        val form =
+            formData {
+                if (!folderId.isNullOrBlank()) append("folderId", folderId)
+                append(
+                    "file",
+                    bytes,
+                    Headers.build {
+                        append(HttpHeaders.ContentType, mimeType)
+                        append(HttpHeaders.ContentDisposition, "form-data; name=\"file\"; filename=\"$filename\"")
+                    },
+                )
+            }
         val res = http.post("${Config.baseUrl}/drive/upload") {
             headers.append("Authorization", "Bearer $token")
             setBody(MultiPartFormDataContent(form))
         }
-        return res.status.isSuccess()
+        if (!res.status.isSuccess()) return null
+        return runCatching { res.body<UploadResponse>() }.getOrNull()
     }
 }

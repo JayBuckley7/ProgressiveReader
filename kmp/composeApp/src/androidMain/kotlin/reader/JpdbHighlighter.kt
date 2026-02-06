@@ -275,13 +275,18 @@ class JpdbHighlighter(
         when (node) {
             is TextNode -> Category.TEXT
             is Element -> {
-                val name = node.tagName().lowercase()
-                when {
-                    name == "rt" || name == "rp" -> Category.NONE
-                    name == "ruby" -> Category.RUBY
-                    name == "br" -> Category.BLOCK
-                    isBlockTag(name) -> Category.BLOCK
-                    else -> Category.INLINE
+                // Ignore translation overlay nodes so JPDB offsets map to the original text.
+                if (node.hasClass("pr-translation") || node.hasAttr("data-pr-translation")) {
+                    Category.NONE
+                } else {
+                    val name = node.tagName().lowercase()
+                    when {
+                        name == "rt" || name == "rp" -> Category.NONE
+                        name == "ruby" -> Category.RUBY
+                        name == "br" -> Category.BLOCK
+                        isBlockTag(name) -> Category.BLOCK
+                        else -> Category.INLINE
+                    }
                 }
             }
 
@@ -319,4 +324,3 @@ class JpdbHighlighter(
                 "hr",
             )
 }
-

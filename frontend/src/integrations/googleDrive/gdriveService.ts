@@ -647,7 +647,7 @@ class GDriveService {
       try {
         const clerkSessionToken = await window.Clerk?.session?.getToken();
         if (!clerkSessionToken) {
-          console.warn('[🔗 CLERK TOKEN] ❌ No Clerk session token available');
+          appLog.debug('[🔗 CLERK TOKEN] ❌ No Clerk session token available');
           return null;
         }
 
@@ -785,7 +785,7 @@ class GDriveService {
 
     const currentToken = gDriveCacheService.getAccessToken(); // Use the token active at the start of this attempt
     if (!currentToken) {
-      console.warn('[GDriveService] Cannot fetch user profile, no access token after getAccessToken attempt.');
+      appLog.debug('[GDriveService] Cannot fetch user profile: no access token available.');
       return;
     }
     try {
@@ -1024,7 +1024,7 @@ class GDriveService {
     // if (!currentAppFolderId || !this.isSignedIn() || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-      console.warn('[GDriveService] Cannot list files: Not signed in, token invalid, GAPI Drive client not ready, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot list files: prerequisites not met (signed out / token invalid / Drive not ready / missing folder ID).');
       return [];
     }
     try {
@@ -1060,7 +1060,7 @@ class GDriveService {
     // if (!currentAppFolderId || !this.isSignedIn() || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-      console.warn('[GDriveService] Cannot upload file: Not signed in, token invalid, GAPI Drive client not ready, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot upload file: prerequisites not met (signed out / token invalid / Drive not ready / missing folder ID).');
       return null;
     }
 
@@ -1098,7 +1098,7 @@ class GDriveService {
   public async downloadFile(fileId: string): Promise<Blob | null> {
     const token = await this.getAccessToken();
     if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-      console.warn('[GDriveService] Cannot download file: Not signed in, token invalid, or GAPI Drive client not ready.');
+      appLog.debug('[GDriveService] Cannot download file: prerequisites not met (signed out / token invalid / Drive not ready).');
       return null;
     }
     if (!fileId) {
@@ -1143,7 +1143,7 @@ class GDriveService {
     // if (!this.isSignedIn() || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
     const token = await this.getAccessToken();
     if (!token || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-      console.warn('[GDriveService] Cannot delete file: Not signed in, token invalid, or GAPI Drive client not ready.');
+      appLog.debug('[GDriveService] Cannot delete file: prerequisites not met (signed out / token invalid / Drive not ready).');
       return false;
     }
     if (!fileId) {
@@ -1170,7 +1170,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-      console.warn('[GDriveService] Cannot get metadata file: Not signed in, token invalid, or GAPI Drive client not ready.');
+      appLog.debug('[GDriveService] Cannot get metadata file: prerequisites not met (signed out / token invalid / Drive not ready).');
       return null;
     }
 
@@ -1280,7 +1280,7 @@ class GDriveService {
   public async updateMetadataFile(fileId: string, data: any): Promise<boolean> {
     const token = await this.getAccessToken();
     if (!token) {
-      console.warn('[GDriveService] Cannot update metadata file: No valid token');
+      appLog.debug('[GDriveService] Cannot update metadata file: no valid token');
       return false;
     }
 
@@ -1366,7 +1366,7 @@ class GDriveService {
     try {
       const metadataInfo = await this.getMetadataFile();
       if (!metadataInfo) {
-        console.warn('[GDriveService] No metadata file found, cannot add folder metadata');
+        appLog.debug('[GDriveService] No metadata file found, cannot add folder metadata');
         return false;
       }
 
@@ -1395,7 +1395,7 @@ class GDriveService {
     try {
       const metadataInfo = await this.getMetadataFile();
       if (!metadataInfo) {
-        console.warn('[GDriveService] No metadata file found, cannot remove folder metadata');
+        appLog.debug('[GDriveService] No metadata file found, cannot remove folder metadata');
         return false;
       }
 
@@ -1407,7 +1407,7 @@ class GDriveService {
         appLog.debug(`[GDriveService] Removed folder metadata for folder: ${folderId}`);
         return await this.updateMetadataFile(metadataFileId, metadata);
       } else {
-        console.warn(`[GDriveService] Folder metadata not found for folder: ${folderId}`);
+        appLog.debug(`[GDriveService] Folder metadata not found for folder: ${folderId}`);
         return false;
       }
     } catch (error) {
@@ -1428,7 +1428,7 @@ class GDriveService {
     try {
       const metadataInfo = await this.getMetadataFile();
       if (!metadataInfo) {
-        console.warn('[GDriveService] No metadata file found, cannot update folder metadata');
+        appLog.debug('[GDriveService] No metadata file found, cannot update folder metadata');
         return false;
       }
 
@@ -1445,7 +1445,7 @@ class GDriveService {
         appLog.debug(`[GDriveService] Updated folder metadata for folder: ${folderId}`);
         return await this.updateMetadataFile(metadataFileId, metadata);
       } else {
-        console.warn(`[GDriveService] Folder metadata not found for folder: ${folderId}`);
+        appLog.debug(`[GDriveService] Folder metadata not found for folder: ${folderId}`);
         return false;
       }
     } catch (error) {
@@ -1462,7 +1462,7 @@ class GDriveService {
     const files = await this.listFiles();
     const metadataInfo = await this.getMetadataFile();
     if (!metadataInfo) {
-      console.warn('[GDriveService] No metadata file available for sync');
+      appLog.debug('[GDriveService] No metadata file available for sync');
       return;
     }
 
@@ -1549,7 +1549,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot save settings: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot save settings: prerequisites not met (signed out / token invalid / missing folder ID).');
       return false;
     }
 
@@ -1588,7 +1588,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot load settings: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot load settings: prerequisites not met (signed out / token invalid / missing folder ID).');
       return null;
     }
 
@@ -1692,7 +1692,7 @@ class GDriveService {
   private async updateSettingsFile(fileId: string, data: any): Promise<boolean> {
     const token = await this.getAccessToken();
     if (!token) {
-      console.warn('[GDriveService] Cannot update settings file: No valid token');
+      appLog.debug('[GDriveService] Cannot update settings file: no valid token');
       return false;
     }
 
@@ -1734,7 +1734,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot save vocabulary: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot save vocabulary: prerequisites not met (signed out / token invalid / missing folder ID).');
       return false;
     }
 
@@ -1774,7 +1774,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot load vocabulary: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot load vocabulary: prerequisites not met (signed out / token invalid / missing folder ID).');
       return null;
     }
 
@@ -1834,7 +1834,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot save JPDB mirror: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot save JPDB mirror: prerequisites not met (signed out / token invalid / missing folder ID).');
       return false;
     }
 
@@ -1873,7 +1873,7 @@ class GDriveService {
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot load JPDB mirror: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot load JPDB mirror: prerequisites not met (signed out / token invalid / missing folder ID).');
       return null;
     }
 
@@ -1918,19 +1918,23 @@ class GDriveService {
   }
 
   /**
-   * Save grammar progress to grammar.json in the app folder
+   * Save grammar state (v2) to grammar.json in the app folder.
    */
-  public async saveGrammarProgress(knownIds: string[]): Promise<boolean> {
+  public async saveGrammarStateV2(payload: {
+    knownIds: string[];
+    learningIds: string[];
+    examplesByGrammarId: Record<string, any[]>;
+  }): Promise<boolean> {
     // CRITICAL: Check Clerk authentication first
     if (!this.isClerkUserAuthenticated()) {
-      appLog.debug('[GDriveService] Cannot save grammar progress: Clerk user not authenticated');
+      appLog.debug('[GDriveService] Cannot save grammar state: Clerk user not authenticated');
       return false;
     }
 
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot save grammar progress: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot save grammar state: prerequisites not met (signed out / token invalid / missing folder ID).');
       return false;
     }
 
@@ -1942,7 +1946,13 @@ class GDriveService {
       });
 
       const files = response.result.files || [];
-      const data = { known: knownIds, lastUpdated: new Date().toISOString(), version: '1.0' };
+      const data = {
+        version: '2.0',
+        known: Array.isArray(payload.knownIds) ? payload.knownIds : [],
+        learning: Array.isArray(payload.learningIds) ? payload.learningIds : [],
+        examples: payload.examplesByGrammarId && typeof payload.examplesByGrammarId === 'object' ? payload.examplesByGrammarId : {},
+        lastUpdated: new Date().toISOString(),
+      };
 
       if (files.length > 0) {
         const fileId = files[0].id;
@@ -1952,25 +1962,29 @@ class GDriveService {
         return !!newId;
       }
     } catch (error) {
-      console.error('[GDriveService] Error saving grammar progress:', error);
+      console.error('[GDriveService] Error saving grammar state:', error);
       return false;
     }
   }
 
   /**
-   * Load grammar progress from grammar.json
+   * Load grammar state (v2) from grammar.json.
    */
-  public async loadGrammarProgress(): Promise<string[] | null> {
+  public async loadGrammarStateV2(): Promise<{
+    knownIds: string[];
+    learningIds: string[];
+    examplesByGrammarId: Record<string, any[]>;
+  } | null> {
     // CRITICAL: Check Clerk authentication first
     if (!this.isClerkUserAuthenticated()) {
-      appLog.debug('[GDriveService] Cannot load grammar progress: Clerk user not authenticated');
+      appLog.debug('[GDriveService] Cannot load grammar state: Clerk user not authenticated');
       return null;
     }
 
     const currentAppFolderId = await this.getAppFolderId();
     const token = await this.getAccessToken();
     if (!token || !currentAppFolderId) {
-      console.warn('[GDriveService] Cannot load grammar progress: Not signed in, token invalid, or no folder ID.');
+      appLog.debug('[GDriveService] Cannot load grammar state: prerequisites not met (signed out / token invalid / missing folder ID).');
       return null;
     }
 
@@ -1980,40 +1994,78 @@ class GDriveService {
       if (files.length > 0) {
         const fileId = files[0].id;
         const currentToken = await this.getAccessToken();
-        if (!currentToken) throw new Error('Failed to get valid access token for grammar download.');
+        if (!currentToken) throw new Error('Failed to get valid access token for grammar state download.');
 
         const fetchResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
           headers: new Headers({ Authorization: `Bearer ${currentToken}` }),
         });
 
         if (!fetchResponse.ok) {
-          throw new Error(`Failed to download grammar progress: ${fetchResponse.status} ${fetchResponse.statusText}`);
+          throw new Error(`Failed to download grammar state: ${fetchResponse.status} ${fetchResponse.statusText}`);
         }
 
         const text = await fetchResponse.text();
         try {
           const content = JSON.parse(text);
-          return Array.isArray(content.known) ? content.known : [];
+
+          // v2 format
+          if (content && typeof content === 'object' && (content.version || '').toString().startsWith('2')) {
+            const knownIds = Array.isArray(content.known) ? content.known : [];
+            const learningIds = Array.isArray(content.learning) ? content.learning : [];
+            const examplesByGrammarId =
+              content.examples && typeof content.examples === 'object'
+                ? (content.examples as Record<string, any[]>)
+                : {};
+            return { knownIds, learningIds, examplesByGrammarId };
+          }
+
+          // v1 format
+          if (content && typeof content === 'object') {
+            const knownIds = Array.isArray(content.known) ? content.known : [];
+            return { knownIds, learningIds: [], examplesByGrammarId: {} };
+          }
+
+          // very old format (array)
+          if (Array.isArray(content)) {
+            return { knownIds: content, learningIds: [], examplesByGrammarId: {} };
+          }
+
+          return { knownIds: [], learningIds: [], examplesByGrammarId: {} };
         } catch {
           console.warn('[GDriveService] Invalid JSON in grammar file');
-          return [];
+          return { knownIds: [], learningIds: [], examplesByGrammarId: {} };
         }
       } else {
         appLog.debug('[GDriveService] No grammar.json file found after retry');
-        return [];
+        return { knownIds: [], learningIds: [], examplesByGrammarId: {} };
       }
     } catch (error: any) {
-      console.error('[GDriveService] Error loading grammar progress:', error);
+      console.error('[GDriveService] Error loading grammar state:', error);
 
       // Check if it's an authentication error
       if (error.status === 401 || error.result?.error?.code === 401) {
-        appLog.debug('[GDriveService] 401 error in loadGrammarProgress - clearing invalid tokens');
+        appLog.debug('[GDriveService] 401 error in loadGrammarStateV2 - clearing invalid tokens');
         gDriveCacheService.clearCachedTokens();
         this.updateSigninStatus(false);
       }
 
       return null;
     }
+  }
+
+  /**
+   * Legacy wrappers: preserve old call sites that only read/write `known`.
+   */
+  public async saveGrammarProgress(knownIds: string[]): Promise<boolean> {
+    const existing = await this.loadGrammarStateV2();
+    const learningIds = existing?.learningIds || [];
+    const examplesByGrammarId = existing?.examplesByGrammarId || {};
+    return await this.saveGrammarStateV2({ knownIds, learningIds, examplesByGrammarId });
+  }
+
+  public async loadGrammarProgress(): Promise<string[] | null> {
+    const existing = await this.loadGrammarStateV2();
+    return existing ? existing.knownIds : null;
   }
 
   private async createVocabFile(data: any): Promise<string | null> {
@@ -2061,7 +2113,7 @@ class GDriveService {
   private async updateVocabFile(fileId: string, data: any): Promise<boolean> {
     const token = await this.getAccessToken();
     if (!token) {
-      console.warn('[GDriveService] Cannot update vocab file: No valid token');
+      appLog.debug('[GDriveService] Cannot update vocab file: no valid token');
       return false;
     }
 
@@ -2135,7 +2187,7 @@ class GDriveService {
   private async updateJpdbMirrorFile(fileId: string, data: any): Promise<boolean> {
     const token = await this.getAccessToken();
     if (!token) {
-      console.warn('[GDriveService] Cannot update JPDB mirror file: No valid token');
+      appLog.debug('[GDriveService] Cannot update JPDB mirror file: no valid token');
       return false;
     }
 
@@ -2209,7 +2261,7 @@ class GDriveService {
   private async updateGrammarFile(fileId: string, data: any): Promise<boolean> {
     const token = await this.getAccessToken();
     if (!token) {
-      console.warn('[GDriveService] Cannot update grammar file: No valid token');
+      appLog.debug('[GDriveService] Cannot update grammar file: no valid token');
       return false;
     }
 
@@ -2359,7 +2411,7 @@ class GDriveService {
 
       // Check if folder exists
       if (!data.folders[folderId]) {
-        console.warn(`[GDriveService] Folder ${folderId} not found in metadata, nothing to delete`);
+        appLog.debug(`[GDriveService] Folder ${folderId} not found in metadata, nothing to delete`);
         return;
       }
 
@@ -2561,7 +2613,7 @@ class GDriveService {
       const token = await this.getAccessToken();
 
       if (!token || !currentAppFolderId || !this.gapi || !this.gapi.client || !this.gapi.client.drive) {
-        console.warn(`[GDriveService] Cannot search for ${fileName}: Prerequisites not met`);
+        appLog.debug(`[GDriveService] Cannot search for ${fileName}: prerequisites not met`);
         return [];
       }
 

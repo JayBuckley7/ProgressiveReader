@@ -2,6 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { SettingsProvider } from '@shared/contexts/SettingsContext';
 import { BrowserRouter } from 'react-router-dom';
+import { GrammarProvider } from '@features/grammar/contexts/GrammarContext';
 
 type AnyObj = Record<string, any>;
 
@@ -15,12 +16,13 @@ export function renderWithProviders(ui: React.ReactElement, options?: { appDataO
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <BrowserRouter>
-        <SettingsProvider>{children}</SettingsProvider>
+        <SettingsProvider>
+          <GrammarProvider>{children}</GrammarProvider>
+        </SettingsProvider>
       </BrowserRouter>
     );
   }
 
   return render(ui, { wrapper: Wrapper as any });
 }
-
 

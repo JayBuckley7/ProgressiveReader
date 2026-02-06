@@ -928,7 +928,7 @@ class BookMetadataService {
 
         try {
             if (!gDriveService.isSignedIn()) {
-                console.warn('Cannot save settings: Google Drive not connected');
+                appLog.debug('Cannot save settings: Google Drive not connected');
                 return false;
             }
 
@@ -969,7 +969,7 @@ class BookMetadataService {
 
             const isAuthenticated = await authManager.ensureAuthenticated();
             if (!isAuthenticated) {
-                console.warn('Cannot load settings: Google Drive authentication failed');
+                appLog.debug('Cannot load settings: Google Drive authentication failed');
                 return null;
             }
 
@@ -1039,6 +1039,40 @@ class BookMetadataService {
         }
 
         return await gDriveService.loadGrammarProgress();
+    }
+
+    /**
+     * Save grammar state v2 (known + learning + examples) to cloud storage.
+     */
+    async saveGrammarStateV2(payload: {
+        knownIds: string[];
+        learningIds: string[];
+        examplesByGrammarId: Record<string, any[]>;
+    }): Promise<void> {
+        const isAuthenticated = await authManager.ensureAuthenticated();
+        if (!isAuthenticated) {
+            appLog.debug('saveGrammarStateV2: Authentication failed, cannot save grammar state');
+            return;
+        }
+
+        await gDriveService.saveGrammarStateV2(payload);
+    }
+
+    /**
+     * Load grammar state v2 (known + learning + examples) from cloud storage.
+     */
+    async loadGrammarStateV2(): Promise<{
+        knownIds: string[];
+        learningIds: string[];
+        examplesByGrammarId: Record<string, any[]>;
+    } | null> {
+        const isAuthenticated = await authManager.ensureAuthenticated();
+        if (!isAuthenticated) {
+            appLog.debug('loadGrammarStateV2: Authentication failed, cannot load grammar state');
+            return null;
+        }
+
+        return await gDriveService.loadGrammarStateV2();
     }
 
     // Folder management methods
