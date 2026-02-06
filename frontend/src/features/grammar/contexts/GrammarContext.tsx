@@ -328,9 +328,12 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       const nextScanBy = { ...(prev.scanByGrammarId || {}) };
       if (learning) {
         const cur = nextScanBy[grammarId];
+        const point = getGrammarPointById(grammarId);
         nextScanBy[grammarId] = {
           ...(cur || {}),
-          status: "queued",
+          // Don't enqueue auto-mining for ultra-common/ambiguous points.
+          status: point && point.hintQuality === "ok" ? "queued" : "idle",
+          lastError: undefined,
         };
       }
 
@@ -347,10 +350,11 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => {
       const nextScanBy = { ...(prev.scanByGrammarId || {}) };
       const cur = nextScanBy[grammarId];
+      const point = getGrammarPointById(grammarId);
       nextScanBy[grammarId] = {
         ...(cur || {}),
-        status: "queued",
-        lastError: undefined,
+        status: point && point.hintQuality === "ok" ? "queued" : "error",
+        lastError: point && point.hintQuality === "ok" ? undefined : "Grammar point too ambiguous for MVP mining.",
       };
       return { ...prev, scanByGrammarId: nextScanBy, lastUpdatedMs: Date.now() };
     });
@@ -581,10 +585,11 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => {
         const nextScanBy = { ...(prev.scanByGrammarId || {}) };
         const cur = nextScanBy[grammarId];
+        const point = getGrammarPointById(grammarId);
         nextScanBy[grammarId] = {
           ...(cur || {}),
-          status: "queued",
-          lastError: undefined,
+          status: point && point.hintQuality === "ok" ? "queued" : "error",
+          lastError: point && point.hintQuality === "ok" ? undefined : "Grammar point too ambiguous for MVP mining.",
         };
         return { ...prev, scanByGrammarId: nextScanBy, lastUpdatedMs: Date.now() };
       });

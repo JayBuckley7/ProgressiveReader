@@ -17,7 +17,9 @@ type MinerBudgets = {
 };
 
 const DEFAULT_BUDGETS: MinerBudgets = {
-  maxBooks: 10,
+  // Default was intentionally conservative, but users with larger libraries expect a full sweep.
+  // Still bounded to avoid runaway costs/time; can be overridden via args.budgets.
+  maxBooks: 50,
   maxChapters: 25,
   maxCandidates: 25,
   maxExtractedTextChars: 200_000,
@@ -200,11 +202,14 @@ export async function mineLibraryForGrammarExamples(args: {
 
     // Download book content and parse chapters.
     const blob = await bookStorageService.downloadBook(meta.id, meta);
+    if (args.signal?.aborted) break;
     if (!blob) continue;
     const buf = await blob.arrayBuffer();
+    if (args.signal?.aborted) break;
 
     const processor = meta.fileType === "epub" ? new EpubProcessorWrapper() : new TextProcessorWrapper();
     const ok = meta.fileType === "epub" ? await processor.loadBook(buf) : await processor.loadBook(buf, { fileType: meta.fileType });
+    if (args.signal?.aborted) break;
     if (!ok) continue;
 
     const totalChapters = processor.getTotalChapters();
@@ -228,6 +233,7 @@ export async function mineLibraryForGrammarExamples(args: {
 
       if (!textToUse) {
         const html = await processor.getChapterHtml(ch);
+        if (args.signal?.aborted) break;
         if (!html) continue;
         const extracted = extractPlainTextFromHtml(html);
         if (!looksJapanese(extracted)) continue;
