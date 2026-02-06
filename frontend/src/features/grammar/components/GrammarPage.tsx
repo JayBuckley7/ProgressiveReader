@@ -215,7 +215,21 @@ function GrammarCard({
 export default function GrammarPage() {
   const navigate = useNavigate();
   const { books } = useAppData();
-  const { knownSet, learningSet, setKnown, setKnownMany, setLearning, forceMine, getExamples, getScanState } = useGrammar();
+  const {
+    knownSet,
+    learningSet,
+    setKnown,
+    setKnownMany,
+    setLearning,
+    forceMine,
+    runNow,
+    cancelMining,
+    activeMiningGrammarId,
+    miningEnabled,
+    getExamples,
+    getScanState,
+    getGrammarPoint,
+  } = useGrammar();
 
   const [openLevels, setOpenLevels] = useState<Set<GrammarLevel>>(() => loadOpenSections());
 
@@ -236,6 +250,27 @@ export default function GrammarPage() {
     for (const gid of learningSet) examples += (getExamples(gid) || []).length;
     return { known, learning, examples };
   }, [getExamples, knownSet, learningSet]);
+
+  const miningPanel = useMemo(() => {
+    const queued: Array<{ id: string; title: string; status: string; examples: number; lastError?: string }> = [];
+    // We don't have direct scanBy access here; use getScanState per id.
+    for (const gid of Array.from(learningSet)) {
+      const scan = getScanState(gid);
+      const status = scan?.status || "idle";
+      if (status !== "queued" && status !== "scanning" && status !== "error" && status !== "not_found_yet" && status !== "idle") continue;
+      const p = getGrammarPoint(gid);
+      queued.push({
+        id: gid,
+        title: p?.title || gid,
+        status,
+        examples: (getExamples(gid) || []).length,
+        lastError: scan?.lastError,
+      });
+    }
+    const active = activeMiningGrammarId ? queued.find((q) => q.id === activeMiningGrammarId) : null;
+    const queueOnly = queued.filter((q) => q.status === "queued" && q.examples < 3);
+    return { active, queueOnly, all: queued };
+  }, [activeMiningGrammarId, getExamples, getGrammarPoint, getScanState, learningSet]);
 
   const toggleOpen = (level: GrammarLevel) => {
     setOpenLevels((prev) => {
@@ -323,6 +358,86 @@ export default function GrammarPage() {
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-8 app-card p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-sm font-semibold">Background Miner</div>
+            <div className="mt-1 text-xs app-muted">
+              Manage the current grammar example mining task. Use “Run now” to prioritize a queued item.
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button
+              className="app-button-muted px-3 py-1.5 rounded-md text-xs"
+              onClick={cancelMining}
+              disabled={!activeMiningGrammarId}
+              title={activeMiningGrammarId ? "Cancel current mining task" : "No active task"}
+            >
+              Cancel current
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {!miningEnabled ? (
+            <div className="text-xs app-muted">
+              Mining is currently disabled. Enable it in Settings → General → Grammar.
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="app-chip">
+              Active: {activeMiningGrammarId ? (getGrammarPoint(activeMiningGrammarId)?.title || activeMiningGrammarId) : "None"}
+            </span>
+            {activeMiningGrammarId ? (
+              <span className="app-chip">
+                Status: {getScanState(activeMiningGrammarId)?.status || "scanning"}
+              </span>
+            ) : null}
+          </div>
+
+          {miningPanel.queueOnly.length > 0 ? (
+            <div className="mt-2">
+              <div className="text-xs app-muted mb-2">Queued</div>
+              <div className="space-y-2">
+                {miningPanel.queueOnly.slice(0, 12).map((q) => (
+                  <div key={q.id} className="flex items-center justify-between gap-3 p-2 rounded-lg border app-border bg-[var(--ui-surface-alt)]">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{q.title}</div>
+                      <div className="text-xs app-muted">
+                        {q.examples}/3 examples
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex gap-2">
+                      <button
+                        className="app-button-muted px-3 py-1.5 rounded-md text-xs"
+                        onClick={() => runNow(q.id)}
+                      >
+                        Run now
+                      </button>
+                      <button
+                        className="app-button-muted px-3 py-1.5 rounded-md text-xs"
+                        onClick={() => forceMine(q.id)}
+                        title="Re-queue (if needed)"
+                      >
+                        Re-queue
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {miningPanel.queueOnly.length > 12 ? (
+                <div className="mt-2 text-xs app-muted">Showing first 12 queued items.</div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="text-xs app-muted">
+              No queued tasks.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
