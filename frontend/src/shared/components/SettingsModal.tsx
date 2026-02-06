@@ -146,6 +146,13 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     hideFurigana: settings.hideFurigana ?? false,
     cacheTranslations: settings.cacheTranslations ?? true,
     customPopupCSS: localState.customPopupCSS,
+
+    // Mix mode (English -> Mixed JP)
+    mix_enabled: settings.mixEnabled ?? false,
+    mix_aggression: settings.mixAggression ?? 0.25,
+    mix_auto_enable_highlight: settings.mixAutoEnableHighlight ?? true,
+    mix_backup_mirror_to_drive: settings.mixBackupMirrorToDrive ?? true,
+    mix_mirror_stale_after_hours: settings.mixMirrorStaleAfterHours ?? 24,
   });
 
   // Helper function to apply imported settings
@@ -186,6 +193,22 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
     if (importedSettings.disableFadeAnimation !== undefined) settingsUpdates.disableFadeAnimation = importedSettings.disableFadeAnimation;
     if (importedSettings.hideFurigana !== undefined) settingsUpdates.hideFurigana = importedSettings.hideFurigana;
     if (importedSettings.cacheTranslations !== undefined) settingsUpdates.cacheTranslations = importedSettings.cacheTranslations;
+
+    if (importedSettings.mix_enabled !== undefined) settingsUpdates.mixEnabled = Boolean(importedSettings.mix_enabled);
+    if (importedSettings.mix_aggression !== undefined) {
+      const n = typeof importedSettings.mix_aggression === 'number'
+        ? importedSettings.mix_aggression
+        : parseFloat(String(importedSettings.mix_aggression));
+      if (Number.isFinite(n)) settingsUpdates.mixAggression = Math.max(0, Math.min(1, n));
+    }
+    if (importedSettings.mix_auto_enable_highlight !== undefined) settingsUpdates.mixAutoEnableHighlight = Boolean(importedSettings.mix_auto_enable_highlight);
+    if (importedSettings.mix_backup_mirror_to_drive !== undefined) settingsUpdates.mixBackupMirrorToDrive = Boolean(importedSettings.mix_backup_mirror_to_drive);
+    if (importedSettings.mix_mirror_stale_after_hours !== undefined) {
+      const n = typeof importedSettings.mix_mirror_stale_after_hours === 'number'
+        ? importedSettings.mix_mirror_stale_after_hours
+        : parseInt(String(importedSettings.mix_mirror_stale_after_hours), 10);
+      if (Number.isFinite(n) && n > 0) settingsUpdates.mixMirrorStaleAfterHours = n;
+    }
     
     if (Object.keys(settingsUpdates).length > 0) {
       updateSettings(settingsUpdates);

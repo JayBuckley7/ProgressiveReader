@@ -33,5 +33,45 @@ describe('Reader integration: translation', () => {
 
     await waitFor(() => expect(screen.getByText(/Mock Translation/)).toBeInTheDocument(), { timeout: 2000 });
   });
-});
 
+  it('Show original text suppresses autoloading a cached translation (user override)', async () => {
+    localStorage.clear();
+    localStorage.setItem('autoloadTranslations', 'true');
+    localStorage.setItem('cefrLevel', '3');
+    localStorage.setItem(
+      'translation_demo-2_0',
+      JSON.stringify({
+        content: '<p>Cached Translation</p>',
+        timestamp: Date.now(),
+        useCefr: false,
+        targetLanguage: 'English',
+        cefrLevel: '3',
+      })
+    );
+
+    const user = userEvent.setup();
+
+    function Harness() {
+      const { isTranslated, translatedContent, clearTranslation } = useReaderTranslation('demo-2', 0, '<p>Chapter 1</p>');
+      return (
+        <div>
+          <button onClick={() => clearTranslation({ suppressAutoload: true })}>Original</button>
+          <div>{isTranslated ? translatedContent : 'ORIGINAL'}</div>
+        </div>
+      );
+    }
+
+    renderWithProviders(<Harness />);
+
+    // Autoload applies on initial render (setting enabled + cache hit)
+    await waitFor(() => expect(screen.getByText(/Cached Translation/)).toBeInTheDocument(), { timeout: 2000 });
+
+    // User explicitly switches to original; it should stick and not get auto-reapplied.
+    await user.click(screen.getByRole('button', { name: 'Original' }));
+    await waitFor(() => expect(screen.getByText('ORIGINAL')).toBeInTheDocument(), { timeout: 2000 });
+
+    // Regression check: allow effects to re-run; translation should not come back.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByText('ORIGINAL')).toBeInTheDocument();
+  });
+});

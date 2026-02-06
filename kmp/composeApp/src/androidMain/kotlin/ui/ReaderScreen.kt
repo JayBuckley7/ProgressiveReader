@@ -77,6 +77,7 @@ import com.progressivereader.kmp.reader.EpubRepository
 import com.progressivereader.kmp.reader.HtmlContent
 import com.progressivereader.kmp.reader.JpdbHighlighter
 import com.progressivereader.kmp.reader.JpdbTokenCache
+import com.progressivereader.kmp.reader.TranslatedHtmlSanitizer
 import com.progressivereader.kmp.reader.TranslationCache
 import com.progressivereader.kmp.reader.SwipeDirection
 import com.progressivereader.kmp.settings.AppSettings
@@ -348,8 +349,13 @@ fun ReaderScreen(
                     cefrLevel = cefrLevel,
                 )
             if (cached != null) {
-                translatedBodyHtml = cached.html
+                val sanitized = TranslatedHtmlSanitizer.sanitizeBodyHtml(cached.html)
+                translatedBodyHtml = sanitized
                 isTranslated = true
+                // Opportunistically repair older cached translations created before we sanitized output.
+                if (sanitized != cached.html) {
+                    runCatching { translationCache.save(chapterIndex, cached.copy(createdAt = TranslationCache.isoNowUtc(), html = sanitized)) }
+                }
                 return
             }
         }
@@ -391,7 +397,7 @@ fun ReaderScreen(
                 useCefr = false,
                 cefrLevel = cefrLevel,
                 sourceHash = hash,
-                html = resp.translated_text,
+                html = TranslatedHtmlSanitizer.sanitizeBodyHtml(resp.translated_text),
             )
         if (settings.reader.cacheTranslations) {
             runCatching { translationCache.save(chapterIndex, entry) }

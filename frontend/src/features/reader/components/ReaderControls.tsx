@@ -19,6 +19,8 @@ interface ReaderControlsProps {
   translating: boolean;
   ttsActive: boolean;
   jpdbHighlighted: boolean;
+  mixEnabled: boolean;
+  onShowMixSettings: () => void;
 }
 
 function ReaderControlsComponent({
@@ -35,6 +37,8 @@ function ReaderControlsComponent({
   translating,
   ttsActive,
   jpdbHighlighted,
+  mixEnabled,
+  onShowMixSettings,
 }: ReaderControlsProps) {
   const [showDrawer, setShowDrawer] = useState(false);
   const { t } = useTranslation();
@@ -148,6 +152,19 @@ function ReaderControlsComponent({
               )}
             </button>
             <button
+              onClick={onShowMixSettings}
+              className={`p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 relative flex-shrink-0 ${mixEnabled ? 'bg-emerald-100 dark:bg-emerald-900 border border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-200' : ''}`}
+              aria-label={mixEnabled ? "Configure Mix Japanese (enabled)" : "Configure Mix Japanese"}
+              title={mixEnabled ? "Mix Japanese (enabled)" : "Mix Japanese"}
+            >
+              <svg className={`w-5 h-5 ${mixEnabled ? 'text-emerald-600 dark:text-emerald-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" />
+              </svg>
+              {mixEnabled && (
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-gray-800"></div>
+              )}
+            </button>
+            <button
               onClick={onTranslate}
               disabled={translating}
               className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
@@ -221,6 +238,14 @@ function ReaderControlsComponent({
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-white dark:border-gray-800"></div>
               )}
             </button>
+            <button onClick={onShowMixSettings} className={`${bigBtn} relative ${mixEnabled ? 'bg-emerald-100 dark:bg-emerald-900 border border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-200' : ''}`} aria-label={mixEnabled ? "Configure Mix Japanese (enabled)" : "Configure Mix Japanese"} title={mixEnabled ? "Mix Japanese (enabled)" : "Mix Japanese"}>
+              <svg className={`w-6 h-6 ${mixEnabled ? 'text-emerald-600 dark:text-emerald-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" />
+              </svg>
+              {mixEnabled && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+              )}
+            </button>
             <button onClick={onTranslate} disabled={translating} className={`${bigBtn} disabled:opacity-50`} aria-label={t('reader.controls.translate')} title={t('reader.controls.translate')}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
@@ -264,5 +289,4 @@ function ReaderControlsComponent({
 
 export const ReaderControls = React.memo(ReaderControlsComponent);
 export default ReaderControls;
-
 

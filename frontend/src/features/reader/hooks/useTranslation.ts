@@ -50,6 +50,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const [isAutoloaded, setIsAutoloaded] = useState(false);
   const [lastUseCefr, setLastUseCefr] = useState(false);
+  const suppressAutoloadKeyRef = useRef<string | null>(null);
 
   // Translate using the user's personal OpenAI key entirely in the browser
   const translateWithOpenAI = async (html: string, useCefr: boolean): Promise<string> => {
@@ -101,6 +102,8 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
    */
   const translateCurrent = useCallback(async (useCefr: boolean) => {
     if (!currentChapterContent) return;
+    // User explicitly requested a translation; don't keep any "show original" override.
+    suppressAutoloadKeyRef.current = null;
     setIsTranslating(true);
     const toastId = toast.loading("Translating...", {
       id: "translating",
@@ -186,14 +189,29 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
     }
   }, [bookId, chapter, currentChapterContent, settings]);
 
-  const clearTranslation = useCallback(() => {
+  const clearTranslation = useCallback((options?: { suppressAutoload?: boolean }) => {
     if (isTranslated) {
       console.log('Clearing translation, returning to original content');
+      if (options?.suppressAutoload) {
+        // Prevent the autoload effect from immediately re-applying the cached translation.
+        suppressAutoloadKeyRef.current = getTranslationStorageKey(bookId, chapter);
+      }
       setTranslatedContent(null);
       setIsTranslated(false);
       setIsAutoloaded(false);
     }
-  }, [isTranslated]);
+  }, [isTranslated, bookId, chapter]);
+
+  const applyStoredTranslation = useCallback((translation: { content: string; useCefr?: boolean } | null) => {
+    if (!translation?.content) return;
+    suppressAutoloadKeyRef.current = null;
+    setTranslatedContent(translation.content);
+    setIsTranslated(true);
+    setIsAutoloaded(true);
+    if (typeof translation.useCefr === "boolean") {
+      setLastUseCefr(translation.useCefr);
+    }
+  }, []);
 
   // Clear translated content when chapter changes, but check for autoload first
   useEffect(() => {
@@ -204,6 +222,12 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
       setIsAutoloaded(false);
     }
   }, [chapter]);
+
+  // Reset any "show original" override when navigating chapters/books.
+  // Important: this must be declared before the autoload effect so it runs first after navigation.
+  useEffect(() => {
+    suppressAutoloadKeyRef.current = null;
+  }, [bookId, chapter]);
 
   // Autoload translations when chapter changes if setting is enabled (one-time per chapter load)
   useEffect(() => {
@@ -224,10 +248,21 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
                        storedTranslation.cefrLevel === currentCefrLevel;
         
         if (isValid) {
+          const currentKey = getTranslationStorageKey(bookId, chapter);
+          const isSuppressed = suppressAutoloadKeyRef.current === currentKey;
+
+          if (isSuppressed) {
+            console.log('🛑 Autoload suppressed (user chose original) for chapter', chapter);
+            return;
+          }
+
           console.log('✅ Autoloading stored translation for chapter', chapter);
           setTranslatedContent(storedTranslation.content);
           setIsTranslated(true);
           setIsAutoloaded(true);
+          if (typeof storedTranslation.useCefr === "boolean") {
+            setLastUseCefr(storedTranslation.useCefr);
+          }
         } else {
           console.log('❌ Stored translation is outdated, removing from storage');
           const key = getTranslationStorageKey(bookId, chapter);
@@ -243,9 +278,9 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
     isTranslated,
     translatedContent,
     clearTranslation,
+    applyStoredTranslation,
     isAutoloaded,
     lastUseCefr,
     setLastUseCefr,
   };
 }
-

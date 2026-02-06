@@ -22,6 +22,13 @@ interface Settings {
   disableFadeAnimation?: boolean;
   cacheTranslations?: boolean;
   hideFurigana?: boolean;
+
+  // English -> Mixed JP "known-word swap" reader mode
+  mixEnabled: boolean;
+  mixAggression: number; // 0..1
+  mixAutoEnableHighlight: boolean;
+  mixBackupMirrorToDrive: boolean;
+  mixMirrorStaleAfterHours: number;
 }
 
 interface SettingsContextType {
@@ -47,6 +54,12 @@ const defaultSettings: Settings = {
   disableFadeAnimation: false,
   cacheTranslations: true,
   hideFurigana: false,
+
+  mixEnabled: false,
+  mixAggression: 0.25,
+  mixAutoEnableHighlight: true,
+  mixBackupMirrorToDrive: true,
+  mixMirrorStaleAfterHours: 24,
 };
 
 const SETTINGS_COOKIE = "prSettings";
@@ -175,6 +188,30 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               if (data.hideFurigana !== undefined) basicSettingsUpdates.hideFurigana = data.hideFurigana;
               if (data.cacheTranslations !== undefined) basicSettingsUpdates.cacheTranslations = data.cacheTranslations;
 
+              // Mix mode settings (support both snake_case and camelCase keys for backward/forward compatibility)
+              const mixEnabledRaw = (data as any).mix_enabled ?? (data as any).mixEnabled;
+              if (mixEnabledRaw !== undefined) basicSettingsUpdates.mixEnabled = Boolean(mixEnabledRaw);
+
+              const mixAggressionRaw = (data as any).mix_aggression ?? (data as any).mixAggression;
+              if (mixAggressionRaw !== undefined) {
+                const parsed = typeof mixAggressionRaw === 'number' ? mixAggressionRaw : parseFloat(String(mixAggressionRaw));
+                if (Number.isFinite(parsed)) {
+                  basicSettingsUpdates.mixAggression = Math.max(0, Math.min(1, parsed));
+                }
+              }
+
+              const mixAutoHighlightRaw = (data as any).mix_auto_enable_highlight ?? (data as any).mixAutoEnableHighlight;
+              if (mixAutoHighlightRaw !== undefined) basicSettingsUpdates.mixAutoEnableHighlight = Boolean(mixAutoHighlightRaw);
+
+              const mixBackupRaw = (data as any).mix_backup_mirror_to_drive ?? (data as any).mixBackupMirrorToDrive;
+              if (mixBackupRaw !== undefined) basicSettingsUpdates.mixBackupMirrorToDrive = Boolean(mixBackupRaw);
+
+              const mixStaleRaw = (data as any).mix_mirror_stale_after_hours ?? (data as any).mixMirrorStaleAfterHours;
+              if (mixStaleRaw !== undefined) {
+                const parsed = typeof mixStaleRaw === 'number' ? mixStaleRaw : parseInt(String(mixStaleRaw), 10);
+                if (Number.isFinite(parsed) && parsed > 0) basicSettingsUpdates.mixMirrorStaleAfterHours = parsed;
+              }
+
               const updated = { ...prev, ...basicSettingsUpdates };
               setSettingsCookie(updated);
               setSettingsStorage(updated);
@@ -275,7 +312,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     console.log("Updating settings:", updates);
 
     setCurrentSettings(prev => {
-      const updated = { ...prev, ...updates };
+      const updatedRaw = { ...prev, ...updates };
+      // Clamp numeric settings that are user-controlled and can drift.
+      const mixAgg = Number(updatedRaw.mixAggression ?? 0.25);
+      const staleHours = Number(updatedRaw.mixMirrorStaleAfterHours ?? 24);
+      const updated: Settings = {
+        ...updatedRaw,
+        mixAggression: Number.isFinite(mixAgg) ? Math.max(0, Math.min(1, mixAgg)) : prev.mixAggression,
+        mixMirrorStaleAfterHours: Number.isFinite(staleHours)
+          ? Math.max(1, Math.min(24 * 30, staleHours))
+          : prev.mixMirrorStaleAfterHours,
+      } as Settings;
       setSettingsCookie(updated);
       setSettingsStorage(updated);
 
@@ -342,6 +389,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               touchscreenSupport: updated.touchscreenSupport,
               disableFadeAnimation: updated.disableFadeAnimation,
               hideFurigana: updated.hideFurigana,
+              mix_enabled: updated.mixEnabled,
+              mix_aggression: updated.mixAggression,
+              mix_auto_enable_highlight: updated.mixAutoEnableHighlight,
+              mix_backup_mirror_to_drive: updated.mixBackupMirrorToDrive,
+              mix_mirror_stale_after_hours: updated.mixMirrorStaleAfterHours,
               // Add timestamp and version
               lastUpdated: new Date().toISOString(),
               version: '1.0'
