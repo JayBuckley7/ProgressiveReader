@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import type { TranslateRequest, TranslateResponse } from "~/types/api";
 import { translateChapterStream } from "@features/reader/services/readerApi";
+import { appLog } from '@shared/appLog'
 
 // Helper functions for translation storage
 const getTranslationStorageKey = (bookId: string, chapter: number) => {
@@ -20,7 +21,7 @@ const saveTranslationToStorage = (bookId: string, chapter: number, translatedCon
     cefrLevel: localStorage.getItem("cefrLevel") || "3"
   };
   localStorage.setItem(key, JSON.stringify(translationData));
-  console.log('Translation saved to storage:', key, 'with settings:', {
+  appLog.debug('Translation saved to storage:', key, 'with settings:', {
     targetLanguage: translationData.targetLanguage,
     cefrLevel: translationData.cefrLevel,
     useCefr
@@ -33,7 +34,7 @@ export const loadTranslationFromStorage = (bookId: string, chapter: number) => {
   if (stored) {
     try {
       const translationData = JSON.parse(stored);
-      console.log('Translation loaded from storage:', key);
+      appLog.debug('Translation loaded from storage:', key);
       return translationData;
     } catch (error) {
       console.error('Error parsing stored translation:', error);
@@ -191,7 +192,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
 
   const clearTranslation = useCallback((options?: { suppressAutoload?: boolean }) => {
     if (isTranslated) {
-      console.log('Clearing translation, returning to original content');
+      appLog.debug('Clearing translation, returning to original content');
       if (options?.suppressAutoload) {
         // Prevent the autoload effect from immediately re-applying the cached translation.
         suppressAutoloadKeyRef.current = getTranslationStorageKey(bookId, chapter);
@@ -216,7 +217,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
   // Clear translated content when chapter changes, but check for autoload first
   useEffect(() => {
     if (isTranslated) {
-      console.log('Chapter changed - clearing translated content');
+      appLog.debug('Chapter changed - clearing translated content');
       setIsTranslated(false);
       setTranslatedContent(null);
       setIsAutoloaded(false);
@@ -236,7 +237,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
     
     // Only autoload on initial chapter load, not when user has already interacted with translations
     if (autoloadEnabled && cachingEnabled && currentChapterContent && !isTranslating && !isTranslated) {
-      console.log('Checking for stored translation for autoload...');
+      appLog.debug('Checking for stored translation for autoload...');
       const storedTranslation = loadTranslationFromStorage(bookId, chapter);
       
       if (storedTranslation) {
@@ -252,11 +253,11 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
           const isSuppressed = suppressAutoloadKeyRef.current === currentKey;
 
           if (isSuppressed) {
-            console.log('🛑 Autoload suppressed (user chose original) for chapter', chapter);
+            appLog.debug('🛑 Autoload suppressed (user chose original) for chapter', chapter);
             return;
           }
 
-          console.log('✅ Autoloading stored translation for chapter', chapter);
+          appLog.debug('✅ Autoloading stored translation for chapter', chapter);
           setTranslatedContent(storedTranslation.content);
           setIsTranslated(true);
           setIsAutoloaded(true);
@@ -264,7 +265,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
             setLastUseCefr(storedTranslation.useCefr);
           }
         } else {
-          console.log('❌ Stored translation is outdated, removing from storage');
+          appLog.debug('❌ Stored translation is outdated, removing from storage');
           const key = getTranslationStorageKey(bookId, chapter);
           localStorage.removeItem(key);
         }

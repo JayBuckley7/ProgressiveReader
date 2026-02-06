@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { appLog } from '@shared/appLog'
 
 interface ReadingProgress {
   currentChapter?: number;
@@ -69,7 +70,7 @@ export function useReadingProgress({
       try {
         const progress = await getReadingProgress(bookId);
         if (progress) {
-          console.log('📖 Restoring reading progress:', progress);
+          appLog.debug('📖 Restoring reading progress:', progress);
           
           if (bookMetadata.fileType === 'pdf' && progress.currentPage) {
             // For PDFs, restore the page (only if not set via URL)

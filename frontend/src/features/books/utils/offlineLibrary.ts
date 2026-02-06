@@ -1,3 +1,4 @@
+import { appLog } from '@shared/appLog'
 export const OFFLINE_BOOKS_KEY = 'prOfflineBooks';
 import type { BookMetadata } from '~/types';
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, getCachedFile } from '@integrations/googleDrive/services/driveCache';
@@ -44,7 +45,7 @@ export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {
     // Metadata alone is not enough for offline reading.
     if (b.driveFileId) {
       const hasContent = await getCachedFile(b.driveFileId);
-      console.log(`[Offline Library] Book "${b.title}" - driveFileId: ${b.driveFileId}, Cached: ${!!hasContent}`);
+      appLog.debug(`[Offline Library] Book "${b.title}" - driveFileId: ${b.driveFileId}, Cached: ${!!hasContent}`);
       // TEMPORARY: Disabled filter because user reported valid books being hidden.
       // if (!hasContent) {
       //   continue;

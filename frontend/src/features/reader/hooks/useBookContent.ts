@@ -6,6 +6,7 @@ import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 import { TextProcessorWrapper } from '@shared/lib/textProcessor.ts';
 
 import type { ChapterTitle } from '~/types/index.ts';
+import { appLog } from '@shared/appLog'
 
 interface BookContent {
   title: string;
@@ -41,14 +42,14 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
   // Add debug logging only in development mode
   if (process.env.NODE_ENV === 'development') {
-    console.log(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
+    appLog.debug(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
   }
 
   // Memoize the book metadata to prevent unnecessary re-renders
   const bookMetadata = useMemo(() => {
     const metadata = books.find(book => book.id === bookId);
     if (process.env.NODE_ENV === 'development') {
-      console.log(`📚 [useBookContent] Book metadata lookup result:`, metadata ? 'Found' : 'Not found');
+      appLog.debug(`📚 [useBookContent] Book metadata lookup result:`, metadata ? 'Found' : 'Not found');
     }
     return metadata;
   }, [books, bookId]);
@@ -56,7 +57,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   // Get the book processors (now directly imported)
   const getProcessors = () => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('Getting processor classes...');
+      appLog.debug('Getting processor classes...');
     }
     return {
       EpubProcessorWrapper,
@@ -70,7 +71,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     if (!bookMetadata) {
       if (isAppLoading) {
         // Still waiting for app data to load... keep loading state
-        console.log('useBookContent: Waiting for app data to load...');
+        appLog.debug('useBookContent: Waiting for app data to load...');
         return;
       }
       console.warn('useBookContent: No book metadata found for bookId:', bookId);
@@ -88,7 +89,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
     // Skip if this book is already loaded and metadata hasn't changed
     if (loadedBookIdRef.current === bookId && bookContent && metaUnchanged) {
-      console.log('useBookContent: Book already loaded, skipping reload for:', bookId);
+      appLog.debug('useBookContent: Book already loaded, skipping reload for:', bookId);
       setIsLoading(false);
       return;
     }
@@ -102,7 +103,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       activeLoadRef.current.metadata.fileType === bookMetadata.fileType &&
       activeLoadRef.current.metadata.driveFileId === bookMetadata.driveFileId
     ) {
-      console.log('useBookContent: Book is already loading, skipping duplicate request for:', bookId);
+      appLog.debug('useBookContent: Book is already loading, skipping duplicate request for:', bookId);
       return;
     }
 
@@ -123,63 +124,63 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           },
         };
 
-        console.log('Loading book content for:', bookMetadata.title, 'ID:', bookId);
-        console.log('Book metadata:', bookMetadata);
+        appLog.debug('Loading book content for:', bookMetadata.title, 'ID:', bookId);
+        appLog.debug('Book metadata:', bookMetadata);
 
         // Get the processors
-        console.log('Step 1: Getting processors...');
+        appLog.debug('Step 1: Getting processors...');
         const processors = getProcessors();
-        console.log('Step 1 complete: Processors available');
+        appLog.debug('Step 1 complete: Processors available');
 
         // Download book content from Google Drive
-        console.log('Step 2: Downloading book from Google Drive...');
+        appLog.debug('Step 2: Downloading book from Google Drive...');
         const bookBlob = await bookStorageService.downloadBook(bookId, bookMetadata);
         if (!bookBlob) {
           throw new Error('Failed to download book content');
         }
 
-        console.log('Step 2 complete: Book downloaded successfully, size:', bookBlob.size, 'type:', bookBlob.type);
+        appLog.debug('Step 2 complete: Book downloaded successfully, size:', bookBlob.size, 'type:', bookBlob.type);
 
         // Convert blob to ArrayBuffer
-        console.log('Step 3: Converting blob to ArrayBuffer...');
+        appLog.debug('Step 3: Converting blob to ArrayBuffer...');
         const arrayBuffer = await bookBlob.arrayBuffer();
-        console.log('Step 3 complete: ArrayBuffer size:', arrayBuffer.byteLength);
+        appLog.debug('Step 3 complete: ArrayBuffer size:', arrayBuffer.byteLength);
 
         // Choose the appropriate processor based on file type
-        console.log('Step 4: Creating processor for file type:', bookMetadata.fileType);
+        appLog.debug('Step 4: Creating processor for file type:', bookMetadata.fileType);
         let processor: EpubProcessorWrapper | TextProcessorWrapper;
         let loaded: boolean;
 
         if (bookMetadata.fileType === 'epub') {
           // Use EPUB processor
           processor = new processors.EpubProcessorWrapper();
-          console.log('Step 4 complete: Created EpubProcessorWrapper');
+          appLog.debug('Step 4 complete: Created EpubProcessorWrapper');
 
           // Load the book with the EPUB processor
-          console.log('Step 5: Loading book with EpubProcessorWrapper...');
+          appLog.debug('Step 5: Loading book with EpubProcessorWrapper...');
           loaded = await processor.loadBook(arrayBuffer);
         } else {
           // Default to Text processor for other types
           processor = new processors.TextProcessorWrapper();
-          console.log('Step 4 complete: Created TextProcessorWrapper');
+          appLog.debug('Step 4 complete: Created TextProcessorWrapper');
 
           // Load the book with the text processor
-          console.log('Step 5: Loading book with TextProcessorWrapper...');
+          appLog.debug('Step 5: Loading book with TextProcessorWrapper...');
           loaded = await processor.loadBook(arrayBuffer, { fileType: bookMetadata.fileType });
         }
         if (!loaded) {
           throw new Error(`Failed to load book using ${processor.constructor.name}`);
         }
-        console.log('Step 5 complete: Book loaded with processor');
+        appLog.debug('Step 5 complete: Book loaded with processor');
 
         processorRef.current = processor;
 
         // Get book metadata
-        console.log('Step 6: Getting book metadata...');
+        appLog.debug('Step 6: Getting book metadata...');
         const totalChapters = processor.getTotalChapters();
         const chapterTitles = (await processor.getChapterTitles()) as ChapterTitle[];
 
-        console.log('Step 6 complete: Book processed successfully:', {
+        appLog.debug('Step 6 complete: Book processed successfully:', {
           title: bookMetadata.title,
           totalChapters,
           chapterTitles: chapterTitles?.slice(0, 3) // Log first 3 titles
@@ -189,14 +190,14 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         const chapters: string[] = [];
         if (totalChapters <= 10) {
           // Pre-load all chapters for small books
-          console.log('Step 7: Pre-loading all chapters for small book...');
+          appLog.debug('Step 7: Pre-loading all chapters for small book...');
           for (let i = 0; i < totalChapters; i++) {
             const chapterHtml = await processor.getChapterHtml(i);
             chapters[i] = chapterHtml || '';
           }
-          console.log('Step 7 complete: All chapters pre-loaded');
+          appLog.debug('Step 7 complete: All chapters pre-loaded');
         } else {
-          console.log('Step 7: Skipping pre-load for large book (' + totalChapters + ' chapters)');
+          appLog.debug('Step 7: Skipping pre-load for large book (' + totalChapters + ' chapters)');
         }
 
         // Bail out if the user navigated away before load finished
@@ -218,7 +219,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         // Mark this book as loaded
         loadedBookIdRef.current = bookId;
 
-        console.log('✁EBook loading complete!');
+        appLog.debug('✁EBook loading complete!');
 
         prevMetadataRef.current = {
           title: bookMetadata.title,
@@ -283,7 +284,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
         // Otherwise, load chapter on-demand
         if (process.env.NODE_ENV === 'development') {
-          console.log('Loading chapter content on-demand:', currentChapter);
+          appLog.debug('Loading chapter content on-demand:', currentChapter);
         }
         const chapterHtml = await processorRef.current.getChapterHtml(currentChapter);
         setCurrentChapterContent(chapterHtml || '<p>Chapter content not available</p>');

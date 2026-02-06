@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/clerk-react";
 import {
+import { appLog } from '@shared/appLog'
   Routes,
   Route,
   useParams,
@@ -121,7 +122,7 @@ function AppContent() {
   //     );
 
   //     if (wasGoogleClerkLogin && !isDriveConnected) {
-  //       console.log(
+  //       appLog.debug(
   //         "[AppContent] Clerk Google sign-in detected. Google Drive not yet connected. Waiting for automatic connection..."
   //       );
   //       // Try silent sign-in first, only prompt if that fails

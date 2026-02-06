@@ -14,6 +14,7 @@ import { vocabBank } from "@features/vocabulary/services/vocabBank";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SignInForm } from "@shared/components/SignInForm";
+import { appLog } from '@shared/appLog'
 
 interface BookLibraryProps {
   onSelectBook?: (bookId: string) => void;
@@ -78,7 +79,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             </p>
             <button
               onClick={async () => {
-                console.log("Manual Google Drive connection requested");
+                appLog.debug("Manual Google Drive connection requested");
                 await connectToGoogleDriveAndLoad();
               }}
               className="px-4 py-2 rounded-md text-sm font-medium transition-colors app-button-primary"
@@ -226,7 +227,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                 </button>
                 <button
                   onClick={() => {
-                    console.log("sync library button clicked");
+                    appLog.debug("sync library button clicked");
                     syncBooks();
                   }}
                   className="h-9 w-9 flex items-center justify-center app-icon-button transition-colors"

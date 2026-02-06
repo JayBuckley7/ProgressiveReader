@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useTranslation } from "react-i18next";
+import { appLog } from '@shared/appLog'
 
 // LocalStorage & Cookie keys
 const localKeys = {
@@ -89,7 +90,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       document.cookie = `jpdb_api_key=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
     }
     
-    console.log('Synced all settings to localStorage and cookies');
+    appLog.debug('Synced all settings to localStorage and cookies');
   }, [localState, jpdbApiKey]);
 
   // Note: Parser selection is now automatic based on JPDB API key presence
@@ -226,7 +227,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 	    setCloudAction("save");
 	    try {
 	      const settingsToSave = createSettingsObject();
-	      console.log('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
+	      appLog.debug('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
 	      const success = await saveSettings(settingsToSave);
       if (success) {
         toast.success(t('settings.toasts.save.success'));
@@ -253,7 +254,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 	    setCloudAction("load");
 	    try {
 	      const cloudSettings = await loadSettings();
-	      console.log('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
+	      appLog.debug('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
 	      if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
         toast.success(t('settings.toasts.load.success'));

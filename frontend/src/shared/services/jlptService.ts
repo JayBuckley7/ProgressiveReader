@@ -1,5 +1,6 @@
 // JLPT Vocabulary Lookup Service
 import kanjiApiData from '~/data/jlpt/kanjiapi_full.json';
+import { appLog } from '@shared/appLog'
 
 export interface KanjiEntry {
   freq_mainichi_shinbun?: number;
@@ -79,14 +80,14 @@ function buildCombinedDataset(): JlptWordInfo[] {
     });
   }
   
-  console.log(`📚 JLPT Service: Loaded ${allEntries.length} kanji entries from kanjiapi_full.json`);
+  appLog.debug(`📚 JLPT Service: Loaded ${allEntries.length} kanji entries from kanjiapi_full.json`);
   const jlptCounts = allEntries.reduce((acc, entry) => {
     if (entry.level) {
       acc[entry.level] = (acc[entry.level] || 0) + 1;
     }
     return acc;
   }, {} as Record<JlptLevel, number>);
-  console.log('📊 JLPT Level distribution:', jlptCounts);
+  appLog.debug('📊 JLPT Level distribution:', jlptCounts);
   
   return allEntries;
 }

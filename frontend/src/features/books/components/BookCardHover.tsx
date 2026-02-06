@@ -3,6 +3,7 @@ import { BookMetadata, Folder } from '~/types';
 import { EditBookModal } from './EditBookModal';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
 import { toast } from 'sonner';
+import { appLog } from '@shared/appLog'
 
 interface BookCardHoverProps {
   book: BookMetadata;
@@ -187,7 +188,7 @@ export function BookCardHover({
   };
 
   const handleMoveToFolder = (folderId: string | null) => {
-    console.log('handleMoveToFolder called with:', folderId, 'onMoveToFolder exists:', !!onMoveToFolder);
+    appLog.debug('handleMoveToFolder called with:', folderId, 'onMoveToFolder exists:', !!onMoveToFolder);
     if (onMoveToFolder) {
       onMoveToFolder(book.id, folderId);
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { authManager } from '@shared/services/authManager';
+import { appLog } from '@shared/appLog'
 
 /**
  * Button UI for connecting to Google Drive and triggering sync.
@@ -32,7 +33,7 @@ export function DriveButton() {
   const handleConnect = async () => {
     if (connected) {
       // TODO: Add folder opening functionality to auth manager if needed
-      console.log('Already connected to Google Drive');
+      appLog.debug('Already connected to Google Drive');
       return;
     }
     setConnecting(true);
@@ -57,7 +58,7 @@ export function DriveButton() {
 
   const handleSync = async () => {
     // TODO: Add sync functionality to auth manager if needed
-    console.log('Sync functionality not yet implemented in auth manager');
+    appLog.debug('Sync functionality not yet implemented in auth manager');
   };
 
   const buttonText = connecting

@@ -3,6 +3,7 @@
 import TinySegmenter from 'tiny-segmenter';
 import { Token, Card } from '~/types';
 import { translationCache, checkCacheSize } from './translationCache';
+import { appLog } from '@shared/appLog'
 
 const segmenter = new TinySegmenter();
 
@@ -147,7 +148,7 @@ function shouldMergeCompound(current: string, next: string): boolean {
 }
 
 export async function parseWithLocalLookup(text: string): Promise<Token[]> {
-  console.log('📝 Parsing text with TinySegmenter (local lookup mode)');
+  appLog.debug('📝 Parsing text with TinySegmenter (local lookup mode)');
   
   const startTime = performance.now();
   
@@ -155,12 +156,12 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
     // Initial segmentation with TinySegmenter
     const segmentationStart = performance.now();
     const rawSegments = segmenter.segment(text);
-    console.log(`📝 Raw segments: ${rawSegments.length} (${(performance.now() - segmentationStart).toFixed(1)}ms)`);
+    appLog.debug(`📝 Raw segments: ${rawSegments.length} (${(performance.now() - segmentationStart).toFixed(1)}ms)`);
     
     // Improve segmentation with post-processing
     const improveStart = performance.now();
     const improvedSegments = await improveSegmentation(rawSegments);
-    console.log(`✨ Improved segments: ${improvedSegments.length} (${(performance.now() - improveStart).toFixed(1)}ms)`);
+    appLog.debug(`✨ Improved segments: ${improvedSegments.length} (${(performance.now() - improveStart).toFixed(1)}ms)`);
     
     // Generate tokens for local JLPT lookup (no external API calls)
     const tokens: Token[] = [];
@@ -208,7 +209,7 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
     }
     
     const totalTime = performance.now() - startTime;
-    console.log(`✅ Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms (local lookup mode)`);
+    appLog.debug(`✅ Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms (local lookup mode)`);
     
     return tokens;
     

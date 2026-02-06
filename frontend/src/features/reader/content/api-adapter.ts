@@ -5,6 +5,7 @@ import { Keybind } from '~/types';
 import { vocabBank } from '@features/vocabulary/services/vocabBank';
 import { parseWithLocalLookup } from '@features/reader/utils/localTextParser';
 import { getJpdbData, mineJpdbWord, updateJpdbWordState, reviewJpdbCard } from '@features/vocabulary/services/vocabApi';
+import { appLog } from '@shared/appLog'
 
 // Helper function to convert string[] to CardState
 function toCardState(state: string[]): CardState {
@@ -70,13 +71,13 @@ let currentConfigInstance: JpHighlighterConfig = { ...defaultConfig };
 
 // Function to get the current configuration
 export function getCurrentConfig(): JpHighlighterConfig {
-    //console.log('[api-adapter] getCurrentConfig called, returning:', JSON.stringify(currentConfigInstance));
+    //appLog.debug('[api-adapter] getCurrentConfig called, returning:', JSON.stringify(currentConfigInstance));
     return currentConfigInstance;
 }
 
 // Load configuration from cookies/localStorage
 export function loadConfig(): JpHighlighterConfig {
-    //console.log('[api-adapter] loadConfig called');
+    //appLog.debug('[api-adapter] loadConfig called');
     const loadedConfig = { ...defaultConfig }; // Start with defaults
     
     // Load from cookies
@@ -181,7 +182,7 @@ export function loadConfig(): JpHighlighterConfig {
     // loadedConfig[keybindKey] would be undefined. The spread above handles this by keeping the default.
     // If it *was* in localStorage and parsed to { code: 'None', ... }, that will correctly override a different default.
 
-    // console.log('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance, null, 2));
+    // appLog.debug('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance, null, 2));
     return currentConfigInstance; // Return the new config instance
 }
 

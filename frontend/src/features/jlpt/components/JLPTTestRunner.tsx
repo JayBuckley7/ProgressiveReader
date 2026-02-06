@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { appLog } from '@shared/appLog'
 
 const furiganaPattern = /((?:[\p{sc=Han}々〆ヶ]+)|\(\)|（）)\(([^)]+)\)/gu;
 
@@ -323,8 +324,8 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
   // Debug logging
   useEffect(() => {
     if (question) {
-      console.log('Current question:', question);
-      console.log('Choices:', question.choices);
+      appLog.debug('Current question:', question);
+      appLog.debug('Choices:', question.choices);
     }
   }, [question]);
 

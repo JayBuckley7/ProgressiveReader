@@ -1,6 +1,7 @@
 /**
  * LRU Cache for translation results to avoid duplicate API calls
  */
+import { appLog } from '@shared/appLog'
 export class TranslationCache {
   private cache = new Map<string, string>();
   private maxSize: number;
@@ -60,7 +61,7 @@ export const translationCache = new TranslationCache(1000);
 // Utility functions for cache management
 export const clearTranslationCache = () => {
   translationCache.clear();
-  console.log('🗑️ Translation cache cleared');
+  appLog.debug('🗑️ Translation cache cleared');
 };
 
 export const getTranslationCacheStats = () => {

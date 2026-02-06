@@ -1,5 +1,6 @@
 import { BookMetadata } from '~/types';
 import {
+import { appLog } from '@shared/appLog'
     getCachedCover,
     cacheCover,
     getCoverForFile,
@@ -55,7 +56,7 @@ class BookCacheService {
 
         // Check if download is already in progress
         if (this.activeCoverDownloads.has(bookId)) {
-            console.log(`[Cover Cache] Download in progress for book ${bookId}, waiting...`);
+            appLog.debug(`[Cover Cache] Download in progress for book ${bookId}, waiting...`);
             return this.activeCoverDownloads.get(bookId)!;
         }
 
@@ -79,21 +80,21 @@ class BookCacheService {
             // Check file-level cache first
             let coverBlob = await getCoverForFile(bookId);
             if (coverBlob) {
-                console.log(`[Cover Cache] Found cover in file cache for book ${bookId}`);
+                appLog.debug(`[Cover Cache] Found cover in file cache for book ${bookId}`);
             } else {
                 // Check cover-level cache
                 coverBlob = await getCachedCover(coverImageId);
                 if (coverBlob) {
-                    console.log(`[Cover Cache] Found cover in cover cache for book ${bookId}`);
+                    appLog.debug(`[Cover Cache] Found cover in cover cache for book ${bookId}`);
                     await cacheCoverForFile(bookId, coverBlob);
                 } else {
                     // Download from Google Drive
-                    console.log(`[Cover Cache] Downloading cover from Google Drive for book ${bookId}`);
+                    appLog.debug(`[Cover Cache] Downloading cover from Google Drive for book ${bookId}`);
                     coverBlob = await gDriveService.downloadFile(coverImageId);
                     if (coverBlob) {
                         await cacheCover(coverImageId, coverBlob);
                         await cacheCoverForFile(bookId, coverBlob);
-                        console.log(`[Cover Cache] Downloaded and cached cover for book ${bookId}`);
+                        appLog.debug(`[Cover Cache] Downloaded and cached cover for book ${bookId}`);
                     }
                 }
             }
@@ -105,7 +106,7 @@ class BookCacheService {
                     // Create persistent blob URL
                     const coverUrl = URL.createObjectURL(coverBlob);
                     this.coverUrlCache.set(bookId, coverUrl);
-                    console.log(`✅ [Cover Cache] Created persistent URL for book ${bookId}`);
+                    appLog.debug(`✅ [Cover Cache] Created persistent URL for book ${bookId}`);
                     return coverUrl;
                 } else {
                     console.warn(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
@@ -156,11 +157,11 @@ class BookCacheService {
         // Wrap the download in a queued task
         const task = async () => {
             try {
-                console.log(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId})`);
+                appLog.debug(`[Cover Debug] Starting cover download for book: ${bookTitle} (ID: ${bookId})`);
 
                 const coverUrl = await this.getPersistentCoverUrl(bookId, coverImageId);
                 if (coverUrl) {
-                    console.log(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
+                    appLog.debug(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
                     onCoverReady(bookId, coverUrl);
                 } else {
                     console.warn(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
@@ -187,7 +188,7 @@ class BookCacheService {
             if (!activeBookIds.has(bookId)) {
                 URL.revokeObjectURL(coverUrl);
                 this.coverUrlCache.delete(bookId);
-                console.log(`[Cover Cache] Cleaned up unused cover URL for book ${bookId}`);
+                appLog.debug(`[Cover Cache] Cleaned up unused cover URL for book ${bookId}`);
             }
         }
     }
@@ -245,7 +246,7 @@ class BookCacheService {
 
             img.onload = () => {
                 clearTimeout(timeoutId);
-                console.log(`✅ Blob URL is valid: ${img.width}x${img.height}`);
+                appLog.debug(`✅ Blob URL is valid: ${img.width}x${img.height}`);
                 resolve(true);
             };
 
@@ -277,7 +278,7 @@ class BookCacheService {
             img.onload = () => {
                 clearTimeout(timeoutId);
                 URL.revokeObjectURL(url);
-                console.log(`✅ Blob is valid image: ${img.width}x${img.height}`);
+                appLog.debug(`✅ Blob is valid image: ${img.width}x${img.height}`);
                 resolve(true);
             };
 

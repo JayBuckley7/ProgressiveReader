@@ -3,6 +3,7 @@ import { useAppData } from '@shared/contexts/AppDataContext';
 import { BookMetadata, ReadingProgress } from '~/types';
 import { EditBookModal } from './EditBookModal';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
+import { appLog } from '@shared/appLog'
 
 interface Book {
   _id: string;
@@ -35,9 +36,9 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
 
   // Add logging for cover URL changes
   useEffect(() => {
-    console.log(`[BookCard Debug] Book "${book.title}" (ID: ${book.id}) - coverUrl: ${book.coverUrl ? 'Present' : 'Missing'}`);
+    appLog.debug(`[BookCard Debug] Book "${book.title}" (ID: ${book.id}) - coverUrl: ${book.coverUrl ? 'Present' : 'Missing'}`);
     if (book.coverUrl) {
-      console.log(`[BookCard Debug] Cover URL for "${book.title}": ${book.coverUrl.substring(0, 50)}...`);
+      appLog.debug(`[BookCard Debug] Cover URL for "${book.title}": ${book.coverUrl.substring(0, 50)}...`);
     }
   }, [book.coverUrl, book.title, book.id]);
 
@@ -98,7 +99,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
         window.location.href = baseUrl;
       }
     } else {
-      console.log("No file available for:", book.title);
+      appLog.debug("No file available for:", book.title);
     }
   };
 

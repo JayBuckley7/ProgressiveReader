@@ -4,6 +4,7 @@ import { authManager } from "@shared/services/authManager";
 import { bookMetadataService } from "@features/books/services/bookMetadata";
 import { toast } from "sonner";
 import i18n from "~/i18n";
+import { appLog } from '@shared/appLog'
 
 type Theme = "light" | "dark" | "wood" | "space" | "system";
 
@@ -137,7 +138,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
         localStorage.setItem('hideFurigana', String(updated.hideFurigana ?? false));
-        console.log('🔔 Initial sync of accessibility settings to localStorage');
+        appLog.debug('🔔 Initial sync of accessibility settings to localStorage');
 
         setSettingsStorage(updated);
 
@@ -152,7 +153,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('disableFadeAnimation', String(defaultSettings.disableFadeAnimation));
       localStorage.setItem('cacheTranslations', String(defaultSettings.cacheTranslations));
       localStorage.setItem('hideFurigana', String(defaultSettings.hideFurigana));
-      console.log('🔔 Initial sync of default accessibility settings to localStorage');
+      appLog.debug('🔔 Initial sync of default accessibility settings to localStorage');
       setSettingsStorage(defaultSettings);
       i18n.changeLanguage(defaultSettings.uiLanguage);
     }
@@ -165,11 +166,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (isAuthenticated && !loadedFromCloudRef.current && !isLoadingFromCloud) {
         setIsLoadingFromCloud(true);
         try {
-          console.log('🔄 Auto-loading settings from Google Drive after authentication...');
+          appLog.debug('🔄 Auto-loading settings from Google Drive after authentication...');
           // Don't call authManager.ensureAuthenticated() again since we're already in auth callback
           const data = await bookMetadataService.loadSettings();
           if (data && Object.keys(data).length > 0) {
-            console.log('✅ Settings auto-loaded from Google Drive successfully');
+            appLog.debug('✅ Settings auto-loaded from Google Drive successfully');
             toast.success('Settings synced from Google Drive', {
               description: 'Your preferences have been loaded automatically',
               duration: 3000
@@ -222,7 +223,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
               localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
               localStorage.setItem('hideFurigana', String(updated.hideFurigana ?? false));
-              console.log('🔔 Auto-synced all accessibility settings to localStorage');
+              appLog.debug('🔔 Auto-synced all accessibility settings to localStorage');
 
 
 
@@ -232,7 +233,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof cloudJpdbKey === 'string' && cloudJpdbKey.length > 0) {
                   document.cookie = `jpdbApiKey=${cloudJpdbKey}; path=/;`;
                   document.cookie = `jpdb_api_key=${cloudJpdbKey}; path=/;`;
-                  console.log('🔑 JPDB API key synced from cloud into cookies');
+                  appLog.debug('🔑 JPDB API key synced from cloud into cookies');
                 }
               } catch (e) {
                 console.warn('Failed to sync JPDB key from cloud settings');
@@ -260,7 +261,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               return updated;
             });
           } else {
-            console.log('ℹ️ No settings.json found in Google Drive - using local settings');
+            appLog.debug('ℹ️ No settings.json found in Google Drive - using local settings');
           }
           loadedFromCloudRef.current = true;
         } catch (err) {
@@ -309,7 +310,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const settings = currentSettings; // Use state directly
 
   const updateSettings = (updates: Partial<Settings>) => {
-    console.log("Updating settings:", updates);
+    appLog.debug("Updating settings:", updates);
 
     setCurrentSettings(prev => {
       const updatedRaw = { ...prev, ...updates };
@@ -329,22 +330,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Sync accessibility settings to localStorage for JPDB integration
       if ('showPopupOnHover' in updates) {
         localStorage.setItem('showPopupOnHover', String(updated.showPopupOnHover));
-        console.log('🔔 Synced showPopupOnHover to localStorage:', updated.showPopupOnHover);
+        appLog.debug('🔔 Synced showPopupOnHover to localStorage:', updated.showPopupOnHover);
       }
       if ('touchscreenSupport' in updates) {
         localStorage.setItem('touchscreenSupport', String(updated.touchscreenSupport));
-        console.log('🔔 Synced touchscreenSupport to localStorage:', updated.touchscreenSupport);
+        appLog.debug('🔔 Synced touchscreenSupport to localStorage:', updated.touchscreenSupport);
       }
       if ('disableFadeAnimation' in updates) {
         localStorage.setItem('disableFadeAnimation', String(updated.disableFadeAnimation));
-        console.log('🔔 Synced disableFadeAnimation to localStorage:', updated.disableFadeAnimation);
+        appLog.debug('🔔 Synced disableFadeAnimation to localStorage:', updated.disableFadeAnimation);
       }
       if ('cacheTranslations' in updates) {
         localStorage.setItem('cacheTranslations', String(updated.cacheTranslations));
       }
       if ('hideFurigana' in updates) {
         localStorage.setItem('hideFurigana', String(updated.hideFurigana));
-        console.log('🔔 Synced hideFurigana to localStorage:', updated.hideFurigana);
+        appLog.debug('🔔 Synced hideFurigana to localStorage:', updated.hideFurigana);
       }
 
 
@@ -359,12 +360,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // Set a new timeout to save after 2 seconds of no changes
         autoSaveTimeoutRef.current = setTimeout(async () => {
           try {
-            console.log('🔄 Auto-saving settings to cloud...');
+            appLog.debug('🔄 Auto-saving settings to cloud...');
 
             // First, load existing comprehensive settings to preserve API keys and other fields
             const existingSettingsRaw = await loadSettings();
             const existingSettings = (existingSettingsRaw && typeof existingSettingsRaw === 'object') ? existingSettingsRaw : {};
-            console.log('🔍 [SettingsContext] Existing settings loaded for merge:', existingSettings);
+            appLog.debug('🔍 [SettingsContext] Existing settings loaded for merge:', existingSettings);
 
             // Merge the basic settings with existing comprehensive settings
             const preserved = { ...existingSettings } as any;
@@ -399,10 +400,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               version: '1.0'
             };
 
-            console.log('🔍 [SettingsContext] Auto-saving merged settings:', settingsToSave);
+            appLog.debug('🔍 [SettingsContext] Auto-saving merged settings:', settingsToSave);
             const success = await saveSettings(settingsToSave);
             if (success) {
-              console.log('✅ Settings auto-saved to cloud successfully (comprehensive format preserved)');
+              appLog.debug('✅ Settings auto-saved to cloud successfully (comprehensive format preserved)');
             } else {
               console.warn('⚠️ Auto-save to cloud failed');
             }

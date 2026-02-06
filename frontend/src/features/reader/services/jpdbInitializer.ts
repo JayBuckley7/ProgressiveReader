@@ -254,6 +254,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     }
     
     try {
+        const renderVersionAtStart = contentElement.dataset.prRenderVersion ?? null;
         const textSegments = extractCleanTextSegments(contentElement);
         
         Logger.log(`Extracted ${textSegments.length} text segments`);
@@ -269,6 +270,18 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         Logger.log(`Created ${paragraphs.length} paragraph fragments`);
 
         const tokens = await parseText(textSegments); // Tokens have global offsets
+
+        // If the reader rerendered while we were awaiting tokens, offsets no longer match the DOM.
+        // This can happen when quickly adjusting mix aggression. In that case, skip applying.
+        const renderVersionNow = contentElement.dataset.prRenderVersion ?? null;
+        if (!contentElement.isConnected || renderVersionAtStart !== renderVersionNow) {
+            Logger.log('Skipping highlight apply (stale render version).', {
+                renderVersionAtStart,
+                renderVersionNow,
+                isConnected: contentElement.isConnected,
+            });
+            return;
+        }
 
         Logger.log(`Received ${tokens.length} tokens from API`);
         

@@ -1,5 +1,6 @@
 // Dictionary Worker Manager - handles communication with dictionary web worker
 import type { WorkerMessage, WorkerResponse } from '~/workers/dictionaryWorker';
+import { appLog } from '@shared/appLog'
 
 export interface ProgressCallback {
   (progress: {
@@ -55,7 +56,7 @@ class DictionaryWorkerManager {
       this.worker.onmessage = this.handleWorkerMessage.bind(this);
       this.worker.onerror = this.handleWorkerError.bind(this);
 
-      console.log('Dictionary worker initialized successfully');
+      appLog.debug('Dictionary worker initialized successfully');
     } catch (error) {
       console.error('Failed to initialize dictionary worker:', error);
       this.worker = null;
@@ -187,7 +188,7 @@ class DictionaryWorkerManager {
     });
     this.pendingMessages.clear();
 
-    console.log('Dictionary worker terminated');
+    appLog.debug('Dictionary worker terminated');
   }
 
   /**

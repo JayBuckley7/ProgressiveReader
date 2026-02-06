@@ -343,6 +343,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     setContentVersion(v => v + 1);
   }, [currentChapterContent, translatedContent, settings?.mixEnabled, settings?.mixAggression]);
 
+  // Stamp a render version onto the content node so async highlighter runs can detect staleness.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.dataset.prRenderVersion = String(contentVersion);
+  }, [contentVersion]);
+
   // Load JPDB mirror metadata for mix mode.
   useEffect(() => {
     void reloadMirror();

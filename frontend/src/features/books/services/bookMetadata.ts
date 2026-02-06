@@ -6,6 +6,7 @@ import { bookCacheService } from './bookCache';
 import { bookStorageService } from './bookStorage';
 import { processPDFWithOCR, OCRProgressCallback } from './ocrApi';
 import { toast } from 'sonner';
+import { appLog } from '@shared/appLog'
 
 declare global {
     interface Window {
@@ -22,13 +23,13 @@ class BookMetadataService {
     private detectProviderFromClerkUser(clerkUser: any): Provider {
         // Detect provider from Clerk user's external accounts
         if (!clerkUser?.externalAccounts?.length) {
-            console.log('No external accounts found, defaulting to email provider');
+            appLog.debug('No external accounts found, defaulting to email provider');
             return 'email';
         }
 
         // Get the first external account's provider
         const provider = clerkUser.externalAccounts[0]?.provider;
-        console.log('Detected Clerk provider:', provider);
+        appLog.debug('Detected Clerk provider:', provider);
         
         switch (provider) {
             case 'google':
@@ -349,7 +350,7 @@ class BookMetadataService {
         clerkUser?: any,
         onOCRProgress?: OCRProgressCallback
     ): Promise<BookMetadata> {
-        console.log('Uploading book to user\'s cloud storage. Privacy-first: no content stored in our backend.');
+        appLog.debug('Uploading book to user\'s cloud storage. Privacy-first: no content stored in our backend.');
         
         const provider = this.detectProviderFromClerkUser(clerkUser);
         
@@ -366,14 +367,14 @@ class BookMetadataService {
                     let coverBlob = meta.cover;
                     
                     if (!coverBlob && meta.fileType === 'epub') {
-                        console.log('Attempting to extract cover from EPUB file...');
+                        appLog.debug('Attempting to extract cover from EPUB file...');
                         try {
                             const extractedCover = await bookStorageService.extractCoverFromEpub(file);
                             if (extractedCover) {
                                 coverBlob = extractedCover;
-                                console.log('✅ Cover extracted from EPUB successfully');
+                                appLog.debug('✅ Cover extracted from EPUB successfully');
                             } else {
-                                console.log('📖 No cover found in EPUB file');
+                                appLog.debug('📖 No cover found in EPUB file');
                             }
                         } catch (error) {
                             console.warn('⚠️ Failed to extract cover from EPUB:', error);
@@ -384,18 +385,18 @@ class BookMetadataService {
                     }
 
                     if (!coverBlob) {
-                        console.log('No embedded cover found; attempting cover lookup by title...');
+                        appLog.debug('No embedded cover found; attempting cover lookup by title...');
                         const lookedUpCover = await this.lookupCover(meta.title);
                         if (lookedUpCover) {
                             coverBlob = lookedUpCover;
-                            console.log('✅ Cover found via lookup');
+                            appLog.debug('✅ Cover found via lookup');
                         } else {
-                            console.log('No cover found via lookup');
+                            appLog.debug('No cover found via lookup');
                         }
                     }
 
                     if (!coverBlob) {
-                        console.log('No cover available; generating placeholder cover...');
+                        appLog.debug('No cover available; generating placeholder cover...');
                         coverBlob = await this.generatePlaceholderCover(meta.title, meta.fileType);
                     }
 
@@ -403,9 +404,9 @@ class BookMetadataService {
                     let fileToUpload = file;
                     if (meta.processOCR && meta.fileType === 'pdf') {
                         try {
-                            console.log('Processing PDF with OCR...');
+                            appLog.debug('Processing PDF with OCR...');
                             fileToUpload = await processPDFWithOCR(file, onOCRProgress);
-                            console.log('✅ PDF processed with OCR successfully');
+                            appLog.debug('✅ PDF processed with OCR successfully');
                         } catch (error) {
                             console.error('OCR processing failed:', error);
                             toast.error('OCR processing failed. Uploading original PDF.');
@@ -445,7 +446,7 @@ class BookMetadataService {
                         
                         if (coverResult) {
                             coverImageId = coverResult.id;
-                            console.log('✅ Cover image uploaded successfully');
+                            appLog.debug('✅ Cover image uploaded successfully');
                         } else {
                             console.warn('⚠️ Failed to upload cover image, but book upload succeeded');
                         }
@@ -477,7 +478,7 @@ class BookMetadataService {
                         folderId: undefined // New books start without a folder
                     };
 
-                    console.log('✅ Book uploaded to user\'s cloud storage successfully. Privacy-first: no metadata stored in our backend.');
+                    appLog.debug('✅ Book uploaded to user\'s cloud storage successfully. Privacy-first: no metadata stored in our backend.');
             
                     // Clear cache since book list has changed
                     bookCacheService.clearBookListCache();
@@ -503,7 +504,7 @@ class BookMetadataService {
     }
 
     async getUserBooks(onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
-        console.log('getUserBooks: Fetching book list from user\'s Google Drive...');
+        appLog.debug('getUserBooks: Fetching book list from user\'s Google Drive...');
         const isJsonFileType = (fileType?: string | null) => (fileType || '').toLowerCase() === 'json';
         
         try {
@@ -513,17 +514,17 @@ class BookMetadataService {
                 const isClerkSignedIn = window.Clerk.session !== null;
                 
                 if (!clerkUser || !isClerkSignedIn) {
-                    console.log('getUserBooks: Clerk user not authenticated, skipping Google Drive access');
+                    appLog.debug('getUserBooks: Clerk user not authenticated, skipping Google Drive access');
                     return [];
                 }
             } else {
-                console.log('getUserBooks: Clerk not available, skipping Google Drive access');
+                appLog.debug('getUserBooks: Clerk not available, skipping Google Drive access');
                 return [];
             }
 
             // Check if user is signed in to Google Drive
             if (!gDriveService.isSignedIn()) {
-                console.log('User not signed in to Google Drive');
+                appLog.debug('User not signed in to Google Drive');
                 return [];
             }
 
@@ -532,7 +533,7 @@ class BookMetadataService {
             if (cachedBooks) {
                 const cachedLibraryBooks = cachedBooks.filter(book => !isJsonFileType(book.fileType));
                 if (cachedLibraryBooks.length !== cachedBooks.length) {
-                    console.log('getUserBooks: Filtered JSON test files from cached library list');
+                    appLog.debug('getUserBooks: Filtered JSON test files from cached library list');
                 }
                 // Update books with current cached cover URLs and trigger callbacks
                 const updatedBooks = cachedLibraryBooks.map(book => {
@@ -556,7 +557,7 @@ class BookMetadataService {
             // Get metadata.json file which contains book-to-cover mappings
             const metadataInfo = await gDriveService.getMetadataFile();
             if (!metadataInfo) {
-                console.log('No metadata file found, returning empty list');
+                appLog.debug('No metadata file found, returning empty list');
                 return [];
             }
 
@@ -564,7 +565,7 @@ class BookMetadataService {
             const bookEntries = metadata.books || {};
             const coverEntries = metadata.covers || {};
 
-            console.log('Found book entries in metadata:', Object.keys(bookEntries).length);
+            appLog.debug('Found book entries in metadata:', Object.keys(bookEntries).length);
 
             // Get list of files from user's Google Drive app folder to verify they still exist
             const driveFiles = await gDriveService.listFiles();
@@ -579,17 +580,17 @@ class BookMetadataService {
                 const extFromMeta = (bookMeta.fileType || bookMeta.fileName?.split('.').pop() || '').toLowerCase();
 
                 if (!BOOK_FILE_EXTENSIONS.includes(extFromMeta)) {
-                    console.log(`Skipping non-book entry ${bookMeta.fileName || bookFileId}`);
+                    appLog.debug(`Skipping non-book entry ${bookMeta.fileName || bookFileId}`);
                     continue;
                 }
                 if (isJsonFileType(extFromMeta)) {
-                    console.log(`Skipping JSON test file ${bookMeta.fileName || bookFileId} from library view`);
+                    appLog.debug(`Skipping JSON test file ${bookMeta.fileName || bookFileId} from library view`);
                     continue;
                 }
 
                 // Skip if the book file no longer exists in Drive
                 if (!driveFileIds.has(bookFileId)) {
-                    console.log(`Book file ${bookFileId} no longer exists in Drive, skipping`);
+                    appLog.debug(`Book file ${bookFileId} no longer exists in Drive, skipping`);
                     continue;
                 }
 
@@ -620,7 +621,7 @@ class BookMetadataService {
                 // Start async cover download only if we don't have a cached cover and callback is provided
                 if (coverImageId && driveFileIds.has(coverImageId) && onCoverReady) {
                     if (!cachedCoverUrl) {
-                        console.log(`[Cover Debug] Initiating cover download for book: ${bookMetadata.title} (ID: ${bookFileId})`);
+                        appLog.debug(`[Cover Debug] Initiating cover download for book: ${bookMetadata.title} (ID: ${bookFileId})`);
                         const coverTask = bookCacheService.downloadCoverAsync(bookFileId, coverImageId, bookMetadata.title, onCoverReady);
                         coverDownloadTasks.push(coverTask);
                     } else {
@@ -629,23 +630,23 @@ class BookMetadataService {
                     }
                 } else {
                     if (!coverImageId) {
-                        console.log(`[Cover Debug] No cover image ID for book: ${bookMetadata.title}`);
+                        appLog.debug(`[Cover Debug] No cover image ID for book: ${bookMetadata.title}`);
                     } else if (!driveFileIds.has(coverImageId)) {
-                        console.log(`[Cover Debug] Cover image ID not found in drive files for book: ${bookMetadata.title} (CoverID: ${coverImageId})`);
+                        appLog.debug(`[Cover Debug] Cover image ID not found in drive files for book: ${bookMetadata.title} (CoverID: ${coverImageId})`);
                     } else if (!onCoverReady) {
-                        console.log(`[Cover Debug] No onCoverReady callback provided for book: ${bookMetadata.title}`);
+                        appLog.debug(`[Cover Debug] No onCoverReady callback provided for book: ${bookMetadata.title}`);
                     }
                 }
             }
 
-            console.log(`Processed ${books.length} books from metadata (covers downloading in background)`);
+            appLog.debug(`Processed ${books.length} books from metadata (covers downloading in background)`);
             
             // Log summary of books with/without covers
             const booksWithCovers = books.filter(book => book.coverImageId);
             const booksWithoutCovers = books.filter(book => !book.coverImageId);
-            console.log(`[Cover Summary] Books with covers: ${booksWithCovers.length}/${books.length}`);
-            console.log(`[Cover Summary] Books with covers:`, booksWithCovers.map(b => b.title));
-            console.log(`[Cover Summary] Books without covers:`, booksWithoutCovers.map(b => b.title));
+            appLog.debug(`[Cover Summary] Books with covers: ${booksWithCovers.length}/${books.length}`);
+            appLog.debug(`[Cover Summary] Books with covers:`, booksWithCovers.map(b => b.title));
+            appLog.debug(`[Cover Summary] Books without covers:`, booksWithoutCovers.map(b => b.title));
             
             // Cache the book list to prevent redundant API calls
             bookCacheService.setBookListCache(books);
@@ -662,7 +663,7 @@ class BookMetadataService {
     }
 
     async deleteBook(id: string): Promise<void> {
-        console.log('deleteBook: Deleting book from user\'s Google Drive. Book ID:', id);
+        appLog.debug('deleteBook: Deleting book from user\'s Google Drive. Book ID:', id);
         
         try {
             // Check if user is signed in to Google Drive
@@ -685,13 +686,13 @@ class BookMetadataService {
                 throw new Error('Failed to delete book file from Google Drive');
             }
 
-            console.log('✅ Book file deleted from Google Drive successfully');
+            appLog.debug('✅ Book file deleted from Google Drive successfully');
 
             // Delete cover image if it exists
             if (coverImageId) {
                 const coverDeleteSuccess = await gDriveService.deleteFile(coverImageId);
                 if (coverDeleteSuccess) {
-                    console.log('✅ Cover image deleted from Google Drive successfully');
+                    appLog.debug('✅ Cover image deleted from Google Drive successfully');
                 } else {
                     console.warn('⚠️ Failed to delete cover image, but book deletion succeeded');
                 }
@@ -702,7 +703,7 @@ class BookMetadataService {
             if (!metadataUpdateSuccess) {
                 console.warn('⚠️ Failed to update metadata file, but book deletion succeeded');
             } else {
-                console.log('✅ Book metadata removed successfully');
+                appLog.debug('✅ Book metadata removed successfully');
             }
 
             // Clear cache since book list has changed
@@ -719,7 +720,7 @@ class BookMetadataService {
      * Uploads new cover to cloud storage and updates metadata
      */
     async updateBookCover(bookId: string, coverFile: File): Promise<string> {
-        console.log('updateBookCover: Updating cover for book:', bookId);
+        appLog.debug('updateBookCover: Updating cover for book:', bookId);
         
         try {
             // Check if user is signed in to Google Drive
@@ -753,7 +754,7 @@ class BookMetadataService {
             }
 
             const coverImageId = coverResult.id;
-            console.log('✅ New cover image uploaded to Google Drive:', coverImageId);
+            appLog.debug('✅ New cover image uploaded to Google Drive:', coverImageId);
 
             // Update metadata by getting the current data and modifying only the coverImageId
             const { fileId, data } = metadataInfo;
@@ -771,7 +772,7 @@ class BookMetadataService {
                 throw new Error('Failed to update book metadata with new cover');
             }
 
-            console.log('✅ Book metadata updated with new cover');
+            appLog.debug('✅ Book metadata updated with new cover');
 
             // Purge cached cover for this book so UI fetches the new one
             await removeCoverForFile(bookId);
@@ -789,7 +790,7 @@ class BookMetadataService {
             if (currentCoverImageId && currentCoverImageId !== coverImageId) {
                 const deleteSuccess = await gDriveService.deleteFile(currentCoverImageId);
                 if (deleteSuccess) {
-                    console.log('✅ Old cover image deleted from Google Drive');
+                    appLog.debug('✅ Old cover image deleted from Google Drive');
                 } else {
                     console.warn('⚠️ Failed to delete old cover image, but new cover was set successfully');
                 }
@@ -807,7 +808,7 @@ class BookMetadataService {
      * Update book metadata (title, author, etc.)
      */
     async updateBookMetadata(bookId: string, updates: { title?: string; author?: string }): Promise<void> {
-        console.log('updateBookMetadata: Updating metadata for book:', bookId, updates);
+        appLog.debug('updateBookMetadata: Updating metadata for book:', bookId, updates);
         
         try {
             // Check if user is signed in to Google Drive
@@ -842,7 +843,7 @@ class BookMetadataService {
                 throw new Error('Failed to update book metadata');
             }
 
-            console.log('✅ Book metadata updated successfully');
+            appLog.debug('✅ Book metadata updated successfully');
 
             // Clear book list cache since metadata has changed
             bookCacheService.clearBookListCache();
@@ -857,11 +858,11 @@ class BookMetadataService {
      * Currently implemented for Google Drive only.
      */
     async syncBooks(clerkUser?: any, onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
-        console.log('Syncing books with cloud storage...');
+        appLog.debug('Syncing books with cloud storage...');
 
         // CRITICAL: Check Clerk authentication first
         if (!clerkUser) {
-            console.log('syncBooks: No Clerk user provided, skipping sync');
+            appLog.debug('syncBooks: No Clerk user provided, skipping sync');
             return [];
         }
 
@@ -894,7 +895,7 @@ class BookMetadataService {
      * This method will work with different cloud providers (Google Drive, OneDrive, iCloud)
      */
     async openCloudFolder(clerkUser?: any): Promise<void> {
-        console.log('Opening cloud storage folder...');
+        appLog.debug('Opening cloud storage folder...');
         
         const provider = this.detectProviderFromClerkUser(clerkUser);
         
@@ -923,7 +924,7 @@ class BookMetadataService {
      * Save user settings to Google Drive settings.json file
      */
     async saveSettings(settings: any): Promise<boolean> {
-        console.log('Saving settings to Google Drive settings.json...');
+        appLog.debug('Saving settings to Google Drive settings.json...');
 
         try {
             if (!gDriveService.isSignedIn()) {
@@ -933,7 +934,7 @@ class BookMetadataService {
 
             const success = await gDriveService.saveSettings(settings);
             if (success) {
-                console.log('✅ Settings saved to Google Drive successfully');
+                appLog.debug('✅ Settings saved to Google Drive successfully');
                 return true;
             } else {
                 console.warn('⚠️ Failed to save settings to Google Drive');
@@ -949,7 +950,7 @@ class BookMetadataService {
      * Load user settings from Google Drive settings.json file
      */
     async loadSettings(): Promise<any | null> {
-        console.log('Loading settings from Google Drive settings.json...');
+        appLog.debug('Loading settings from Google Drive settings.json...');
 
         try {
             // CRITICAL: Check Clerk authentication first
@@ -958,11 +959,11 @@ class BookMetadataService {
                 const isClerkSignedIn = window.Clerk.session !== null;
                 
                 if (!clerkUser || !isClerkSignedIn) {
-                    console.log('loadSettings: Clerk user not authenticated, skipping Google Drive access');
+                    appLog.debug('loadSettings: Clerk user not authenticated, skipping Google Drive access');
                     return null;
                 }
             } else {
-                console.log('loadSettings: Clerk not available, skipping Google Drive access');
+                appLog.debug('loadSettings: Clerk not available, skipping Google Drive access');
                 return null;
             }
 
@@ -974,10 +975,10 @@ class BookMetadataService {
 
             const settings = await gDriveService.loadSettings();
             if (settings) {
-                console.log('✅ Settings loaded from Google Drive successfully');
+                appLog.debug('✅ Settings loaded from Google Drive successfully');
                 return settings;
             } else {
-                console.log('ℹ️ No settings found in Google Drive');
+                appLog.debug('ℹ️ No settings found in Google Drive');
                 return null;
             }
         } catch (error) {
@@ -993,7 +994,7 @@ class BookMetadataService {
         // Use centralized auth manager to ensure authentication
         const isAuthenticated = await authManager.ensureAuthenticated();
         if (!isAuthenticated) {
-            console.log('saveVocabulary: Authentication failed, cannot save vocabulary');
+            appLog.debug('saveVocabulary: Authentication failed, cannot save vocabulary');
             return;
         }
 
@@ -1007,7 +1008,7 @@ class BookMetadataService {
         // Use centralized auth manager to ensure authentication
         const isAuthenticated = await authManager.ensureAuthenticated();
         if (!isAuthenticated) {
-            console.log('loadVocabulary: Authentication failed, cannot load vocabulary');
+            appLog.debug('loadVocabulary: Authentication failed, cannot load vocabulary');
             return null;
         }
 
@@ -1020,7 +1021,7 @@ class BookMetadataService {
     async saveGrammarProgress(knownIds: string[]): Promise<void> {
         const isAuthenticated = await authManager.ensureAuthenticated();
         if (!isAuthenticated) {
-            console.log('saveGrammarProgress: Authentication failed, cannot save grammar progress');
+            appLog.debug('saveGrammarProgress: Authentication failed, cannot save grammar progress');
             return;
         }
 
@@ -1033,7 +1034,7 @@ class BookMetadataService {
     async loadGrammarProgress(): Promise<string[] | null> {
         const isAuthenticated = await authManager.ensureAuthenticated();
         if (!isAuthenticated) {
-            console.log('loadGrammarProgress: Authentication failed, cannot load grammar progress');
+            appLog.debug('loadGrammarProgress: Authentication failed, cannot load grammar progress');
             return null;
         }
 
@@ -1088,29 +1089,29 @@ class BookMetadataService {
     }
 
     async getFolders(clerkUser?: any): Promise<Folder[]> {
-        console.log('📁 [StorageService] getFolders called with clerkUser:', !!clerkUser);
+        appLog.debug('📁 [StorageService] getFolders called with clerkUser:', !!clerkUser);
         
         // CRITICAL: Check Clerk authentication first
         if (!clerkUser) {
-            console.log('📁 [StorageService] getFolders: No Clerk user provided, returning empty folders');
+            appLog.debug('📁 [StorageService] getFolders: No Clerk user provided, returning empty folders');
             return [];
         }
 
         const provider = this.detectProviderFromClerkUser(clerkUser);
-        console.log('📁 [StorageService] Detected provider:', provider);
+        appLog.debug('📁 [StorageService] Detected provider:', provider);
         
         switch (provider) {
             case 'google':
-                console.log('📁 [StorageService] Calling gDriveService.getFolders()...');
+                appLog.debug('📁 [StorageService] Calling gDriveService.getFolders()...');
                 const folders = await gDriveService.getFolders();
-                console.log('📁 [StorageService] gDriveService.getFolders() returned:', folders.length, 'folders');
+                appLog.debug('📁 [StorageService] gDriveService.getFolders() returned:', folders.length, 'folders');
                 return folders;
             case 'microsoft':
                 throw new Error('OneDrive folder retrieval not yet implemented');
             case 'apple':
                 throw new Error('iCloud folder retrieval not yet implemented');
             default:
-                console.log('📁 [StorageService] Unknown provider, returning empty folders');
+                appLog.debug('📁 [StorageService] Unknown provider, returning empty folders');
                 return [];
         }
     }

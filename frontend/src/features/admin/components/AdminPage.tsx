@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+import { appLog } from '@shared/appLog'
   listOpenAiKeys,
   addOpenAiKey,
   removeOpenAiKey,
@@ -109,7 +110,7 @@ export function AdminPage() {
     setKanjiLoading(true);
     try {
       const data = await updateKanjiJlptApi(selectedKanji.kanji, newJlptLevel);
-      console.log(`Updated ${data.kanji} from N${data.old_jlpt || 'None'} to N${data.new_jlpt || 'None'}`);
+      appLog.debug(`Updated ${data.kanji} from N${data.old_jlpt || 'None'} to N${data.new_jlpt || 'None'}`);
 
       const updatedKanji = { ...selectedKanji, jlpt: newJlptLevel ?? undefined };
       setSelectedKanji(updatedKanji);

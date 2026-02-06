@@ -69,7 +69,15 @@ export function displayCategory(node: Node): 'text' | 'ruby' | 'ruby-text' | 'in
 function splitFragment(fragments: Fragment[], fragmentIndex: number, splitOffset: number) {
     const oldFragment = fragments[fragmentIndex];
 
-    const newNode = oldFragment.node.splitText(splitOffset - oldFragment.start);
+    const relativeOffset = splitOffset - oldFragment.start;
+    const nodeLen = oldFragment.node.data.length;
+    // Defensive: async highlight runs can become stale if the DOM changes mid-flight.
+    // Avoid throwing on invalid split offsets (e.g. empty text nodes).
+    if (relativeOffset <= 0 || relativeOffset >= nodeLen) {
+        return;
+    }
+
+    const newNode = oldFragment.node.splitText(relativeOffset);
 
     // Insert new fragment
     const newFragment: Fragment = {

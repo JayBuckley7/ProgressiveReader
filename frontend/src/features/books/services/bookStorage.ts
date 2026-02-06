@@ -3,6 +3,7 @@ import { getCachedFile, cacheFile, findCachedFileByPrefix } from '@integrations/
 import { addOfflineBook } from '@features/books/utils/offlineLibrary';
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
 import * as pdfjsLib from 'pdfjs-dist';
+import { appLog } from '@shared/appLog'
 
 // Request deduplication cache to prevent multiple simultaneous requests for the same resource
 const activeDownloads = new Map<string, Promise<Blob>>();
@@ -32,15 +33,18 @@ declare global {
  * Book storage service for file operations and reading progress
  */
 class BookStorageService {
+    // Coalesce cloud sync writes so rapid progress updates (e.g. PDF page flips) don't spam Drive.
+    private cloudSyncTimeoutByBookId: Map<string, number> = new Map();
+
     /**
      * Download a book's file content from cloud storage
      */
     async downloadBook(bookId: string, metadata: BookMetadata): Promise<Blob> {
-        console.log('Downloading book from user\'s google cloud storage');
+        appLog.debug('Downloading book from user\'s google cloud storage');
 
         // Check if this book is already being downloaded
         if (activeDownloads.has(bookId)) {
-            console.log('Book download already in progress, waiting for existing request...');
+            appLog.debug('Book download already in progress, waiting for existing request...');
             return activeDownloads.get(bookId)!;
         }
 
@@ -62,12 +66,12 @@ class BookStorageService {
                 // try to find by strictly the file ID prefix.
                 // This heals the "Offline Storage" corruption issue where modifiedTime was stripped.
                 if (!cached) {
-                    console.log('Exact cache key miss, trying prefix search for:', metadata.driveFileId);
+                    appLog.debug('Exact cache key miss, trying prefix search for:', metadata.driveFileId);
                     cached = await findCachedFileByPrefix(metadata.driveFileId);
                 }
 
                 if (cached) {
-                    console.log('Retrieved book from cache');
+                    appLog.debug('Retrieved book from cache');
                     // Ensure it's in the offline index (self-healing for existing caches)
                     addOfflineBook(metadata);
                     return cached;
@@ -135,7 +139,7 @@ class BookStorageService {
             // Get cover URL from the book
             const coverUrl = await book.coverUrl();
             if (!coverUrl) {
-                console.log('No cover URL found in EPUB metadata');
+                appLog.debug('No cover URL found in EPUB metadata');
                 return null;
             }
 
@@ -277,7 +281,7 @@ class BookStorageService {
     }
 
     async getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
-        console.log('Getting reading progress for book:', bookId);
+        appLog.debug('Getting reading progress for book:', bookId);
         try {
             // First try local storage for immediate access
             const localKey = `reading_progress_${bookId}`;
@@ -326,7 +330,7 @@ class BookStorageService {
     async saveReadingProgress(progress: ReadingProgress): Promise<void> {
         // Only log in development mode to reduce spam
         if (process.env.NODE_ENV === 'development') {
-            console.log('Saving reading progress for book:', progress.bookId);
+            appLog.debug('Saving reading progress for book:', progress.bookId);
         }
         try {
             // Always save to local storage first for immediate access
@@ -339,36 +343,45 @@ class BookStorageService {
 
             // Also save to cloud metadata if connected
             if (gDriveService.isSignedIn()) {
-                try {
-                    const metadataInfo = await gDriveService.getMetadataFile();
-                    if (metadataInfo) {
-                        const { fileId, data } = metadataInfo;
-
-                        // Initialize progress section if it doesn't exist
-                        if (!data.progress) {
-                            data.progress = {};
-                        }
-
-                        // Update progress for this book
-                        data.progress[progress.bookId] = progressToStore;
-
-                        // Save back to cloud
-                        const success = await gDriveService.updateMetadataFile(fileId, data);
-                        if (success) {
-                            //// console.log('Reading progress synced to cloud successfully');
-                        } else {
-                            console.warn('Failed to sync progress to cloud, but local save succeeded');
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Failed to sync progress to cloud metadata:', error);
-                    // Don't throw - local storage save succeeded
+                const existingTimeout = this.cloudSyncTimeoutByBookId.get(progress.bookId);
+                if (existingTimeout) {
+                    window.clearTimeout(existingTimeout);
                 }
+
+                const timeoutId = window.setTimeout(async () => {
+                    try {
+                        const metadataInfo = await gDriveService.getMetadataFile();
+                        if (metadataInfo) {
+                            const { fileId, data } = metadataInfo;
+
+                            // Initialize progress section if it doesn't exist
+                            if (!data.progress) {
+                                data.progress = {};
+                            }
+
+                            // Update progress for this book
+                            data.progress[progress.bookId] = progressToStore;
+
+                            // Save back to cloud (gdriveService handles retry/backoff + serialization)
+                            const success = await gDriveService.updateMetadataFile(fileId, data);
+                            if (!success) {
+                                console.warn('Failed to sync progress to cloud, but local save succeeded');
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Failed to sync progress to cloud metadata:', error);
+                        // Don't throw - local storage save succeeded
+                    } finally {
+                        this.cloudSyncTimeoutByBookId.delete(progress.bookId);
+                    }
+                }, 1500);
+
+                this.cloudSyncTimeoutByBookId.set(progress.bookId, timeoutId);
             }
 
             // Only log success in development mode
             if (process.env.NODE_ENV === 'development') {
-                console.log('Reading progress saved successfully');
+                appLog.debug('Reading progress saved successfully');
             }
         } catch (error) {
             console.error('Error saving reading progress:', error);
@@ -403,4 +416,3 @@ class BookStorageService {
 }
 
 export const bookStorageService = new BookStorageService();
-

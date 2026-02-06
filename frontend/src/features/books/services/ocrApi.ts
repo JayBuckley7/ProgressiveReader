@@ -2,6 +2,7 @@
  * OCR API service for processing PDFs with OCR.
  */
 
+import { appLog } from '@shared/appLog'
 export interface OCRProgress {
   type: 'progress' | 'complete' | 'error';
   page?: number;
@@ -73,7 +74,7 @@ export async function processPDFWithOCR(
       
       // Log every 10MB received to debug transfer size
       if (totalBytesReceived % (10 * 1024 * 1024) < value.length) {
-        console.log(`[OCR] Total bytes received so far: ${(totalBytesReceived / (1024 * 1024)).toFixed(1)}MB`);
+        appLog.debug(`[OCR] Total bytes received so far: ${(totalBytesReceived / (1024 * 1024)).toFixed(1)}MB`);
       }
 
       if (!isReceivingPDF) {
@@ -102,7 +103,7 @@ export async function processPDFWithOCR(
                   filename = data.filename;
                 }
                 const expectedSize = data.size ? (data.size / (1024 * 1024)).toFixed(2) + 'MB' : 'unknown';
-                console.log(`[OCR] Completion message received. Expected PDF size: ${expectedSize}`);
+                appLog.debug(`[OCR] Completion message received. Expected PDF size: ${expectedSize}`);
                 // Next chunks will be binary PDF data
                 isReceivingPDF = true;
                 // Clear text buffer - any remaining data after this will be binary
@@ -168,8 +169,8 @@ export async function processPDFWithOCR(
 
   // Combine all byte chunks into a single Uint8Array
   const totalLength = pdfBytes.reduce((sum, chunk) => sum + chunk.length, 0);
-  console.log(`[OCR] Final PDF size: ${(totalLength / (1024 * 1024)).toFixed(2)}MB (${totalLength} bytes)`);
-  console.log(`[OCR] Total stream bytes received: ${(totalBytesReceived / (1024 * 1024)).toFixed(2)}MB`);
+  appLog.debug(`[OCR] Final PDF size: ${(totalLength / (1024 * 1024)).toFixed(2)}MB (${totalLength} bytes)`);
+  appLog.debug(`[OCR] Total stream bytes received: ${(totalBytesReceived / (1024 * 1024)).toFixed(2)}MB`);
   
   if (totalLength > totalBytesReceived * 1.1) {
     console.warn(`[OCR] WARNING: PDF size (${totalLength}) is larger than bytes received (${totalBytesReceived}) - this shouldn't happen!`);
