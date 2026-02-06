@@ -67,13 +67,15 @@ function ScanStatus({
 }): JSX.Element | null {
   if (!scan) return null;
 
-  const status = scan.status;
+  // Scan status can become stale (e.g. examples synced from Drive while status remains "queued").
+  // If we already have our full quota, treat it as ready for UI purposes.
+  const status = exampleCount >= 3 ? "complete" : scan.status;
   const label =
     status === "queued"
       ? "Queued"
       : status === "scanning"
         ? "Scanning"
-        : status === "complete"
+      : status === "complete"
           ? "Ready"
           : status === "not_found_yet"
             ? "Not found yet"
@@ -93,7 +95,9 @@ function ScanStatus({
         {label} · {exampleCount}/3 examples
       </span>
       {progressText ? <span className="app-chip">{progressText}</span> : null}
-      {scan.lastError ? <span className="text-xs text-red-600 dark:text-red-400">{scan.lastError}</span> : null}
+      {scan.status === "error" && exampleCount < 3 && scan.lastError ? (
+        <span className="text-xs text-red-600 dark:text-red-400">{scan.lastError}</span>
+      ) : null}
     </div>
   );
 }
@@ -111,6 +115,7 @@ function ExamplesList({
       {examples.map((ex) => {
         const title = bookTitleById.get(ex.bookId) || "Unknown book";
         const confidencePct = Math.round(clamp(ex.confidence ?? 0, 0, 1) * 100);
+        const hasTeaching = Boolean(ex.teaching?.breakdown || ex.teaching?.translation || ex.teaching?.usageNote || ex.teaching?.contrast);
         return (
           <div key={ex.id} className="p-3 rounded-lg border app-border bg-[var(--ui-surface-alt)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -120,9 +125,38 @@ function ExamplesList({
               <div className="text-xs app-muted">{confidencePct}%</div>
             </div>
             <div className="mt-2">{renderHighlightedSentence(ex.sentence || "", ex.match)}</div>
-            {ex.explanation ? (
+
+            {!hasTeaching ? (
+              <div className="mt-3 text-xs app-muted">
+                Generating teaching…
+              </div>
+            ) : null}
+
+            {ex.teaching?.usageNote ? (
+              <div className="mt-3 text-xs app-muted">
+                <span className="font-medium">Usage:</span> {ex.teaching.usageNote}
+              </div>
+            ) : null}
+
+            {ex.teaching?.breakdown ? (
               <div className="mt-2 text-xs app-muted">
-                {ex.explanation}
+                <span className="font-medium">Breakdown:</span> {ex.teaching.breakdown}
+              </div>
+            ) : null}
+
+            {ex.teaching?.translation ? (
+              <div className="mt-2 text-xs app-muted">
+                <span className="font-medium">Meaning:</span> {ex.teaching.translation}
+              </div>
+            ) : null}
+
+            {ex.teaching?.contrast ? (
+              <div className="mt-3 text-xs app-muted">
+                <div className="font-medium">Contrast:</div>
+                <div className="mt-1">
+                  <span className="font-mono text-[11px]">{ex.teaching.contrast.alternative}</span>
+                </div>
+                <div className="mt-1">{ex.teaching.contrast.note}</div>
               </div>
             ) : null}
           </div>
@@ -154,6 +188,7 @@ function GrammarCard({
   bookTitleById: Map<string, string>;
 }): JSX.Element {
   const canMine = point.hintQuality === "ok";
+  const [expanded, setExpanded] = useState<boolean>(() => isLearning);
 
   return (
     <div className="app-card p-4">
@@ -163,6 +198,16 @@ function GrammarCard({
             <div className="text-base font-semibold tracking-tight">{point.title}</div>
             {point.hintQuality !== "ok" ? (
               <span className="app-chip">auto-mining limited</span>
+            ) : null}
+            {isLearning ? (
+              <button
+                type="button"
+                className="app-button-muted px-2 py-1 rounded-md text-[11px]"
+                onClick={() => setExpanded((v) => !v)}
+                title={expanded ? "Collapse" : "Expand"}
+              >
+                {expanded ? "Collapse" : "Expand"}
+              </button>
             ) : null}
           </div>
           <div className="text-sm app-muted mt-1">{point.meaning}</div>
@@ -200,7 +245,7 @@ function GrammarCard({
       {isLearning ? (
         <div className="mt-3">
           <ScanStatus scan={scan} exampleCount={examples.length} />
-          <ExamplesList examples={examples} bookTitleById={bookTitleById} />
+          {expanded ? <ExamplesList examples={examples} bookTitleById={bookTitleById} /> : null}
           {point.hintQuality !== "ok" ? (
             <div className="mt-3 text-xs app-muted">
               This grammar point is very common/ambiguous, so automatic mining and underlines are limited in the MVP.

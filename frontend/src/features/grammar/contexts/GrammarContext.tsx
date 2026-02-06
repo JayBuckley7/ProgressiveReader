@@ -10,6 +10,7 @@ import type { GrammarExample, GrammarScanBoundary, GrammarScanState, GrammarStat
 import { mergeAndLimitExamples } from "@features/grammar/services/grammarExamples";
 import { loadGrammarStateV2FromLocalStorage, saveGrammarStateV2ToLocalStorage } from "@features/grammar/services/grammarStateStorage";
 import { mineLibraryForGrammarExamples } from "@features/grammar/services/grammarLibraryMiner";
+import { mergeTeachingIntoExamples, teachGrammarExamples } from "@features/grammar/services/grammarTeachApi";
 
 type GrammarContextValue = {
   state: GrammarStateV2;
@@ -22,6 +23,7 @@ type GrammarContextValue = {
   setKnownMany: (grammarIds: string[], known: boolean) => void;
   setLearning: (grammarId: string, learning: boolean) => void;
   forceMine: (grammarId: string) => void;
+  teachExamples: (grammarId: string) => Promise<void>;
   runNow: (grammarId: string) => void;
   cancelMining: () => void;
   activeMiningGrammarId: string | null;
@@ -354,6 +356,58 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Background "teacher" (LLM teaching overlay). Keep this separate from mining so we can
+  // generate breakdown/usage/contrast once examples exist.
+  const teacherRunningRef = useRef(false);
+  const autoTeachBlockedRef = useRef<Set<string>>(new Set());
+
+  const teachExamples = useCallback(
+    async (grammarId: string) => {
+      const point = getGrammarPointById(grammarId);
+      if (!point) return;
+
+      const examples = stateRef.current.examplesByGrammarId[grammarId] || [];
+      const missing = examples.filter((e) => !e.teaching);
+      if (missing.length === 0) return;
+
+      const apiKey = (typeof window !== "undefined" ? (localStorage.getItem("openaiKey") || "") : "") || "";
+      const model = (typeof window !== "undefined" ? (localStorage.getItem("openaiModel") || "") : "") || "gpt-4o-mini";
+
+      try {
+        const resp = await teachGrammarExamples({
+          grammar: { id: point.id, title: point.title, meaning: point.meaning, level: point.level },
+          examples: missing.slice(0, 3).map((e) => ({
+            exampleId: e.id,
+            sentence: e.sentence,
+            before: e.before,
+            after: e.after,
+            matchSpan: e.match ? { start: e.match.start, end: e.match.end, text: e.match.text } : undefined,
+          })),
+          model,
+          apiKey: apiKey || undefined,
+        });
+
+        autoTeachBlockedRef.current.delete(grammarId);
+
+        setState((prev) => {
+          const cur = prev.examplesByGrammarId[grammarId] || [];
+          const merged = mergeTeachingIntoExamples(cur, resp.teachings || [], { model });
+          return {
+            ...prev,
+            examplesByGrammarId: { ...(prev.examplesByGrammarId || {}), [grammarId]: merged },
+            lastUpdatedMs: Date.now(),
+          };
+        });
+      } catch (e: any) {
+        // Prevent background auto-teach from retrying endlessly for this grammarId.
+        autoTeachBlockedRef.current.add(grammarId);
+        const msg = String(e?.message || e || "Unknown error");
+        toast.error("Teaching failed", { description: msg });
+      }
+    },
+    []
+  );
+
   // Requeue mining when reading progress advances beyond what we scanned.
   useEffect(() => {
     const handler = (event: Event) => {
@@ -464,6 +518,15 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
 
         if (result.examples.length > 0) {
           toast.success(`Found grammar example${result.examples.length > 1 ? "s" : ""}: ${point.title}`);
+
+          // Kick off teaching immediately so examples land "taught" by default without user action.
+          // (Auto-teach effect will also pick this up, but this reduces perceived latency.)
+          if (!teacherRunningRef.current) {
+            teacherRunningRef.current = true;
+            void teachExamples(grammarId).finally(() => {
+              teacherRunningRef.current = false;
+            });
+          }
         }
       } catch (e: any) {
         if (e?.name === "AbortError") {
@@ -537,19 +600,23 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
     // Pick the next queued/eligible grammar point.
     const scanBy = state.scanByGrammarId || {};
 
-    const isEligible = (gid: string) => {
-      const point = getGrammarPointById(gid);
-      if (!point || point.hintQuality !== "ok") return false;
-      const exCount = (state.examplesByGrammarId[gid] || []).length;
-      if (exCount >= 3) return false;
+      const isEligible = (gid: string) => {
+        const point = getGrammarPointById(gid);
+        if (!point || point.hintQuality !== "ok") return false;
+        const exCount = (state.examplesByGrammarId[gid] || []).length;
+        if (exCount >= 3) return false;
 
-      const scan = scanBy[gid];
-      if (scan?.status === "scanning") return false;
-      if (scan?.status === "queued") return true;
-      if (!scan) return true;
-      if (scan.status === "idle" || scan.status === "not_found_yet") return true;
-      return false;
-    };
+        const scan = scanBy[gid];
+        if (scan?.status === "scanning") return false;
+        if (scan?.status === "queued") return true;
+        if (!scan) return true; // first time we see this learning point
+        if (scan.status === "idle") return true;
+
+        // IMPORTANT: do NOT auto-rerun "not_found_yet" points in a tight loop.
+        // These should only be re-queued when reading progress advances (see pr:reading-progress-saved),
+        // or via explicit user action (Run now / Find examples).
+        return false;
+      };
 
     const forced = priorityNextGrammarIdRef.current;
     let next: string | undefined;
@@ -567,6 +634,27 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       if (priorityNextGrammarIdRef.current === next) priorityNextGrammarIdRef.current = null;
     });
   }, [books, miningEnabled, runMine, state.examplesByGrammarId, state.learningIds, state.scanByGrammarId]);
+
+  // Auto-generate teaching overlays once examples exist (default experience).
+  useEffect(() => {
+    if (!miningEnabled) return;
+    if (!books || books.length === 0) return;
+    if (teacherRunningRef.current) return;
+
+    const next = state.learningIds.find((gid) => {
+      if (autoTeachBlockedRef.current.has(gid)) return false;
+      const ex = state.examplesByGrammarId[gid] || [];
+      if (ex.length === 0) return false;
+      if (ex.every((e) => Boolean(e.teaching))) return false;
+      return true;
+    });
+    if (!next) return;
+
+    teacherRunningRef.current = true;
+    void teachExamples(next).finally(() => {
+      teacherRunningRef.current = false;
+    });
+  }, [books, miningEnabled, state.examplesByGrammarId, state.learningIds, teachExamples]);
 
   // Abort in-flight request on unmount.
   useEffect(() => {
@@ -587,6 +675,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       setKnownMany,
       setLearning,
       forceMine,
+      teachExamples,
       runNow,
       cancelMining,
       activeMiningGrammarId,
@@ -606,6 +695,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       setKnown,
       setKnownMany,
       setLearning,
+      teachExamples,
       runNow,
       cancelMining,
       activeMiningGrammarId,

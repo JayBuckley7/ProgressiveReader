@@ -22,6 +22,18 @@ export type GrammarExample = {
 
   match: GrammarExampleMatchSpan;
   explanation?: string;
+  teaching?: {
+    // Short, human-friendly teaching overlay (optional; generated on demand).
+    translation?: string;
+    breakdown?: string; // e.g. "女子寮 (girls' dorm) だから (because...) か (maybe)"
+    usageNote?: string; // e.g. "だからか = 'maybe because' / soft inference."
+    contrast?: {
+      alternative: string; // rewritten sentence
+      note: string; // what changes (tone/nuance)
+    };
+    createdAt: string; // ISO
+    model?: string;
+  };
   confidence: number; // 0..1
   createdAt: string; // ISO
 };
@@ -50,4 +62,3 @@ export type GrammarStateV2 = {
   scanByGrammarId?: Record<string, GrammarScanState>;
   lastUpdatedMs: number;
 };
-

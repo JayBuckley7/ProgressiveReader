@@ -45,6 +45,33 @@ class ValidateExamplesResponse(BaseModel):
     matches: List[GrammarValidateMatch]
 
 
+class TeachExampleIn(BaseModel):
+    exampleId: str
+    sentence: str
+    before: Optional[str] = None
+    after: Optional[str] = None
+    matchSpan: Optional[Span] = None
+
+
+class TeachExamplesRequest(BaseModel):
+    grammar: GrammarInfo
+    examples: List[TeachExampleIn]
+    model: str = Field(default="gpt-4o-mini")
+    apiKey: Optional[str] = Field(default=None)
+
+
+class TeachExampleOut(BaseModel):
+    exampleId: str
+    translation: Optional[str] = None
+    breakdown: Optional[str] = None
+    usageNote: Optional[str] = None
+    contrast: Optional[dict] = None  # {alternative: string, note: string}
+
+
+class TeachExamplesResponse(BaseModel):
+    teachings: List[TeachExampleOut]
+
+
 __all__ = [
     "GrammarInfo",
     "Span",
@@ -52,5 +79,8 @@ __all__ = [
     "ValidateExamplesRequest",
     "GrammarValidateMatch",
     "ValidateExamplesResponse",
+    "TeachExampleIn",
+    "TeachExamplesRequest",
+    "TeachExampleOut",
+    "TeachExamplesResponse",
 ]
-

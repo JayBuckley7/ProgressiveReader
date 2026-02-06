@@ -161,6 +161,23 @@ export function JpdbPopupController() {
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
 
+  const learningGrammarPoints = useMemo<GrammarPoint[]>(() => {
+    const sourceEl = popup?.sourceElement;
+    if (!sourceEl || !(sourceEl instanceof Element)) return [];
+    const raw = (sourceEl as HTMLElement).getAttribute("data-pr-grammar-ids") || "";
+    if (!raw) return [];
+    const ids = raw
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .filter((id) => learningSet.has(id));
+    const uniq = Array.from(new Set(ids));
+    return uniq
+      .map((id) => getGrammarPoint(id))
+      .filter((p): p is GrammarPoint => Boolean(p))
+      .slice(0, 3);
+  }, [getGrammarPoint, learningSet, popup?.sourceElement]);
+
   // Handle mouse enter/leave on the popup itself
   const handlePopupMouseEnter = () => {
     isPopupHovered = true;
@@ -211,23 +228,6 @@ export function JpdbPopupController() {
   const config = getCurrentConfig();
 
   const isOfflineMode = !config.apiKey || !navigator.onLine;
-
-  const learningGrammarPoints = useMemo<GrammarPoint[]>(() => {
-    const sourceEl = popup?.sourceElement;
-    if (!sourceEl || !(sourceEl instanceof Element)) return [];
-    const raw = (sourceEl as HTMLElement).getAttribute("data-pr-grammar-ids") || "";
-    if (!raw) return [];
-    const ids = raw
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean)
-      .filter((id) => learningSet.has(id));
-    const uniq = Array.from(new Set(ids));
-    return uniq
-      .map((id) => getGrammarPoint(id))
-      .filter((p): p is GrammarPoint => Boolean(p))
-      .slice(0, 3);
-  }, [getGrammarPoint, learningSet, popup?.sourceElement]);
 
   const surfaceWord = token?.card?.spelling || popup.word;
   const reading = token?.card?.reading || "";

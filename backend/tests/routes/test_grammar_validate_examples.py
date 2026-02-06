@@ -73,3 +73,52 @@ def test_validate_examples_success(client, monkeypatch):
     assert "matches" in data
     assert any(m.get("candidateId") == "c1" and m.get("isMatch") is True for m in data["matches"])
 
+
+def test_teach_examples_success(client, monkeypatch):
+    import app.domains.grammar.routes as grammar_routes
+
+    class _FakeCompletion:
+        def __init__(self, content: str):
+            class _Msg:
+                def __init__(self, c: str):
+                    self.content = c
+
+            class _Choice:
+                def __init__(self, c: str):
+                    self.message = _Msg(c)
+
+            self.choices = [_Choice(content)]
+
+    class _FakeOpenAI:
+        def __init__(self, *args, **kwargs):
+            class _Chat:
+                class _Completions:
+                    def create(self, *a, **k):
+                        return _FakeCompletion(
+                            "{\"teachings\":[{\"exampleId\":\"ex1\",\"translation\":\"Maybe because it's a girls' dorm...\",\"breakdown\":\"女子寮 (girls' dorm) だから (because) か (maybe)\",\"contrast\":{\"alternative\":\"女子寮なので、見事に女の人しかいない。\",\"note\":\"Softer / more explanatory than だから.\"}}]}"
+                        )
+
+                def __init__(self):
+                    self.completions = self._Completions()
+
+            self.chat = _Chat()
+
+    monkeypatch.setattr(grammar_routes, "OpenAI", _FakeOpenAI)
+
+    payload = {
+        "grammar": {"id": "n5:だから", "title": "だから", "meaning": "because", "level": "n5"},
+        "apiKey": "test-key",
+        "model": "gpt-4o-mini",
+        "examples": [
+            {
+                "exampleId": "ex1",
+                "sentence": "女子寮だからか、見事に女の人しかいない。",
+                "matchSpan": {"start": 3, "end": 6, "text": "だから"},
+            }
+        ],
+    }
+    res = client.post("/api/grammar/teach-examples", json=payload)
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "teachings" in data
+    assert data["teachings"][0]["exampleId"] == "ex1"
