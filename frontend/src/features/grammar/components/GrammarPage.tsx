@@ -189,34 +189,59 @@ function GrammarCard({
 }): JSX.Element {
   const canMine = point.hintQuality === "ok";
   const [expanded, setExpanded] = useState<boolean>(() => isLearning);
+  useEffect(() => {
+    if (!isLearning && expanded) setExpanded(false);
+  }, [expanded, isLearning]);
+
+  const toggleExpanded = () => {
+    if (!isLearning) return;
+    setExpanded((v) => !v);
+  };
 
   return (
-    <div className="app-card p-4">
-      <div className="flex items-start justify-between gap-4">
+    <div className="app-card overflow-hidden">
+      <div
+        className={
+          isLearning
+            ? "p-4 flex items-start justify-between gap-4 cursor-pointer select-none hover:bg-[var(--ui-surface-alt)] transition-colors"
+            : "p-4 flex items-start justify-between gap-4"
+        }
+        role={isLearning ? "button" : undefined}
+        tabIndex={isLearning ? 0 : undefined}
+        aria-expanded={isLearning ? expanded : undefined}
+        onClick={() => {
+          toggleExpanded();
+        }}
+        onKeyDown={(e) => {
+          if (!isLearning) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggleExpanded();
+          }
+        }}
+      >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <div className="text-base font-semibold tracking-tight">{point.title}</div>
             {point.hintQuality !== "ok" ? (
               <span className="app-chip">auto-mining limited</span>
             ) : null}
-            {isLearning ? (
-              <button
-                type="button"
-                className="app-button-muted px-2 py-1 rounded-md text-[11px]"
-                onClick={() => setExpanded((v) => !v)}
-                title={expanded ? "Collapse" : "Expand"}
-              >
-                {expanded ? "Collapse" : "Expand"}
-              </button>
-            ) : null}
           </div>
           <div className="text-sm app-muted mt-1">{point.meaning}</div>
         </div>
 
         <div className="shrink-0 flex flex-wrap gap-2 justify-end">
+          {isLearning ? (
+            <div className="flex items-center px-2 text-xs app-muted" aria-hidden="true" title={expanded ? "Collapse" : "Expand"}>
+              <span className="text-lg leading-none font-medium app-muted select-none">{expanded ? "–" : "+"}</span>
+            </div>
+          ) : null}
           <button
             className={isKnown ? "app-button-primary px-3 py-1.5 rounded-md text-xs" : "app-button-muted px-3 py-1.5 rounded-md text-xs"}
-            onClick={() => onToggleKnown(!isKnown)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleKnown(!isKnown);
+            }}
             title={isKnown ? "Unmark known" : "Mark known"}
           >
             {isKnown ? "Known" : "Mark known"}
@@ -224,7 +249,10 @@ function GrammarCard({
 
           <button
             className={isLearning ? "app-button-primary px-3 py-1.5 rounded-md text-xs" : "app-button-muted px-3 py-1.5 rounded-md text-xs"}
-            onClick={() => onToggleLearning(!isLearning)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLearning(!isLearning);
+            }}
             disabled={isKnown}
             title={isKnown ? "Already known" : isLearning ? "Stop learning" : "Start learning"}
           >
@@ -233,7 +261,10 @@ function GrammarCard({
 
           <button
             className="app-button-muted px-3 py-1.5 rounded-md text-xs"
-            onClick={onForceMine}
+            onClick={(e) => {
+              e.stopPropagation();
+              onForceMine();
+            }}
             disabled={!isLearning || !canMine}
             title={!canMine ? "Too ambiguous for MVP mining" : "Find examples now"}
           >
@@ -243,9 +274,19 @@ function GrammarCard({
       </div>
 
       {isLearning ? (
-        <div className="mt-3">
+        <div className="px-4 pb-4">
           <ScanStatus scan={scan} exampleCount={examples.length} />
-          {expanded ? <ExamplesList examples={examples} bookTitleById={bookTitleById} /> : null}
+          <div
+            className={
+              expanded
+                ? "mt-3 grid grid-rows-[1fr] transition-[grid-template-rows] duration-200 ease-out"
+                : "mt-3 grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out"
+            }
+          >
+            <div className="overflow-hidden">
+              <ExamplesList examples={examples} bookTitleById={bookTitleById} />
+            </div>
+          </div>
           {point.hintQuality !== "ok" ? (
             <div className="mt-3 text-xs app-muted">
               This grammar point is very common/ambiguous, so automatic mining and underlines are limited in the MVP.
@@ -354,9 +395,17 @@ export default function GrammarPage() {
 
           return (
             <div key={level} className="app-card overflow-hidden">
-              <button
+              <div
                 className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--ui-surface-alt)] transition-colors text-left"
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleOpen(level)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleOpen(level);
+                  }
+                }}
                 aria-expanded={isOpen}
               >
                 <div className="flex items-center gap-3">
@@ -380,7 +429,7 @@ export default function GrammarPage() {
                   </button>
                   <div className="text-lg leading-none font-medium app-muted select-none">{isOpen ? "–" : "+"}</div>
                 </div>
-              </button>
+              </div>
 
               {isOpen ? (
                 <div className="border-t app-border p-4 space-y-3">
