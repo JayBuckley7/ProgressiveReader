@@ -22,6 +22,9 @@ type GrammarContextValue = {
   setKnownMany: (grammarIds: string[], known: boolean) => void;
   setLearning: (grammarId: string, learning: boolean) => void;
   forceMine: (grammarId: string) => void;
+  runNow: (grammarId: string) => void;
+  cancelMining: () => void;
+  activeMiningGrammarId: string | null;
   miningEnabled: boolean;
   underlinesEnabled: boolean;
   setMiningEnabled: (enabled: boolean) => void;
@@ -115,6 +118,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
 
   const [miningEnabled, setMiningEnabledState] = useState<boolean>(() => getBoolLocalStorage("prGrammarMiningEnabled") ?? false);
   const [underlinesEnabled, setUnderlinesEnabledState] = useState<boolean>(() => getBoolLocalStorage("prGrammarUnderlinesEnabled") ?? false);
+  const [activeMiningGrammarId, setActiveMiningGrammarId] = useState<string | null>(null);
 
   // Initialize defaults for the toggles if not explicitly set.
   useEffect(() => {
@@ -396,6 +400,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
   // Background miner (sequential, one grammar point at a time).
   const minerRunningRef = useRef(false);
   const minerAbortRef = useRef<AbortController | null>(null);
+  const priorityNextGrammarIdRef = useRef<string | null>(null);
 
   const runMine = useCallback(
     async (grammarId: string) => {
@@ -411,6 +416,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
 
       minerAbortRef.current?.abort();
       minerAbortRef.current = new AbortController();
+      setActiveMiningGrammarId(grammarId);
 
       setState((prev) => {
         const scanBy = { ...(prev.scanByGrammarId || {}) };
@@ -460,16 +466,67 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
           toast.success(`Found grammar example${result.examples.length > 1 ? "s" : ""}: ${point.title}`);
         }
       } catch (e: any) {
-        if (e?.name === "AbortError") return;
+        if (e?.name === "AbortError") {
+          // Ensure aborted jobs do not remain stuck in "scanning".
+          setState((prev) => {
+            const scanBy = { ...(prev.scanByGrammarId || {}) };
+            const cur = scanBy[grammarId] || { status: "idle" };
+            scanBy[grammarId] = {
+              ...cur,
+              status: "queued",
+              lastError: "Cancelled",
+              lastScanAt: new Date().toISOString(),
+            };
+            return { ...prev, scanByGrammarId: scanBy, lastUpdatedMs: Date.now() };
+          });
+          return;
+        }
         setState((prev) => {
           const scanBy = { ...(prev.scanByGrammarId || {}) };
           const cur = scanBy[grammarId] || { status: "idle" };
           scanBy[grammarId] = { ...cur, status: "error", lastError: String(e?.message || e || "Unknown error"), lastScanAt: new Date().toISOString() };
           return { ...prev, scanByGrammarId: scanBy, lastUpdatedMs: Date.now() };
         });
+      } finally {
+        setActiveMiningGrammarId(null);
       }
     },
     [books]
+  );
+
+  const cancelMining = useCallback(() => {
+    minerAbortRef.current?.abort();
+    const gid = activeMiningGrammarId;
+    if (!gid) return;
+    setState((prev) => {
+      const scanBy = { ...(prev.scanByGrammarId || {}) };
+      const cur = scanBy[gid] || { status: "idle" };
+      if (cur.status === "scanning") {
+        scanBy[gid] = { ...cur, status: "queued", lastError: "Cancelled", lastScanAt: new Date().toISOString() };
+      }
+      return { ...prev, scanByGrammarId: scanBy, lastUpdatedMs: Date.now() };
+    });
+  }, [activeMiningGrammarId]);
+
+  const runNow = useCallback(
+    (grammarId: string) => {
+      priorityNextGrammarIdRef.current = grammarId;
+      // If we're currently scanning something else, abort it so the chosen job can run next.
+      if (activeMiningGrammarId && activeMiningGrammarId !== grammarId) {
+        minerAbortRef.current?.abort();
+      }
+      setState((prev) => {
+        const nextScanBy = { ...(prev.scanByGrammarId || {}) };
+        const cur = nextScanBy[grammarId];
+        nextScanBy[grammarId] = {
+          ...(cur || {}),
+          status: "queued",
+          lastError: undefined,
+        };
+        return { ...prev, scanByGrammarId: nextScanBy, lastUpdatedMs: Date.now() };
+      });
+    },
+    [activeMiningGrammarId]
   );
 
   useEffect(() => {
@@ -480,7 +537,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
     // Pick the next queued/eligible grammar point.
     const scanBy = state.scanByGrammarId || {};
 
-    const next = state.learningIds.find((gid) => {
+    const isEligible = (gid: string) => {
       const point = getGrammarPointById(gid);
       if (!point || point.hintQuality !== "ok") return false;
       const exCount = (state.examplesByGrammarId[gid] || []).length;
@@ -492,15 +549,31 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       if (!scan) return true;
       if (scan.status === "idle" || scan.status === "not_found_yet") return true;
       return false;
-    });
+    };
+
+    const forced = priorityNextGrammarIdRef.current;
+    let next: string | undefined;
+    if (forced && isEligible(forced)) {
+      next = forced;
+    } else {
+      next = state.learningIds.find(isEligible);
+    }
 
     if (!next) return;
 
     minerRunningRef.current = true;
     void runMine(next).finally(() => {
       minerRunningRef.current = false;
+      if (priorityNextGrammarIdRef.current === next) priorityNextGrammarIdRef.current = null;
     });
   }, [books, miningEnabled, runMine, state.examplesByGrammarId, state.learningIds, state.scanByGrammarId]);
+
+  // Abort in-flight request on unmount.
+  useEffect(() => {
+    return () => {
+      minerAbortRef.current?.abort();
+    };
+  }, []);
 
   const value: GrammarContextValue = useMemo(
     () => ({
@@ -514,6 +587,9 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       setKnownMany,
       setLearning,
       forceMine,
+      runNow,
+      cancelMining,
+      activeMiningGrammarId,
       miningEnabled,
       underlinesEnabled,
       setMiningEnabled,
@@ -530,6 +606,9 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       setKnown,
       setKnownMany,
       setLearning,
+      runNow,
+      cancelMining,
+      activeMiningGrammarId,
       state,
       underlinesEnabled,
       setMiningEnabled,
