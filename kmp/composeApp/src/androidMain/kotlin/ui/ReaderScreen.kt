@@ -23,10 +23,12 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.StopCircle
 import androidx.compose.material.icons.outlined.VolumeUp
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -58,6 +60,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -75,6 +78,7 @@ import com.progressivereader.kmp.reader.HtmlContent
 import com.progressivereader.kmp.reader.JpdbHighlighter
 import com.progressivereader.kmp.reader.JpdbTokenCache
 import com.progressivereader.kmp.reader.TranslationCache
+import com.progressivereader.kmp.reader.SwipeDirection
 import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.tts.TtsController
 import com.progressivereader.kmp.translate.TranslateService
@@ -99,7 +103,7 @@ fun ReaderScreen(
     epubRepository: EpubRepository,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
-    onSetDarkMode: (Boolean) -> Unit,
+    onSetTheme: (String) -> Unit,
     onSetFontSizeSp: (Float) -> Unit,
     onSetTtsRate: (Float) -> Unit,
     onSetJpdbHighlightEnabled: (Boolean) -> Unit,
@@ -110,6 +114,7 @@ fun ReaderScreen(
     val clipboard = LocalClipboardManager.current
     val isOnline = rememberIsOnline()
     val context = LocalContext.current
+    val isCompactTopBar = LocalConfiguration.current.screenWidthDp < 420
 
     val ttsController = remember { TtsController(context) }
     DisposableEffect(ttsController) { onDispose { ttsController.shutdown() } }
@@ -137,11 +142,12 @@ fun ReaderScreen(
     var chapterSourceHash by remember { mutableStateOf<String?>(null) }
     var chapterBaseUrl by remember { mutableStateOf<String?>(null) }
 
-    var darkMode by remember { mutableStateOf(settings.reader.darkMode) }
+    var theme by remember { mutableStateOf(settings.reader.theme) }
     var fontSizeSp by remember { mutableStateOf(settings.reader.fontSizeSp) }
     var highlightEnabled by remember { mutableStateOf(settings.reader.jpdbHighlightEnabled) }
 
     var highlightedBodyHtml by remember { mutableStateOf<String?>(null) }
+    var highlightedSourceHash by remember { mutableStateOf<String?>(null) }
     var highlightTokenById by remember { mutableStateOf<Map<String, JpdbService.ProcessedToken>>(emptyMap()) }
     var isApplyingHighlights by remember { mutableStateOf(false) }
 
@@ -152,8 +158,10 @@ fun ReaderScreen(
     var selectedTokenId by remember { mutableStateOf<String?>(null) }
     var isJpdbActionBusy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(settings.reader.darkMode, settings.reader.fontSizeSp) {
-        darkMode = settings.reader.darkMode
+    var showOverflowMenu by remember(bookId) { mutableStateOf(false) }
+
+    LaunchedEffect(settings.reader.theme, settings.reader.fontSizeSp) {
+        theme = settings.reader.theme
         fontSizeSp = settings.reader.fontSizeSp
     }
 
@@ -165,6 +173,8 @@ fun ReaderScreen(
     LaunchedEffect(settings.reader.jpdbHighlightEnabled) {
         highlightEnabled = settings.reader.jpdbHighlightEnabled
     }
+
+    val darkModeEffective = isDarkThemeMode(theme)
 
     val epubFile = remember(bookId) { bookCache.epubFile(bookId) }
     val extractedDir = remember(bookId) { bookCache.extractedDir(bookId) }
@@ -178,6 +188,7 @@ fun ReaderScreen(
         chapterBaseUrl = null
         epubBook = null
         highlightedBodyHtml = null
+        highlightedSourceHash = null
         highlightTokenById = emptyMap()
         isApplyingHighlights = false
         isTranslated = false
@@ -219,6 +230,7 @@ fun ReaderScreen(
         chapterBaseUrl = epubRepository.chapterBaseUrl(extractedDir, chapter.href)
 
         highlightedBodyHtml = null
+        highlightedSourceHash = null
         highlightTokenById = emptyMap()
         isApplyingHighlights = false
         isTranslated = false
@@ -234,11 +246,12 @@ fun ReaderScreen(
     val jpdbApiKey = settings.reader.jpdbApiKey
     val translationTargetLang = settings.reader.translationTargetLang
     val cefrLevel = settings.reader.cefrLevel
+    val translatedBodyHash = remember(translatedBodyHtml) { translatedBodyHtml?.let { TranslationCache.sha256Hex(it) } }
 
     val highlightErrorKey = rememberSaveable(bookId, chapterIndex) { mutableStateOf(false) }
     LaunchedEffect(
         chapterBodyHtml,
-        chapterSourceHash,
+        translatedBodyHtml,
         highlightEnabled,
         jpdbApiKey,
         isOnline,
@@ -246,28 +259,31 @@ fun ReaderScreen(
     ) {
         if (!highlightEnabled) {
             highlightedBodyHtml = null
+            highlightedSourceHash = null
             highlightTokenById = emptyMap()
             highlightErrorKey.value = false
             return@LaunchedEffect
         }
-        if (isTranslated) return@LaunchedEffect
 
-        val body = chapterBodyHtml ?: return@LaunchedEffect
-        val hash = chapterSourceHash ?: return@LaunchedEffect
-        val key = jpdbApiKey?.trim().orEmpty()
-        if (key.isBlank()) {
-            highlightedBodyHtml = null
-            highlightTokenById = emptyMap()
-            if (!highlightErrorKey.value) {
-                highlightErrorKey.value = true
-                val res =
-                    snackbarHostState.showSnackbar(
-                        message = "Add a JPDB API key to enable highlights.",
-                        actionLabel = "Settings",
-                    )
-                if (res == SnackbarResult.ActionPerformed) onOpenSettings()
+        val body =
+            if (isTranslated) {
+                translatedBodyHtml
+            } else {
+                chapterBodyHtml
+            } ?: run {
+                highlightedBodyHtml = null
+                highlightedSourceHash = null
+                highlightTokenById = emptyMap()
+                return@LaunchedEffect
             }
-            return@LaunchedEffect
+        val hash = TranslationCache.sha256Hex(body)
+        val key = jpdbApiKey?.trim().orEmpty()
+
+        // Ensure we never display stale highlights from a different source.
+        if (highlightedSourceHash != null && highlightedSourceHash != hash) {
+            highlightedBodyHtml = null
+            highlightedSourceHash = null
+            highlightTokenById = emptyMap()
         }
 
         isApplyingHighlights = true
@@ -285,13 +301,29 @@ fun ReaderScreen(
 
         if (result == null) {
             highlightedBodyHtml = null
+            highlightedSourceHash = null
             highlightTokenById = emptyMap()
-            if (!isOnline && !highlightErrorKey.value) {
-                highlightErrorKey.value = true
-                snackbarHostState.showSnackbar("Highlights unavailable offline (not cached).")
+            if (!highlightErrorKey.value) {
+                when {
+                    key.isBlank() -> {
+                        highlightErrorKey.value = true
+                        val res =
+                            snackbarHostState.showSnackbar(
+                                message = "Add a JPDB API key to enable highlights.",
+                                actionLabel = "Settings",
+                            )
+                        if (res == SnackbarResult.ActionPerformed) onOpenSettings()
+                    }
+
+                    !isOnline -> {
+                        highlightErrorKey.value = true
+                        snackbarHostState.showSnackbar("Highlights unavailable offline (not cached).")
+                    }
+                }
             }
         } else {
             highlightedBodyHtml = result.html
+            highlightedSourceHash = hash
             highlightTokenById = result.tokenById
             highlightErrorKey.value = false
         }
@@ -306,18 +338,20 @@ fun ReaderScreen(
             return
         }
 
-        val cached =
-            translationCache.loadIfValid(
-                chapterIndex = chapterIndex,
-                sourceHash = hash,
-                targetLang = translationTargetLang,
-                useCefr = false,
-                cefrLevel = cefrLevel,
-            )
-        if (cached != null) {
-            translatedBodyHtml = cached.html
-            isTranslated = true
-            return
+        if (settings.reader.cacheTranslations) {
+            val cached =
+                translationCache.loadIfValid(
+                    chapterIndex = chapterIndex,
+                    sourceHash = hash,
+                    targetLang = translationTargetLang,
+                    useCefr = false,
+                    cefrLevel = cefrLevel,
+                )
+            if (cached != null) {
+                translatedBodyHtml = cached.html
+                isTranslated = true
+                return
+            }
         }
 
         if (!isOnline) {
@@ -336,6 +370,8 @@ fun ReaderScreen(
                     TranslateService.ChapterTranslateRequest(
                         content = body,
                         target_lang = translationTargetLang,
+                        model = settings.reader.openAiModel,
+                        api_key = settings.reader.openAiApiKey?.trim().orEmpty(),
                         use_cefr = false,
                         cefr_level = cefrLevel,
                     ),
@@ -357,7 +393,9 @@ fun ReaderScreen(
                 sourceHash = hash,
                 html = resp.translated_text,
             )
-        runCatching { translationCache.save(chapterIndex, entry) }
+        if (settings.reader.cacheTranslations) {
+            runCatching { translationCache.save(chapterIndex, entry) }
+        }
         translatedBodyHtml = entry.html
         isTranslated = true
     }
@@ -386,6 +424,14 @@ fun ReaderScreen(
 
     LaunchedEffect(bookId, chapterIndex) { ttsController.stop() }
 
+    val swipeHintShown = rememberSaveable(bookId) { mutableStateOf(false) }
+    LaunchedEffect(epubBook) {
+        if (swipeHintShown.value) return@LaunchedEffect
+        if ((epubBook?.chapters?.size ?: 0) <= 1) return@LaunchedEffect
+        swipeHintShown.value = true
+        snackbarHostState.showSnackbar("Tip: swipe left/right to change chapters.")
+    }
+
     val speakSourceHtml =
         when {
             isTranslated -> translatedBodyHtml ?: chapterBodyHtml
@@ -397,9 +443,58 @@ fun ReaderScreen(
             if (speakSourceHtml.isNullOrBlank()) "" else Jsoup.parse(speakSourceHtml).text().trim()
         }
 
+    fun decreaseFontSize() {
+        val next = (fontSizeSp - 2f).coerceAtLeast(12f)
+        fontSizeSp = next
+        onSetFontSizeSp(next)
+    }
+
+    fun increaseFontSize() {
+        val next = (fontSizeSp + 2f).coerceAtMost(32f)
+        fontSizeSp = next
+        onSetFontSizeSp(next)
+    }
+
+    fun toggleTheme() {
+        val next = if (darkModeEffective) "light" else "dark"
+        theme = next
+        onSetTheme(next)
+    }
+
+    fun toggleHighlights() {
+        val next = !highlightEnabled
+        highlightEnabled = next
+        onSetJpdbHighlightEnabled(next)
+        if (next && jpdbApiKey.isNullOrBlank()) {
+            scope.launch {
+                val res =
+                    snackbarHostState.showSnackbar(
+                        message = "Add a JPDB API key to enable highlights.",
+                        actionLabel = "Settings",
+                    )
+                if (res == SnackbarResult.ActionPerformed) onOpenSettings()
+            }
+        }
+    }
+
+    fun toggleTts() {
+        selectedTokenId = null
+        showTtsSheet = true
+        if (isSpeaking) {
+            ttsController.stop()
+        } else {
+            ttsController.speak(speakText)
+        }
+    }
+
     suspend fun updateTokenStateAndRehighlight(tid: String, nextState: List<String>) {
-        val body = chapterBodyHtml ?: return
-        val hash = chapterSourceHash ?: return
+        val body =
+            if (isTranslated) {
+                translatedBodyHtml
+            } else {
+                chapterBodyHtml
+            } ?: return
+        val hash = TranslationCache.sha256Hex(body)
         val cached = jpdbTokenCache.loadIfValid(chapterIndex, hash) ?: return
 
         val nextStateElement = JsonArray(nextState.map { JsonPrimitive(it) })
@@ -426,12 +521,14 @@ fun ReaderScreen(
             )
         if (res != null) {
             highlightedBodyHtml = res.html
+            highlightedSourceHash = hash
             highlightTokenById = res.tokenById
         }
     }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = false,
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContents(
@@ -476,149 +573,167 @@ fun ReaderScreen(
                         }
                     },
                     actions = {
-                        IconButton(
-                            enabled = totalChapters > 0,
-                            onClick = { scope.launch { drawerState.open() } },
-                        ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
+                        // On compact devices, the full action set is too wide and overlaps the back button.
+                        // Keep TOC visible and tuck the rest into an overflow menu.
+                        if (isCompactTopBar) {
+                            IconButton(
+                                enabled = totalChapters > 0,
+                                onClick = { scope.launch { drawerState.open() } },
+                            ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
 
-                        AppTextButton(
-                            text = "A-",
-                            enabled = fontSizeSp > 12f,
-                            onClick = {
-                                val next = (fontSizeSp - 2f).coerceAtLeast(12f)
-                                fontSizeSp = next
-                                onSetFontSizeSp(next)
-                            },
-                        )
+                            IconButton(onClick = { showOverflowMenu = true }) {
+                                Icon(Icons.Outlined.MoreVert, contentDescription = "More")
+                            }
 
-                        AppTextButton(
-                            text = "A+",
-                            enabled = fontSizeSp < 32f,
-                            onClick = {
-                                val next = (fontSizeSp + 2f).coerceAtMost(32f)
-                                fontSizeSp = next
-                                onSetFontSizeSp(next)
-                            },
-                        )
+                            DropdownMenu(
+                                expanded = showOverflowMenu,
+                                onDismissRequest = { showOverflowMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("A-") },
+                                    enabled = fontSizeSp > 12f,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        decreaseFontSize()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("A+") },
+                                    enabled = fontSizeSp < 32f,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        increaseFontSize()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (darkModeEffective) "Light theme" else "Dark theme") },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        toggleTheme()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (highlightEnabled) "Disable highlights" else "Enable highlights") },
+                                    enabled = chapterBodyHtml != null && !isTranslating,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        toggleHighlights()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (isTranslated) "Show original" else "Translate") },
+                                    enabled = chapterBodyHtml != null && !isApplyingHighlights && !isTranslating,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        scope.launch { handleTranslateClick() }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (isSpeaking) "Stop TTS" else "Start TTS") },
+                                    enabled = speakText.isNotBlank() && ttsReady,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        toggleTts()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (isBookmarkedForCurrentChapter()) "Remove bookmark" else "Add bookmark") },
+                                    enabled = totalChapters > 0,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        toggleBookmark()
+                                    },
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                enabled = totalChapters > 0,
+                                onClick = { scope.launch { drawerState.open() } },
+                            ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
 
-                        IconButton(
-                            onClick = {
-                                darkMode = !darkMode
-                                onSetDarkMode(darkMode)
-                            },
-                        ) {
-                            Icon(
-                                if (darkMode) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                                contentDescription = "Theme",
+                            AppTextButton(
+                                text = "A-",
+                                enabled = fontSizeSp > 12f,
+                                onClick = { decreaseFontSize() },
                             )
-                        }
 
-                        IconButton(
-                            enabled = chapterBodyHtml != null && !isTranslating,
-                            onClick = {
-                                val next = !highlightEnabled
-                                highlightEnabled = next
-                                onSetJpdbHighlightEnabled(next)
-                                if (next && jpdbApiKey.isNullOrBlank()) {
-                                    scope.launch {
-                                        val res =
-                                            snackbarHostState.showSnackbar(
-                                                message = "Add a JPDB API key to enable highlights.",
-                                                actionLabel = "Settings",
-                                            )
-                                        if (res == SnackbarResult.ActionPerformed) onOpenSettings()
-                                    }
-                                }
-                            },
-                        ) {
-                            if (isApplyingHighlights) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.padding(6.dp),
-                                )
-                            } else {
+                            AppTextButton(
+                                text = "A+",
+                                enabled = fontSizeSp < 32f,
+                                onClick = { increaseFontSize() },
+                            )
+
+                            IconButton(onClick = { toggleTheme() }) {
                                 Icon(
-                                    Icons.Outlined.AutoFixHigh,
-                                    contentDescription = "Highlights",
-                                    tint =
-                                        if (highlightEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    if (darkModeEffective) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                                    contentDescription = "Theme",
                                 )
                             }
-                        }
 
-                        IconButton(
-                            enabled = chapterBodyHtml != null && !isApplyingHighlights,
-                            onClick = { scope.launch { handleTranslateClick() } },
-                        ) {
-                            if (isTranslating) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.padding(6.dp),
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Outlined.Language,
-                                    contentDescription = "Translate",
-                                    tint =
-                                        if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-
-                        IconButton(
-                            enabled = speakText.isNotBlank() && ttsReady,
-                            onClick = {
-                                selectedTokenId = null
-                                showTtsSheet = true
-                                if (isSpeaking) {
-                                    ttsController.stop()
+                            IconButton(
+                                enabled = chapterBodyHtml != null && !isTranslating,
+                                onClick = { toggleHighlights() },
+                            ) {
+                                if (isApplyingHighlights) {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.padding(6.dp),
+                                    )
                                 } else {
-                                    ttsController.speak(speakText)
+                                    Icon(
+                                        Icons.Outlined.AutoFixHigh,
+                                        contentDescription = "Highlights",
+                                        tint =
+                                            if (highlightEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    )
                                 }
-                            },
-                        ) {
-                            Icon(
-                                if (isSpeaking) Icons.Outlined.StopCircle else Icons.Outlined.VolumeUp,
-                                contentDescription = "Text to speech",
-                                tint =
-                                    if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+                            }
 
-                        IconButton(
-                            enabled = totalChapters > 0,
-                            onClick = { toggleBookmark() },
-                        ) {
-                            Icon(
-                                if (isBookmarkedForCurrentChapter()) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkAdd,
-                                contentDescription = "Bookmark",
-                            )
+                            IconButton(
+                                enabled = chapterBodyHtml != null && !isApplyingHighlights && !isTranslating,
+                                onClick = { scope.launch { handleTranslateClick() } },
+                            ) {
+                                if (isTranslating) {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.padding(6.dp),
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Outlined.Language,
+                                        contentDescription = "Translate",
+                                        tint =
+                                            if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                enabled = speakText.isNotBlank() && ttsReady,
+                                onClick = { toggleTts() },
+                            ) {
+                                Icon(
+                                    if (isSpeaking) Icons.Outlined.StopCircle else Icons.Outlined.VolumeUp,
+                                    contentDescription = "Text to speech",
+                                    tint =
+                                        if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+
+                            IconButton(
+                                enabled = totalChapters > 0,
+                                onClick = { toggleBookmark() },
+                            ) {
+                                Icon(
+                                    if (isBookmarkedForCurrentChapter()) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkAdd,
+                                    contentDescription = "Bookmark",
+                                )
+                            }
                         }
                     },
                 )
-            },
-            bottomBar = {
-                BottomAppBar {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AppOutlineButton(
-                            text = "Previous",
-                            enabled = chapterIndex > 0,
-                            onClick = { chapterIndex = (chapterIndex - 1).coerceAtLeast(0) },
-                        )
-
-                        AppPrimaryButton(
-                            text = "Next",
-                            enabled = chapterIndex < maxIdx,
-                            onClick = { chapterIndex = (chapterIndex + 1).coerceAtMost(maxIdx) },
-                        )
-                    }
-                }
             },
         ) { padding ->
             Column(
@@ -634,30 +749,55 @@ fun ReaderScreen(
                     error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                     epubBook == null -> Text("No book loaded.")
                     else -> {
+                        val baseBody = if (isTranslated) translatedBodyHtml ?: chapterBodyHtml else chapterBodyHtml
+                        val baseHash = if (isTranslated) translatedBodyHash ?: chapterSourceHash else chapterSourceHash
+                        val canShowHighlights =
+                            highlightEnabled &&
+                                highlightedBodyHtml != null &&
+                                highlightedSourceHash != null &&
+                                highlightedSourceHash == baseHash
                         val effectiveBody =
                             when {
-                                isTranslated -> translatedBodyHtml ?: chapterBodyHtml
-                                highlightEnabled -> highlightedBodyHtml ?: chapterBodyHtml
-                                else -> chapterBodyHtml
+                                canShowHighlights -> highlightedBodyHtml
+                                else -> baseBody
                             } ?: "<p>Loading…</p>"
                         val html = chapterHeadHtml + effectiveBody
                         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                             HtmlContent(
                                 html = html,
                                 baseUrl = chapterBaseUrl,
-                                darkMode = darkMode,
+                                darkMode = darkModeEffective,
                                 fontSizeSp = fontSizeSp,
                                 onUrlClick = { url ->
                                     val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return@HtmlContent false
                                     if (uri.scheme != "pr" || uri.host != "jpdb") return@HtmlContent false
                                     val tid = uri.getQueryParameter("tid")?.takeIf { it.isNotBlank() } ?: return@HtmlContent true
-                                    if (highlightTokenById.containsKey(tid)) {
+                                    if (canShowHighlights && highlightTokenById.containsKey(tid)) {
                                         showTtsSheet = false
                                         selectedTokenId = tid
                                     } else {
                                         scope.launch { snackbarHostState.showSnackbar("No token data for that word.") }
                                     }
                                     true
+                                },
+                                onSwipe = { direction ->
+                                    when (direction) {
+                                        SwipeDirection.LEFT -> {
+                                            if (chapterIndex < maxIdx) {
+                                                chapterIndex = (chapterIndex + 1).coerceAtMost(maxIdx)
+                                            } else {
+                                                scope.launch { snackbarHostState.showSnackbar("End of book.") }
+                                            }
+                                        }
+
+                                        SwipeDirection.RIGHT -> {
+                                            if (chapterIndex > 0) {
+                                                chapterIndex = (chapterIndex - 1).coerceAtLeast(0)
+                                            } else {
+                                                scope.launch { snackbarHostState.showSnackbar("Start of book.") }
+                                            }
+                                        }
+                                    }
                                 },
                             )
                         }

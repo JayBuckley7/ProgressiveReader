@@ -1,5 +1,6 @@
 package com.progressivereader.kmp.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,11 +30,14 @@ fun ReaderHostScreen(
     epubRepository: EpubRepository,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
-    onSetDarkMode: (Boolean) -> Unit,
+    onSetTheme: (String) -> Unit,
     onSetFontSizeSp: (Float) -> Unit,
     onSetTtsRate: (Float) -> Unit,
     onSetJpdbHighlightEnabled: (Boolean) -> Unit,
 ) {
+    // Ensure Android system back exits the reader to the library (or previous screen) instead of closing the app.
+    BackHandler(onBack = onBack)
+
     var cachedEntry by remember(bookId) { mutableStateOf<CachedBookEntry?>(null) }
     var indexLoaded by remember(bookId) { mutableStateOf(false) }
     var indexLoadFailed by remember(bookId) { mutableStateOf(false) }
@@ -53,6 +57,9 @@ fun ReaderHostScreen(
     val isPdf =
         cachedEntry?.let { entry -> bookCache.cachedContentFile(entry).name.endsWith(".pdf", ignoreCase = true) }
             ?: bookCache.pdfFile(bookId).exists()
+    val isTxt =
+        cachedEntry?.let { entry -> bookCache.cachedContentFile(entry).name.endsWith(".txt", ignoreCase = true) }
+            ?: bookCache.txtFile(bookId).exists()
 
     when {
         indexLoadFailed -> {
@@ -95,6 +102,16 @@ fun ReaderHostScreen(
                 onSetTtsRate = onSetTtsRate,
             )
 
+        isTxt ->
+            TextReaderScreen(
+                bookId = bookId,
+                title = cachedEntry?.name ?: "TXT",
+                settings = settings,
+                bookCache = bookCache,
+                onBack = onBack,
+                onOpenSettings = onOpenSettings,
+            )
+
         else ->
             ReaderScreen(
                 bookId = bookId,
@@ -104,7 +121,7 @@ fun ReaderHostScreen(
                 epubRepository = epubRepository,
                 onBack = onBack,
                 onOpenSettings = onOpenSettings,
-                onSetDarkMode = onSetDarkMode,
+                onSetTheme = onSetTheme,
                 onSetFontSizeSp = onSetFontSizeSp,
                 onSetTtsRate = onSetTtsRate,
                 onSetJpdbHighlightEnabled = onSetJpdbHighlightEnabled,

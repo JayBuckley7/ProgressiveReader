@@ -36,23 +36,42 @@ class JpdbTokenCache(private val bookDir: File) {
             prettyPrint = true
         }
 
-    private fun fileFor(chapterIndex: Int): File = File(File(bookDir, "jpdb"), "$chapterIndex.json")
+    private fun safeHashPrefix(sourceHash: String): String {
+        val h = sourceHash.trim()
+        // Keep filenames short but unique enough for our use (cache); 48 bits of hex is plenty.
+        return if (h.length <= 12) h else h.substring(0, 12)
+    }
+
+    // Cache is keyed by the exact HTML being highlighted (sourceHash), so translated variants can coexist.
+    private fun fileFor(chapterIndex: Int, sourceHash: String): File =
+        File(File(bookDir, "jpdb"), "${chapterIndex}_${safeHashPrefix(sourceHash)}.json")
+
+    // Legacy single-cache-per-chapter filename (kept for backward compatibility).
+    private fun legacyFileFor(chapterIndex: Int): File = File(File(bookDir, "jpdb"), "$chapterIndex.json")
 
     suspend fun loadIfValid(chapterIndex: Int, sourceHash: String): JpdbTokenCacheFile? =
         withContext(Dispatchers.IO) {
-            val f = fileFor(chapterIndex)
-            if (!f.exists()) return@withContext null
-            val parsed =
-                runCatching { json.decodeFromString(JpdbTokenCacheFile.serializer(), f.readText()) }
-                    .getOrNull()
-                    ?: return@withContext null
-            if (parsed.sourceHash != sourceHash) return@withContext null
-            parsed
+            fun parseIfMatches(f: File): JpdbTokenCacheFile? {
+                if (!f.exists()) return null
+                val parsed =
+                    runCatching { json.decodeFromString(JpdbTokenCacheFile.serializer(), f.readText()) }
+                        .getOrNull()
+                        ?: return null
+                if (parsed.sourceHash != sourceHash) return null
+                return parsed
+            }
+
+            // Prefer the new per-hash cache file.
+            val primary = parseIfMatches(fileFor(chapterIndex, sourceHash))
+            if (primary != null) return@withContext primary
+
+            // Backward compatibility: fall back to the legacy per-chapter file if present.
+            parseIfMatches(legacyFileFor(chapterIndex))
         }
 
     suspend fun save(chapterIndex: Int, entry: JpdbTokenCacheFile) =
         withContext(Dispatchers.IO) {
-            val f = fileFor(chapterIndex)
+            val f = fileFor(chapterIndex, entry.sourceHash)
             f.parentFile?.mkdirs()
             atomicWrite(
                 target = f,
@@ -97,4 +116,3 @@ class JpdbTokenCache(private val bookDir: File) {
         }
     }
 }
-

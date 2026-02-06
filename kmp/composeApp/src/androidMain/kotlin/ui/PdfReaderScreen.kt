@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +21,6 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.StopCircle
 import androidx.compose.material.icons.outlined.VolumeUp
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,8 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.progressivereader.kmp.offline.BookCache
@@ -58,6 +60,7 @@ import com.tom_roush.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,6 +191,8 @@ fun PdfReaderScreen(
     }
 
     val maxIdx = (pageCount - 1).coerceAtLeast(0)
+    val density = LocalDensity.current
+    val minSwipeDxPx = with(density) { 72.dp.toPx() }
 
     Scaffold(
         topBar = {
@@ -261,27 +266,6 @@ fun PdfReaderScreen(
                 },
             )
         },
-        bottomBar = {
-            BottomAppBar {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AppOutlineButton(
-                        text = "Previous",
-                        enabled = pageIndex > 0,
-                        onClick = { setPage(pageIndex - 1) },
-                    )
-                    AppPrimaryButton(
-                        text = "Next",
-                        enabled = pageIndex < maxIdx,
-                        onClick = { setPage(pageIndex + 1) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        },
     ) { padding ->
         Column(
             modifier =
@@ -304,12 +288,40 @@ fun PdfReaderScreen(
                         Image(
                             bitmap = img,
                             contentDescription = title,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .pointerInput(pageIndex, pageCount) {
+                                        var totalDx = 0f
+                                        var totalDy = 0f
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                totalDx = 0f
+                                                totalDy = 0f
+                                            },
+                                            onDrag = { _, dragAmount ->
+                                                totalDx += dragAmount.x
+                                                totalDy += dragAmount.y
+                                            },
+                                            onDragEnd = {
+                                                val absDx = abs(totalDx)
+                                                val absDy = abs(totalDy)
+                                                val isHorizontalSwipe = absDx >= minSwipeDxPx && absDx > absDy * 1.3f
+                                                if (!isHorizontalSwipe) return@detectDragGestures
+
+                                                if (totalDx < 0) {
+                                                    if (pageIndex < maxIdx) setPage(pageIndex + 1)
+                                                } else {
+                                                    if (pageIndex > 0) setPage(pageIndex - 1)
+                                                }
+                                            },
+                                        )
+                                    },
                             contentScale = ContentScale.Fit,
                         )
                     }
                     Spacer(Modifier.height(6.dp))
-                    AppMutedText("Tip: use the speaker icon for TTS.")
+                    AppMutedText("Tip: swipe left/right to change pages. Use the speaker icon for TTS.")
                 }
             }
         }

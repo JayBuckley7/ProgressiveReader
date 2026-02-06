@@ -78,7 +78,7 @@ actual fun App() {
         }
     }
 
-    ProgressiveReaderTheme(darkTheme = settings.reader.darkMode) {
+    ProgressiveReaderTheme(theme = settings.reader.theme) {
         val navigator = rememberNavigator(start = Screen.Library)
         AppRoot(
             navigator = navigator,
@@ -87,15 +87,21 @@ actual fun App() {
             bookCache = bookCache,
             epubRepository = epubRepository,
             onSetSessionJwt = { jwt -> setSessionJwt(jwt) },
-            onUpdateBackendBaseUrl = { url -> settingsStore.setBackendBaseUrl(url) },
-            onUpdateDriveFolderId = { folderId -> settingsStore.setDriveFolderId(folderId) },
-            onUpdateReaderDarkMode = { enabled -> settingsStore.setReaderDarkMode(enabled) },
+            onUpdateReaderTheme = { theme -> settingsStore.setReaderTheme(theme) },
             onUpdateReaderFontSizeSp = { sp -> settingsStore.setReaderFontSizeSp(sp) },
             onUpdateReaderTtsRate = { rate -> settingsStore.setReaderTtsRate(rate) },
+            onUpdateReaderOpenAiApiKey = { key -> settingsStore.setReaderOpenAiApiKey(key) },
+            onUpdateReaderOpenAiModel = { model -> settingsStore.setReaderOpenAiModel(model) },
+            onUpdateReaderCacheTranslations = { enabled -> settingsStore.setReaderCacheTranslations(enabled) },
+            onUpdateReaderUiLanguage = { lang -> settingsStore.setReaderUiLanguage(lang) },
             onUpdateReaderJpdbApiKey = { key -> settingsStore.setReaderJpdbApiKey(key) },
             onUpdateReaderCefrLevel = { level -> settingsStore.setReaderCefrLevel(level) },
             onUpdateReaderJpdbHighlightEnabled = { enabled -> settingsStore.setReaderJpdbHighlightEnabled(enabled) },
             onUpdateReaderTranslationTargetLang = { lang -> settingsStore.setReaderTranslationTargetLang(lang) },
+            onResetDriveOverrides = {
+                settingsStore.setDriveFolderId(null)
+                settingsStore.setBackendBaseUrl("http://10.0.2.2:5000")
+            },
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.progressivereader.kmp.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.MenuBook
@@ -27,17 +28,23 @@ fun AppRoot(
     bookCache: BookCache,
     epubRepository: EpubRepository,
     onSetSessionJwt: suspend (String?) -> Unit,
-    onUpdateBackendBaseUrl: suspend (String) -> Unit,
-    onUpdateDriveFolderId: suspend (String?) -> Unit,
-    onUpdateReaderDarkMode: suspend (Boolean) -> Unit,
+    onUpdateReaderTheme: suspend (String) -> Unit,
     onUpdateReaderFontSizeSp: suspend (Float) -> Unit,
     onUpdateReaderTtsRate: suspend (Float) -> Unit,
+    onUpdateReaderOpenAiApiKey: suspend (String?) -> Unit,
+    onUpdateReaderOpenAiModel: suspend (String) -> Unit,
+    onUpdateReaderCacheTranslations: suspend (Boolean) -> Unit,
+    onUpdateReaderUiLanguage: suspend (String) -> Unit,
     onUpdateReaderJpdbApiKey: suspend (String?) -> Unit,
     onUpdateReaderCefrLevel: suspend (String) -> Unit,
     onUpdateReaderJpdbHighlightEnabled: suspend (Boolean) -> Unit,
     onUpdateReaderTranslationTargetLang: suspend (String) -> Unit,
+    onResetDriveOverrides: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+
+    // Integrate Android system back with our in-app navigation stack.
+    BackHandler(enabled = navigator.canPop()) { navigator.pop() }
 
     when (val s = navigator.current) {
         Screen.Library ->
@@ -93,9 +100,11 @@ fun AppRoot(
                 sessionJwt = sessionJwt,
                 bookCache = bookCache,
                 epubRepository = epubRepository,
-                onBack = { navigator.pop() },
+                onBack = {
+                    if (navigator.canPop()) navigator.pop() else navigator.reset(Screen.Library)
+                },
                 onOpenSettings = { navigator.push(Screen.Settings(showBack = true)) },
-                onSetDarkMode = { enabled -> scope.launch { onUpdateReaderDarkMode(enabled) } },
+                onSetTheme = { theme -> scope.launch { onUpdateReaderTheme(theme) } },
                 onSetFontSizeSp = { sp -> scope.launch { onUpdateReaderFontSizeSp(sp) } },
                 onSetTtsRate = { rate -> scope.launch { onUpdateReaderTtsRate(rate) } },
                 onSetJpdbHighlightEnabled = { enabled -> scope.launch { onUpdateReaderJpdbHighlightEnabled(enabled) } },
@@ -107,11 +116,13 @@ fun AppRoot(
                 sessionJwt = sessionJwt,
                 showBack = s.showBack,
                 onBack = { navigator.pop() },
-                onUpdateBackendBaseUrl = { url -> scope.launch { onUpdateBackendBaseUrl(url) } },
-                onUpdateDriveFolderId = { folderId -> scope.launch { onUpdateDriveFolderId(folderId) } },
-                onUpdateReaderDarkMode = { enabled -> scope.launch { onUpdateReaderDarkMode(enabled) } },
+                onUpdateReaderTheme = { theme -> scope.launch { onUpdateReaderTheme(theme) } },
                 onUpdateReaderFontSizeSp = { sp -> scope.launch { onUpdateReaderFontSizeSp(sp) } },
                 onUpdateReaderTtsRate = { rate -> scope.launch { onUpdateReaderTtsRate(rate) } },
+                onUpdateReaderOpenAiApiKey = { key -> scope.launch { onUpdateReaderOpenAiApiKey(key) } },
+                onUpdateReaderOpenAiModel = { model -> scope.launch { onUpdateReaderOpenAiModel(model) } },
+                onUpdateReaderCacheTranslations = { enabled -> scope.launch { onUpdateReaderCacheTranslations(enabled) } },
+                onUpdateReaderUiLanguage = { lang -> scope.launch { onUpdateReaderUiLanguage(lang) } },
                 onUpdateReaderJpdbApiKey = { key -> scope.launch { onUpdateReaderJpdbApiKey(key) } },
                 onUpdateReaderCefrLevel = { level -> scope.launch { onUpdateReaderCefrLevel(level) } },
                 onUpdateReaderJpdbHighlightEnabled = { enabled -> scope.launch { onUpdateReaderJpdbHighlightEnabled(enabled) } },
@@ -124,6 +135,7 @@ fun AppRoot(
                         navigator.reset(Screen.Library)
                     }
                 },
+                onResetDriveOverrides = { scope.launch { onResetDriveOverrides() } },
                 bottomBar =
                     if (s.showBack) {
                         null

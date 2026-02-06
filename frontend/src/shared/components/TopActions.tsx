@@ -84,17 +84,6 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                 </button>
                 <button
                   onClick={() => {
-                    navigate("/clipboard");
-                    setShowMobileMenu(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded text-sm app-nav-item ${
-                    currentPage === "stats" ? "app-nav-active" : ""
-                  }`}
-                >
-                  {t("nav.clipboard")}
-                </button>
-                <button
-                  onClick={() => {
                     navigate("/grammar");
                     setShowMobileMenu(false);
                   }}
@@ -103,6 +92,17 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                   }`}
                 >
                   {t("nav.grammar")}
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/clipboard");
+                    setShowMobileMenu(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded text-sm app-nav-item ${
+                    currentPage === "stats" ? "app-nav-active" : ""
+                  }`}
+                >
+                  {t("nav.clipboard")}
                 </button>
                 <button
                   onClick={() => {
@@ -192,15 +192,6 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     {t("nav.vocabulary")}
                   </button>
                   <button
-                    onClick={() => navigate("/clipboard")}
-                    aria-label={t("nav.clipboardPageAria")}
-                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
-                      currentPage === "stats" ? "app-nav-active" : ""
-                    }`}
-                  >
-                    {t("nav.clipboard")}
-                  </button>
-                  <button
                     onClick={() => navigate("/grammar")}
                     aria-label={t("nav.grammarPageAria")}
                     className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
@@ -208,6 +199,15 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     }`}
                   >
                     {t("nav.grammar")}
+                  </button>
+                  <button
+                    onClick={() => navigate("/clipboard")}
+                    aria-label={t("nav.clipboardPageAria")}
+                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
+                      currentPage === "stats" ? "app-nav-active" : ""
+                    }`}
+                  >
+                    {t("nav.clipboard")}
                   </button>
                   <button
                     onClick={() => navigate("/jlpt-tests")}

@@ -64,15 +64,16 @@ class BookCache(private val context: Context) {
     fun bookDir(bookId: String): File = File(booksRootDir(), bookId)
     fun epubFile(bookId: String): File = File(bookDir(bookId), "book.epub")
     fun pdfFile(bookId: String): File = File(bookDir(bookId), "book.pdf")
+    fun txtFile(bookId: String): File = File(bookDir(bookId), "book.txt")
     fun extractedDir(bookId: String): File = File(bookDir(bookId), "extracted")
     fun stateFile(bookId: String): File = File(bookDir(bookId), "state.json")
     fun coverFile(bookId: String, ext: String = "jpg"): File = File(bookDir(bookId), "cover.$ext")
 
     fun contentFile(bookId: String, mimeType: String?, filename: String): File =
-        if (isPdf(mimeType = mimeType, filename = filename)) {
-            pdfFile(bookId)
-        } else {
-            epubFile(bookId)
+        when {
+            isPdf(mimeType = mimeType, filename = filename) -> pdfFile(bookId)
+            isTxt(mimeType = mimeType, filename = filename) -> txtFile(bookId)
+            else -> epubFile(bookId)
         }
 
     fun cachedContentFile(entry: CachedBookEntry): File =
@@ -171,5 +172,11 @@ class BookCache(private val context: Context) {
         val mt = mimeType?.lowercase()?.trim()
         if (mt == "application/pdf" || mt?.contains("pdf") == true) return true
         return filename.endsWith(".pdf", ignoreCase = true)
+    }
+
+    private fun isTxt(mimeType: String?, filename: String): Boolean {
+        val mt = mimeType?.lowercase()?.trim()
+        if (mt == "text/plain" || mt?.startsWith("text/") == true) return true
+        return filename.endsWith(".txt", ignoreCase = true)
     }
 }

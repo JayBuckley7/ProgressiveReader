@@ -133,8 +133,8 @@ fun LibraryScreen(
     var inferredRootFolder by remember { mutableStateOf<DriveService.DriveFile?>(null) }
     var lastDriveRootFolderIdFetched by remember { mutableStateOf<String?>(null) }
 
-    val folderBooks = remember { mutableStateMapOf<String, List<DriveService.DriveFile>?>() }
-    val folderLoading = remember { mutableStateMapOf<String, Boolean>() }
+    var virtualFolderNameById by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var virtualFolderIdByBookId by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
 
     val showDrive = canUseDrive && !driveFetchFailed
     val showSignedOutLanding =
@@ -195,6 +195,31 @@ fun LibraryScreen(
         }.toMap()
     }
 
+    fun parseVirtualFoldersFromMetadataJson(text: String): Map<String, String> {
+        val element = runCatching { metadataJson.parseToJsonElement(text) }.getOrNull() ?: return emptyMap()
+        val root = element.jsonObject
+        val folders = root["folders"]?.jsonObject ?: return emptyMap()
+        return folders.mapNotNull { (folderId, value) ->
+            val obj = runCatching { value.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val name = runCatching { obj["name"]?.jsonPrimitive?.content }.getOrNull()
+            if (name.isNullOrBlank()) null else folderId to name
+        }.toMap()
+    }
+
+    fun parseBookFolderAssignmentsFromMetadataJson(text: String): Map<String, String?> {
+        val element = runCatching { metadataJson.parseToJsonElement(text) }.getOrNull() ?: return emptyMap()
+        val root = element.jsonObject
+        val books = root["books"]?.jsonObject ?: return emptyMap()
+        return books.map { (bookId, value) ->
+            val obj = runCatching { value.jsonObject }.getOrNull()
+            val folderId =
+                runCatching { obj?.get("folderId")?.jsonPrimitive?.content }.getOrNull()
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            bookId to folderId
+        }.toMap()
+    }
+
     suspend fun refreshMetadataIfPresent(files: List<DriveService.DriveFile>, force: Boolean) {
         if (!canUseDrive) return
 
@@ -202,7 +227,7 @@ fun LibraryScreen(
             files.firstOrNull { it.name.equals("metadata.json", ignoreCase = true) }
                 ?: return
 
-        if (!force && metadataFile.id == lastMetadataFileIdLoaded && coverImageIdByBookId.isNotEmpty()) return
+        if (!force && metadataFile.id == lastMetadataFileIdLoaded) return
 
         metadataLoadError = null
         val bytes = runCatching { driveService.download(metadataFile.id) }.getOrNull()
@@ -218,20 +243,18 @@ fun LibraryScreen(
         }
 
         val covers = parseCoverMapFromMetadataJson(text)
-        if (covers.isNotEmpty()) {
-            coverImageIdByBookId = covers
-            lastMetadataFileIdLoaded = metadataFile.id
-        } else {
-            // Metadata exists but doesn't have covers; keep existing map.
-            lastMetadataFileIdLoaded = metadataFile.id
-        }
+        val folders = parseVirtualFoldersFromMetadataJson(text)
+        val assignments = parseBookFolderAssignmentsFromMetadataJson(text)
+
+        if (covers.isNotEmpty()) coverImageIdByBookId = covers
+        virtualFolderNameById = folders
+        virtualFolderIdByBookId = assignments
+        lastMetadataFileIdLoaded = metadataFile.id
     }
 
     suspend fun refreshDrive(force: Boolean = false) {
         error = null
         driveFetchFailed = false
-        folderBooks.clear()
-        folderLoading.clear()
         if (force) {
             remoteCoverPathById.clear()
             remoteCoverLoadingById.clear()
@@ -306,7 +329,8 @@ fun LibraryScreen(
 
     suspend fun ensureRemoteCover(file: DriveService.DriveFile, cachedEntry: CachedBookEntry?) {
         if (!canUseDrive) return
-        if (!file.isEpub()) return
+        // Covers are supported for EPUB and TXT via metadata.json cover mappings.
+        if (!file.isEpub() && !file.isTxt()) return
 
         val fileId = file.id
         if (remoteCoverPathById.containsKey(fileId)) return
@@ -360,19 +384,6 @@ fun LibraryScreen(
         } finally {
             remoteCoverLoadingById[fileId] = false
         }
-    }
-
-    suspend fun loadFolderBooks(folder: DriveService.DriveFile) {
-        if (folderLoading[folder.id] == true) return
-        folderLoading[folder.id] = true
-        val result = runCatching { driveService.listFiles(folderId = folder.id) }
-        val files =
-            result
-                .getOrDefault(emptyList())
-                .filter { it.isSupportedBook() }
-                .sortedBy { it.name.lowercase() }
-        folderBooks[folder.id] = files
-        folderLoading[folder.id] = false
     }
 
     LaunchedEffect(Unit) { refreshCached() }
@@ -478,7 +489,7 @@ fun LibraryScreen(
                     InfoBanner(
                         icon = Icons.Outlined.CloudOff,
                         title = "Drive unavailable",
-                        body = "Showing cached books only. Check backend URL in Settings.",
+                        body = "Showing cached books only. Check your connection or reload from Settings.",
                     )
                 }
             }
@@ -500,13 +511,29 @@ fun LibraryScreen(
                 files == null -> item { CircularProgressIndicator() }
                 files.isEmpty() -> item { Text("No files found.") }
                 else -> {
-                    val folders = files.filter { it.isFolder() }
-                    val rootBooks = files.filter { it.isSupportedBook() }
+                    val allBooks = files.filter { it.isSupportedBook() }
+                    val visibleFolders =
+                        virtualFolderNameById
+                            .filterValues { name -> !name.trim().equals("JLPT", ignoreCase = true) }
+                    val knownFolderIds = visibleFolders.keys
+                    val uncategorizedBooks =
+                        allBooks.filter { file ->
+                            val folderId = virtualFolderIdByBookId[file.id]
+                            folderId.isNullOrBlank() || !knownFolderIds.contains(folderId)
+                        }
+
+                    val folderShelves =
+                        visibleFolders
+                            .entries
+                            .sortedBy { it.value.lowercase() }
+                            .map { (folderId, name) ->
+                                folderId to allBooks.filter { f -> virtualFolderIdByBookId[f.id] == folderId }
+                            }
 
                     item {
                         ShelfSection(
                             title = "My Books",
-                            subtitle = if (rootBooks.isEmpty()) "No books in root folder." else "${rootBooks.size} books",
+                            subtitle = if (uncategorizedBooks.isEmpty()) "No books." else "${uncategorizedBooks.size} books",
                             collapsed = collapsedShelves.contains("root"),
                             onToggle = {
                                 collapsedShelves =
@@ -515,7 +542,7 @@ fun LibraryScreen(
                         ) {
                                 BookGrid(
                                     books =
-                                        rootBooks.map { file ->
+                                        uncategorizedBooks.map { file ->
                                             DriveBookCardData(
                                                 file = file,
                                                 cachedEntry = cachedById[file.id],
@@ -599,17 +626,12 @@ fun LibraryScreen(
                         }
                     }
 
-                    items(folders, key = { it.id }) { folder ->
-                        val collapsed = collapsedShelves.contains(folder.id)
-                        val folderFiles = folderBooks[folder.id]
-                        val isLoading = folderLoading[folder.id] == true
-
+                    items(folderShelves, key = { it.first }) { (folderId, folderFiles) ->
+                        val collapsed = collapsedShelves.contains(folderId)
                         ShelfSection(
-                            title = folder.name,
+                            title = virtualFolderNameById[folderId] ?: folderId,
                             subtitle =
                                 when {
-                                    isLoading -> "Loading…"
-                                    folderFiles == null -> "Tap to load"
                                     folderFiles.isEmpty() -> "No books"
                                     else -> "${folderFiles.size} books"
                                 },
@@ -617,105 +639,94 @@ fun LibraryScreen(
                             collapsed = collapsed,
                             onToggle = {
                                 collapsedShelves =
-                                    if (collapsed) collapsedShelves - folder.id else collapsedShelves + folder.id
-                                if (collapsed && folderFiles == null) {
-                                    scope.launch { loadFolderBooks(folder) }
-                                }
+                                    if (collapsed) collapsedShelves - folderId else collapsedShelves + folderId
                             },
                         ) {
-                            if (folderFiles == null) {
-                                if (isLoading) {
-                                    Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
-                            } else {
-                                BookGrid(
-                                    books =
-                                        folderFiles.map { file ->
-                                            DriveBookCardData(
-                                                file = file,
-                                                cachedEntry = cachedById[file.id],
-                                                coverFile = coverFileForCached(bookCache, cachedById[file.id]),
-                                                parentFolderId = folder.id,
-                                                parentFolderName = folder.name,
-                                            )
-                                        },
-                                    downloadingId = downloadingId,
-                                    remoteCoverPathFor = { id -> remoteCoverPathById[id] },
-                                    remoteCoverAttemptedFor = { id -> remoteCoverPathById.containsKey(id) },
-                                    ensureRemoteCover = { file, cachedEntry -> ensureRemoteCover(file, cachedEntry) },
-                                    onOpen = { onOpenReader(it) },
-                                    onDownload = { file, needsUpdate ->
-                                        scope.launch {
-                                            error = null
-                                            downloadingId = file.id
-                                            try {
-                                                val destFile = bookCache.contentFile(file.id, file.mimeType, file.name)
-                                                val ok =
-                                                    downloadDriveFileTo(
-                                                        http = http,
-                                                        jwt = sessionJwt!!,
-                                                        fileId = file.id,
-                                                        dest = destFile,
-                                                    )
-                                                if (!ok) {
-                                                    error = "Download failed (${Config.baseUrl})."
-                                                    return@launch
-                                                }
-
-                                                if (needsUpdate) {
-                                                    bookCache.extractedDir(file.id).deleteRecursively()
-                                                }
-
-                                                val coverFile =
-                                                    if (file.isEpub()) {
-                                                        epubRepository.extractIfNeeded(
-                                                            epubFile = bookCache.epubFile(file.id),
-                                                            extractedDir = bookCache.extractedDir(file.id),
-                                                        )
-                                                        epubRepository.extractCoverIfNeeded(
-                                                            extractedDir = bookCache.extractedDir(file.id),
-                                                            bookDir = bookCache.bookDir(file.id),
-                                                        )
-                                                    } else {
-                                                        null
-                                                    }
-
-                                                val now = isoNowUtc()
-                                                val existing = bookCache.loadIndex()
-                                                val entry =
-                                                    CachedBookEntry(
-                                                        id = file.id,
-                                                        name = file.name,
-                                                        mimeType = file.mimeType,
-                                                        size = file.size,
-                                                        modifiedTime = file.modifiedTime,
-                                                        parentFolderId = folder.id,
-                                                        parentFolderName = folder.name,
-                                                        coverPath = coverFile?.name,
-                                                        cachedAt = now,
-                                                        lastOpenedAt = cachedById[file.id]?.lastOpenedAt,
-                                                    )
-                                                val updated =
-                                                    existing.copy(
-                                                        updatedAt = now,
-                                                        books = existing.books.filterNot { it.id == file.id } + entry,
-                                                    )
-                                                bookCache.saveIndex(updated)
-                                                cachedIndex = updated
-                                                snackbarHostState.showSnackbar(if (needsUpdate) "Updated download" else "Downloaded")
-
-                                                onOpenReader(file.id)
-                                            } catch (t: Throwable) {
-                                                error = t.message ?: "Download failed"
-                                            } finally {
-                                                downloadingId = null
-                                            }
-                                        }
+                            BookGrid(
+                                books =
+                                    folderFiles.map { file ->
+                                        DriveBookCardData(
+                                            file = file,
+                                            cachedEntry = cachedById[file.id],
+                                            coverFile = coverFileForCached(bookCache, cachedById[file.id]),
+                                            parentFolderId = folderId,
+                                            parentFolderName = virtualFolderNameById[folderId],
+                                        )
                                     },
-                                )
-                            }
+                                downloadingId = downloadingId,
+                                remoteCoverPathFor = { id -> remoteCoverPathById[id] },
+                                remoteCoverAttemptedFor = { id -> remoteCoverPathById.containsKey(id) },
+                                ensureRemoteCover = { file, cachedEntry -> ensureRemoteCover(file, cachedEntry) },
+                                onOpen = { onOpenReader(it) },
+                                onDownload = { file, needsUpdate ->
+                                    scope.launch {
+                                        error = null
+                                        downloadingId = file.id
+                                        try {
+                                            val destFile = bookCache.contentFile(file.id, file.mimeType, file.name)
+                                            val ok =
+                                                downloadDriveFileTo(
+                                                    http = http,
+                                                    jwt = sessionJwt!!,
+                                                    fileId = file.id,
+                                                    dest = destFile,
+                                                )
+                                            if (!ok) {
+                                                error = "Download failed (${Config.baseUrl})."
+                                                return@launch
+                                            }
+
+                                            if (needsUpdate) {
+                                                bookCache.extractedDir(file.id).deleteRecursively()
+                                            }
+
+                                            val coverFile =
+                                                if (file.isEpub()) {
+                                                    epubRepository.extractIfNeeded(
+                                                        epubFile = bookCache.epubFile(file.id),
+                                                        extractedDir = bookCache.extractedDir(file.id),
+                                                    )
+                                                    epubRepository.extractCoverIfNeeded(
+                                                        extractedDir = bookCache.extractedDir(file.id),
+                                                        bookDir = bookCache.bookDir(file.id),
+                                                    )
+                                                } else {
+                                                    null
+                                                }
+
+                                            val now = isoNowUtc()
+                                            val existing = bookCache.loadIndex()
+                                            val entry =
+                                                CachedBookEntry(
+                                                    id = file.id,
+                                                    name = file.name,
+                                                    mimeType = file.mimeType,
+                                                    size = file.size,
+                                                    modifiedTime = file.modifiedTime,
+                                                    parentFolderId = folderId,
+                                                    parentFolderName = virtualFolderNameById[folderId],
+                                                    coverPath = coverFile?.name,
+                                                    cachedAt = now,
+                                                    lastOpenedAt = cachedById[file.id]?.lastOpenedAt,
+                                                )
+                                            val updated =
+                                                existing.copy(
+                                                    updatedAt = now,
+                                                    books = existing.books.filterNot { it.id == file.id } + entry,
+                                                )
+                                            bookCache.saveIndex(updated)
+                                            cachedIndex = updated
+                                            snackbarHostState.showSnackbar(if (needsUpdate) "Updated download" else "Downloaded")
+
+                                            onOpenReader(file.id)
+                                        } catch (t: Throwable) {
+                                            error = t.message ?: "Download failed"
+                                        } finally {
+                                            downloadingId = null
+                                        }
+                                    }
+                                },
+                            )
                         }
                     }
                 }
@@ -808,7 +819,12 @@ private fun LibraryBookCard(
                 .clickable(enabled = isCached && !isBusy) { onOpen() },
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val typeLabel = if (file.isPdf()) "PDF" else "EPUB"
+            val typeLabel =
+                when {
+                    file.isPdf() -> "PDF"
+                    file.isTxt() -> "TXT"
+                    else -> "EPUB"
+                }
             CoverArt(
                 coverPath = coverPath,
                 title = file.name,
@@ -1074,7 +1090,13 @@ private fun DriveService.DriveFile.isPdf(): Boolean {
     return mt.equals("application/pdf", ignoreCase = true) || mt.contains("pdf", ignoreCase = true)
 }
 
-private fun DriveService.DriveFile.isSupportedBook(): Boolean = isEpub() || isPdf()
+private fun DriveService.DriveFile.isTxt(): Boolean {
+    if (name.endsWith(".txt", ignoreCase = true)) return true
+    val mt = mimeType ?: return false
+    return mt.equals("text/plain", ignoreCase = true) || mt.startsWith("text/", ignoreCase = true)
+}
+
+private fun DriveService.DriveFile.isSupportedBook(): Boolean = isEpub() || isPdf() || isTxt()
 
 private suspend fun downloadDriveFileTo(
     http: HttpClient,

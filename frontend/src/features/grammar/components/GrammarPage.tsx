@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { bookMetadataService } from "@features/books/services/bookMetadata";
+import { useUser } from "@clerk/clerk-react";
 
 type GrammarCard = {
   title: string;
@@ -446,13 +447,81 @@ type GrammarSection = {
 };
 
 const GRAMMAR_PROGRESS_KEY = "grammar_progress_v1";
+const GRAMMAR_OPEN_SECTIONS_KEY = "grammar_open_sections_v1";
+
+// Module-level caches so GrammarPage can remount without reloading/refetching.
+let cachedKnownIds: string[] | null = null;
+let cachedOpenSectionKeys: string[] | null = null;
+
+let cachedDriveKnownIds: string[] | null = null;
+let driveLoadPromise: Promise<string[] | null> | null = null;
+let driveLastAttemptAtMs: number | null = null;
+
+let driveSaveTimeoutId: number | null = null;
+let lastQueuedDriveSaveSignature: string | null = null;
+
+const DRIVE_RETRY_BACKOFF_MS = 60_000;
+
+function readStoredStringArray(key: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((value) => typeof value === "string");
+  } catch {
+    return [];
+  }
+}
+
+function signatureForIds(ids: string[]): string {
+  return ids.slice().sort().join("|");
+}
+
+function queueDriveSave(ids: string[]) {
+  if (typeof window === "undefined") return;
+
+  const signature = signatureForIds(ids);
+  if (signature === lastQueuedDriveSaveSignature) return;
+  lastQueuedDriveSaveSignature = signature;
+
+  if (driveSaveTimeoutId !== null) window.clearTimeout(driveSaveTimeoutId);
+  driveSaveTimeoutId = window.setTimeout(() => {
+    driveSaveTimeoutId = null;
+    void bookMetadataService.saveGrammarProgress(ids);
+  }, 800);
+}
 
 const buildGrammarId = (levelKey: string, title: string) => `${levelKey}:${title}`;
 
 export function GrammarPage() {
   const { t } = useTranslation();
-  const [knownIds, setKnownIds] = useState<string[]>([]);
-  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["n4"]));
+  const { isSignedIn, user } = useUser();
+  const allowDriveSync =
+    isSignedIn &&
+    (user?.externalAccounts?.some((acc) => String((acc as any)?.provider || "").startsWith("google")) ??
+      false);
+
+  const [knownIds, setKnownIds] = useState<string[]>(() => {
+    if (cachedKnownIds !== null) return cachedKnownIds;
+    const stored = readStoredStringArray(GRAMMAR_PROGRESS_KEY);
+    cachedKnownIds = stored;
+    return stored;
+  });
+
+  const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    if (cachedOpenSectionKeys !== null) return new Set(cachedOpenSectionKeys);
+    const stored = readStoredStringArray(GRAMMAR_OPEN_SECTIONS_KEY);
+    const initial = stored.length > 0 ? stored : ["n4"];
+    cachedOpenSectionKeys = initial;
+    return new Set(initial);
+  });
+
+  const knownIdsRef = useRef<string[]>(knownIds);
+  knownIdsRef.current = knownIds;
+
+  const dirtyRef = useRef(false);
 
   const knownSet = useMemo(() => new Set(knownIds), [knownIds]);
 
@@ -497,35 +566,17 @@ export function GrammarPage() {
   );
 
   useEffect(() => {
+    cachedOpenSectionKeys = Array.from(openSections);
     if (typeof window === "undefined") return;
     try {
-      const stored = localStorage.getItem(GRAMMAR_PROGRESS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setKnownIds(parsed);
-      }
+      localStorage.setItem(GRAMMAR_OPEN_SECTIONS_KEY, JSON.stringify(cachedOpenSectionKeys));
     } catch {
       // ignore storage errors
     }
-
-    let cancelled = false;
-    const loadFromDrive = (bookMetadataService as any)?.loadGrammarProgress;
-    if (typeof loadFromDrive === "function") {
-      loadFromDrive.call(bookMetadataService).then((driveKnown: string[] | null) => {
-        if (cancelled || !driveKnown || driveKnown.length === 0) return;
-        setKnownIds((prev) => {
-          const merged = new Set([...prev, ...driveKnown]);
-          return Array.from(merged);
-        });
-      });
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [openSections]);
 
   useEffect(() => {
+    cachedKnownIds = knownIds;
     if (typeof window === "undefined") return;
     try {
       localStorage.setItem(GRAMMAR_PROGRESS_KEY, JSON.stringify(knownIds));
@@ -533,15 +584,77 @@ export function GrammarPage() {
       // ignore storage errors
     }
 
-    const handle = window.setTimeout(() => {
-      const saveToDrive = (bookMetadataService as any)?.saveGrammarProgress;
-      if (typeof saveToDrive === "function") saveToDrive.call(bookMetadataService, knownIds);
-    }, 800);
+    if (dirtyRef.current) {
+      dirtyRef.current = false;
+      if (allowDriveSync) queueDriveSave(knownIds);
+    }
+  }, [knownIds, allowDriveSync]);
 
-    return () => window.clearTimeout(handle);
-  }, [knownIds]);
+  useEffect(() => {
+    if (!allowDriveSync) return;
+
+    let cancelled = false;
+    const mergeFromDrive = (driveKnown: string[]) => {
+      if (cancelled) return;
+
+      if (driveKnown.length > 0) {
+        setKnownIds((prev) => {
+          const merged = new Set([...prev, ...driveKnown]);
+          if (merged.size === prev.length) return prev;
+          return Array.from(merged);
+        });
+      }
+
+      const localNow = knownIdsRef.current;
+      if (localNow.length === 0) return;
+      const driveSet = new Set(driveKnown);
+      const localHasExtra = localNow.some((id) => !driveSet.has(id));
+      if (localHasExtra) {
+        queueDriveSave(Array.from(new Set([...localNow, ...driveKnown])));
+      }
+    };
+
+    if (cachedDriveKnownIds !== null) {
+      mergeFromDrive(cachedDriveKnownIds);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const now = Date.now();
+    if (driveLastAttemptAtMs !== null && now - driveLastAttemptAtMs < DRIVE_RETRY_BACKOFF_MS) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!driveLoadPromise) {
+      driveLastAttemptAtMs = now;
+      driveLoadPromise = bookMetadataService
+        .loadGrammarProgress()
+        .then((driveKnown) => {
+          if (!driveKnown) return null;
+          cachedDriveKnownIds = driveKnown;
+          return driveKnown;
+        })
+        .catch(() => null)
+        .finally(() => {
+          driveLoadPromise = null;
+        });
+    }
+
+    driveLoadPromise.then((driveKnown) => {
+      if (!driveKnown) return;
+      mergeFromDrive(driveKnown);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allowDriveSync]);
 
   const toggleKnown = (levelKey: string, title: string) => {
+    dirtyRef.current = true;
     const id = buildGrammarId(levelKey, title);
     setKnownIds((prev) => {
       if (prev.includes(id)) return prev.filter((entry) => entry !== id);
@@ -552,7 +665,10 @@ export function GrammarPage() {
   const markSectionKnown = (sectionKey: string, items: GrammarCard[]) => {
     setKnownIds((prev) => {
       const next = new Set(prev);
+      const beforeSize = next.size;
       items.forEach((item) => next.add(buildGrammarId(sectionKey, item.title)));
+      if (next.size === beforeSize) return prev;
+      dirtyRef.current = true;
       return Array.from(next);
     });
   };

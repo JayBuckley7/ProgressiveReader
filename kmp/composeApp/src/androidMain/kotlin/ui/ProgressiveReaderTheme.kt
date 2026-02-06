@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Shapes
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.isSystemInDarkTheme
 
 private val LightColors =
     lightColorScheme(
@@ -75,9 +76,20 @@ private val AppShapes =
 
 @Composable
 fun ProgressiveReaderTheme(
-    darkTheme: Boolean,
+    theme: String,
     content: @Composable () -> Unit,
 ) {
+    val normalized = theme.trim().lowercase()
+    val darkTheme =
+        when (normalized) {
+            "light" -> false
+            "dark" -> true
+            "system" -> isSystemInDarkTheme()
+            // Web-only themes; treat as dark on mobile for now.
+            "wood" -> true
+            "space" -> true
+            else -> isSystemInDarkTheme()
+        }
     val colorScheme = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(

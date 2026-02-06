@@ -19,6 +19,7 @@ class TranslateService(private val getSessionToken: () -> String?) {
         val target_lang: String = "English",
         val source_lang: String? = null,
         val model: String = "gpt-4o-mini",
+        val api_key: String? = null,
         val stream: Boolean = false,
         val use_cefr: Boolean = false,
         val cefr_level: String? = null,
@@ -39,5 +40,4 @@ class TranslateService(private val getSessionToken: () -> String?) {
         return res.body()
     }
 }
-
 

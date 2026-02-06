@@ -2,6 +2,11 @@ package com.progressivereader.kmp.reader
 
 import androidx.compose.runtime.Composable
 
+enum class SwipeDirection {
+    LEFT,
+    RIGHT,
+}
+
 @Composable
 expect fun HtmlContent(
     html: String,
@@ -9,4 +14,5 @@ expect fun HtmlContent(
     darkMode: Boolean,
     fontSizeSp: Float,
     onUrlClick: (String) -> Boolean,
+    onSwipe: ((SwipeDirection) -> Unit)?,
 )

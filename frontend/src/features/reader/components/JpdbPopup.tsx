@@ -268,10 +268,21 @@ export function JpdbPopupController() {
     window.open(jpdbUrl, '_blank');
   };
 
+  // Flatter JPDB-style buttons (no neon "glow" shadows).
+  const flatBtnBase =
+    "px-3 py-1.5 rounded-full border bg-neutral-900/60 hover:bg-neutral-800/70 active:bg-neutral-800 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap transition-colors";
+  const flatBlue = `${flatBtnBase} border-sky-700 text-sky-300`;
+  const flatGreen = `${flatBtnBase} border-emerald-700 text-emerald-300`;
+  const flatLime = `${flatBtnBase} border-lime-700 text-lime-300`;
+  const flatNeutral = `${flatBtnBase} border-neutral-700 text-neutral-200`;
+  const flatRed = `${flatBtnBase} border-red-700 text-red-300`;
+  const flatRose = `${flatBtnBase} border-rose-700 text-rose-200`;
+  const flatOrange = `${flatBtnBase} border-orange-700 text-orange-200`;
+
   return (
     <div
       data-jpdb-popup
-      className="fixed z-50 rounded-2xl shadow-2xl overflow-hidden cursor-default border border-neutral-700 bg-gradient-to-b from-neutral-900 to-neutral-800 text-neutral-100 backdrop-blur-sm flex flex-col"
+      className="fixed z-50 rounded-2xl shadow-lg overflow-hidden cursor-default border border-neutral-700 bg-neutral-900 text-neutral-100 flex flex-col"
       style={{
         top: popup.y,
         left: popup.x,
@@ -281,93 +292,91 @@ export function JpdbPopupController() {
       onMouseEnter={handlePopupMouseEnter}
       onMouseLeave={handlePopupMouseLeave}
     >
-      <div className="p-3 overflow-y-auto min-h-0">
+      <div className="px-3 pt-3 pb-2 shrink-0 border-b border-neutral-700 bg-neutral-950/30">
         <div className="flex items-start justify-between gap-3">
-          {!isOfflineMode && card && config.apiKey ? (
-            <div className="flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleMineWord}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-blue-500/80 text-blue-300 bg-black/20 shadow-[0_0_10px_rgba(59,130,246,0.35)] hover:bg-blue-500/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title="Add word to mining deck"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => handleUpdateWordState('never-forget', hasNeverForget)}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-lime-500/80 text-lime-300 bg-black/20 shadow-[0_0_10px_rgba(132,204,22,0.35)] hover:bg-lime-500/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title={hasNeverForget ? 'Remove never-forget' : 'Mark never-forget'}
-                >
-                  Forget
-                </button>
-                <button
-                  onClick={() => handleUpdateWordState('blacklist', hasBlacklisted)}
-                  disabled={isLoading}
-                  className={`px-2.5 py-1 rounded-md border bg-black/20 disabled:opacity-50 text-xs sm:text-sm ${
-                    hasBlacklisted
-                      ? 'border-red-500/80 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.35)] hover:bg-red-500/10'
-                      : 'border-neutral-500/70 text-neutral-300 hover:bg-white/5'
-                  }`}
-                  title={hasBlacklisted ? 'Remove blacklist' : 'Add to blacklist'}
-                >
-                  Blacklist
-                </button>
-              </div>
+          <div className="min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
+            {!isOfflineMode && card && config.apiKey ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleMineWord}
+                    disabled={isLoading}
+                    className={flatBlue}
+                    title="Add word to mining deck"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => handleUpdateWordState('never-forget', hasNeverForget)}
+                    disabled={isLoading}
+                    className={flatLime}
+                    title={hasNeverForget ? 'Remove never-forget' : 'Mark never-forget'}
+                  >
+                    Never forget
+                  </button>
+                  <button
+                    onClick={() => handleUpdateWordState('blacklist', hasBlacklisted)}
+                    disabled={isLoading}
+                    className={hasBlacklisted ? flatRed : flatNeutral}
+                    title={hasBlacklisted ? 'Remove blacklist' : 'Add to blacklist'}
+                  >
+                    Blacklist
+                  </button>
+                </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => handleReviewCard('nothing')}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-red-500/80 text-red-300 bg-black/20 shadow-[0_0_10px_rgba(239,68,68,0.25)] hover:bg-red-500/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title="I don't know this word at all"
-                >
-                  nothing
-                </button>
-                <button
-                  onClick={() => handleReviewCard('something')}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-rose-400/80 text-rose-200 bg-black/20 shadow-[0_0_10px_rgba(251,113,133,0.25)] hover:bg-rose-400/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title="I recognize this word but don't know the meaning"
-                >
-                  something
-                </button>
-                <button
-                  onClick={() => handleReviewCard('hard')}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-orange-400/80 text-orange-200 bg-black/20 shadow-[0_0_10px_rgba(251,146,60,0.25)] hover:bg-orange-400/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title="I know this word but it was difficult"
-                >
-                  hard
-                </button>
-                <button
-                  onClick={() => handleReviewCard('good')}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-green-500/80 text-green-200 bg-black/20 shadow-[0_0_10px_rgba(34,197,94,0.25)] hover:bg-green-500/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title="I know this word well"
-                >
-                  okay
-                </button>
-                <button
-                  onClick={() => handleReviewCard('easy')}
-                  disabled={isLoading}
-                  className="px-2.5 py-1 rounded-md border border-sky-400/80 text-sky-200 bg-black/20 shadow-[0_0_10px_rgba(56,189,248,0.25)] hover:bg-sky-400/10 disabled:opacity-50 text-xs sm:text-sm"
-                  title="This word is very easy for me"
-                >
-                  easy
-                </button>
-              </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleReviewCard('nothing')}
+                    disabled={isLoading}
+                    className={flatRed}
+                    title="I don't know this word at all"
+                  >
+                    nothing
+                  </button>
+                  <button
+                    onClick={() => handleReviewCard('something')}
+                    disabled={isLoading}
+                    className={flatRose}
+                    title="I recognize this word but don't know the meaning"
+                  >
+                    something
+                  </button>
+                  <button
+                    onClick={() => handleReviewCard('hard')}
+                    disabled={isLoading}
+                    className={flatOrange}
+                    title="I know this word but it was difficult"
+                  >
+                    hard
+                  </button>
+                  <button
+                    onClick={() => handleReviewCard('good')}
+                    disabled={isLoading}
+                    className={flatGreen}
+                    title="I know this word well"
+                  >
+                    okay
+                  </button>
+                  <button
+                    onClick={() => handleReviewCard('easy')}
+                    disabled={isLoading}
+                    className={flatBlue}
+                    title="This word is very easy for me"
+                  >
+                    easy
+                  </button>
+                </div>
 
-              {isLoading && (
-                <div className="text-xs text-neutral-400">Processing…</div>
-              )}
-            </div>
-          ) : (
-            <div className="text-sm text-neutral-300">
-              {isOfflineMode ? 'Enter your JPDB key to enable actions.' : 'Please set your JPDB API key in settings.'}
-            </div>
-          )}
+                {isLoading && (
+                  <div className="text-xs text-neutral-400">Processing…</div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-neutral-300">
+                {isOfflineMode ? 'Enter your JPDB key to enable actions.' : 'Please set your JPDB API key in settings.'}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={(e) => {
@@ -375,12 +384,15 @@ export function JpdbPopupController() {
               isPopupPinned = false;
               setPopup(null);
             }}
-            className="shrink-0 w-9 h-9 rounded-xl border border-neutral-700 bg-neutral-900/60 shadow-inner text-red-500 hover:text-red-400 hover:bg-neutral-800/60"
+            className="shrink-0 w-9 h-9 rounded-xl border border-neutral-700 bg-neutral-900/60 text-red-400 hover:text-red-300 hover:bg-neutral-800/70 transition-colors"
             title="Close"
           >
             <span className="text-xl leading-none">×</span>
           </button>
         </div>
+      </div>
+
+      <div className="p-3 overflow-y-auto min-h-0">
 
         <div className="mt-3 flex gap-4">
           <div className="flex-1 min-w-0">

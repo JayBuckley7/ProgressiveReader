@@ -16,9 +16,15 @@ class AppSettingsStore(private val context: Context) {
     private object Keys {
         val backendBaseUrl = stringPreferencesKey("backend_base_url")
         val driveFolderId = stringPreferencesKey("drive_folder_id")
+        // Legacy (debug-era) key; keep for migration.
         val darkMode = booleanPreferencesKey("reader_dark_mode")
+        val theme = stringPreferencesKey("reader_theme")
         val fontSizeSp = floatPreferencesKey("reader_font_size_sp")
         val ttsRate = floatPreferencesKey("reader_tts_rate")
+        val openAiApiKey = stringPreferencesKey("reader_openai_api_key")
+        val openAiModel = stringPreferencesKey("reader_openai_model")
+        val cacheTranslations = booleanPreferencesKey("reader_cache_translations")
+        val uiLanguage = stringPreferencesKey("reader_ui_language")
         val jpdbApiKey = stringPreferencesKey("reader_jpdb_api_key")
         val cefrLevel = stringPreferencesKey("reader_cefr_level")
         val jpdbHighlightEnabled = booleanPreferencesKey("reader_jpdb_highlight_enabled")
@@ -38,8 +44,22 @@ class AppSettingsStore(private val context: Context) {
         }
     }
 
-    suspend fun setReaderDarkMode(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.darkMode] = enabled }
+    suspend fun setReaderTheme(theme: String) {
+        val normalized =
+            when (theme.trim().lowercase()) {
+                "system" -> "system"
+                "light" -> "light"
+                "dark" -> "dark"
+                // Web-only themes; treat as dark on mobile for now.
+                "wood" -> "dark"
+                "space" -> "dark"
+                else -> "dark"
+            }
+        context.dataStore.edit {
+            it[Keys.theme] = normalized
+            // Maintain legacy boolean for older builds and as a sensible fallback.
+            it[Keys.darkMode] = normalized != "light"
+        }
     }
 
     suspend fun setReaderFontSizeSp(fontSizeSp: Float) {
@@ -48,6 +68,26 @@ class AppSettingsStore(private val context: Context) {
 
     suspend fun setReaderTtsRate(rate: Float) {
         context.dataStore.edit { it[Keys.ttsRate] = rate.coerceIn(0.5f, 2.0f) }
+    }
+
+    suspend fun setReaderOpenAiApiKey(apiKey: String?) {
+        context.dataStore.edit {
+            if (apiKey.isNullOrBlank()) it.remove(Keys.openAiApiKey) else it[Keys.openAiApiKey] = apiKey
+        }
+    }
+
+    suspend fun setReaderOpenAiModel(model: String) {
+        val normalized = model.trim().ifBlank { "gpt-4o-mini" }
+        context.dataStore.edit { it[Keys.openAiModel] = normalized }
+    }
+
+    suspend fun setReaderCacheTranslations(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.cacheTranslations] = enabled }
+    }
+
+    suspend fun setReaderUiLanguage(lang: String) {
+        val normalized = lang.trim().lowercase().ifBlank { "en" }
+        context.dataStore.edit { it[Keys.uiLanguage] = normalized }
     }
 
     suspend fun setReaderJpdbApiKey(apiKey: String?) {
@@ -71,12 +111,26 @@ class AppSettingsStore(private val context: Context) {
     private fun Preferences.toAppSettings(): AppSettings {
         val backend = this[Keys.backendBaseUrl] ?: "http://10.0.2.2:5000"
         val folderId = this[Keys.driveFolderId]
+        val theme =
+            this[Keys.theme]
+                ?: run {
+                    val legacy = this[Keys.darkMode]
+                    when (legacy) {
+                        true -> "dark"
+                        false -> "light"
+                        null -> "dark"
+                    }
+                }
         val reader =
             ReaderSettings(
-                darkMode = this[Keys.darkMode] ?: true,
+                theme = theme,
                 fontSizeSp = this[Keys.fontSizeSp] ?: 18f,
                 ttsRate = this[Keys.ttsRate] ?: 1.0f,
                 cefrLevel = this[Keys.cefrLevel] ?: "B1",
+                openAiApiKey = this[Keys.openAiApiKey],
+                openAiModel = this[Keys.openAiModel] ?: "gpt-4o-mini",
+                cacheTranslations = this[Keys.cacheTranslations] ?: true,
+                uiLanguage = this[Keys.uiLanguage] ?: "en",
                 jpdbApiKey = this[Keys.jpdbApiKey],
                 jpdbHighlightEnabled = this[Keys.jpdbHighlightEnabled] ?: false,
                 translationTargetLang = this[Keys.translationTargetLang] ?: "English",

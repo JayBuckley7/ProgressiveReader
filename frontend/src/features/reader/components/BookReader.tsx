@@ -47,9 +47,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
-      navigate(-1);
+      return;
     }
+
+    // The UI label is "Back to Library". In mobile webviews / deep links there may be no
+    // meaningful in-app history to navigate back to.
+    navigate("/", { replace: true });
   };
 
   const [localChapter, setLocalChapter] = useState(() => {
@@ -334,10 +337,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   // Apply JPDB highlighting when enabled or when content changes while enabled
   // Use useLayoutEffect to coordinate with React's rendering cycle and avoid DOM conflicts
   useLayoutEffect(() => {
-    if (jpdbHighlighted && contentRef.current && currentChapterContent) {
+    const el = contentRef.current;
+    const activeHtml = isTranslated ? translatedContent : currentChapterContent;
+
+    if (jpdbHighlighted && el && activeHtml) {
       // Use requestAnimationFrame to ensure React has finished updating the DOM
       const frameId = requestAnimationFrame(() => {
-        const el = contentRef.current;
         if (!el) return;
         highlightContent(el).catch((error) => {
           console.error('highlightContent failed:', error);
@@ -345,11 +350,11 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       });
       
       return () => cancelAnimationFrame(frameId);
-    } else if (!jpdbHighlighted && contentRef.current) {
+    } else if (!jpdbHighlighted && el) {
       // Clear highlighting when disabled
-      removeJpdbHighlighting(contentRef.current);
+      removeJpdbHighlighting(el);
     }
-  }, [jpdbHighlighted, currentChapterContent]);
+  }, [jpdbHighlighted, currentChapterContent, translatedContent, isTranslated]);
 
   const nextChapter = useCallback(() => {
     if (bookContent && chapter < bookContent.totalChapters - 1) {

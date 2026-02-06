@@ -45,9 +45,6 @@ function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
 // Get Clerk publishable key from environment variable
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-console.log('🔐 [APP CLERK DEBUG] App component Clerk key check:', clerkPubKey ? `${clerkPubKey.substring(0, 10)}...${clerkPubKey.substring(clerkPubKey.length - 5)}` : 'UNDEFINED')
-console.log('🔐 [APP CLERK DEBUG] Environment mode:', import.meta.env.MODE)
-
 
 export default function App() {
   if (!clerkPubKey) {
