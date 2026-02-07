@@ -88,6 +88,8 @@ export interface BookMetadata {
   driveFileId?: string;
   onedriveFileId?: string;
   icloudFileId?: string;
+  // Used for cache invalidation when the Drive file changes.
+  modifiedTime?: string;
   coverImageId?: string;
   coverUrl?: string;
   totalChapters?: number;

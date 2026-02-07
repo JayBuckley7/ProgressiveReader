@@ -8,7 +8,7 @@ import { authManager } from '@shared/services/authManager';
 import { addOfflineBook, getOfflineBooksWithCovers, OFFLINE_BOOKS_KEY, getOfflineBooks } from '@features/books/utils/offlineLibrary';
 import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, clearAllCache } from '@integrations/googleDrive/services/driveCache';
 import { toast } from 'sonner';
-import { useUser } from '@clerk/clerk-react';
+import { useClerk, useUser } from '@clerk/clerk-react';
 import { appLog } from '@shared/appLog'
 
 /**
@@ -29,6 +29,7 @@ function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
 
 function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
+  const clerk = useClerk();
   const [isLoading, setIsLoading] = useState(true);
   const [isDriveBookLoading, setIsDriveBookLoading] = useState(false);
   const [books, setBooks] = useState<BookMetadata[]>([]);
@@ -94,7 +95,7 @@ function useStorageService() {
         toast.success(`✅ Loaded ${userBooks.length} book${userBooks.length === 1 ? '' : 's'} from Google Drive`);
       }
     } catch (error) {
-      console.error('Error silently refreshing books:', error);
+      appLog.error('Error silently refreshing books:', error);
       toast.error('Failed to load books from Google Drive');
     } finally {
       isRefreshingRef.current = false;
@@ -176,7 +177,7 @@ function useStorageService() {
       toast.success('Google Drive connected and library loaded!');
       return true;
     } catch (error) {
-      console.error('[useStorageService] ❌ Error during Google Drive connection:', error);
+      appLog.error('[useStorageService] ❌ Error during Google Drive connection:', error);
       toast.error('Failed to connect to Google Drive - showing offline books');
       await loadOfflineBooks();
       return false;
@@ -210,20 +211,8 @@ function useStorageService() {
   }, []);
 
   useEffect(() => {
-    // 🚨 RACE CONDITION FIX 🚨
-    // Previously, there was an automatic effect that tried to connect to Google Drive
-    // immediately when a user signed in with Google OAuth through Clerk. This caused
-    // a race condition where the effect ran before Clerk had fully finalized the
-    // user session, resulting in "valid tokens being cleared" as noted in GitHub issues.
-    // 
-    // SOLUTION: We now use a coordinated approach:
-    // 1. Only auto-connect on specific pages that need books (not admin pages)
-    // 2. Add a 1-second delay to ensure Clerk is fully ready
-    // 3. Let the storage service handle authentication to avoid competing flows
-    // 4. Prefer manual user-triggered connection over automatic connection
-    //
-    // This prevents multiple parts of the app from trying to manage authentication
-    // simultaneously and ensures proper state coordination.
+    // Auto-connect to Drive only on pages that need books, and delay slightly to avoid
+    // Clerk session-finalization races that can cause auth state churn.
 
     // Only log auth status in development mode to reduce spam
     if (import.meta.env.DEV) {
@@ -296,8 +285,6 @@ function useStorageService() {
   useEffect(() => {
     if (!clerkUser) return;
 
-    //// appLog.debug('[🔐 GOOGLE DRIVE AUTH] Setting up auth listener (manual mode - no auto-loading)...');
-
     const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
       appLog.debug(`[🔐 GOOGLE DRIVE AUTH] Auth state changed: ${isAuthenticated}`);
       // Just log the state change, don't auto-load anything
@@ -336,7 +323,7 @@ function useStorageService() {
       toast.success('Book uploaded successfully to your cloud storage!');
       return book;
     } catch (error) {
-      console.error('Error uploading book:', error);
+      appLog.error('Error uploading book:', error);
       toast.error('Failed to upload book to cloud storage');
       throw error;
     }
@@ -351,7 +338,7 @@ function useStorageService() {
     try {
       return await bookStorageService.downloadBook(bookId, metadata);
     } catch (error) {
-      console.error('Error downloading book:', error);
+      appLog.error('Error downloading book:', error);
       toast.error('Failed to download book from cloud storage');
       throw error;
     }
@@ -392,7 +379,7 @@ function useStorageService() {
       await silentRefreshBooks();
       toast.success('Book deleted successfully');
     } catch (error) {
-      console.error('Error deleting book:', error);
+      appLog.error('Error deleting book:', error);
       toast.error('Failed to delete book');
     } finally {
       setIsLoading(false);
@@ -412,7 +399,7 @@ function useStorageService() {
       toast.success('Book cover updated successfully');
       return newCoverImageId;
     } catch (error) {
-      console.error('Error updating book cover:', error);
+      appLog.error('Error updating book cover:', error);
       toast.error('Failed to update book cover');
       throw error;
     }
@@ -422,7 +409,7 @@ function useStorageService() {
     try {
       return await bookStorageService.getReadingProgress(bookId);
     } catch (error) {
-      console.error('Error getting reading progress:', error);
+      appLog.error('Error getting reading progress:', error);
       return null;
     }
   };
@@ -431,7 +418,7 @@ function useStorageService() {
     try {
       await bookStorageService.saveReadingProgress(progress);
     } catch (error) {
-      console.error('Error saving reading progress:', error);
+      appLog.error('Error saving reading progress:', error);
     }
   };
 
@@ -448,58 +435,64 @@ function useStorageService() {
     try {
       await bookStorageService.saveBookProgress(bookId, currentChapter, currentPosition, currentPage, totalPages, fileType, scrollHeight, viewportHeight);
     } catch (error) {
-      console.error('Error saving book progress:', error);
+      appLog.error('Error saving book progress:', error);
     }
   };
 
   const signIn = async () => {
-    // Redirect to Clerk's sign-in page
-    if (window.Clerk) {
-      window.Clerk.redirectToSignIn();
-    } else {
+    if (!clerk.loaded) {
       toast.error('Authentication system not loaded yet');
+      return;
     }
+    clerk.redirectToSignIn();
   };
 
   const signOut = async () => {
-    // Sign out using Clerk
-    if (window.Clerk) {
-      await window.Clerk.signOut();
-      setBooks([]); // Clear books when signing out
-      lastUserIdRef.current = null;
-      lastSessionToastRef.current = 0;
-
-      // SECURITY: Clear Google Drive tokens when Clerk user signs out
-      // This prevents token leakage between different user sessions
-      gDriveService.onClerkSignOut();
-
-      // SECURITY: Explicitly wipe all local data to prevent access by next user
-      localStorage.removeItem(OFFLINE_BOOKS_KEY);
-
-      // Clear all reading progress from localStorage
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('reading_progress_')) {
-          localStorage.removeItem(key);
-        }
-      });
-
-      // Clear IndexedDB (files and covers)
-      try {
-        await clearAllCache();
-        appLog.debug('✅ Secure logout: Local cache wiped');
-      } catch (e) {
-        console.error('Failed to wipe cache on logout:', e);
-      }
-
-      // Clear persisted settings
-      document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-      localStorage.removeItem('prSettings');
-      localStorage.removeItem('showPopupOnHover');
-      localStorage.removeItem('touchscreenSupport');
-      localStorage.removeItem('disableFadeAnimation');
-    } else {
+    if (!clerk.loaded) {
       toast.error('Authentication system not loaded yet');
+      return;
     }
+
+    try {
+      await clerk.signOut();
+    } catch (error) {
+      appLog.error('[useStorageService] Clerk signOut failed', error);
+      toast.error('Sign out failed');
+      return;
+    }
+
+    setBooks([]); // Clear books when signing out
+    lastUserIdRef.current = null;
+    lastSessionToastRef.current = 0;
+
+    // SECURITY: Clear Google Drive tokens when Clerk user signs out
+    // This prevents token leakage between different user sessions
+    gDriveService.onClerkSignOut();
+
+    // SECURITY: Explicitly wipe all local data to prevent access by next user
+    localStorage.removeItem(OFFLINE_BOOKS_KEY);
+
+    // Clear all reading progress from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('reading_progress_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Clear IndexedDB (files and covers)
+    try {
+      await clearAllCache();
+      appLog.debug('[useStorageService] Secure logout: local cache wiped');
+    } catch (e) {
+      appLog.error('[useStorageService] Failed to wipe cache on logout', e);
+    }
+
+    // Clear persisted settings
+    document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    localStorage.removeItem('prSettings');
+    localStorage.removeItem('showPopupOnHover');
+    localStorage.removeItem('touchscreenSupport');
+    localStorage.removeItem('disableFadeAnimation');
   };
 
   const openCloudFolder = async () => {
@@ -511,7 +504,7 @@ function useStorageService() {
     try {
       await bookMetadataService.openCloudFolder(clerkUser);
     } catch (error) {
-      console.error('Error opening cloud folder:', error);
+      appLog.error('Error opening cloud folder:', error);
       toast.error('Failed to open cloud storage folder');
     }
   };
@@ -539,7 +532,7 @@ function useStorageService() {
       toast.success('Library synced successfully');
       lastSessionToastRef.current = 0;
     } catch (error) {
-      console.error('Error syncing books:', error);
+      appLog.error('Error syncing books:', error);
       toast.error('Failed to sync books');
     } finally {
       setIsLoading(false);
@@ -562,7 +555,7 @@ function useStorageService() {
       }
       return success;
     } catch (error) {
-      console.error('Error saving settings:', error);
+      appLog.error('Error saving settings:', error);
       return false;
     }
   };
@@ -590,7 +583,7 @@ function useStorageService() {
         }
         throw error;
       } else {
-        console.error('Error loading settings:', error);
+        appLog.error('Error loading settings:', error);
         // Don't show error toast for generic settings loading failure - just use defaults
         return null;
       }
@@ -609,7 +602,7 @@ function useStorageService() {
       setFolders(current => [...current, newFolder]);
       toast.success(`Folder "${name}" created successfully`);
     } catch (error) {
-      console.error('Error creating folder:', error);
+      appLog.error('Error creating folder:', error);
       toast.error('Failed to create folder');
     }
   };
@@ -629,7 +622,7 @@ function useStorageService() {
       );
       toast.success('Folder updated successfully');
     } catch (error) {
-      console.error('Error updating folder:', error);
+      appLog.error('Error updating folder:', error);
       toast.error('Failed to update folder');
     }
   };
@@ -645,7 +638,7 @@ function useStorageService() {
       setFolders(current => current.filter(folder => folder.id !== folderId));
       toast.success('Folder deleted successfully');
     } catch (error) {
-      console.error('Error deleting folder:', error);
+      appLog.error('Error deleting folder:', error);
       toast.error('Failed to delete folder');
     }
   };
@@ -665,7 +658,7 @@ function useStorageService() {
       );
       toast.success('Book moved successfully');
     } catch (error) {
-      console.error('Error moving book:', error);
+      appLog.error('Error moving book:', error);
       toast.error('Failed to move book');
     }
   };

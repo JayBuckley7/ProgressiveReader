@@ -39,22 +39,7 @@ function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
   return <RedirectToSignIn />;
 }
 
-
-// Get Clerk publishable key from environment variable
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-
-export default function App() {
-  if (!clerkPubKey) {
-    console.error('Missing Clerk publishable key')
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h1>Configuration Error</h1>
-        <p>Missing Clerk publishable key. Please check your .env file.</p>
-      </div>
-    )
-  }
-
+export default function App({ clerkPubKey }: { clerkPubKey: string }) {
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}

@@ -1,8 +1,9 @@
-import { appLog } from '@shared/appLog'
-export const OFFLINE_BOOKS_KEY = 'prOfflineBooks';
 import type { BookMetadata } from '~/types';
-import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, getCachedFile } from '@integrations/googleDrive/services/driveCache';
+import { appLog } from '@shared/appLog'
+import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, getCachedFile, findCachedFileByPrefix } from '@integrations/googleDrive/services/driveCache';
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
+
+export const OFFLINE_BOOKS_KEY = 'prOfflineBooks';
 
 export function getOfflineBooks(): BookMetadata[] {
   try {
@@ -41,19 +42,18 @@ export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {
   const result: BookMetadata[] = [];
 
   for (const b of books) {
-    // CRITICAL: Only include books that have actual CONTENT cached.
-    // Metadata alone is not enough for offline reading.
-    if (b.driveFileId) {
-      const hasContent = await getCachedFile(b.driveFileId);
-      appLog.debug(`[Offline Library] Book "${b.title}" - driveFileId: ${b.driveFileId}, Cached: ${!!hasContent}`);
-      // TEMPORARY: Disabled filter because user reported valid books being hidden.
-      // if (!hasContent) {
-      //   continue;
-      // }
-    } else {
-      // If no driveFileId (e.g. local import?), maybe logic differs.
-      // But for now, assume filtering.
-      // continue; 
+    // Only include books that have actual CONTENT cached (metadata alone isn't enough for offline reading).
+    if (!b.driveFileId) {
+      continue;
+    }
+
+    // Cached files are stored by `driveFileId_modifiedTime` when `modifiedTime` is present.
+    // Fall back to a prefix search to support older caches that didn't include `modifiedTime`.
+    const cacheKey = b.modifiedTime ? `${b.driveFileId}_${b.modifiedTime}` : b.driveFileId;
+    const cached = (await getCachedFile(cacheKey)) || (await findCachedFileByPrefix(b.driveFileId));
+    appLog.debug(`[Offline Library] Book "${b.title}" - cachedContent=${!!cached}`);
+    if (!cached) {
+      continue;
     }
 
     let coverUrl: string | undefined;

@@ -36,13 +36,30 @@ function renderFatalError(title: string, message: string, details?: string) {
   );
 }
 
+function requireEnv(name: string): string | null {
+  const v = (import.meta.env as Record<string, unknown>)[name];
+  if (typeof v !== "string") return null;
+  const trimmed = v.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function startApp() {
   try {
+    const clerkPubKey = requireEnv("VITE_CLERK_PUBLISHABLE_KEY");
+    if (!clerkPubKey) {
+      renderFatalError(
+        "Configuration Error",
+        "Missing VITE_CLERK_PUBLISHABLE_KEY. Check your .env and restart the dev server.",
+        "VITE_CLERK_PUBLISHABLE_KEY is required to start the app."
+      );
+      return;
+    }
+
     root.render(
       <React.StrictMode>
         <I18nextProvider i18n={i18n}>
           <BrowserRouter>
-            <App />
+            <App clerkPubKey={clerkPubKey} />
           </BrowserRouter>
         </I18nextProvider>
       </React.StrictMode>

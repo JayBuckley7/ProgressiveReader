@@ -5,7 +5,7 @@ import { JpdbWord, getJpdbData, getSentences } from '@features/reader/content/wo
 import { notifyError } from '@shared/utils/notify';
 import { showDefinitionPopup, hideDefinitionPopup } from '@features/reader/components/JpdbPopup';
 import { Keybind } from '~/types';
-import Logger from '@shared/utils/logger';
+import { appLog } from '@shared/appLog';
 
 let currentHover: [JpdbWord, number, number] | null = null;
 let popupKeyHeld = false; // Add popupKeyHeld state
@@ -13,63 +13,48 @@ let popupKeyHeld = false; // Add popupKeyHeld state
 // Track initialization state and event listener references
 let isInitialized = false;
 
-// Initialize logger debug state from a global flag if present
-Logger.setDebug((window as any).jpHighlighterDebug === true);
+export function setDebug(flag: boolean): void {
+    appLog.setLevel(flag ? 'debug' : 'warn');
+}
 
 // Helper to check if event matches a hotkey
 function matchesHotkey(event: KeyboardEvent | MouseEvent, hotkey: Keybind | undefined): boolean {
-    const eventType = event.type;
-    const eventCode = event instanceof KeyboardEvent ? event.code : `Mouse${event.button}`;
-    Logger.log(`matchesHotkey called with event type: ${eventType}, code: ${eventCode}`);
-    
     if (!hotkey) {
-        Logger.log('No hotkey provided, returning false');
         return false;
     }
-    
-    Logger.log('Checking against hotkey:', hotkey);
-    
+
     if (hotkey.code === 'None') {
-        Logger.log("Hotkey code is 'None', returning false");
         return false; // No binding if code is 'None'
     }
-    
+
     const code = event instanceof KeyboardEvent ? event.code : `Mouse${event.button}`;
-    
-    // Check modifiers
-    const modifiersMatch = (hotkey.modifiers || []).every((name: string) => { 
-        const isModifierPressed = 
-            (name === 'Control' && event.ctrlKey) ||
-            (name === 'Shift' && event.shiftKey) ||
-            (name === 'Alt' && event.altKey) ||
-            (name === 'Meta' && event.metaKey);
-            
-        Logger.log(`Checking modifier ${name}: required=${true}, pressed=${isModifierPressed}`);
-        return isModifierPressed;
+    if (code !== hotkey.code) return false;
+
+    const required = hotkey.modifiers || [];
+    if (required.length === 0 && (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey)) {
+        return false;
+    }
+
+    const modifiersOk = required.every((name: string) => {
+        switch (name) {
+            case 'Control':
+                return !!event.ctrlKey;
+            case 'Shift':
+                return !!event.shiftKey;
+            case 'Alt':
+                return !!event.altKey;
+            case 'Meta':
+                return !!event.metaKey;
+            default:
+                return false;
+        }
     });
-    
-    const allModifiersMatch = 
-        (hotkey.modifiers || []).length === 0 || // No modifiers required
-        modifiersMatch;
-    
-    // Extra check: if hotkey requires no modifiers, ensure no modifiers are pressed
-    const noExtraModifiers = (hotkey.modifiers || []).length === 0 ? 
-        !(event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) : true;
-    
-    // Log active modifiers if any
-    const activeModifiers = [];
-    if (event.ctrlKey) activeModifiers.push('Control');
-    if (event.shiftKey) activeModifiers.push('Shift');
-    if (event.altKey) activeModifiers.push('Alt');
-    if (event.metaKey) activeModifiers.push('Meta');
-    
-    Logger.log(`Active modifiers: [${activeModifiers.join(', ')}]`);
-    Logger.log(`Code match: ${code === hotkey.code}, modifiers match: ${allModifiersMatch}, no extra modifiers: ${noExtraModifiers}`);
-    
-    // Match if codes match and either modifiers match (if any required) or no modifiers required and none pressed
-    const result = code === hotkey.code && allModifiersMatch;
-    Logger.log(`matchesHotkey result: ${result}`);
-    return result;
+
+    if (modifiersOk) {
+        appLog.debug('[jpdb] Hotkey matched', { code, modifiers: required });
+    }
+
+    return modifiersOk;
 }
 
 // Wait for the browser to load all CSS before starting
@@ -227,13 +212,13 @@ export function removeJpdbHighlighting(contentElement: HTMLElement): void {
             contentElement.normalize();
         }
     } catch (error) {
-        console.error('Error removing JPDB highlighting:', error);
+        appLog.error('[jpdb] Error removing highlighting', error);
     }
 }
 
 // Main function to apply JPDB highlighting to a content element
 export async function highlightContent(contentElement: HTMLElement): Promise<void> {
-    Logger.log('highlightContent called', contentElement);
+    appLog.debug('[jpdb] highlightContent');
 
     // Ensure the DOM is clean before applying highlights (prevents nesting on re-run).
     removeJpdbHighlighting(contentElement);
@@ -242,13 +227,10 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     setWordHoverHandlers(onWordHoverStart, onWordHoverStop);
     
     const currentConfig = loadConfig(); // Load config, it updates the instance in api-adapter and returns it
-    
-    Logger.log('Config loaded/updated in highlightContent:', JSON.stringify(currentConfig, null, 2));
-    Logger.log('API Key exists:', !!currentConfig.apiKey, 'API Key value length:', currentConfig.apiKey?.length || 0);
-    Logger.log('API Key empty check (!currentConfig.apiKey):', !currentConfig.apiKey);
-    
+
+    appLog.debug('[jpdb] highlight config', { hasApiKey: !!currentConfig.apiKey });
+
     if (!currentConfig.apiKey || currentConfig.apiKey.length === 0) {
-        Logger.warn('JPDB API Key is not set. Falling back to local translation');
         // Do not abort here. parseText() will handle local translation fallback when no API key
         // is configured.
     }
@@ -256,18 +238,18 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
     try {
         const renderVersionAtStart = contentElement.dataset.prRenderVersion ?? null;
         const textSegments = extractCleanTextSegments(contentElement);
-        
-        Logger.log(`Extracted ${textSegments.length} text segments`);
+
+        appLog.debug('[jpdb] extracted text segments', { count: textSegments.length });
         
         if (!textSegments || textSegments.length === 0) {
-            Logger.log('No text segments to highlight.');
+            appLog.debug('[jpdb] no text segments to highlight');
             return;
         }
         
         document.body.style.cursor = 'wait';
         
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
-        Logger.log(`Created ${paragraphs.length} paragraph fragments`);
+        appLog.debug('[jpdb] created paragraph fragments', { count: paragraphs.length });
 
         const tokens = await parseText(textSegments); // Tokens have global offsets
 
@@ -275,7 +257,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         // This can happen when quickly adjusting mix aggression. In that case, skip applying.
         const renderVersionNow = contentElement.dataset.prRenderVersion ?? null;
         if (!contentElement.isConnected || renderVersionAtStart !== renderVersionNow) {
-            Logger.log('Skipping highlight apply (stale render version).', {
+            appLog.debug('[jpdb] skipping highlight apply (stale render version)', {
                 renderVersionAtStart,
                 renderVersionNow,
                 isConnected: contentElement.isConnected,
@@ -283,7 +265,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
             return;
         }
 
-        Logger.log(`Received ${tokens.length} tokens from API`);
+        appLog.debug('[jpdb] received tokens', { count: tokens.length });
         
         for (const paragraph of paragraphs) { // A paragraph is a Fragment[]
             if (paragraph.length > 0) {
@@ -324,7 +306,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         }
 
     } catch (error) {
-        console.error('Error in highlightContent:', error);
+        appLog.error('[jpdb] Error in highlightContent', error);
         notifyError(error, { title: 'JPDB highlight error' });
         // Attempt to rollback any partial highlighting.
         removeJpdbHighlighting(contentElement);
@@ -376,7 +358,7 @@ function onWordHoverStart(event: MouseEvent): void {
             );
         }
     } catch (error) {
-        console.error('Error in onWordHoverStart:', error);
+        appLog.error('[jpdb] Error in onWordHoverStart', error);
     }
 }
 
@@ -396,34 +378,26 @@ function globalKeydownListener(event: KeyboardEvent) {
     const currentConfig = getCurrentConfig(); // Get latest config for keybinds
     // Check for the show popup key specifically
     if (matchesHotkey(event, currentConfig.showPopupKey)) {
-                event.preventDefault(); // Prevent default browser behavior
+        event.preventDefault(); // Prevent default browser behavior
         popupKeyHeld = true;
 
-                 // If a word is already hovered, show the popup immediately
-         if (currentHover) {
-             const [wordElement, x, y] = currentHover;
-             const jpdbData = getJpdbData(wordElement);
-             if (jpdbData) {
-                 Logger.log('Showing popup because popup key was pressed while hovering a word');
-                 const sentence = getSentences(jpdbData, currentConfig.contextWidth);
-                 const displayWord = jpdbData.token?.card?.spelling || wordElement.textContent || '';
-                 const wordData = {
-                     token: jpdbData.token, // Extract the actual token from jpdbData
-                     position: jpdbData.contextOffset,
-                     sentence
-                 };
-                 showDefinitionPopup(displayWord, { x, y }, wordData, { sourceElement: wordElement });
-             }
-         }
+        // If a word is already hovered, show the popup immediately.
+        if (currentHover) {
+            const [wordElement, x, y] = currentHover;
+            const jpdbData = getJpdbData(wordElement);
+            if (jpdbData) {
+                appLog.debug('[jpdb] Showing popup from hotkey while hovering');
+                const sentence = getSentences(jpdbData, currentConfig.contextWidth);
+                const displayWord = jpdbData.token?.card?.spelling || wordElement.textContent || '';
+                const wordData = {
+                    token: jpdbData.token, // Extract the actual token from jpdbData
+                    position: jpdbData.contextOffset,
+                    sentence
+                };
+                showDefinitionPopup(displayWord, { x, y }, wordData, { sourceElement: wordElement });
+            }
+        }
     }
-    
-    // Future: Add more hotkey handling here for other actions (like in the inspiration code)
-    // if (currentHover) {
-    //    const [wordElement, x, y] = currentHover;
-    //    if (matchesHotkey(event, config.addKey)) { /* handle adding word */ }
-    //    if (matchesHotkey(event, config.dialogKey)) { /* show dialog */ }
-    //    // etc.
-    // }
 }
 
 // Global keyup listener
@@ -466,10 +440,8 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
 
         // Define a reinitialization function that will be called when settings change
         const reinitialize = () => {
-            Logger.log('[jpdbInitializer] reinitialize called. Calling loadConfig.');
+            appLog.debug('[jpdb] Reinitialize: reloading config');
             loadConfig(); // Call loadConfig to update the central instance in api-adapter
-            // No need to assign to a local variable here if other functions use getCurrentConfig()
-            Logger.log('[jpdbInitializer] reinitialize: loadConfig completed. Current config from getCurrentConfig() is now:', JSON.stringify(getCurrentConfig()));
         };
 
         // Properly expose the module interface to global scope
@@ -481,7 +453,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             reinitialize, // Specific function to reload config when settings change
             wireUpToggle, // Use the actual wireUpToggle function
             highlightContent, // Use the actual highlightContent function
-            setDebug: Logger.setDebug, // Allow toggling debug logging
+            setDebug, // Allow toggling debug logging
         };
 
         // Apply custom CSS if provided (from original logic)
@@ -500,7 +472,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             document.head.appendChild(styleElement);
         }
         
-        Logger.log('JP Highlighter initialized.');
+        appLog.debug('[jpdb] Highlighter initialized');
     } catch (error) {
         notifyError(error, { title: 'JPDB highlighter error' });
     }
@@ -510,7 +482,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
 export function wireUpToggle(contentElement: HTMLElement): void {
     const toggleCheckbox = document.getElementById('jlpt-highlighting') as HTMLInputElement;
     if (!toggleCheckbox) {
-        console.warn('JLPT toggle checkbox not found');
+        appLog.debug('[jpdb] JLPT toggle checkbox not found');
         return;
     }
     
