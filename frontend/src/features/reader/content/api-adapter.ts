@@ -1,6 +1,7 @@
 import { Token, Card, CardState } from '~/types';
 import { Canceled } from '@shared/utils/util';
 import { notifyError } from '@shared/utils/notify';
+import { appLog } from '@shared/appLog';
 import { reverseIndex } from './parse.tsx';
 import { Keybind } from '~/types';
 import { vocabBank } from '@features/vocabulary/services/vocabBank';
@@ -166,7 +167,7 @@ export function loadConfig(): JpHighlighterConfig {
         loadedConfig.customPopupCSS = localStorage.getItem('customPopupCSS') || localStorage.getItem('jpdb_custom_popup_css') || undefined;
         loadedConfig.touchscreenSupport = localStorage.getItem('touchscreenSupport') === 'true' || false;
     } catch (e) {
-        console.error('Error loading configuration from localStorage:', e);
+        appLog.warn('[loadConfig] Failed to load configuration from localStorage', e);
     }
     
     // Update the internal config instance with the newly loaded values
@@ -222,7 +223,6 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
 
         return tokens;
     } catch (error) {
-        console.error('Error in parseText:', error);
         notifyError(error, { title: 'JPDB parsing error' });
         throw new Canceled('Parsing canceled due to error');
     }

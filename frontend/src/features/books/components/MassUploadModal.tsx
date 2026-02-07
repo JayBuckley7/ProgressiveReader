@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
+import { appLog } from '@shared/appLog';
 
 interface BookFileData {
   id: string;
@@ -68,7 +69,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         };
       }
     } catch (error) {
-      console.warn('Failed to extract EPUB metadata:', error);
+      appLog.warn('[MassUploadModal] Failed to extract EPUB metadata', error);
     }
     
     return {
@@ -231,7 +232,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         throw new Error(t('massUpload.toasts.uploadFailed'));
       }
     } catch (error: any) {
-      console.error(`Retry failed for ${book.title}:`, error);
+      appLog.error(`[MassUploadModal] Retry failed for ${book.title}`, error);
       updateBookFile(bookId, { 
         status: 'error', 
         error: error.message || t('massUpload.toasts.uploadFailed'),
@@ -306,7 +307,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
           throw new Error(t('massUpload.toasts.uploadFailed'));
         }
       } catch (error: any) {
-        console.error(`Failed to upload ${book.title}:`, error);
+        appLog.error(`[MassUploadModal] Failed to upload ${book.title}`, error);
         updateBookFile(book.id, { 
           status: 'error', 
           error: error.message || t('massUpload.toasts.uploadFailed'),

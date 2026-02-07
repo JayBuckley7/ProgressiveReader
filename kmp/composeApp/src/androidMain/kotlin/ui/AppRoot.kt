@@ -3,6 +3,7 @@ package com.progressivereader.kmp.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Style
@@ -39,6 +40,10 @@ fun AppRoot(
     onUpdateReaderCefrLevel: suspend (String) -> Unit,
     onUpdateReaderJpdbHighlightEnabled: suspend (Boolean) -> Unit,
     onUpdateReaderTranslationTargetLang: suspend (String) -> Unit,
+    onUpdateReaderMixEnabled: suspend (Boolean) -> Unit,
+    onUpdateReaderMixAggression: suspend (Float) -> Unit,
+    onUpdateReaderMixAutoEnableHighlight: suspend (Boolean) -> Unit,
+    onUpdateReaderMixBackupMirrorToDrive: suspend (Boolean) -> Unit,
     onResetDriveOverrides: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -73,6 +78,13 @@ fun AppRoot(
                 sessionJwt = sessionJwt,
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 bottomBar = { AppBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) },
+            )
+
+        Screen.Grammar ->
+            GrammarScreen(
+                showBack = false,
+                onBack = { navigator.pop() },
+                bottomBar = { AppBottomBar(current = Screen.Grammar, onSelect = { navigator.reset(it) }) },
             )
 
         is Screen.Login ->
@@ -127,6 +139,10 @@ fun AppRoot(
                 onUpdateReaderCefrLevel = { level -> scope.launch { onUpdateReaderCefrLevel(level) } },
                 onUpdateReaderJpdbHighlightEnabled = { enabled -> scope.launch { onUpdateReaderJpdbHighlightEnabled(enabled) } },
                 onUpdateReaderTranslationTargetLang = { lang -> scope.launch { onUpdateReaderTranslationTargetLang(lang) } },
+                onUpdateReaderMixEnabled = { enabled -> scope.launch { onUpdateReaderMixEnabled(enabled) } },
+                onUpdateReaderMixAggression = { value -> scope.launch { onUpdateReaderMixAggression(value) } },
+                onUpdateReaderMixAutoEnableHighlight = { enabled -> scope.launch { onUpdateReaderMixAutoEnableHighlight(enabled) } },
+                onUpdateReaderMixBackupMirrorToDrive = { enabled -> scope.launch { onUpdateReaderMixBackupMirrorToDrive(enabled) } },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 onSignOut = {
                     scope.launch {
@@ -168,6 +184,12 @@ private fun AppBottomBar(
             onClick = { select(Screen.Vocabulary) },
             icon = { Icon(Icons.Outlined.Style, contentDescription = "Vocabulary") },
             label = { Text("Vocab") },
+        )
+        NavigationBarItem(
+            selected = current is Screen.Grammar,
+            onClick = { select(Screen.Grammar) },
+            icon = { Icon(Icons.Outlined.AutoFixHigh, contentDescription = "Grammar") },
+            label = { Text("Grammar") },
         )
         NavigationBarItem(
             selected = current is Screen.Clipboard,

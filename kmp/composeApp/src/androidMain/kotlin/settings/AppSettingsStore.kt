@@ -29,6 +29,10 @@ class AppSettingsStore(private val context: Context) {
         val cefrLevel = stringPreferencesKey("reader_cefr_level")
         val jpdbHighlightEnabled = booleanPreferencesKey("reader_jpdb_highlight_enabled")
         val translationTargetLang = stringPreferencesKey("reader_translation_target_lang")
+        val mixEnabled = booleanPreferencesKey("reader_mix_enabled")
+        val mixAggression = floatPreferencesKey("reader_mix_aggression")
+        val mixAutoEnableHighlight = booleanPreferencesKey("reader_mix_auto_enable_highlight")
+        val mixBackupMirrorToDrive = booleanPreferencesKey("reader_mix_backup_mirror_to_drive")
     }
 
     val settingsFlow: Flow<AppSettings> =
@@ -108,6 +112,23 @@ class AppSettingsStore(private val context: Context) {
         context.dataStore.edit { it[Keys.translationTargetLang] = lang.trim().ifBlank { "English" } }
     }
 
+    suspend fun setReaderMixEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.mixEnabled] = enabled }
+    }
+
+    suspend fun setReaderMixAggression(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        context.dataStore.edit { it[Keys.mixAggression] = clamped }
+    }
+
+    suspend fun setReaderMixAutoEnableHighlight(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.mixAutoEnableHighlight] = enabled }
+    }
+
+    suspend fun setReaderMixBackupMirrorToDrive(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.mixBackupMirrorToDrive] = enabled }
+    }
+
     private fun Preferences.toAppSettings(): AppSettings {
         val backend = this[Keys.backendBaseUrl] ?: "http://10.0.2.2:5000"
         val folderId = this[Keys.driveFolderId]
@@ -134,6 +155,10 @@ class AppSettingsStore(private val context: Context) {
                 jpdbApiKey = this[Keys.jpdbApiKey],
                 jpdbHighlightEnabled = this[Keys.jpdbHighlightEnabled] ?: false,
                 translationTargetLang = this[Keys.translationTargetLang] ?: "English",
+                mixEnabled = this[Keys.mixEnabled] ?: false,
+                mixAggression = (this[Keys.mixAggression] ?: 0.25f).coerceIn(0f, 1f),
+                mixAutoEnableHighlight = this[Keys.mixAutoEnableHighlight] ?: true,
+                mixBackupMirrorToDrive = this[Keys.mixBackupMirrorToDrive] ?: true,
             )
         return AppSettings(
             backendBaseUrl = backend,

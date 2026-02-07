@@ -25,7 +25,8 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.StopCircle
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -72,8 +73,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.BorderStroke
+import com.progressivereader.kmp.grammar.GrammarState
+import com.progressivereader.kmp.grammar.GrammarStore
+import com.progressivereader.kmp.grammar.HintQuality
+import com.progressivereader.kmp.grammar.GrammarUnderliner
+import com.progressivereader.kmp.grammar.getGrammarPointById
 import com.progressivereader.kmp.jpdb.JpdbActionsService
 import com.progressivereader.kmp.jpdb.JpdbService
+import com.progressivereader.kmp.jpdbMirror.JpdbMirrorSnapshot
+import com.progressivereader.kmp.jpdbMirror.JpdbMirrorStore
+import com.progressivereader.kmp.mix.EnglishSwapHighlighter
+import com.progressivereader.kmp.mix.MixRefineCandidate
+import com.progressivereader.kmp.mix.MixRefineStore
+import com.progressivereader.kmp.mix.applyEnglishSwapToBodyHtml
+import com.progressivereader.kmp.mix.getMixRefineCacheKey
+import com.progressivereader.kmp.mix.refineAmbiguousSwaps
 import com.progressivereader.kmp.offline.BookCache
 import com.progressivereader.kmp.offline.BookState
 import com.progressivereader.kmp.offline.Bookmark
@@ -92,7 +106,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -159,16 +175,36 @@ fun ReaderScreen(
     val context = LocalContext.current
     val isCompactTopBar = LocalConfiguration.current.screenWidthDp < 420
 
+    val mirrorStore = remember { JpdbMirrorStore(context.applicationContext) }
+    var mirrorSnapshot by remember { mutableStateOf<JpdbMirrorSnapshot?>(null) }
+    LaunchedEffect(Unit) { mirrorSnapshot = mirrorStore.loadSnapshot() }
+    val mixVocabById =
+        remember(mirrorSnapshot) { mirrorSnapshot?.knownVocab?.associateBy { it.id } ?: emptyMap() }
+    val mixGlossIndex =
+        remember(mirrorSnapshot) {
+            mirrorSnapshot?.glossIndexRows?.associate { it.gloss to it.candidateIds } ?: emptyMap()
+        }
+
+    val grammarStore = remember { GrammarStore(context.applicationContext) }
+    val grammarState by grammarStore.stateFlow.collectAsState(initial = GrammarState())
+    val learningGrammarPoints =
+        remember(grammarState.learningIds) {
+            grammarState.learningIds.mapNotNull { getGrammarPointById(it) }
+                .filter { it.hintQuality == HintQuality.OK && it.hints.isNotEmpty() }
+        }
+
     val ttsController = remember { TtsController(context) }
     DisposableEffect(ttsController) { onDispose { ttsController.shutdown() } }
     val ttsReady by ttsController.isReady.collectAsState(initial = false)
     val isSpeaking by ttsController.isSpeaking.collectAsState(initial = false)
+    val isPaused by ttsController.isPaused.collectAsState(initial = false)
     var ttsRate by remember { mutableStateOf(settings.reader.ttsRate) }
     var showTtsSheet by remember { mutableStateOf(false) }
 
     val bookDir = remember(bookId) { bookCache.bookDir(bookId) }
     val translationCache = remember(bookId) { TranslationCache(bookDir) }
     val jpdbTokenCache = remember(bookId) { JpdbTokenCache(bookDir) }
+    val mixRefineStore = remember(bookId) { MixRefineStore(bookDir) }
     val jpdbHighlighter =
         remember(bookId) { JpdbHighlighter(tokenCache = jpdbTokenCache, jpdbService = JpdbService()) }
     val translateService = remember(sessionJwt) { TranslateService(getSessionToken = { sessionJwt }) }
@@ -185,6 +221,13 @@ fun ReaderScreen(
     var chapterSourceHash by remember { mutableStateOf<String?>(null) }
     var chapterBaseUrl by remember { mutableStateOf<String?>(null) }
 
+    var mixedBodyHtml by remember { mutableStateOf<String?>(null) }
+    var mixedSourceHash by remember { mutableStateOf<String?>(null) }
+    var isApplyingMix by remember { mutableStateOf(false) }
+    var mixAmbiguousGlosses by remember { mutableStateOf<List<String>>(emptyList()) }
+    var refinedChoices by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
+    var isRefiningMix by remember { mutableStateOf(false) }
+
     var theme by remember { mutableStateOf(settings.reader.theme) }
     var fontSizeSp by remember { mutableStateOf(settings.reader.fontSizeSp) }
     var highlightEnabled by remember { mutableStateOf(settings.reader.jpdbHighlightEnabled) }
@@ -194,6 +237,9 @@ fun ReaderScreen(
     var highlightedForTranslatedMode by remember { mutableStateOf(false) }
     var highlightTokenById by remember { mutableStateOf<Map<String, JpdbService.ProcessedToken>>(emptyMap()) }
     var isApplyingHighlights by remember { mutableStateOf(false) }
+
+    var grammarMarkedBodyHtml by remember { mutableStateOf<String?>(null) }
+    var grammarMarkedSourceHash by remember { mutableStateOf<String?>(null) }
 
     var isTranslated by remember { mutableStateOf(false) }
     var translatedBodyHtml by remember { mutableStateOf<String?>(null) }
@@ -230,6 +276,12 @@ fun ReaderScreen(
         chapterHeadHtml = ""
         chapterSourceHash = null
         chapterBaseUrl = null
+        mixedBodyHtml = null
+        mixedSourceHash = null
+        isApplyingMix = false
+        mixAmbiguousGlosses = emptyList()
+        refinedChoices = emptyMap()
+        isRefiningMix = false
         epubBook = null
         highlightedBodyHtml = null
         highlightedSourceHash = null
@@ -274,6 +326,12 @@ fun ReaderScreen(
         chapterHeadHtml = ""
         chapterSourceHash = null
         chapterBaseUrl = null
+        mixedBodyHtml = null
+        mixedSourceHash = null
+        isApplyingMix = false
+        mixAmbiguousGlosses = emptyList()
+        refinedChoices = emptyMap()
+        isRefiningMix = false
         highlightedBodyHtml = null
         highlightedSourceHash = null
         highlightedForTranslatedMode = false
@@ -295,19 +353,114 @@ fun ReaderScreen(
         runCatching { bookCache.saveState(bookId, updated) }
     }
 
+    LaunchedEffect(bookId, chapterIndex) {
+        refinedChoices = runCatching { mixRefineStore.loadLatestChoices(chapterIndex) }.getOrDefault(emptyMap())
+    }
+
+    val mixEnabledSetting = settings.reader.mixEnabled
+    val mixAggressionSetting = settings.reader.mixAggression
+    val mixAutoEnableHighlightSetting = settings.reader.mixAutoEnableHighlight
+
+    val mixActive =
+        mixEnabledSetting &&
+            !isTranslated &&
+            mirrorSnapshot != null &&
+            mirrorSnapshot?.knownVocab?.isNotEmpty() == true &&
+            mirrorSnapshot?.glossIndexRows?.isNotEmpty() == true
+
+    LaunchedEffect(
+        chapterBodyHtml,
+        chapterIndex,
+        mixActive,
+        mixAggressionSetting,
+        mixGlossIndex,
+        mixVocabById,
+        refinedChoices,
+        isTranslated,
+    ) {
+        if (!mixActive) {
+            mixedBodyHtml = null
+            mixedSourceHash = null
+            isApplyingMix = false
+            mixAmbiguousGlosses = emptyList()
+            return@LaunchedEffect
+        }
+
+        val body = chapterBodyHtml
+        if (body.isNullOrBlank()) {
+            mixedBodyHtml = null
+            mixedSourceHash = null
+            isApplyingMix = false
+            mixAmbiguousGlosses = emptyList()
+            return@LaunchedEffect
+        }
+
+        val glossIndexSnapshot = mixGlossIndex
+        val vocabByIdSnapshot = mixVocabById
+        val refinedSnapshot = refinedChoices
+
+        isApplyingMix = true
+        try {
+            val highlighter =
+                EnglishSwapHighlighter(
+                    bookId = bookId,
+                    chapter = chapterIndex,
+                    aggression = mixAggressionSetting.toDouble(),
+                    glossIndex = glossIndexSnapshot,
+                    vocabById = vocabByIdSnapshot,
+                    refinedChoices = refinedSnapshot,
+                )
+            val swapped =
+                withContext(Dispatchers.Default) {
+                    applyEnglishSwapToBodyHtml(
+                        bodyHtml = body,
+                        highlighter = highlighter,
+                    )
+                }
+            mixedBodyHtml = swapped
+            mixedSourceHash = TranslationCache.sha256Hex(swapped)
+            mixAmbiguousGlosses = highlighter.getAmbiguousGlosses()
+        } finally {
+            isApplyingMix = false
+        }
+    }
+
     val jpdbApiKey = settings.reader.jpdbApiKey
+    val openAiApiKey = settings.reader.openAiApiKey?.trim().orEmpty()
+    val openAiModel = settings.reader.openAiModel.trim().ifBlank { "gpt-4o-mini" }
     val translationTargetLang = settings.reader.translationTargetLang
     val cefrLevel = settings.reader.cefrLevel
     val translatedBodyHash = remember(translatedBodyHtml) { translatedBodyHtml?.let { TranslationCache.sha256Hex(it) } }
 
+    LaunchedEffect(mixActive, mixAutoEnableHighlightSetting, jpdbApiKey) {
+        if (!mixActive) return@LaunchedEffect
+        if (!mixAutoEnableHighlightSetting) return@LaunchedEffect
+        if (highlightEnabled) return@LaunchedEffect
+
+        highlightEnabled = true
+        onSetJpdbHighlightEnabled(true)
+
+        if (jpdbApiKey.isNullOrBlank()) {
+            val res =
+                snackbarHostState.showSnackbar(
+                    message = "Add a JPDB API key to enable highlights.",
+                    actionLabel = "Settings",
+                )
+            if (res == SnackbarResult.ActionPerformed) onOpenSettings()
+        }
+    }
+
     val highlightErrorKey = rememberSaveable(bookId, chapterIndex) { mutableStateOf(false) }
     LaunchedEffect(
         chapterBodyHtml,
+        mixedBodyHtml,
+        mixedSourceHash,
         translatedBodyHtml,
         highlightEnabled,
         jpdbApiKey,
         isOnline,
         isTranslated,
+        mixActive,
     ) {
         if (!highlightEnabled) {
             highlightedBodyHtml = null
@@ -322,7 +475,11 @@ fun ReaderScreen(
             if (isTranslated) {
                 translatedBodyHtml
             } else {
-                chapterBodyHtml
+                if (mixActive) {
+                    mixedBodyHtml
+                } else {
+                    chapterBodyHtml
+                }
             } ?: run {
             highlightedBodyHtml = null
             highlightedSourceHash = null
@@ -333,6 +490,8 @@ fun ReaderScreen(
         val hash =
             if (isTranslated) {
                 TranslationCache.sha256Hex(body)
+            } else if (mixActive) {
+                mixedSourceHash ?: TranslationCache.sha256Hex(body)
             } else {
                 chapterSourceHash ?: TranslationCache.sha256Hex(body)
             }
@@ -389,6 +548,48 @@ fun ReaderScreen(
             highlightTokenById = result.tokenById
             highlightErrorKey.value = false
         }
+    }
+
+    LaunchedEffect(
+        highlightEnabled,
+        isTranslated,
+        highlightedBodyHtml,
+        highlightedSourceHash,
+        highlightTokenById,
+        grammarState.underlinesEnabled,
+        learningGrammarPoints,
+    ) {
+        val enabled =
+            grammarState.underlinesEnabled &&
+                highlightEnabled &&
+                !isTranslated &&
+                learningGrammarPoints.isNotEmpty()
+        if (!enabled) {
+            grammarMarkedBodyHtml = null
+            grammarMarkedSourceHash = null
+            return@LaunchedEffect
+        }
+
+        val html = highlightedBodyHtml
+        val hash = highlightedSourceHash
+        if (html.isNullOrBlank() || hash.isNullOrBlank()) {
+            grammarMarkedBodyHtml = null
+            grammarMarkedSourceHash = null
+            return@LaunchedEffect
+        }
+
+        val tokenSnapshot = highlightTokenById
+        val pointsSnapshot = learningGrammarPoints
+        val marked =
+            withContext(Dispatchers.Default) {
+                GrammarUnderliner.apply(
+                    highlightedBodyHtml = html,
+                    tokenById = tokenSnapshot,
+                    learningPoints = pointsSnapshot,
+                )
+            }
+        grammarMarkedBodyHtml = marked
+        grammarMarkedSourceHash = hash
     }
 
     suspend fun handleTranslateClick() {
@@ -467,6 +668,108 @@ fun ReaderScreen(
         isTranslated = true
     }
 
+    suspend fun handleRefineMixClick() {
+        if (!settings.reader.mixEnabled) {
+            snackbarHostState.showSnackbar("Enable mix mode in Settings → Mix.")
+            return
+        }
+        if (isTranslated) {
+            snackbarHostState.showSnackbar("Turn off translation to refine mix mode.")
+            return
+        }
+        if (mirrorSnapshot == null) {
+            snackbarHostState.showSnackbar("Sync JPDB knowledge in Settings → Mix.")
+            return
+        }
+        if (!isOnline) {
+            snackbarHostState.showSnackbar("Refine requires internet.")
+            return
+        }
+        if (openAiApiKey.isBlank()) {
+            val res =
+                snackbarHostState.showSnackbar(
+                    message = "Add an OpenAI key to refine mix swaps.",
+                    actionLabel = "Settings",
+                )
+            if (res == SnackbarResult.ActionPerformed) onOpenSettings()
+            return
+        }
+
+        val ambiguousKeys = mixAmbiguousGlosses.take(30)
+        if (ambiguousKeys.isEmpty()) {
+            snackbarHostState.showSnackbar("No ambiguous swaps detected in this chapter.")
+            return
+        }
+
+        val candidatesByKey = LinkedHashMap<String, List<MixRefineCandidate>>()
+        for (k in ambiguousKeys) {
+            val ids = mixGlossIndex[k].orEmpty().take(3)
+            val rows =
+                ids.mapNotNull { id ->
+                    val rec = mixVocabById[id] ?: return@mapNotNull null
+                    MixRefineCandidate(
+                        id = id,
+                        spelling = rec.spelling,
+                        reading = rec.reading,
+                        meaning = rec.meanings.firstOrNull(),
+                    )
+                }
+            if (rows.isNotEmpty()) candidatesByKey[k] = rows
+        }
+
+        val html = chapterBodyHtml.orEmpty()
+        val textSample =
+            runCatching {
+                Jsoup.parse(html).text().replace(Regex("\\s+"), " ").trim()
+            }.getOrNull()
+                .orEmpty()
+
+        val cacheKey =
+            getMixRefineCacheKey(
+                bookId = bookId,
+                chapter = chapterIndex,
+                model = openAiModel,
+                textSample = textSample,
+                ambiguousKeys = ambiguousKeys,
+                candidatesByKey = candidatesByKey.mapValues { (_, v) -> v.map { it.id } },
+            )
+
+        val cached = runCatching { mixRefineStore.loadChoices(cacheKey) }.getOrNull()
+        if (cached != null) {
+            refinedChoices = cached
+            runCatching { mixRefineStore.setLatest(chapterIndex, cacheKey) }
+            snackbarHostState.showSnackbar("Loaded refined swaps (cached).")
+            return
+        }
+
+        isRefiningMix = true
+        try {
+            val choices =
+                refineAmbiguousSwaps(
+                    openAiKey = openAiApiKey,
+                    model = openAiModel,
+                    textSample = textSample,
+                    ambiguousKeys = ambiguousKeys,
+                    candidatesByKey = candidatesByKey,
+                )
+            runCatching { mixRefineStore.saveChoices(cacheKey, choices) }
+            runCatching { mixRefineStore.setLatest(chapterIndex, cacheKey) }
+            refinedChoices = choices
+            snackbarHostState.showSnackbar("Refined ambiguous swaps.")
+        } catch (t: Throwable) {
+            val msg = t.message?.takeIf { it.isNotBlank() } ?: "Refine failed."
+            snackbarHostState.showSnackbar(msg)
+        } finally {
+            isRefiningMix = false
+        }
+    }
+
+    suspend fun handleClearRefineMixClick() {
+        runCatching { mixRefineStore.clearLatest(chapterIndex) }
+        refinedChoices = emptyMap()
+        snackbarHostState.showSnackbar("Cleared refined swaps for this chapter.")
+    }
+
     fun isBookmarkedForCurrentChapter(): Boolean =
         bookState.bookmarks.any { it.chapterIndex == chapterIndex }
 
@@ -499,11 +802,17 @@ fun ReaderScreen(
         snackbarHostState.showSnackbar("Tip: swipe left/right to change chapters.")
     }
 
+    val speakUntranslatedHtml =
+        if (mixActive) {
+            mixedBodyHtml ?: chapterBodyHtml
+        } else {
+            chapterBodyHtml
+        }
     val speakSourceHtml =
         when {
             isTranslated -> translatedBodyHtml ?: chapterBodyHtml
-            highlightEnabled -> highlightedBodyHtml ?: chapterBodyHtml
-            else -> chapterBodyHtml
+            highlightEnabled -> highlightedBodyHtml ?: speakUntranslatedHtml
+            else -> speakUntranslatedHtml
         }
     val speakText =
         remember(speakSourceHtml) {
@@ -547,10 +856,10 @@ fun ReaderScreen(
     fun toggleTts() {
         selectedTokenId = null
         showTtsSheet = true
-        if (isSpeaking) {
-            ttsController.stop()
-        } else {
-            ttsController.speak(speakText)
+        when {
+            isSpeaking -> ttsController.pause()
+            isPaused -> ttsController.resume()
+            else -> ttsController.speak(speakText)
         }
     }
 
@@ -713,7 +1022,7 @@ fun ReaderScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text(if (highlightEnabled) "Disable highlights" else "Enable highlights") },
-                                    enabled = chapterBodyHtml != null && !isTranslating,
+                                    enabled = chapterBodyHtml != null && !isTranslating && !isApplyingMix && !isRefiningMix,
                                     onClick = {
                                         showOverflowMenu = false
                                         toggleHighlights()
@@ -727,8 +1036,41 @@ fun ReaderScreen(
                                         scope.launch { handleTranslateClick() }
                                     },
                                 )
+                                if (settings.reader.mixEnabled) {
+                                    DropdownMenuItem(
+                                        text = { Text("Refine mix swaps") },
+                                        enabled =
+                                            mixActive &&
+                                                isOnline &&
+                                                openAiApiKey.isNotBlank() &&
+                                                !isApplyingMix &&
+                                                !isRefiningMix &&
+                                                !isApplyingHighlights &&
+                                                !isTranslating,
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            scope.launch { handleRefineMixClick() }
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Clear refined swaps") },
+                                        enabled = refinedChoices.isNotEmpty() && !isApplyingMix && !isRefiningMix,
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            scope.launch { handleClearRefineMixClick() }
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
-                                    text = { Text(if (isSpeaking) "Stop TTS" else "Start TTS") },
+                                    text = {
+                                        Text(
+                                            when {
+                                                isSpeaking -> "Pause TTS"
+                                                isPaused -> "Resume TTS"
+                                                else -> "Start TTS"
+                                            }
+                                        )
+                                    },
                                     enabled = speakText.isNotBlank() && ttsReady,
                                     onClick = {
                                         showOverflowMenu = false
@@ -770,7 +1112,7 @@ fun ReaderScreen(
                             }
 
                             IconButton(
-                                enabled = chapterBodyHtml != null && !isTranslating,
+                                enabled = chapterBodyHtml != null && !isTranslating && !isApplyingMix && !isRefiningMix,
                                 onClick = { toggleHighlights() },
                             ) {
                                 if (isApplyingHighlights) {
@@ -814,10 +1156,14 @@ fun ReaderScreen(
                                 onClick = { toggleTts() },
                             ) {
                                 Icon(
-                                    if (isSpeaking) Icons.Outlined.StopCircle else Icons.Outlined.VolumeUp,
+                                    when {
+                                        isSpeaking -> Icons.Outlined.PauseCircle
+                                        isPaused -> Icons.Outlined.PlayCircle
+                                        else -> Icons.Outlined.VolumeUp
+                                    },
                                     contentDescription = "Text to speech",
                                     tint =
-                                        if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        if (isSpeaking || isPaused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                 )
                             }
 
@@ -829,6 +1175,53 @@ fun ReaderScreen(
                                     if (isBookmarkedForCurrentChapter()) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkAdd,
                                     contentDescription = "Bookmark",
                                 )
+                            }
+
+                            val showMixMenu = settings.reader.mixEnabled || refinedChoices.isNotEmpty()
+                            if (showMixMenu) {
+                                IconButton(onClick = { showOverflowMenu = true }) {
+                                    Icon(Icons.Outlined.MoreVert, contentDescription = "More")
+                                }
+
+                                DropdownMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Mix settings") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onOpenSettings()
+                                        },
+                                    )
+
+                                    if (settings.reader.mixEnabled) {
+                                        DropdownMenuItem(
+                                            text = { Text("Refine mix swaps") },
+                                            enabled =
+                                                mixActive &&
+                                                    isOnline &&
+                                                    openAiApiKey.isNotBlank() &&
+                                                    !isApplyingMix &&
+                                                    !isRefiningMix &&
+                                                    !isApplyingHighlights &&
+                                                    !isTranslating,
+                                            onClick = {
+                                                showOverflowMenu = false
+                                                scope.launch { handleRefineMixClick() }
+                                            },
+                                        )
+                                    }
+
+                                    DropdownMenuItem(
+                                        text = { Text("Clear refined swaps") },
+                                        enabled = refinedChoices.isNotEmpty() && !isApplyingMix && !isRefiningMix,
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            scope.launch { handleClearRefineMixClick() }
+                                        },
+                                    )
+                                }
                             }
                         }
                     },
@@ -848,22 +1241,41 @@ fun ReaderScreen(
                     error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                     epubBook == null -> Text("No book loaded.")
                     else -> {
-                        val baseBody = if (isTranslated) translatedBodyHtml else chapterBodyHtml
-                        val baseHash =
-                            if (isTranslated) {
-                                translatedBodyHash
+                        val untranslatedBody =
+                            if (mixActive) {
+                                mixedBodyHtml ?: chapterBodyHtml
+                            } else {
+                                chapterBodyHtml
+                            }
+                        val untranslatedHash =
+                            if (mixActive) {
+                                mixedSourceHash ?: mixedBodyHtml?.let { TranslationCache.sha256Hex(it) } ?: chapterSourceHash
                             } else {
                                 chapterSourceHash
                             }
+
+                        val baseBody = if (isTranslated) translatedBodyHtml else untranslatedBody
+                        val baseHash = if (isTranslated) translatedBodyHash else untranslatedHash
                         val canShowHighlights =
                             highlightEnabled &&
                                 highlightedBodyHtml != null &&
                                 highlightedSourceHash != null &&
                                 highlightedSourceHash == baseHash &&
                                 highlightedForTranslatedMode == isTranslated
+                        val highlightedForDisplay =
+                            if (canShowHighlights) {
+                                val marked = grammarMarkedBodyHtml
+                                if (!marked.isNullOrBlank() && grammarMarkedSourceHash == highlightedSourceHash) {
+                                    marked
+                                } else {
+                                    highlightedBodyHtml
+                                }
+                            } else {
+                                null
+                            }
                         val effectiveBody =
                             when {
-                                canShowHighlights -> highlightedBodyHtml
+                                highlightedForDisplay != null -> highlightedForDisplay
                                 else -> baseBody
                             } ?: "<p>Loading…</p>"
                         val html = chapterHeadHtml + effectiveBody
@@ -906,8 +1318,15 @@ fun ReaderScreen(
                                 },
                             )
 
-                            val showBusyOverlay = isTranslating || isApplyingHighlights
+                            val showBusyOverlay = isTranslating || isApplyingHighlights || isApplyingMix || isRefiningMix
                             if (showBusyOverlay) {
+                                val label =
+                                    when {
+                                        isRefiningMix -> "Refining mix…"
+                                        isTranslating -> "Translating…"
+                                        isApplyingHighlights -> "Applying highlights…"
+                                        else -> "Applying mix…"
+                                    }
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
                                     contentAlignment = Alignment.TopCenter,
@@ -925,7 +1344,7 @@ fun ReaderScreen(
                                         ) {
                                             CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                                             Text(
-                                                text = if (isTranslating) "Translating…" else "Applying highlights…",
+                                                text = label,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                         }
@@ -972,14 +1391,27 @@ fun ReaderScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AppTonalButton(
-                        text = if (isSpeaking) "Stop" else "Speak",
+                        text =
+                            when {
+                                isSpeaking -> "Pause"
+                                isPaused -> "Resume"
+                                else -> "Speak"
+                            },
                         enabled = ttsReady && speakText.isNotBlank(),
                         onClick = {
-                            if (isSpeaking) ttsController.stop() else ttsController.speak(speakText)
+                            when {
+                                isSpeaking -> ttsController.pause()
+                                isPaused -> ttsController.resume()
+                                else -> ttsController.speak(speakText)
+                            }
                         },
                         icon = {
                             Icon(
-                                if (isSpeaking) Icons.Outlined.StopCircle else Icons.Outlined.VolumeUp,
+                                when {
+                                    isSpeaking -> Icons.Outlined.PauseCircle
+                                    isPaused -> Icons.Outlined.PlayCircle
+                                    else -> Icons.Outlined.VolumeUp
+                                },
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
                             )
@@ -988,10 +1420,17 @@ fun ReaderScreen(
                     )
 
                     AppOutlineButton(
-                        text = "Close",
-                        onClick = { showTtsSheet = false },
+                        text = "Stop",
+                        enabled = isSpeaking || isPaused,
+                        onClick = { ttsController.stop() },
                     )
                 }
+
+                AppOutlineButton(
+                    text = "Close",
+                    onClick = { showTtsSheet = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
                 Spacer(Modifier.height(6.dp))
             }

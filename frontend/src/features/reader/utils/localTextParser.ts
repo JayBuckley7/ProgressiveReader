@@ -1,8 +1,7 @@
 // Local Text Parser - combines TinySegmenter with local JLPT JSON lookup for offline parsing
-// @ts-ignore - tiny-segmenter doesn't have TypeScript definitions
+// @ts-expect-error - tiny-segmenter doesn't have TypeScript definitions
 import TinySegmenter from 'tiny-segmenter';
 import { Token, Card } from '~/types';
-import { translationCache, checkCacheSize } from './translationCache';
 import { appLog } from '@shared/appLog'
 
 const segmenter = new TinySegmenter();
@@ -56,7 +55,7 @@ async function improveSegmentation(raw: string[]): Promise<string[]> {
     // Use heuristics instead of API calls for performance
     // This avoids spamming the backend with hundreds of API calls
     const isLikelyWord = s.length >= 2 && 
-                        !/^[\s　、。！？]+$/.test(s) && // not just punctuation/spaces
+                        !/^[\s\u3000、。！？]+$/.test(s) && // not just punctuation/spaces
                         !/^[A-Za-z0-9]+$/.test(s);    // not just ASCII
     
     hit.set(s, isLikelyWord);
@@ -176,7 +175,7 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
       offset = end;
       
       const trimmedWord = word.trim();
-      if (trimmedWord === '' || /^[\s　、。！？．，]+$/.test(trimmedWord)) {
+      if (trimmedWord === '' || /^[\s\u3000、。！？．，]+$/.test(trimmedWord)) {
         // Skip pure punctuation/whitespace - don't create tokens for them
         continue;
       }
@@ -209,15 +208,15 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
     }
     
     const totalTime = performance.now() - startTime;
-    appLog.debug(`✅ Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms (local lookup mode)`);
+    appLog.debug(`Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms (local lookup mode)`);
     
     return tokens;
     
   } catch (error) {
-    console.error('❌ Error in parseWithLocalLookup:', error);
+    appLog.error('[parseWithLocalLookup] Error', error);
     
     // Basic fallback: split on whitespace and common punctuation
-    const words = text.split(/[\s　、。！？]+/).filter(w => w.length > 0);
+    const words = text.split(/[\s\u3000、。！？]+/).filter(w => w.length > 0);
     const tokens: Token[] = [];
     let offset = 0;
     
@@ -255,4 +254,3 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
     return tokens;
   }
 }
-

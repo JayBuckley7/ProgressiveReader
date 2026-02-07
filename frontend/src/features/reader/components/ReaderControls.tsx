@@ -4,6 +4,7 @@ import ContentsDrawer from "./ContentsDrawer";
 import { getBookmarks, addBookmark } from "@features/reader/services/bookmarksApi";
 import type { ChapterTitle } from "~/types";
 import type { Bookmark } from "~/types/api";
+import { appLog } from "@shared/appLog";
 
 interface ReaderControlsProps {
   currentChapter: number;
@@ -65,7 +66,7 @@ function ReaderControlsComponent({
         }
       })
       .catch((err) => {
-        console.error('Failed to load bookmarks:', err);
+        appLog.error("[ReaderControls] Failed to load bookmarks", err);
         if (!cancelled) {
           setBookmarks([]);
         }
@@ -93,7 +94,7 @@ function ReaderControlsComponent({
         });
         setBookmarks((prev) => [...prev, newBookmark]);
       } catch (err) {
-        console.error('Failed to add bookmark:', err);
+        appLog.error("[ReaderControls] Failed to add bookmark", err);
       } finally {
         setIsAddingBookmark(false);
       }

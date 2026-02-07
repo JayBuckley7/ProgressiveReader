@@ -42,14 +42,14 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
 
   // Add debug logging only in development mode
   if (import.meta.env.DEV) {
-    appLog.debug(`📚 [useBookContent] Hook called for bookId: ${bookId}, chapter: ${currentChapter}, books.length: ${books.length}`);
+    appLog.debug(`[useBookContent] Hook called for bookId=${bookId} chapter=${currentChapter} books=${books.length}`);
   }
 
   // Memoize the book metadata to prevent unnecessary re-renders
   const bookMetadata = useMemo(() => {
     const metadata = books.find(book => book.id === bookId);
     if (import.meta.env.DEV) {
-      appLog.debug(`📚 [useBookContent] Book metadata lookup result:`, metadata ? 'Found' : 'Not found');
+      appLog.debug('[useBookContent] Book metadata lookup result:', metadata ? 'Found' : 'Not found');
     }
     return metadata;
   }, [books, bookId]);
@@ -219,7 +219,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         // Mark this book as loaded
         loadedBookIdRef.current = bookId;
 
-        appLog.debug('✁EBook loading complete!');
+        appLog.debug('[useBookContent] Book loading complete');
 
         prevMetadataRef.current = {
           title: bookMetadata.title,
@@ -228,7 +228,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         };
 
       } catch (error) {
-        console.error('❁EError loading book content:', error);
+        appLog.error('[useBookContent] Error loading book content', error);
         if (activeLoadRef.current?.requestId === requestId) {
           setError(error instanceof Error ? error.message : 'Failed to load book');
           setIsLoading(false); // Exit loading state on failure
@@ -289,7 +289,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         const chapterHtml = await processorRef.current.getChapterHtml(currentChapter);
         setCurrentChapterContent(chapterHtml || '<p>Chapter content not available</p>');
       } catch (error) {
-        console.error('Error loading chapter content:', error);
+        appLog.error('[useBookContent] Error loading chapter content', error);
         setCurrentChapterContent('<p>Error loading chapter content</p>');
       }
     };

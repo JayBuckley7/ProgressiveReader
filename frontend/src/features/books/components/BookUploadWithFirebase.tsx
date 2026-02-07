@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { toast } from 'sonner';
+import { appLog } from '@shared/appLog';
 
 interface BookUploadProps {
   onUploadComplete?: () => void;
@@ -41,7 +42,7 @@ export function BookUpload({ onUploadComplete }: BookUploadProps) {
         onUploadComplete?.();
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      appLog.error('[BookUpload] Upload error', error);
       toast.error('Failed to upload book');
     } finally {
       setIsUploading(false);
@@ -108,4 +109,3 @@ export function BookUpload({ onUploadComplete }: BookUploadProps) {
     </div>
   );
 }
-

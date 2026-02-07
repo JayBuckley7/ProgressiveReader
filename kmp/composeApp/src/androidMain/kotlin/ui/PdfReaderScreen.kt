@@ -18,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.StopCircle
 import androidx.compose.material.icons.outlined.VolumeUp
@@ -81,6 +83,7 @@ fun PdfReaderScreen(
     DisposableEffect(ttsController) { onDispose { ttsController.shutdown() } }
     val ttsReady by ttsController.isReady.collectAsState(initial = false)
     val isSpeaking by ttsController.isSpeaking.collectAsState(initial = false)
+    val isPaused by ttsController.isPaused.collectAsState(initial = false)
     var ttsRate by remember { mutableStateOf(settings.reader.ttsRate) }
     var showTtsSheet by remember { mutableStateOf(false) }
     var isExtractingTtsText by remember { mutableStateOf(false) }
@@ -228,10 +231,8 @@ fun PdfReaderScreen(
                         onClick = {
                             showTtsSheet = true
                             ttsTextError = null
-                            if (isSpeaking) {
-                                ttsController.stop()
-                                return@IconButton
-                            }
+                            if (isSpeaking) return@IconButton ttsController.pause()
+                            if (isPaused) return@IconButton ttsController.resume()
 
                             val cached = ttsTextCache[pageIndex]
                             if (!cached.isNullOrBlank()) {
@@ -253,10 +254,14 @@ fun PdfReaderScreen(
                         },
                     ) {
                         Icon(
-                            if (isSpeaking) Icons.Outlined.StopCircle else Icons.Outlined.VolumeUp,
+                            when {
+                                isSpeaking -> Icons.Outlined.PauseCircle
+                                isPaused -> Icons.Outlined.PlayCircle
+                                else -> Icons.Outlined.VolumeUp
+                            },
                             contentDescription = "Text to speech",
                             tint =
-                                if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                if (isSpeaking || isPaused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -368,13 +373,18 @@ fun PdfReaderScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AppTonalButton(
-                        text = if (isSpeaking) "Stop" else "Speak",
+                        text =
+                            when {
+                                isSpeaking -> "Pause"
+                                isPaused -> "Resume"
+                                else -> "Speak"
+                            },
                         enabled = ttsReady && !isExtractingTtsText && pageCount > 0,
                         onClick = {
                             ttsTextError = null
-                            if (isSpeaking) {
-                                ttsController.stop()
-                                return@AppTonalButton
+                            when {
+                                isSpeaking -> return@AppTonalButton ttsController.pause()
+                                isPaused -> return@AppTonalButton ttsController.resume()
                             }
 
                             val cached = ttsTextCache[pageIndex]
@@ -397,15 +407,29 @@ fun PdfReaderScreen(
                         },
                         icon = {
                             Icon(
-                                if (isSpeaking) Icons.Outlined.StopCircle else Icons.Outlined.VolumeUp,
+                                when {
+                                    isSpeaking -> Icons.Outlined.PauseCircle
+                                    isPaused -> Icons.Outlined.PlayCircle
+                                    else -> Icons.Outlined.VolumeUp
+                                },
                                 contentDescription = null,
                             )
                         },
                         modifier = Modifier.weight(1f),
                     )
 
-                    AppOutlineButton(text = "Close", onClick = { showTtsSheet = false })
+                    AppOutlineButton(
+                        text = "Stop",
+                        enabled = isSpeaking || isPaused,
+                        onClick = { ttsController.stop() },
+                    )
                 }
+
+                AppOutlineButton(
+                    text = "Close",
+                    onClick = { showTtsSheet = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
                 Spacer(Modifier.height(6.dp))
             }

@@ -9,8 +9,8 @@ type AnyObj = Record<string, any>;
 export function renderWithProviders(ui: React.ReactElement, options?: { appDataOverride?: AnyObj }) {
   // Allow overriding the global AppData mock for a single test render
   if (options?.appDataOverride) {
-    // @ts-ignore
-    globalThis.__APP_DATA_MOCK__ = { ...(globalThis.__APP_DATA_MOCK__ || {}), ...options.appDataOverride };
+    const existing = (globalThis.__APP_DATA_MOCK__ as AnyObj | undefined) ?? {};
+    globalThis.__APP_DATA_MOCK__ = { ...existing, ...options.appDataOverride };
   }
 
   function Wrapper({ children }: { children: React.ReactNode }) {
@@ -25,4 +25,3 @@ export function renderWithProviders(ui: React.ReactElement, options?: { appDataO
 
   return render(ui, { wrapper: Wrapper as any });
 }
-

@@ -1,3 +1,5 @@
+import { appLog } from '@shared/appLog';
+
 export interface ChapterTitle {
   index: number;
   label: string;
@@ -31,7 +33,7 @@ export class EpubProcessorWrapper {
         try {
 
             if (!(bookBinaryContent instanceof ArrayBuffer) || bookBinaryContent.byteLength < 512) {
-                console.error(`[EpubProcessor] Aborting: Book binary is too small or invalid (${bookBinaryContent.byteLength} bytes)`);
+                appLog.error(`[EpubProcessor] Aborting: Book binary is too small or invalid (${bookBinaryContent.byteLength} bytes)`);
                 throw new Error('Invalid or empty book data');
             }
 
@@ -43,7 +45,7 @@ export class EpubProcessorWrapper {
             this.isReady        = true;
             return true;
         } catch (err) {
-            console.error('EpubProcessorWrapper: Error loading book:', err);
+            appLog.error('EpubProcessorWrapper: Error loading book:', err);
             this.isReady = false;
             return false;
         }
@@ -59,7 +61,7 @@ export class EpubProcessorWrapper {
         try {
             return await this.processor.getIndexFromCfi(cfi);
         } catch (err) {
-            console.warn('EpubProcessorWrapper: Error resolving CFI:', err);
+            appLog.warn('EpubProcessorWrapper: Error resolving CFI:', err);
             return -1;
         }
     }
@@ -69,17 +71,17 @@ export class EpubProcessorWrapper {
      */
     async getChapterHtml(index: number): Promise<string | null> {
         if (!this.isReady || !this.processor) {
-            console.error('EpubProcessorWrapper: Not ready for getChapterHtml');
+            appLog.error('EpubProcessorWrapper: Not ready for getChapterHtml');
             return null;
         }
         if (index < 0 || index >= this.totalChapters) {
-            console.error('EpubProcessorWrapper: Invalid chapter index:', index);
+            appLog.error('EpubProcessorWrapper: Invalid chapter index:', index);
             return null;
         }
         try {
             return await this.processor.getChapterHtml(index);
         } catch (err) {
-            console.error(`EpubProcessorWrapper: Error getting chapter ${index}:`, err);
+            appLog.error(`EpubProcessorWrapper: Error getting chapter ${index}:`, err);
             return null;
         }
     }
@@ -89,7 +91,7 @@ export class EpubProcessorWrapper {
      */
     async getCoverBlob(): Promise<Blob | null> {
         if (!this.isReady || !this.processor) {
-            console.error('EpubProcessorWrapper: Not ready for getCoverBlob');
+            appLog.error('EpubProcessorWrapper: Not ready for getCoverBlob');
             return null;
         }
         try {
@@ -104,7 +106,7 @@ export class EpubProcessorWrapper {
                 return await this.processor.book.archive.request(coverPathOrUrl, 'blob');
             }
         } catch (err) {
-            console.error('EpubProcessorWrapper: Error getting cover:', err);
+            appLog.error('EpubProcessorWrapper: Error getting cover:', err);
             return null;
         }
     }
@@ -114,7 +116,7 @@ export class EpubProcessorWrapper {
         try {
             return await this.processor.getChapterTitles();
         } catch (err) {
-            console.error('EpubProcessorWrapper: Error getting chapter titles:', err);
+            appLog.error('EpubProcessorWrapper: Error getting chapter titles:', err);
             return [];
         }
     }
@@ -246,23 +248,23 @@ class EpubProcessor {
         const total   = flatToc.length || this.book.spine?.spineItems?.length || 0;
 
         if (index < 0 || index >= total) {
-            console.error('EpubProcessor (internal): Chapter index out of bounds:', index);
+            appLog.error('EpubProcessor (internal): Chapter index out of bounds:', index);
             return null;
         }
 
         const tocItem = flatToc[index] || this.book.navigation?.toc?.[index];
         if (!tocItem) {
-            console.error('EpubProcessor (internal): Invalid chapter index:', index);
+            appLog.error('EpubProcessor (internal): Invalid chapter index:', index);
             return null;
         }
         
         let spineItem = this.book.spine.get(tocItem.href);
         if (!spineItem) {
-            console.warn('EpubProcessor (internal): Spine lookup by href failed, falling back to index for href:', tocItem.href);
+            appLog.warn('EpubProcessor (internal): Spine lookup by href failed, falling back to index for href:', tocItem.href);
             spineItem = this.book.spine.get(index);
         }
         if (!spineItem) {
-            console.error('EpubProcessor (internal): Could not find spine item for href or index:', tocItem.href, index);
+            appLog.error('EpubProcessor (internal): Could not find spine item for href or index:', tocItem.href, index);
             return null;
         }
 
@@ -280,7 +282,7 @@ class EpubProcessor {
             }
             return doc.documentElement ? doc.documentElement.innerHTML : '';
         } catch (err) {
-            console.error(`EpubProcessor (internal): Error processing chapter ${index}:`, err);
+            appLog.error(`EpubProcessor (internal): Error processing chapter ${index}:`, err);
             return null;
         }
     }
@@ -322,7 +324,7 @@ class EpubProcessor {
             if (!item) return -1;
             return item.index;
         } catch (err) {
-            console.warn('EpubProcessor (internal): Error resolving CFI:', err);
+            appLog.warn('EpubProcessor (internal): Error resolving CFI:', err);
             return -1;
         }
     }
@@ -338,9 +340,8 @@ class EpubProcessor {
                 href: item.href,
             }));
         } catch (err) {
-            console.error('EpubProcessor (internal): Error getting chapter titles:', err);
+            appLog.error('EpubProcessor (internal): Error getting chapter titles:', err);
             return [];
         }
     }
 }
-

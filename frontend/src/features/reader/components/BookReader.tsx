@@ -19,7 +19,6 @@ import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { PdfViewerHandle } from "@shared/components/PdfViewer";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation as useI18n } from "react-i18next";
-import { PdfViewer } from "@shared/components/PdfViewer";
 import { MixSettingsModal } from "./MixSettingsModal";
 import { getGlossIndexAsMap, getKnownVocabAsMap, getMirrorMeta } from "@features/jpdbMirror/db";
 import type { JpdbKnownVocabRecord, JpdbMirrorMeta } from "@features/jpdbMirror/types";
@@ -28,6 +27,7 @@ import { getRefineCacheKey, refineAmbiguousSwaps } from "@features/reader/utils/
 import { toast } from "sonner";
 import { normalizeTranslatedHtml } from "@features/reader/utils/bilingualHtml";
 import { useGrammarReadAlong } from "@features/grammar/hooks/useGrammarReadAlong";
+import { appLog } from "@shared/appLog";
 
 interface BookReaderProps {
   bookId: string;
@@ -239,7 +239,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 	    try {
 	      return normalizeTranslatedHtml(translatedContent);
 	    } catch (e) {
-	      console.warn("Failed to normalize translated HTML; falling back to raw.", e);
+	      appLog.warn("[BookReader] Failed to normalize translated HTML; falling back to raw", e);
 	      return translatedContent;
 	    }
 	  }, [translatedContent]);
@@ -299,7 +299,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 	      <ErrorBoundary
 	        resetKeys={[bookId, chapter, isTranslated, contentVersion]}
 	        onError={(err) => {
-	          console.error("[BookReader] Content render error:", err);
+	          appLog.error("[BookReader] Content render error", err);
 	        }}
 	        fallback={({ error }) => (
 	          <div className="text-sm">
@@ -341,7 +341,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       setMirrorVocabById(vocabById);
       setMirrorGlossIndex(glossIndex);
     } catch (e) {
-      console.warn("Failed to load JPDB mirror:", e);
+      appLog.warn("[BookReader] Failed to load JPDB mirror", e);
       setMirrorMeta(null);
       setMirrorVocabById(null);
       setMirrorGlossIndex(null);
@@ -658,7 +658,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       const frameId = requestAnimationFrame(() => {
         if (!el) return;
         highlightContent(el).catch((error) => {
-          console.error('highlightContent failed:', error);
+          appLog.error("[BookReader] highlightContent failed", error);
         });
       });
       

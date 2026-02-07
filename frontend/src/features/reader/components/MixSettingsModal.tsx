@@ -7,6 +7,7 @@ import { gDriveService } from "@integrations/googleDrive/gdriveService";
 import { syncJpdbKnownMirror, type JpdbMirrorSyncProgress } from "@features/jpdbMirror/sync";
 import type { JpdbMirrorMeta } from "@features/jpdbMirror/types";
 import { importMirrorSnapshotFromDrive, isValidDriveSnapshot } from "@features/jpdbMirror/import";
+import { appLog } from "@shared/appLog";
 
 export function MixSettingsModal(props: {
   visible: boolean;
@@ -70,7 +71,7 @@ export function MixSettingsModal(props: {
         toast.success("Restored JPDB mirror from Google Drive");
       } catch (e) {
         // Restore failures are non-fatal.
-        console.warn("JPDB mirror restore failed:", e);
+        appLog.warn("[MixSettingsModal] JPDB mirror restore failed", e);
       } finally {
         setIsRestoring(false);
       }

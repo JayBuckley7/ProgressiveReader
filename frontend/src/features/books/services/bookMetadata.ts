@@ -8,12 +8,6 @@ import { processPDFWithOCR, OCRProgressCallback } from './ocrApi';
 import { toast } from 'sonner';
 import { appLog } from '@shared/appLog'
 
-declare global {
-    interface Window {
-        Clerk: any;
-    }
-}
-
 type Provider = 'google' | 'apple' | 'microsoft' | 'email';
 
 /**
@@ -184,12 +178,15 @@ class BookMetadataService {
                         return parsed.d;
                     }
                 } catch {
+                    // Ignore cover cache parse errors (e.g. corrupted localStorage entry).
                     if (cached.startsWith('data:image/')) {
                         return cached;
                     }
                 }
             }
-        } catch { }
+        } catch {
+            // Ignore localStorage access failures (private mode / quota).
+        }
 
         const blob = await this.generatePlaceholderCover(title, fileType, author);
         const dataUrl = await this.blobToDataUrl(blob);
@@ -204,7 +201,9 @@ class BookMetadataService {
                     d: dataUrl,
                 })
             );
-        } catch { }
+        } catch {
+            // Ignore localStorage write failures (private mode / quota).
+        }
         return dataUrl;
     }
 
@@ -377,7 +376,7 @@ class BookMetadataService {
                                 appLog.debug('📖 No cover found in EPUB file');
                             }
                         } catch (error) {
-                            console.warn('⚠️ Failed to extract cover from EPUB:', error);
+                            appLog.warn('Failed to extract cover from EPUB:', error);
                         }
                     } else if (!coverBlob && meta.fileType === 'pdf') {
                         const extracted = await bookStorageService.extractCoverFromPdf(file);
@@ -408,7 +407,7 @@ class BookMetadataService {
                             fileToUpload = await processPDFWithOCR(file, onOCRProgress);
                             appLog.debug('✅ PDF processed with OCR successfully');
                         } catch (error) {
-                            console.error('OCR processing failed:', error);
+                            appLog.error('OCR processing failed:', error);
                             toast.error('OCR processing failed. Uploading original PDF.');
                             // Fallback: continue with original file
                         }
@@ -448,7 +447,7 @@ class BookMetadataService {
                             coverImageId = coverResult.id;
                             appLog.debug('✅ Cover image uploaded successfully');
                         } else {
-                            console.warn('⚠️ Failed to upload cover image, but book upload succeeded');
+                            appLog.warn('Failed to upload cover image, but book upload succeeded');
                         }
                     }
 
@@ -462,7 +461,7 @@ class BookMetadataService {
                     });
 
                     if (!metadataSuccess) {
-                        console.warn('⚠️ Failed to update metadata file, but book upload succeeded');
+                        appLog.warn('Failed to update metadata file, but book upload succeeded');
                     }
 
                     const bookMetadata: BookMetadata = {
@@ -486,7 +485,7 @@ class BookMetadataService {
                     return bookMetadata;
 
                 } catch (error: any) {
-                    console.error('Google Drive upload failed:', error);
+                    appLog.error('Google Drive upload failed:', error);
                     throw new Error(`Failed to upload to Google Drive: ${error.message || 'Unknown error'}`);
                 }
                 
@@ -503,29 +502,15 @@ class BookMetadataService {
         }
     }
 
-    async getUserBooks(onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
-        appLog.debug('getUserBooks: Fetching book list from user\'s Google Drive...');
-        const isJsonFileType = (fileType?: string | null) => (fileType || '').toLowerCase() === 'json';
-        
-        try {
-            // CRITICAL: Check Clerk authentication first before accessing Google Drive
-            if (typeof window !== 'undefined' && window.Clerk) {
-                const clerkUser = window.Clerk.user;
-                const isClerkSignedIn = window.Clerk.session !== null;
-                
-                if (!clerkUser || !isClerkSignedIn) {
-                    appLog.debug('getUserBooks: Clerk user not authenticated, skipping Google Drive access');
-                    return [];
-                }
-            } else {
-                appLog.debug('getUserBooks: Clerk not available, skipping Google Drive access');
-                return [];
-            }
-
-            // Check if user is signed in to Google Drive
-            if (!gDriveService.isSignedIn()) {
-                appLog.debug('User not signed in to Google Drive');
-                return [];
+	    async getUserBooks(onCoverReady?: (bookId: string, coverUrl: string) => void): Promise<BookMetadata[]> {
+	        appLog.debug('getUserBooks: Fetching book list from user\'s Google Drive...');
+	        const isJsonFileType = (fileType?: string | null) => (fileType || '').toLowerCase() === 'json';
+	        
+	        try {
+	            // Check if user is signed in to Google Drive
+	            if (!gDriveService.isSignedIn()) {
+	                appLog.debug('User not signed in to Google Drive');
+	                return [];
             }
 
             // Check cache first to prevent redundant API calls
@@ -656,7 +641,7 @@ class BookMetadataService {
             return books;
             
         } catch (error) {
-            console.error('Error fetching books from Google Drive:', error);
+            appLog.error('Error fetching books from Google Drive:', error);
             // Return empty array on error rather than throwing
             return [];
         }
@@ -694,14 +679,14 @@ class BookMetadataService {
                 if (coverDeleteSuccess) {
                     appLog.debug('✅ Cover image deleted from Google Drive successfully');
                 } else {
-                    console.warn('⚠️ Failed to delete cover image, but book deletion succeeded');
+                    appLog.warn('Failed to delete cover image, but book deletion succeeded');
                 }
             }
 
             // Remove from metadata.json
             const metadataUpdateSuccess = await gDriveService.removeBookMetadata(id);
             if (!metadataUpdateSuccess) {
-                console.warn('⚠️ Failed to update metadata file, but book deletion succeeded');
+                appLog.warn('Failed to update metadata file, but book deletion succeeded');
             } else {
                 appLog.debug('✅ Book metadata removed successfully');
             }
@@ -710,7 +695,7 @@ class BookMetadataService {
             bookCacheService.clearBookListCache();
             
         } catch (error) {
-            console.error('Error deleting book from Google Drive:', error);
+            appLog.error('Error deleting book from Google Drive:', error);
             throw error;
         }
     }
@@ -792,14 +777,14 @@ class BookMetadataService {
                 if (deleteSuccess) {
                     appLog.debug('✅ Old cover image deleted from Google Drive');
                 } else {
-                    console.warn('⚠️ Failed to delete old cover image, but new cover was set successfully');
+                    appLog.warn('Failed to delete old cover image, but new cover was set successfully');
                 }
             }
 
             return coverImageId;
             
         } catch (error) {
-            console.error('Error updating book cover:', error);
+            appLog.error('Error updating book cover:', error);
             throw error;
         }
     }
@@ -848,7 +833,7 @@ class BookMetadataService {
             // Clear book list cache since metadata has changed
             bookCacheService.clearBookListCache();
         } catch (error) {
-            console.error('Error updating book metadata:', error);
+            appLog.error('Error updating book metadata:', error);
             throw error;
         }
     }
@@ -870,12 +855,14 @@ class BookMetadataService {
 
         switch (provider) {
             case 'google':
-                const isAuthenticated = await authManager.ensureAuthenticated();
-                if (!isAuthenticated) {
-                    throw new Error('Google Drive authentication failed. Please connect first.');
+                {
+                    const isAuthenticated = await authManager.ensureAuthenticated();
+                    if (!isAuthenticated) {
+                        throw new Error('Google Drive authentication failed. Please connect first.');
+                    }
+                    await gDriveService.syncMetadataWithDrive();
+                    return await this.getUserBooks(onCoverReady);
                 }
-                await gDriveService.syncMetadataWithDrive();
-                return await this.getUserBooks(onCoverReady);
 
             case 'microsoft':
                 // TODO: Implement OneDrive sync
@@ -937,11 +924,11 @@ class BookMetadataService {
                 appLog.debug('✅ Settings saved to Google Drive successfully');
                 return true;
             } else {
-                console.warn('⚠️ Failed to save settings to Google Drive');
+                appLog.warn('Failed to save settings to Google Drive');
                 return false;
             }
         } catch (error) {
-            console.error('Error saving settings to Google Drive:', error);
+            appLog.error('Error saving settings to Google Drive:', error);
             return false;
         }
     }
@@ -949,40 +936,25 @@ class BookMetadataService {
     /**
      * Load user settings from Google Drive settings.json file
      */
-    async loadSettings(): Promise<any | null> {
-        appLog.debug('Loading settings from Google Drive settings.json...');
+	    async loadSettings(): Promise<any | null> {
+	        appLog.debug('Loading settings from Google Drive settings.json...');
 
-        try {
-            // CRITICAL: Check Clerk authentication first
-            if (typeof window !== 'undefined' && window.Clerk) {
-                const clerkUser = window.Clerk.user;
-                const isClerkSignedIn = window.Clerk.session !== null;
-                
-                if (!clerkUser || !isClerkSignedIn) {
-                    appLog.debug('loadSettings: Clerk user not authenticated, skipping Google Drive access');
-                    return null;
-                }
-            } else {
-                appLog.debug('loadSettings: Clerk not available, skipping Google Drive access');
-                return null;
-            }
+	        try {
+	            if (!gDriveService.isSignedIn()) {
+	                appLog.debug('Cannot load settings: Google Drive not connected');
+	                return null;
+	            }
 
-            const isAuthenticated = await authManager.ensureAuthenticated();
-            if (!isAuthenticated) {
-                appLog.debug('Cannot load settings: Google Drive authentication failed');
-                return null;
-            }
-
-            const settings = await gDriveService.loadSettings();
-            if (settings) {
-                appLog.debug('✅ Settings loaded from Google Drive successfully');
+	            const settings = await gDriveService.loadSettings();
+	            if (settings) {
+	                appLog.debug('✅ Settings loaded from Google Drive successfully');
                 return settings;
             } else {
                 appLog.debug('ℹ️ No settings found in Google Drive');
                 return null;
             }
         } catch (error) {
-            console.error('Error loading settings from Google Drive:', error);
+            appLog.error('Error loading settings from Google Drive:', error);
             return null;
         }
     }
@@ -1137,9 +1109,11 @@ class BookMetadataService {
         switch (provider) {
             case 'google':
                 appLog.debug('📁 [StorageService] Calling gDriveService.getFolders()...');
-                const folders = await gDriveService.getFolders();
-                appLog.debug('📁 [StorageService] gDriveService.getFolders() returned:', folders.length, 'folders');
-                return folders;
+                {
+                    const folders = await gDriveService.getFolders();
+                    appLog.debug('📁 [StorageService] gDriveService.getFolders() returned:', folders.length, 'folders');
+                    return folders;
+                }
             case 'microsoft':
                 throw new Error('OneDrive folder retrieval not yet implemented');
             case 'apple':

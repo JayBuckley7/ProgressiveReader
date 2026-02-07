@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookMetadata, Folder } from '~/types';
 import { BookCardHover } from './BookCardHover';
+import { appLog } from '@shared/appLog';
 
 interface FolderViewProps {
   books: BookMetadata[];
@@ -67,7 +68,7 @@ export function FolderView({
 
     // FALLBACK: If we have books with folder IDs but no folder metadata, create virtual folders
     if (folders.length === 0 && books.some(book => book.folderId)) {
-      console.warn('[FolderView] 🚨 FALLBACK: Books have folder IDs but no folder metadata found');
+      appLog.warn('[FolderView] Fallback: books have folder IDs but no folder metadata found');
       // Group books by their folder IDs and create virtual folders
       const folderGroups = books.reduce((acc, book) => {
         if (book.folderId) {

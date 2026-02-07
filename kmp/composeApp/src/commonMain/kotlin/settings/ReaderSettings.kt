@@ -16,7 +16,14 @@ data class ReaderSettings(
     val jpdbApiKey: String? = null,
     val jpdbHighlightEnabled: Boolean = false,
     val translationTargetLang: String = "English",
+    // Mix Japanese: swap in known JP words while reading English.
+    val mixEnabled: Boolean = false,
+    // 0..1 probability to swap an eligible gloss occurrence.
+    val mixAggression: Float = 0.25f,
+    // Convenience: turn on JPDB highlighting when mix mode is enabled (so swapped words are tappable).
+    val mixAutoEnableHighlight: Boolean = true,
+    // Back up the mirror snapshot as `jpdb_mirror_v1.json` in the Drive app folder.
+    val mixBackupMirrorToDrive: Boolean = true,
 )
-
 
 

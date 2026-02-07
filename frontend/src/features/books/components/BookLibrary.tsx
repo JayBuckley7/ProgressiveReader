@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { SettingsModal } from "@shared/components/SettingsModal";
-import { BookCardHover } from "./BookCardHover";
 import { FolderManager } from "./FolderManager";
 import { FolderView } from "./FolderView";
 import { TokenStatusWarning } from "@shared/components/TokenStatusWarning";
@@ -115,16 +114,14 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     }
   };
 
-  const {
-    books,
-    folders,
-    isAuthenticated,
-    signIn,
-    uploadBook,
-    deleteBook,
-    updateBookCover,
-    openCloudFolder,
-    syncBooks,
+	  const {
+	    books,
+	    folders,
+	    isAuthenticated,
+	    deleteBook,
+	    updateBookCover,
+	    openCloudFolder,
+	    syncBooks,
 
     createFolder,
     updateFolder,

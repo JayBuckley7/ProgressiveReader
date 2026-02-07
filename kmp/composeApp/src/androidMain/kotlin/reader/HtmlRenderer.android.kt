@@ -119,6 +119,15 @@ actual fun HtmlContent(
             a.jpdb-word { color: inherit; text-decoration: none; }
             a.jpdb-word:active { text-decoration: underline; outline: 1px solid rgba(255,255,255,0.22); }
 
+            /* Grammar underlines (mobile-only; web is viewport-throttled via JS) */
+            a.jpdb-word.pr-grammar-hit--candidate {
+                text-decoration-line: underline;
+                text-decoration-style: dotted;
+                text-decoration-color: rgba(245, 158, 11, 0.85);
+                text-decoration-thickness: 2px;
+                text-underline-offset: 0.18em;
+            }
+
             .jpdb-word.locked { color: rgb(119, 119, 119); }
             .jpdb-word.suspended { color: rgb(119, 119, 119); }
             .jpdb-word.blacklisted { color: rgb(119, 119, 119); }

@@ -115,7 +115,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
     try {
       await onDeleteBook?.(book.id as string);
     } catch (error) {
-      console.error('Error deleting book:', error);
+      appLog.error('[BookCard] Error deleting book', error);
     } finally {
       setIsDeleting(false);
     }
@@ -146,7 +146,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
         fileInputRef.current.value = '';
       }
     } catch (error) {
-      console.error('Error updating cover:', error);
+      appLog.error('[BookCard] Error updating cover', error);
     } finally {
       setIsUpdatingCover(false);
     }
@@ -356,4 +356,3 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
     </div>
   );
 }
-

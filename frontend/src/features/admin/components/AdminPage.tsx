@@ -97,7 +97,7 @@ export function AdminPage() {
       const data = await searchKanjiApi(kanjiQuery.trim());
       setKanjiResults(data.results || []);
     } catch (error) {
-      console.error("Error searching kanji:", error);
+      appLog.error("[AdminPage] Error searching kanji", error);
       setKanjiResults([]);
     } finally {
       setKanjiLoading(false);
@@ -117,7 +117,7 @@ export function AdminPage() {
       setKanjiResults(prev => prev.map(k => k.kanji === selectedKanji.kanji ? updatedKanji : k));
       setNewJlptLevel(null);
     } catch (error) {
-      console.error("Error updating kanji:", error);
+      appLog.error("[AdminPage] Error updating kanji", error);
     } finally {
       setKanjiLoading(false);
     }

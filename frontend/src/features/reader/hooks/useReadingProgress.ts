@@ -74,7 +74,7 @@ export function useReadingProgress({
       try {
         const progress = await getReadingProgress(bookId);
         if (progress) {
-          appLog.debug('📖 Restoring reading progress:', progress);
+          appLog.debug('[useReadingProgress] Restoring reading progress:', progress);
           
           if (bookMetadata.fileType === 'pdf' && progress.currentPage) {
             // For PDFs, restore the page (only if not set via URL)
@@ -105,7 +105,7 @@ export function useReadingProgress({
           }
         }
       } catch (error) {
-        console.error('Failed to load reading progress:', error);
+        appLog.error('[useReadingProgress] Failed to load reading progress', error);
       } finally {
         setProgressLoaded(true);
       }

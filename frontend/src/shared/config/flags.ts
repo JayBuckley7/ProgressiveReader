@@ -27,7 +27,9 @@ function getLocal(): Partial<FlagMap> {
 function setLocal(next: Partial<FlagMap>) {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
-  } catch {}
+  } catch {
+    // ignore (private mode / disabled storage)
+  }
 }
 
 let cache: FlagMap | null = null;
@@ -78,5 +80,4 @@ export function setFlag(name: FlagName, value: boolean): void {
 export function allFlags(): FlagMap {
   return loadFlags();
 }
-
 

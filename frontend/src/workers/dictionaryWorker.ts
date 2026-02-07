@@ -252,22 +252,26 @@ self.onmessage = async (event) => {
         break;
         
       case 'LOOKUP_TERM':
-        const results = lookupTerm(message.payload.term);
-        postMessage({
-          id: message.id,
-          type: 'SUCCESS',
-          payload: { results }
-        } as WorkerResponse);
-        break;
+        {
+          const results = lookupTerm(message.payload.term);
+          postMessage({
+            id: message.id,
+            type: 'SUCCESS',
+            payload: { results }
+          } as WorkerResponse);
+          break;
+        }
         
       case 'LOOKUP_BATCH':
-        const batchResults = lookupTermsBatch(message.payload.terms);
-        postMessage({
-          id: message.id,
-          type: 'SUCCESS',
-          payload: { results: batchResults }
-        } as WorkerResponse);
-        break;
+        {
+          const batchResults = lookupTermsBatch(message.payload.terms);
+          postMessage({
+            id: message.id,
+            type: 'SUCCESS',
+            payload: { results: batchResults }
+          } as WorkerResponse);
+          break;
+        }
         
       default:
         postMessage({

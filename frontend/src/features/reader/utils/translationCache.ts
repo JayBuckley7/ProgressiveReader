@@ -61,7 +61,7 @@ export const translationCache = new TranslationCache(1000);
 // Utility functions for cache management
 export const clearTranslationCache = () => {
   translationCache.clear();
-  appLog.debug('🗑️ Translation cache cleared');
+  appLog.debug('Translation cache cleared');
 };
 
 export const getTranslationCacheStats = () => {
@@ -73,8 +73,7 @@ const AUTO_CLEAR_THRESHOLD = 2000;
 export const checkCacheSize = () => {
   const stats = translationCache.getStats();
   if (stats.size > AUTO_CLEAR_THRESHOLD) {
-    console.warn(`⚠️ Cache size (${stats.size}) exceeded threshold (${AUTO_CLEAR_THRESHOLD}), clearing...`);
+    appLog.warn(`Cache size (${stats.size}) exceeded threshold (${AUTO_CLEAR_THRESHOLD}); clearing.`);
     translationCache.clear();
   }
 };
-

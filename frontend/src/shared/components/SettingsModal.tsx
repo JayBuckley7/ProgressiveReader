@@ -229,7 +229,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 	    setCloudAction("save");
 	    try {
 	      const settingsToSave = createSettingsObject();
-	      appLog.debug('🔍 [SettingsModal] Saving comprehensive settings to Google Drive:', settingsToSave);
+	      appLog.debug('[SettingsModal] Saving comprehensive settings to Google Drive', settingsToSave);
 	      const success = await saveSettings(settingsToSave);
       if (success) {
         toast.success(t('settings.toasts.save.success'));
@@ -237,7 +237,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
         toast.error(t('settings.toasts.save.failure'));
       }
 	    } catch (error) {
-	      console.error('Cloud save error:', error);
+	      appLog.error('[SettingsModal] Cloud save error', error);
 	      toast.error(t('settings.toasts.save.failure'));
 	    } finally {
 	      setIsCloudLoading(false);
@@ -256,7 +256,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
 	    setCloudAction("load");
 	    try {
 	      const cloudSettings = await loadSettings();
-	      appLog.debug('🔍 [SettingsModal] Loaded settings from Google Drive:', cloudSettings);
+	      appLog.debug('[SettingsModal] Loaded settings from Google Drive', cloudSettings);
 	      if (cloudSettings && Object.keys(cloudSettings).length > 0) {
         applyImportedSettings(cloudSettings);
         toast.success(t('settings.toasts.load.success'));
@@ -265,7 +265,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
       }
 	    } catch (error: any) {
 	      if (error.message !== 'UNAUTHORIZED') {
-	        console.error('Cloud load error:', error);
+	        appLog.error('[SettingsModal] Cloud load error', error);
 	        toast.error(t('settings.toasts.load.failure'));
 	      }
 	    } finally {
@@ -675,7 +675,7 @@ export function SettingsModal({ onClose, onTranslate, translating }: {
                             // Optional: Force a page reload to ensure all settings are applied
                             // window.location.reload();
                           } catch (error) {
-                            console.error('Error importing settings:', error);
+                            appLog.error('[SettingsModal] Error importing settings', error);
                             toast.error(t('settings.toasts.import.failure'));
                           }
                         };

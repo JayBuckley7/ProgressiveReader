@@ -1,9 +1,9 @@
 import { CardState, Token } from '~/types';
 import { nonNull } from '@shared/utils/util';
-import { jsxCreateElement as createElement } from '@shared/utils/jsx';
 import { JpdbWord } from './word';
 import { getCurrentConfig } from './api-adapter';
 import { getJlptLevel, getWordKanjiInfo } from '@shared/services/jlptService';
+import { appLog } from '@shared/appLog';
 
 // Global WeakMap for storing JPDB data when elements are not extensible
 declare global {
@@ -65,7 +65,7 @@ export function displayCategory(node: Node): 'text' | 'ruby' | 'ruby-text' | 'in
         if (display[0] === 'contents') return 'inline';
         if (display[0] === 'run-in') return 'block';
 
-        console.warn(`Unknown display value ${display.join(' ')}, please report this!`);
+        appLog.warn(`Unknown display value ${display.join(' ')}, please report this!`);
         return 'none';
     } else {
         return 'none';
@@ -103,7 +103,7 @@ function splitFragment(fragments: Fragment[], fragmentIndex: number, splitOffset
 function insertBefore(newNode: Node, referenceNode: Node) {
     // Ensure newNode is actually a proper DOM Node
     if (!(newNode instanceof Node)) {
-        console.error('insertBefore: newNode is not a proper DOM Node:', newNode);
+        appLog.error('insertBefore: newNode is not a proper DOM Node:', newNode);
         throw new TypeError('Failed to execute insertBefore: parameter 1 is not of type Node.');
     }
     nonNull(referenceNode.parentElement).insertBefore(newNode, referenceNode);
@@ -274,7 +274,7 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 try {
                     onWordHoverStart(event as MouseEvent);
                 } catch (error) {
-                    console.error('Error in onWordHoverStart:', error);
+                    appLog.error('Error in onWordHoverStart:', error);
                 }
             });
             wrapper.addEventListener('mouseleave', (event: Event) => {
@@ -288,7 +288,7 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 try {
                     onWordHoverStart(event as MouseEvent);
                 } catch (error) {
-                    console.error('Error in onWordHoverStart:', error);
+                    appLog.error('Error in onWordHoverStart:', error);
                 }
             });
 

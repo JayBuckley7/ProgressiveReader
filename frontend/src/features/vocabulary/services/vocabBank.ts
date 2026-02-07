@@ -1,5 +1,6 @@
 import { Card, CardState, Token } from '~/types';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
+import { appLog } from '@shared/appLog';
 
 export interface VocabWord {
   spelling: string;
@@ -20,7 +21,7 @@ class VocabBank {
           this.words = data;
         }
       } catch (e) {
-        console.error('Failed to load vocabulary:', e);
+        appLog.error('[vocabBank] Failed to load vocabulary', e);
       }
       this.loaded = true;
     }
@@ -32,7 +33,7 @@ class VocabBank {
     try {
       await bookMetadataService.saveVocabulary(this.words);
     } catch (e) {
-      console.error('Failed to save vocabulary:', e);
+      appLog.error('[vocabBank] Failed to save vocabulary', e);
     }
   }
 
@@ -94,4 +95,3 @@ class VocabBank {
 }
 
 export const vocabBank = new VocabBank();
-

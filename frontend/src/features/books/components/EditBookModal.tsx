@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BookMetadata } from '~/types';
 import { toast } from 'sonner';
+import { appLog } from '@shared/appLog';
 
 interface EditBookModalProps {
   book: BookMetadata;
@@ -31,7 +32,7 @@ export function EditBookModal({ book, onClose, onSave }: EditBookModalProps) {
       toast.success('Book details updated successfully');
       onClose();
     } catch (error) {
-      console.error('Error updating book:', error);
+      appLog.error('[EditBookModal] Error updating book', error);
       toast.error('Failed to update book details');
     } finally {
       setIsSaving(false);

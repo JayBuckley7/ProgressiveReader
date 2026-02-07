@@ -5,6 +5,7 @@ import { initialize as initializeJpdb, highlightContent, removeJpdbHighlighting 
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useTranslation } from "react-i18next";
+import { appLog } from "@shared/appLog";
 
 // Simple sanitizer to wrap plain text in paragraphs
 function textToHtml(text: string): string {
@@ -106,7 +107,7 @@ export default function ClipboardReader() {
       }
     } catch (err: any) {
       // Permission or focus errors are common; only surface once
-      console.warn("Clipboard read failed:", err);
+      appLog.warn("[ClipboardReader] Clipboard read failed", err);
     }
   }, [ingestText]);
 
@@ -159,7 +160,7 @@ export default function ClipboardReader() {
       if (!contentRef.current || !hasAnyContent) return;
       const el = contentRef.current;
       const frame = requestAnimationFrame(() => {
-        highlightContent(el).catch((e) => console.error("highlightContent error", e));
+        highlightContent(el).catch((e) => appLog.error("[ClipboardReader] highlightContent error", e));
       });
       return () => cancelAnimationFrame(frame);
     } else if (contentRef.current) {
@@ -264,7 +265,7 @@ export default function ClipboardReader() {
         toast.success(t('clipboard.toasts.saved'));
       }
     } catch (e: any) {
-      console.error('Save to library failed:', e);
+      appLog.error("[ClipboardReader] Save to library failed", e);
       toast.error(t('clipboard.toasts.saveFailed'));
     }
   };
@@ -414,5 +415,4 @@ export default function ClipboardReader() {
     </div>
   );
 }
-
 

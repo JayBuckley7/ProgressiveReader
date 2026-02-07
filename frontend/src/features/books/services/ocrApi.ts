@@ -58,7 +58,7 @@ export async function processPDFWithOCR(
 
   let buffer = '';
   let filename = file.name;
-  let pdfBytes: Uint8Array[] = [];
+  const pdfBytes: Uint8Array[] = [];
   let isReceivingPDF = false;
   let totalBytesReceived = 0;
 
@@ -120,7 +120,7 @@ export async function processPDFWithOCR(
                 throw e;
               }
               // Otherwise, log and continue (might be malformed JSON)
-              console.warn('Failed to parse SSE message:', jsonStr.substring(0, 200), '...', e);
+              appLog.warn('Failed to parse SSE message', jsonStr.substring(0, 200), e);
             }
           }
         }
@@ -154,7 +154,7 @@ export async function processPDFWithOCR(
             if (e instanceof Error && e.message.includes('OCR processing failed')) {
               throw e;
             }
-            console.warn('Failed to parse final SSE message:', jsonStr, e);
+            appLog.warn('Failed to parse final SSE message', jsonStr, e);
           }
         }
       }
@@ -173,7 +173,7 @@ export async function processPDFWithOCR(
   appLog.debug(`[OCR] Total stream bytes received: ${(totalBytesReceived / (1024 * 1024)).toFixed(2)}MB`);
   
   if (totalLength > totalBytesReceived * 1.1) {
-    console.warn(`[OCR] WARNING: PDF size (${totalLength}) is larger than bytes received (${totalBytesReceived}) - this shouldn't happen!`);
+    appLog.warn(`[OCR] PDF size (${totalLength}) is larger than bytes received (${totalBytesReceived}) - unexpected.`);
   }
   
   const combined = new Uint8Array(totalLength);
@@ -186,4 +186,3 @@ export async function processPDFWithOCR(
   const ocrBlob = new Blob([combined], { type: 'application/pdf' });
   return new File([ocrBlob], filename, { type: 'application/pdf' });
 }
-

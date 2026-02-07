@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { fetchUserDecks } from "@features/vocabulary/services/vocabApi";
 import type { Deck } from "~/types/api";
+import { appLog } from "@shared/appLog";
 
 interface DeckSelectorProps {
   onDeckSelect?: (deck: Deck) => void;
@@ -22,7 +23,7 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
       setIsOpen(true);
       toast.success(`Found ${fetchedDecks.length} decks`);
     } catch (error: any) {
-      console.error('Error fetching decks:', error);
+      appLog.error('[DeckSelector] Error fetching decks', error);
       const message = String(error?.message || '');
       if (message.includes('JPDB API key not configured')) {
         toast.error('JPDB API key not configured. Add it in Settings → Highlight.');

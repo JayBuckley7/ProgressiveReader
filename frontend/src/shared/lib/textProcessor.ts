@@ -1,3 +1,5 @@
+import { appLog } from '@shared/appLog';
+
 export interface ChapterTitle {
   index: number;
   title: string;
@@ -29,7 +31,7 @@ export class TextProcessorWrapper {
       this.isReady = true;
       return true;
     } catch (err) {
-      console.error('TextProcessorWrapper: Error loading book:', err);
+      appLog.error('TextProcessorWrapper: Error loading book:', err);
       this.isReady = false;
       return false;
     }
@@ -302,4 +304,3 @@ class TextProcessor {
     }));
   }
 }
-

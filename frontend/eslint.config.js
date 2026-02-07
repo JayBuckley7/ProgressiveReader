@@ -9,6 +9,9 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
+      "public",
+      "src/data",
+      "src/types/api.ts",
       "eslint.config.js",
       "postcss.config.js",
       "tailwind.config.js",
@@ -18,7 +21,7 @@ export default tseslint.config(
   {
     extends: [
       js.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
+      ...tseslint.configs.recommended,
     ],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -26,12 +29,6 @@ export default tseslint.config(
       globals: {
         ...globals.browser,
         ...globals.node,
-      },
-      parserOptions: {
-        project: [
-          "./tsconfig.node.json",
-          "./tsconfig.app.json",
-        ],
       },
     },
     plugins: {

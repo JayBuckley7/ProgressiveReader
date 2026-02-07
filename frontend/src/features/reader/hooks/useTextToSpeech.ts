@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSettings } from "@shared/contexts/SettingsContext";
+import { appLog } from "@shared/appLog";
 
 export function useTextToSpeech(contentRef: React.RefObject<HTMLDivElement | null>) {
   const { settings } = useSettings();
@@ -113,7 +114,7 @@ export function useTextToSpeech(contentRef: React.RefObject<HTMLDivElement | nul
         fallbackHighlightElRef.current = span;
       }
     } catch (err) {
-      console.warn('Unable to highlight range', err);
+      appLog.warn('Unable to highlight range', err);
     }
   };
 
@@ -178,7 +179,7 @@ export function useTextToSpeech(contentRef: React.RefObject<HTMLDivElement | nul
           }
         };
       } catch (err) {
-        console.warn('[tts] Boundary detection failed:', err);
+        appLog.warn('[tts] Boundary detection failed:', err);
         boundarySupportedRef.current = false;
         resolved = true;
         resolve(false);
@@ -353,4 +354,3 @@ export function useTextToSpeech(contentRef: React.RefObject<HTMLDivElement | nul
     handleCloseTtsModal,
   };
 }
-

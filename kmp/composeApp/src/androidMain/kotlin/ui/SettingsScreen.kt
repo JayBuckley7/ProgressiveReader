@@ -43,12 +43,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.progressivereader.kmp.drive.DriveJsonFileService
 import com.progressivereader.kmp.drive.DriveService
+import com.progressivereader.kmp.jpdbMirror.JpdbMirrorSnapshot
+import com.progressivereader.kmp.jpdbMirror.JpdbMirrorStore
+import com.progressivereader.kmp.jpdbMirror.JpdbMirrorSyncProgress
+import com.progressivereader.kmp.jpdbMirror.backupMirrorSnapshotToDrive
+import com.progressivereader.kmp.jpdbMirror.restoreMirrorSnapshotFromDrive
+import com.progressivereader.kmp.jpdbMirror.syncJpdbKnownMirror
 import com.progressivereader.kmp.reader.TranslationCache
 import com.progressivereader.kmp.settings.AppSettings
+import com.progressivereader.kmp.vocabulary.VocabularyService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -59,6 +72,7 @@ import kotlinx.serialization.json.Json
 private enum class SettingsTab(val label: String) {
     General("General"),
     Highlight("Highlight"),
+    Mix("Mix"),
     Sync("Sync"),
 }
 
@@ -74,6 +88,14 @@ private data class CloudSettingsJson(
     @SerialName("cacheTranslations") val cacheTranslations: Boolean? = null,
     @SerialName("cefrLevel") val cefrLevel: String? = null,
     @SerialName("cefr_level") val cefrLevelAlt: String? = null,
+    @SerialName("mix_enabled") val mixEnabled: Boolean? = null,
+    @SerialName("mixEnabled") val mixEnabledAlt: Boolean? = null,
+    @SerialName("mix_aggression") val mixAggression: Float? = null,
+    @SerialName("mixAggression") val mixAggressionAlt: Float? = null,
+    @SerialName("mix_auto_enable_highlight") val mixAutoEnableHighlight: Boolean? = null,
+    @SerialName("mixAutoEnableHighlight") val mixAutoEnableHighlightAlt: Boolean? = null,
+    @SerialName("mix_backup_mirror_to_drive") val mixBackupMirrorToDrive: Boolean? = null,
+    @SerialName("mixBackupMirrorToDrive") val mixBackupMirrorToDriveAlt: Boolean? = null,
 )
 
 @Serializable
@@ -87,6 +109,10 @@ private data class CloudSettingsJsonOut(
     @SerialName("fontSize") val fontSize: String? = null,
     @SerialName("cacheTranslations") val cacheTranslations: Boolean? = null,
     @SerialName("cefrLevel") val cefrLevel: String? = null,
+    @SerialName("mix_enabled") val mixEnabled: Boolean,
+    @SerialName("mix_aggression") val mixAggression: Float,
+    @SerialName("mix_auto_enable_highlight") val mixAutoEnableHighlight: Boolean,
+    @SerialName("mix_backup_mirror_to_drive") val mixBackupMirrorToDrive: Boolean,
     val lastUpdated: String,
     val version: String = "1.0",
 )
@@ -109,6 +135,10 @@ fun SettingsScreen(
     onUpdateReaderCefrLevel: (String) -> Unit,
     onUpdateReaderJpdbHighlightEnabled: (Boolean) -> Unit,
     onUpdateReaderTranslationTargetLang: (String) -> Unit,
+    onUpdateReaderMixEnabled: (Boolean) -> Unit,
+    onUpdateReaderMixAggression: (Float) -> Unit,
+    onUpdateReaderMixAutoEnableHighlight: (Boolean) -> Unit,
+    onUpdateReaderMixBackupMirrorToDrive: (Boolean) -> Unit,
     onOpenLogin: () -> Unit,
     onSignOut: () -> Unit,
     onResetDriveOverrides: () -> Unit,
@@ -128,6 +158,18 @@ fun SettingsScreen(
 
     val driveService = remember(sessionJwt) { DriveService(getSessionToken = { sessionJwt }) }
     val signedIn = !sessionJwt.isNullOrBlank()
+    val isOnline = rememberIsOnline()
+    val appContext = LocalContext.current.applicationContext
+
+    val driveJsonService =
+        remember(sessionJwt, settings.driveFolderId) {
+            DriveJsonFileService(
+                driveService = driveService,
+                getDriveFolderOverride = { settings.driveFolderId },
+            )
+        }
+    val vocabularyService = remember(sessionJwt) { VocabularyService(getSessionToken = { sessionJwt }) }
+    val mirrorStore = remember { JpdbMirrorStore(appContext) }
 
     var activeTab by remember { mutableStateOf(SettingsTab.General) }
 
@@ -145,6 +187,11 @@ fun SettingsScreen(
     var cefrLevel by remember { mutableStateOf(settings.reader.cefrLevel) }
     var highlightEnabled by remember { mutableStateOf(settings.reader.jpdbHighlightEnabled) }
 
+    var mixEnabled by remember { mutableStateOf(settings.reader.mixEnabled) }
+    var mixAggression by remember { mutableStateOf(settings.reader.mixAggression) }
+    var mixAutoEnableHighlight by remember { mutableStateOf(settings.reader.mixAutoEnableHighlight) }
+    var mixBackupMirrorToDrive by remember { mutableStateOf(settings.reader.mixBackupMirrorToDrive) }
+
     var cloudFolderName by remember { mutableStateOf<String?>(null) }
     var cloudFolderId by remember { mutableStateOf<String?>(null) }
     var cloudStatus by remember { mutableStateOf<String?>(null) }
@@ -154,6 +201,59 @@ fun SettingsScreen(
 
     var openAiSaveJob by remember { mutableStateOf<Job?>(null) }
     var jpdbSaveJob by remember { mutableStateOf<Job?>(null) }
+
+    var mirrorSnapshot by remember { mutableStateOf<JpdbMirrorSnapshot?>(null) }
+    var mirrorBusy by remember { mutableStateOf(false) }
+    var mirrorProgress by remember { mutableStateOf<JpdbMirrorSyncProgress?>(null) }
+    var mirrorError by remember { mutableStateOf<String?>(null) }
+    var mirrorRestoreAttempted by remember { mutableStateOf(false) }
+
+    suspend fun reloadMirrorSnapshot() {
+        mirrorSnapshot = mirrorStore.loadSnapshot()
+    }
+
+    LaunchedEffect(Unit) {
+        runCatching { reloadMirrorSnapshot() }
+    }
+
+    LaunchedEffect(activeTab) {
+        if (activeTab != SettingsTab.Mix) {
+            mirrorRestoreAttempted = false
+            return@LaunchedEffect
+        }
+        runCatching { reloadMirrorSnapshot() }
+    }
+
+    // Best-effort: auto-restore from Drive if enabled and we have no local mirror (web parity).
+    LaunchedEffect(activeTab, signedIn, isOnline, mirrorSnapshot, mixBackupMirrorToDrive, mirrorBusy) {
+        if (activeTab != SettingsTab.Mix) return@LaunchedEffect
+        if (mirrorBusy) return@LaunchedEffect
+        if (mirrorRestoreAttempted) return@LaunchedEffect
+        if (mirrorSnapshot != null) return@LaunchedEffect
+        if (!mixBackupMirrorToDrive) return@LaunchedEffect
+        if (!signedIn || !isOnline) return@LaunchedEffect
+
+        mirrorRestoreAttempted = true
+        mirrorBusy = true
+        mirrorError = null
+        mirrorProgress = null
+
+        val restored =
+            runCatching {
+                restoreMirrorSnapshotFromDrive(
+                    driveJson = driveJsonService,
+                    onProgress = { p -> mirrorProgress = p },
+                )
+            }.getOrNull()
+        if (restored != null) {
+            runCatching { mirrorStore.saveSnapshot(restored) }
+            mirrorSnapshot = restored
+            snackbarHostState.showSnackbar("Restored JPDB mirror from Google Drive.")
+        }
+
+        mirrorBusy = false
+        mirrorProgress = null
+    }
 
     LaunchedEffect(settings) {
         theme = settings.reader.theme
@@ -167,6 +267,10 @@ fun SettingsScreen(
         jpdbApiKey = settings.reader.jpdbApiKey ?: ""
         cefrLevel = settings.reader.cefrLevel
         highlightEnabled = settings.reader.jpdbHighlightEnabled
+        mixEnabled = settings.reader.mixEnabled
+        mixAggression = settings.reader.mixAggression
+        mixAutoEnableHighlight = settings.reader.mixAutoEnableHighlight
+        mixBackupMirrorToDrive = settings.reader.mixBackupMirrorToDrive
     }
 
     fun DriveService.DriveFile.isFolder(): Boolean =
@@ -275,6 +379,31 @@ fun SettingsScreen(
                 onUpdateReaderFontSizeSp(clamped)
             }
 
+            val mixEnabledRaw = payload.mixEnabled ?: payload.mixEnabledAlt
+            if (mixEnabledRaw != null) {
+                mixEnabled = mixEnabledRaw
+                onUpdateReaderMixEnabled(mixEnabledRaw)
+            }
+
+            val mixAggRaw = payload.mixAggression ?: payload.mixAggressionAlt
+            if (mixAggRaw != null) {
+                val clamped = mixAggRaw.coerceIn(0f, 1f)
+                mixAggression = clamped
+                onUpdateReaderMixAggression(clamped)
+            }
+
+            val mixAutoRaw = payload.mixAutoEnableHighlight ?: payload.mixAutoEnableHighlightAlt
+            if (mixAutoRaw != null) {
+                mixAutoEnableHighlight = mixAutoRaw
+                onUpdateReaderMixAutoEnableHighlight(mixAutoRaw)
+            }
+
+            val mixBackupRaw = payload.mixBackupMirrorToDrive ?: payload.mixBackupMirrorToDriveAlt
+            if (mixBackupRaw != null) {
+                mixBackupMirrorToDrive = mixBackupRaw
+                onUpdateReaderMixBackupMirrorToDrive(mixBackupRaw)
+            }
+
             cloudLastSync = "Loaded from Drive"
             cloudStatus = "Synced settings from Drive."
             if (manual) snackbarHostState.showSnackbar("Settings loaded from Google Drive.")
@@ -305,6 +434,10 @@ fun SettingsScreen(
                     fontSize = fontSizeSp.toInt().toString(),
                     cacheTranslations = cacheTranslations,
                     cefrLevel = cefrLevel.trim().ifBlank { "B1" },
+                    mixEnabled = mixEnabled,
+                    mixAggression = mixAggression.coerceIn(0f, 1f),
+                    mixAutoEnableHighlight = mixAutoEnableHighlight,
+                    mixBackupMirrorToDrive = mixBackupMirrorToDrive,
                     lastUpdated = TranslationCache.isoNowUtc(),
                 )
             val bytes = json.encodeToString(CloudSettingsJsonOut.serializer(), payload).toByteArray(Charsets.UTF_8)
@@ -577,6 +710,307 @@ fun SettingsScreen(
                                     )
 
                                     AppMutedText("Used when translating with CEFR targeting enabled.")
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsTab.Mix -> {
+                        item {
+                            val meta = mirrorSnapshot?.meta
+                            val lastSynced =
+                                meta?.syncedAtMs?.let { ms ->
+                                    runCatching { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(ms)) }.getOrNull()
+                                } ?: "Not synced"
+                            val knownCountLabel =
+                                meta?.knownEntryCount?.let { c ->
+                                    " · Known words: ${String.format(Locale.getDefault(), "%,d", c)}"
+                                }.orEmpty()
+                            val stale =
+                                meta?.syncedAtMs?.let { ms ->
+                                    val staleAfterMs = 24L * 60L * 60L * 1000L
+                                    System.currentTimeMillis() - ms > staleAfterMs
+                                } == true
+
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Text("Mix Japanese", style = MaterialTheme.typography.titleMedium)
+                                    AppMutedText(
+                                        "Swap in known JP words while reading English. Mix mode is disabled for PDFs and while translation is enabled.",
+                                    )
+
+                                    Text("Mirror: $lastSynced$knownCountLabel", style = MaterialTheme.typography.bodyMedium)
+                                    if (stale) {
+                                        AppMutedText("Sync recommended (mirror is older than 24h).")
+                                    }
+                                    if (meta != null && meta.sourceDecks.isNotEmpty()) {
+                                        AppMutedText("Decks: ${meta.sourceDecks.size}")
+                                    }
+
+                                    mirrorProgress?.let { p ->
+                                        val msg = p.message ?: p.phase.toString()
+                                        val suffix =
+                                            if (p.loaded != null && p.total != null) {
+                                                " (${p.loaded}/${p.total})"
+                                            } else {
+                                                ""
+                                            }
+                                        AppMutedText(msg + suffix)
+                                    }
+
+                                    mirrorError?.let { msg ->
+                                        Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                    }
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        AppPrimaryButton(
+                                            text = "Sync",
+                                            enabled = !mirrorBusy,
+                                            onClick = {
+                                                scope.launch {
+                                                    if (!signedIn) {
+                                                        snackbarHostState.showSnackbar("Sign in to sync JPDB mirror.")
+                                                        return@launch
+                                                    }
+                                                    if (!isOnline) {
+                                                        snackbarHostState.showSnackbar("Sync requires internet.")
+                                                        return@launch
+                                                    }
+                                                    val key = jpdbApiKey.trim()
+                                                    if (key.isBlank()) {
+                                                        snackbarHostState.showSnackbar("Add a JPDB API key in Highlight settings.")
+                                                        activeTab = SettingsTab.Highlight
+                                                        return@launch
+                                                    }
+
+                                                    mirrorBusy = true
+                                                    mirrorError = null
+                                                    mirrorProgress = null
+                                                    try {
+                                                        val snapshot =
+                                                            syncJpdbKnownMirror(
+                                                                vocabularyService = vocabularyService,
+                                                                jpdbApiKey = key,
+                                                                onProgress = { p -> mirrorProgress = p },
+                                                            )
+                                                        if (snapshot == null) {
+                                                            mirrorError = "Sync failed."
+                                                            snackbarHostState.showSnackbar("JPDB sync failed.")
+                                                            return@launch
+                                                        }
+
+                                                        mirrorStore.saveSnapshot(snapshot)
+                                                        mirrorSnapshot = snapshot
+
+                                                        if (mixBackupMirrorToDrive) {
+                                                            val ok =
+                                                                backupMirrorSnapshotToDrive(
+                                                                    driveJson = driveJsonService,
+                                                                    snapshot = snapshot,
+                                                                    onProgress = { p -> mirrorProgress = p },
+                                                                )
+                                                            if (!ok) {
+                                                                snackbarHostState.showSnackbar("Mirror synced. Drive backup failed.")
+                                                            } else {
+                                                                snackbarHostState.showSnackbar("Mirror synced.")
+                                                            }
+                                                        } else {
+                                                            snackbarHostState.showSnackbar("Mirror synced.")
+                                                        }
+                                                    } catch (t: Throwable) {
+                                                        val msg = t.message ?: "Sync failed."
+                                                        mirrorError = msg
+                                                        snackbarHostState.showSnackbar(msg)
+                                                    } finally {
+                                                        mirrorBusy = false
+                                                        mirrorProgress = null
+                                                    }
+                                                }
+                                            },
+                                            icon = { Icon(Icons.Outlined.CloudDownload, contentDescription = null) },
+                                        )
+
+                                        AppOutlineButton(
+                                            text = "Restore",
+                                            enabled = !mirrorBusy && signedIn && isOnline,
+                                            onClick = {
+                                                scope.launch {
+                                                    if (!signedIn) {
+                                                        snackbarHostState.showSnackbar("Sign in to restore from Drive.")
+                                                        return@launch
+                                                    }
+                                                    if (!isOnline) {
+                                                        snackbarHostState.showSnackbar("Restore requires internet.")
+                                                        return@launch
+                                                    }
+
+                                                    mirrorBusy = true
+                                                    mirrorError = null
+                                                    mirrorProgress = null
+                                                    try {
+                                                        val restored =
+                                                            restoreMirrorSnapshotFromDrive(
+                                                                driveJson = driveJsonService,
+                                                                onProgress = { p -> mirrorProgress = p },
+                                                            )
+                                                        if (restored == null) {
+                                                            snackbarHostState.showSnackbar("No mirror backup found in Drive.")
+                                                            return@launch
+                                                        }
+                                                        mirrorStore.saveSnapshot(restored)
+                                                        mirrorSnapshot = restored
+                                                        snackbarHostState.showSnackbar("Mirror restored from Drive.")
+                                                    } catch (t: Throwable) {
+                                                        val msg = t.message ?: "Restore failed."
+                                                        mirrorError = msg
+                                                        snackbarHostState.showSnackbar(msg)
+                                                    } finally {
+                                                        mirrorBusy = false
+                                                        mirrorProgress = null
+                                                    }
+                                                }
+                                            },
+                                            icon = { Icon(Icons.Outlined.CloudUpload, contentDescription = null) },
+                                        )
+                                    }
+
+                                    AppOutlineButton(
+                                        text = "Clear local mirror",
+                                        enabled = !mirrorBusy,
+                                        onClick = {
+                                            scope.launch {
+                                                mirrorBusy = true
+                                                mirrorError = null
+                                                mirrorProgress = null
+                                                try {
+                                                    mirrorStore.clear()
+                                                    mirrorSnapshot = null
+                                                    if (mixEnabled) {
+                                                        mixEnabled = false
+                                                        onUpdateReaderMixEnabled(false)
+                                                    }
+                                                    snackbarHostState.showSnackbar("Cleared local JPDB mirror.")
+                                                } catch (t: Throwable) {
+                                                    val msg = t.message ?: "Failed to clear mirror."
+                                                    mirrorError = msg
+                                                    snackbarHostState.showSnackbar(msg)
+                                                } finally {
+                                                    mirrorBusy = false
+                                                    mirrorProgress = null
+                                                }
+                                            }
+                                        },
+                                        icon = { Icon(Icons.Outlined.SettingsBackupRestore, contentDescription = null) },
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            val canEnable = mirrorSnapshot != null
+                            val aggressionPercent = (mixAggression.coerceIn(0f, 1f) * 100f).toDouble().roundToInt()
+
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Text("Mix settings", style = MaterialTheme.typography.titleMedium)
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text("Enable mix mode", style = MaterialTheme.typography.bodyMedium)
+                                            AppMutedText(
+                                                if (!canEnable) {
+                                                    "Sync JPDB knowledge to enable mix mode."
+                                                } else {
+                                                    "Replaces eligible nouns with known Japanese."
+                                                },
+                                            )
+                                        }
+                                        Switch(
+                                            checked = mixEnabled,
+                                            enabled = canEnable || mixEnabled,
+                                            onCheckedChange = { next ->
+                                                if (next && !canEnable) {
+                                                    scope.launch { snackbarHostState.showSnackbar("Sync JPDB mirror first.") }
+                                                } else {
+                                                    mixEnabled = next
+                                                    onUpdateReaderMixEnabled(next)
+                                                }
+                                            },
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Text("Aggression", style = MaterialTheme.typography.bodyMedium)
+                                        Text("$aggressionPercent%", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Slider(
+                                        value = mixAggression.coerceIn(0f, 1f),
+                                        onValueChange = { v -> mixAggression = v.coerceIn(0f, 1f) },
+                                        valueRange = 0f..1f,
+                                        steps = 99,
+                                        enabled = mixEnabled,
+                                        onValueChangeFinished = { onUpdateReaderMixAggression(mixAggression) },
+                                    )
+                                    AppMutedText("Higher = more swapped known words. Ambiguous words stay English by default.")
+                                }
+                            }
+                        }
+
+                        item {
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Text("Options", style = MaterialTheme.typography.titleMedium)
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Text("Auto-enable JPDB highlights", style = MaterialTheme.typography.bodyMedium)
+                                        Spacer(Modifier.weight(1f))
+                                        Switch(
+                                            checked = mixAutoEnableHighlight,
+                                            onCheckedChange = { next ->
+                                                mixAutoEnableHighlight = next
+                                                onUpdateReaderMixAutoEnableHighlight(next)
+                                            },
+                                        )
+                                    }
+                                    AppMutedText("Enables tap-to-lookup for swapped words.")
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Text("Backup mirror to Drive", style = MaterialTheme.typography.bodyMedium)
+                                        Spacer(Modifier.weight(1f))
+                                        Switch(
+                                            checked = mixBackupMirrorToDrive,
+                                            onCheckedChange = { next ->
+                                                mixBackupMirrorToDrive = next
+                                                onUpdateReaderMixBackupMirrorToDrive(next)
+                                            },
+                                        )
+                                    }
+                                    AppMutedText("Saves jpdb_mirror_v1.json in your Drive app folder for restore on new devices.")
                                 }
                             }
                         }

@@ -54,7 +54,7 @@ export function buildHints(title: string): string[] {
 
   // Split on common delimiters.
   const parts = s
-    .split(/(?:\s+|・|\/|〜|～|~|\+|\-|…|\.|,|:|;|\(|\)|\[|\]|\{|\})+/)
+    .split(/(?:\s+|・|\/|〜|～|~|\+|-|…|\.|,|:|;|\(|\)|\[|\]|\{|\})+/)
     .map((p) => p.trim())
     .filter(Boolean);
 

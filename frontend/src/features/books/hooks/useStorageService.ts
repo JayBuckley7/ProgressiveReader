@@ -10,6 +10,7 @@ import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, clearAl
 import { toast } from 'sonner';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import { appLog } from '@shared/appLog'
+import { notifyError } from '@shared/utils/notify';
 
 /**
  * Determine if two book lists contain the same entries.
@@ -92,11 +93,10 @@ function useStorageService() {
 
       // Show success feedback only
       if (userBooks.length > 0) {
-        toast.success(`✅ Loaded ${userBooks.length} book${userBooks.length === 1 ? '' : 's'} from Google Drive`);
+        toast.success(`Loaded ${userBooks.length} book${userBooks.length === 1 ? '' : 's'} from Google Drive`);
       }
     } catch (error) {
-      appLog.error('Error silently refreshing books:', error);
-      toast.error('Failed to load books from Google Drive');
+      notifyError(error, { title: 'Failed to load books from Google Drive' });
     } finally {
       isRefreshingRef.current = false;
       setIsDriveBookLoading(false);
@@ -117,25 +117,20 @@ function useStorageService() {
       return false;
     }
 
-    appLog.debug('[useStorageService] 🔐 User requested Google Drive connection - starting auth sequence...');
+    appLog.debug('[useStorageService] connectToGoogleDriveAndLoad started');
     setIsLoading(true);
     setIsDriveBookLoading(true);
     isRefreshingRef.current = true;
     isDriveSyncingRef.current = true;
 
     try {
-      // Step 1: Authenticate FIRST
-      appLog.debug('[useStorageService] Step 1: Authenticating with Google Drive...');
       const isAuthenticated = await authManager.ensureAuthenticated();
       if (!isAuthenticated) {
-        appLog.debug('[useStorageService] ❌ Authentication failed');
+        appLog.debug('[useStorageService] Authentication failed');
         toast.error('Failed to connect to Google Drive');
         return false;
       }
-      appLog.debug('[useStorageService] ✅ Google Drive authenticated successfully');
-
-      // Step 2: Load data AFTER authentication
-      appLog.debug('[useStorageService] Step 2: Loading your books and folders...');
+      appLog.debug('[useStorageService] Google Drive authenticated');
       const previous = booksRef.current;
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
@@ -154,7 +149,7 @@ function useStorageService() {
         bookMetadataService.getFolders(clerkUser)
       ]);
 
-      appLog.debug(`[useStorageService] ✅ Loaded ${userBooks.length} books and ${userFolders.length} folders`);
+      appLog.debug('[useStorageService] Loaded library', { books: userBooks.length, folders: userFolders.length });
 
       if (areBooksEqual(userBooks, previous)) {
         setBooks(userBooks);
@@ -177,8 +172,7 @@ function useStorageService() {
       toast.success('Google Drive connected and library loaded!');
       return true;
     } catch (error) {
-      appLog.error('[useStorageService] ❌ Error during Google Drive connection:', error);
-      toast.error('Failed to connect to Google Drive - showing offline books');
+      notifyError(error, { title: 'Failed to connect to Google Drive', description: 'Showing offline books instead.' });
       await loadOfflineBooks();
       return false;
     } finally {
@@ -216,7 +210,7 @@ function useStorageService() {
 
     // Only log auth status in development mode to reduce spam
     if (import.meta.env.DEV) {
-      appLog.debug(`[👤 CLERK AUTH] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
+      appLog.debug(`[useStorageService] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
     }
     if (clerkLoaded) {
       setIsLoading(false);
@@ -224,7 +218,7 @@ function useStorageService() {
         // Check if this is a different user to avoid redundant loads
         const currentUserId = clerkUser.id;
         if (lastUserIdRef.current !== currentUserId) {
-          appLog.debug('[👤 CLERK AUTH] ✅ User signed in with Clerk:', clerkUser);
+          appLog.debug('[useStorageService] User signed in with Clerk:', clerkUser);
           lastUserIdRef.current = currentUserId;
 
           // Check if user signed in with Google via Clerk (has Google external account)
@@ -238,19 +232,19 @@ function useStorageService() {
             const currentPath = window.location.pathname;
             const needsBooks = currentPath === '/' || currentPath.startsWith('/vocabulary') || currentPath.startsWith('/book/');
 
-            appLog.debug(`[👤 CLERK AUTH] Current path: '${currentPath}', needsBooks: ${needsBooks}`);
+            appLog.debug(`[useStorageService] Current path: '${currentPath}', needsBooks: ${needsBooks}`);
 
             if (needsBooks) {
-              appLog.debug('[👤 CLERK AUTH] ✅ User signed in with Google via Clerk - auto-connecting to Google Drive...');
+              appLog.debug('[useStorageService] User signed in with Google via Clerk - auto-connecting to Google Drive...');
               // Auto-connect to Google Drive after a small delay to ensure Clerk is fully ready
               setTimeout(() => {
                 connectToGoogleDriveAndLoad();
               }, 1000); // 1 second delay to ensure Clerk is fully ready
             } else {
-              appLog.debug(`[👤 CLERK AUTH] User on ${currentPath} - skipping auto Google Drive connection`);
+              appLog.debug(`[useStorageService] User on ${currentPath} - skipping auto Google Drive connection`);
             }
           } else {
-            appLog.debug('[👤 CLERK AUTH] User did not sign in with Google, skipping Google Drive auto-connect');
+            appLog.debug('[useStorageService] User did not sign in with Google, skipping Google Drive auto-connect');
           }
         }
       } else {
@@ -286,7 +280,7 @@ function useStorageService() {
     if (!clerkUser) return;
 
     const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
-      appLog.debug(`[🔐 GOOGLE DRIVE AUTH] Auth state changed: ${isAuthenticated}`);
+      appLog.debug(`[useStorageService] Auth state changed: ${isAuthenticated}`);
       // Just log the state change, don't auto-load anything
       // The user will manually trigger connectToGoogleDriveAndLoad when they want to
     });
@@ -323,8 +317,7 @@ function useStorageService() {
       toast.success('Book uploaded successfully to your cloud storage!');
       return book;
     } catch (error) {
-      appLog.error('Error uploading book:', error);
-      toast.error('Failed to upload book to cloud storage');
+      notifyError(error, { title: 'Failed to upload book to cloud storage' });
       throw error;
     }
   };
@@ -338,8 +331,7 @@ function useStorageService() {
     try {
       return await bookStorageService.downloadBook(bookId, metadata);
     } catch (error) {
-      appLog.error('Error downloading book:', error);
-      toast.error('Failed to download book from cloud storage');
+      notifyError(error, { title: 'Failed to download book from cloud storage' });
       throw error;
     }
   };
@@ -379,8 +371,7 @@ function useStorageService() {
       await silentRefreshBooks();
       toast.success('Book deleted successfully');
     } catch (error) {
-      appLog.error('Error deleting book:', error);
-      toast.error('Failed to delete book');
+      notifyError(error, { title: 'Failed to delete book' });
     } finally {
       setIsLoading(false);
     }
@@ -399,8 +390,7 @@ function useStorageService() {
       toast.success('Book cover updated successfully');
       return newCoverImageId;
     } catch (error) {
-      appLog.error('Error updating book cover:', error);
-      toast.error('Failed to update book cover');
+      notifyError(error, { title: 'Failed to update book cover' });
       throw error;
     }
   };
@@ -456,8 +446,7 @@ function useStorageService() {
     try {
       await clerk.signOut();
     } catch (error) {
-      appLog.error('[useStorageService] Clerk signOut failed', error);
-      toast.error('Sign out failed');
+      notifyError(error, { title: 'Sign out failed' });
       return;
     }
 
@@ -504,8 +493,7 @@ function useStorageService() {
     try {
       await bookMetadataService.openCloudFolder(clerkUser);
     } catch (error) {
-      appLog.error('Error opening cloud folder:', error);
-      toast.error('Failed to open cloud storage folder');
+      notifyError(error, { title: 'Failed to open cloud storage folder' });
     }
   };
 
@@ -532,8 +520,7 @@ function useStorageService() {
       toast.success('Library synced successfully');
       lastSessionToastRef.current = 0;
     } catch (error) {
-      appLog.error('Error syncing books:', error);
-      toast.error('Failed to sync books');
+      notifyError(error, { title: 'Failed to sync books' });
     } finally {
       setIsLoading(false);
       isDriveSyncingRef.current = false;
@@ -602,8 +589,7 @@ function useStorageService() {
       setFolders(current => [...current, newFolder]);
       toast.success(`Folder "${name}" created successfully`);
     } catch (error) {
-      appLog.error('Error creating folder:', error);
-      toast.error('Failed to create folder');
+      notifyError(error, { title: 'Failed to create folder' });
     }
   };
 
@@ -622,8 +608,7 @@ function useStorageService() {
       );
       toast.success('Folder updated successfully');
     } catch (error) {
-      appLog.error('Error updating folder:', error);
-      toast.error('Failed to update folder');
+      notifyError(error, { title: 'Failed to update folder' });
     }
   };
 
@@ -638,8 +623,7 @@ function useStorageService() {
       setFolders(current => current.filter(folder => folder.id !== folderId));
       toast.success('Folder deleted successfully');
     } catch (error) {
-      appLog.error('Error deleting folder:', error);
-      toast.error('Failed to delete folder');
+      notifyError(error, { title: 'Failed to delete folder' });
     }
   };
 
@@ -658,8 +642,7 @@ function useStorageService() {
       );
       toast.success('Book moved successfully');
     } catch (error) {
-      appLog.error('Error moving book:', error);
-      toast.error('Failed to move book');
+      notifyError(error, { title: 'Failed to move book' });
     }
   };
 

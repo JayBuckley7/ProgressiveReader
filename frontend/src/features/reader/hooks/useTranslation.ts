@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSettings } from "@shared/contexts/SettingsContext";
-import type { TranslateRequest, TranslateResponse } from "~/types/api";
+import type { TranslateRequest } from "~/types/api";
 import { translateChapterStream } from "@features/reader/services/readerApi";
 import { appLog } from '@shared/appLog'
 
@@ -37,7 +37,7 @@ export const loadTranslationFromStorage = (bookId: string, chapter: number) => {
       appLog.debug('Translation loaded from storage:', key);
       return translationData;
     } catch (error) {
-      console.error('Error parsing stored translation:', error);
+      appLog.warn('[useTranslation] Error parsing stored translation', error);
       localStorage.removeItem(key); // Remove corrupted data
     }
   }
@@ -124,7 +124,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
         setIsAutoloaded(false);
         saveTranslationToStorage(bookId, chapter, finalWrapped, useCefr, settings);
       } catch (err) {
-        console.error("Translation error:", err);
+        appLog.error("[useTranslation] Translation error", err);
         toast.error("Translation error");
       } finally {
         setIsTranslating(false);
@@ -182,7 +182,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
         // Stream is handled by callbacks
       }
     } catch (error) {
-      console.error("Translation error:", error);
+      appLog.error("[useTranslation] Translation error", error);
       toast.error("Translation error");
     } finally {
       setIsTranslating(false);

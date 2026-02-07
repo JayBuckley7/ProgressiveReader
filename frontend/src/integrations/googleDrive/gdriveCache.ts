@@ -4,12 +4,6 @@
  */
 import { GoogleUser } from './types';
 
-declare global {
-    interface Window {
-        Clerk: any;
-    }
-}
-
 class GDriveCacheService {
     // Token caching
     private accessToken: string | null = null;
@@ -180,4 +174,3 @@ class GDriveCacheService {
 }
 
 export const gDriveCacheService = new GDriveCacheService();
-

@@ -95,7 +95,7 @@ class BookStorageService {
 
                 return blob;
             } catch (error: any) {
-                console.error('Google Drive download failed:', error);
+                appLog.error('Google Drive download failed:', error);
                 throw new Error(`Failed to download from Google Drive: ${error.message || 'Unknown error'}`);
             } finally {
                 // Remove from active downloads when complete
@@ -160,7 +160,7 @@ class BookStorageService {
             return coverBlob;
 
         } catch (error) {
-            console.error('Error extracting cover from EPUB:', error);
+            appLog.error('Error extracting cover from EPUB:', error);
             return null;
         }
     }
@@ -194,7 +194,7 @@ class BookStorageService {
                 canvas.toBlob((blob) => resolve(blob || null), 'image/jpeg');
             });
         } catch (error) {
-            console.error('Error extracting cover from PDF:', error);
+            appLog.error('Error extracting cover from PDF:', error);
             return null;
         }
     }
@@ -295,7 +295,7 @@ class BookStorageService {
                         lastUpdated: new Date(parsed.lastUpdated)
                     };
                 } catch (error) {
-                    console.warn('Failed to parse local reading progress:', error);
+                    appLog.warn('Failed to parse local reading progress:', error);
                     localStorage.removeItem(localKey);
                 }
             }
@@ -316,13 +316,13 @@ class BookStorageService {
                         return progress;
                     }
                 } catch (error) {
-                    console.warn('Failed to get progress from cloud metadata:', error);
+                    appLog.warn('Failed to get progress from cloud metadata:', error);
                 }
             }
 
             return null;
         } catch (error) {
-            console.error('Error fetching reading progress:', error);
+            appLog.error('Error fetching reading progress:', error);
             return null;
         }
     }
@@ -376,11 +376,11 @@ class BookStorageService {
                             // Save back to cloud (gdriveService handles retry/backoff + serialization)
                             const success = await gDriveService.updateMetadataFile(fileId, data);
                             if (!success) {
-                                console.warn('Failed to sync progress to cloud, but local save succeeded');
+                                appLog.warn('Failed to sync progress to cloud, but local save succeeded');
                             }
                         }
                     } catch (error) {
-                        console.warn('Failed to sync progress to cloud metadata:', error);
+                        appLog.warn('Failed to sync progress to cloud metadata:', error);
                         // Don't throw - local storage save succeeded
                     } finally {
                         this.cloudSyncTimeoutByBookId.delete(progress.bookId);
@@ -395,7 +395,7 @@ class BookStorageService {
                 appLog.debug('Reading progress saved successfully');
             }
         } catch (error) {
-            console.error('Error saving reading progress:', error);
+            appLog.error('Error saving reading progress:', error);
             throw error;
         }
     }

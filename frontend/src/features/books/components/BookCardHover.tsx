@@ -77,7 +77,7 @@ export function BookCardHover({
     try {
       await onDeleteBook(book.id as string);
     } catch (error) {
-      console.error('Error deleting book:', error);
+      appLog.error('[BookCardHover] Error deleting book', error);
     } finally {
       setIsDeleting(false);
     }
@@ -126,7 +126,7 @@ export function BookCardHover({
 
       await onUpdateCover(book.id as string, coverFile);
     } catch (error) {
-      console.error('Error looking up cover:', error);
+      appLog.error('[BookCardHover] Error looking up cover', error);
       toast.error('Failed to find cover');
     } finally {
       setIsUpdatingCover(false);
@@ -159,7 +159,7 @@ export function BookCardHover({
         fileInputRef.current.value = '';
       }
     } catch (error) {
-      console.error('Error updating cover:', error);
+      appLog.error('[BookCardHover] Error updating cover', error);
     } finally {
       setIsUpdatingCover(false);
     }

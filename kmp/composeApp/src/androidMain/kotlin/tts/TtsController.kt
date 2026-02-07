@@ -16,11 +16,21 @@ class TtsController(context: Context) {
     private val _isSpeaking = MutableStateFlow(false)
     val isSpeaking: StateFlow<Boolean> = _isSpeaking
 
+    private val _isPaused = MutableStateFlow(false)
+    val isPaused: StateFlow<Boolean> = _isPaused
+
     private val _lastError = MutableStateFlow<String?>(null)
     val lastError: StateFlow<String?> = _lastError
 
     private var tts: TextToSpeech? = null
     private var lastUtteranceId: String? = null
+    private var activeBaseId: String? = null
+
+    // We implement pause/resume by stopping playback and re-queuing from the last started chunk.
+    // This resumes at chunk boundaries (good enough for MVP) and keeps behavior deterministic.
+    private var queuedChunks: List<String> = emptyList()
+    private var resumeChunkIndex: Int = 0
+    private var currentChunkIndex: Int = 0
 
     init {
         tts =
@@ -32,23 +42,35 @@ class TtsController(context: Context) {
                 setOnUtteranceProgressListener(
                     object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {
+                            val baseId = activeBaseId
+                            if (utteranceId != null && baseId != null && utteranceId.startsWith("$baseId-")) {
+                                currentChunkIndex = utteranceId.substringAfterLast("-", missingDelimiterValue = "0").toIntOrNull() ?: 0
+                            }
+                            _isPaused.value = false
                             _isSpeaking.value = true
                         }
 
                         override fun onDone(utteranceId: String?) {
                             if (utteranceId != null && utteranceId == lastUtteranceId) {
                                 _isSpeaking.value = false
+                                _isPaused.value = false
+                                activeBaseId = null
+                                queuedChunks = emptyList()
+                                resumeChunkIndex = 0
+                                currentChunkIndex = 0
                             }
                         }
 
                         @Deprecated("Deprecated in Java")
                         override fun onError(utteranceId: String?) {
                             _isSpeaking.value = false
+                            _isPaused.value = false
                             _lastError.value = "TTS error"
                         }
 
                         override fun onError(utteranceId: String?, errorCode: Int) {
                             _isSpeaking.value = false
+                            _isPaused.value = false
                             _lastError.value = "TTS error ($errorCode)"
                         }
                     }
@@ -67,10 +89,16 @@ class TtsController(context: Context) {
 
         _lastError.value = null
         _isSpeaking.value = true
+        _isPaused.value = false
 
         val chunks = chunkText(cleaned, maxChars = 2000)
+        queuedChunks = chunks
+        resumeChunkIndex = 0
+        currentChunkIndex = 0
+
         val baseId = UUID.randomUUID().toString()
-        lastUtteranceId = "$baseId-${chunks.size - 1}"
+        activeBaseId = baseId
+        lastUtteranceId = "$baseId-${chunks.lastIndex}"
 
         chunks.forEachIndexed { idx, chunk ->
             val mode = if (idx == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
@@ -78,19 +106,69 @@ class TtsController(context: Context) {
         }
     }
 
-    fun stop() {
-        lastUtteranceId = null
+    fun pause() {
+        if (!_isSpeaking.value) return
+        // Resume from the current chunk (we may restart that chunk; acceptable for MVP).
+        resumeChunkIndex = currentChunkIndex.coerceIn(0, (queuedChunks.size - 1).coerceAtLeast(0))
         runCatching { tts?.stop() }
         _isSpeaking.value = false
+        _isPaused.value = true
+    }
+
+    fun resume() {
+        val engine = tts ?: return
+        if (!_isPaused.value) return
+        if (queuedChunks.isEmpty()) {
+            _isPaused.value = false
+            return
+        }
+
+        val startIdx = resumeChunkIndex.coerceIn(0, queuedChunks.lastIndex)
+        val chunks = queuedChunks.drop(startIdx)
+        if (chunks.isEmpty()) {
+            _isPaused.value = false
+            return
+        }
+
+        _lastError.value = null
+        _isPaused.value = false
+        _isSpeaking.value = true
+
+        val baseId = UUID.randomUUID().toString()
+        activeBaseId = baseId
+        currentChunkIndex = startIdx
+        resumeChunkIndex = startIdx
+        lastUtteranceId = "$baseId-${startIdx + chunks.lastIndex}"
+
+        chunks.forEachIndexed { idx, chunk ->
+            val mode = if (idx == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+            engine.speak(chunk, mode, null, "$baseId-${startIdx + idx}")
+        }
+    }
+
+    fun stop() {
+        lastUtteranceId = null
+        activeBaseId = null
+        queuedChunks = emptyList()
+        resumeChunkIndex = 0
+        currentChunkIndex = 0
+        runCatching { tts?.stop() }
+        _isSpeaking.value = false
+        _isPaused.value = false
     }
 
     fun shutdown() {
         lastUtteranceId = null
+        activeBaseId = null
+        queuedChunks = emptyList()
+        resumeChunkIndex = 0
+        currentChunkIndex = 0
         runCatching { tts?.stop() }
         runCatching { tts?.shutdown() }
         tts = null
         _isReady.value = false
         _isSpeaking.value = false
+        _isPaused.value = false
     }
 
     private fun chunkText(text: String, maxChars: Int): List<String> {
@@ -106,4 +184,3 @@ class TtsController(context: Context) {
         return chunks
     }
 }
-

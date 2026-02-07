@@ -1,4 +1,5 @@
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
+import { appLog } from '@shared/appLog';
 
 export interface TestFile {
   name: string;
@@ -38,7 +39,7 @@ class JLPTTestService {
 
       return testFiles;
     } catch (error) {
-      console.error('Error scanning library for tests:', error);
+      appLog.error('[jlptTestService] Error scanning library for tests', error);
       return [];
     }
   }
@@ -78,7 +79,7 @@ class JLPTTestService {
 
       return testFiles;
     } catch (error) {
-      console.error('Error scanning local tests:', error);
+      appLog.error('[jlptTestService] Error scanning local tests', error);
       return [];
     }
   }
@@ -134,11 +135,10 @@ class JLPTTestService {
 
       throw new Error('Invalid test file format');
     } catch (error) {
-      console.error('Error loading test data:', error);
+      appLog.error('[jlptTestService] Error loading test data', error);
       throw new Error(`Failed to load test: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }
 
 export const jlptTestService = new JLPTTestService();
-

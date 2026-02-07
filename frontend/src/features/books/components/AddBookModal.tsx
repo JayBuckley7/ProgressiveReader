@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 import { useAppData } from "@shared/contexts/AppDataContext";
+import { appLog } from "@shared/appLog";
 
 interface AddBookModalProps {
   onClose: () => void;
@@ -92,7 +93,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
           toast.success("EPUB metadata extracted successfully!");
         }
       } catch (error) {
-        console.error("Error processing EPUB:", error);
+        appLog.error("[AddBookModal] Error processing EPUB", error);
         toast.error("Could not extract EPUB metadata, but you can still upload the file");
       } finally {
         setIsProcessing(false);
@@ -140,7 +141,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
             }
           }
         } catch (err) {
-          console.warn("Could not extract cover image:", err);
+          appLog.warn("[AddBookModal] Could not extract cover image", err);
         }
       }
 
@@ -169,7 +170,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
         throw new Error("Upload returned no metadata");
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      appLog.error("[AddBookModal] Upload error", error);
       toast.error("Failed to upload book. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -346,4 +347,3 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
     </div>
   );
 }
-

@@ -1,16 +1,23 @@
 // Simplified JSX for creating DOM elements without React
 
-type Props = Record<string, any>;
+import { appLog } from '@shared/appLog';
 
-export function jsxCreateElement(tag: string | Function, props: Props | null, ...children: any[]): HTMLElement | DocumentFragment {
+type Props = Record<string, unknown>;
+type JsxComponent = (props: Props & { children: unknown[] }) => HTMLElement | DocumentFragment;
+
+export function jsxCreateElement(
+  tag: string | JsxComponent,
+  props: Props | null,
+  ...children: unknown[]
+): HTMLElement | DocumentFragment {
     if (typeof tag === 'function') {
-        return tag({ ...props, children });
+        return tag({ ...(props ?? {}), children });
     }
 
     if (tag === '') {
         // Fragment
         const fragment = document.createDocumentFragment();
-        children.flat().forEach(child => {
+        (children as unknown[]).flat().forEach(child => {
             if (child instanceof Node) {
                 fragment.appendChild(child);
             } else if (child !== null && child !== undefined) {
@@ -29,9 +36,9 @@ export function jsxCreateElement(tag: string | Function, props: Props | null, ..
                 const eventName = key.toLowerCase().substring(2);
                 element.addEventListener(eventName, async (event) => {
                     try {
-                        await value(event);
+                        await (value as (event: Event) => unknown)(event);
                     } catch (error) {
-                        console.error('Event handler error:', error);
+                        appLog.error('Event handler error:', error);
                     }
                 });
             } else if (key !== 'children') {
@@ -40,7 +47,7 @@ export function jsxCreateElement(tag: string | Function, props: Props | null, ..
         }
     }
 
-    children.flat().forEach(child => {
+    (children as unknown[]).flat().forEach(child => {
         if (child instanceof Node) {
             element.appendChild(child);
         } else if (child !== null && child !== undefined) {
@@ -50,4 +57,3 @@ export function jsxCreateElement(tag: string | Function, props: Props | null, ..
 
     return element;
 }
-

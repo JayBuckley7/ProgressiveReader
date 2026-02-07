@@ -42,25 +42,6 @@ class AuthManager {
 
   private async performAuthentication(): Promise<boolean> {
     try {
-      // Check if Clerk user is authenticated first
-      if (typeof window !== 'undefined' && window.Clerk) {
-        const clerkUser = window.Clerk.user;
-        const isClerkSignedIn = window.Clerk.session !== null;
-
-        if (!clerkUser || !isClerkSignedIn) {
-          return false;
-        }
-
-        // Check if Clerk user signed in with Google
-        const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
-          (acc: { provider: string }) => acc.provider.startsWith("google")
-        );
-
-        if (!wasGoogleClerkLogin) {
-          return false;
-        }
-      }
-
       // Initialize Google Drive service safely (loads scripts and attempts session restore)
       await gDriveService.safeInitialize();
 

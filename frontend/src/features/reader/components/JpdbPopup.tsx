@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { mineWord, updateWordState, reviewCard, getCurrentConfig } from "@features/reader/content/api-adapter";
-import { Card, Token } from "~/types";
-import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
+import { Token } from "~/types";
+import { getMeaning, getKunReading, getOnReading, getJlptLevel } from "@shared/services/jlptService";
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 
@@ -39,7 +39,6 @@ function renderPitchReact(reading: string, pitch: string): React.ReactElement {
 
     return <span className="pitch">{parts}</span>;
   } catch (error) {
-    console.error(error);
     return <span className="pitch-error">Error: invalid pitch</span>;
   }
 }

@@ -98,6 +98,10 @@ actual fun App() {
             onUpdateReaderCefrLevel = { level -> settingsStore.setReaderCefrLevel(level) },
             onUpdateReaderJpdbHighlightEnabled = { enabled -> settingsStore.setReaderJpdbHighlightEnabled(enabled) },
             onUpdateReaderTranslationTargetLang = { lang -> settingsStore.setReaderTranslationTargetLang(lang) },
+            onUpdateReaderMixEnabled = { enabled -> settingsStore.setReaderMixEnabled(enabled) },
+            onUpdateReaderMixAggression = { value -> settingsStore.setReaderMixAggression(value) },
+            onUpdateReaderMixAutoEnableHighlight = { enabled -> settingsStore.setReaderMixAutoEnableHighlight(enabled) },
+            onUpdateReaderMixBackupMirrorToDrive = { enabled -> settingsStore.setReaderMixBackupMirrorToDrive(enabled) },
             onResetDriveOverrides = {
                 settingsStore.setDriveFolderId(null)
                 settingsStore.setBackendBaseUrl("http://10.0.2.2:5000")

@@ -58,7 +58,7 @@ class DictionaryWorkerManager {
 
       appLog.debug('Dictionary worker initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize dictionary worker:', error);
+      appLog.error('Failed to initialize dictionary worker', error);
       this.worker = null;
       this.initializationPromise = null;
       throw error;
@@ -73,7 +73,7 @@ class DictionaryWorkerManager {
     const pending = this.pendingMessages.get(response.id);
 
     if (!pending) {
-      console.warn('Received response for unknown message ID:', response.id);
+      appLog.warn('Received response for unknown message ID', response.id);
       return;
     }
 
@@ -101,7 +101,7 @@ class DictionaryWorkerManager {
    * Handle worker errors
    */
   private handleWorkerError(error: ErrorEvent): void {
-    console.error('Dictionary worker error:', error);
+    appLog.error('Dictionary worker error', error);
     
     // Reject all pending messages
     this.pendingMessages.forEach(({ reject }) => {

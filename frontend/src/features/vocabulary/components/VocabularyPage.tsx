@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@clerk/clerk-react";
+import { appLog } from "@shared/appLog";
 
 import {
   addVocabularyWord,
@@ -245,7 +246,7 @@ export function VocabularyPage() {
       }));
       setVocabulary(converted);
     } catch (error) {
-      console.error("Failed to load vocabulary:", error);
+      appLog.error("[VocabularyPage] Failed to load vocabulary", error);
       const message = error instanceof Error ? error.message : "Failed to load vocabulary";
       setVocabError(message);
       if (message.includes("401") || message.includes("Authentication")) {
@@ -272,7 +273,7 @@ export function VocabularyPage() {
       toast.success(`Word marked as ${updatedWord.mastered ? "mastered" : "learning"}`);
     } catch (error) {
       toast.error("Failed to update word status");
-      console.error(error);
+      appLog.error("[VocabularyPage] Failed to update word status", error);
     }
   };
 
@@ -497,7 +498,7 @@ export function VocabularyPage() {
       toast.success(`Found ${dueEntries.length} due cards`);
     } catch (err: any) {
       const message = String(err?.message || "Failed to fetch due cards");
-      console.error("Failed to fetch due cards", err);
+      appLog.error("[VocabularyPage] Failed to fetch due cards", err);
       setDueVocabError(message);
       if (message.includes("JPDB API key not configured")) {
         toast.error("JPDB API key not configured. Add it in Settings → Highlight.");
@@ -891,7 +892,7 @@ function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
       await onAdded();
     } catch (error) {
       toast.error("Failed to add word");
-      console.error(error);
+      appLog.error("[VocabularyPage] Failed to add word", error);
     } finally {
       setIsSubmitting(false);
     }

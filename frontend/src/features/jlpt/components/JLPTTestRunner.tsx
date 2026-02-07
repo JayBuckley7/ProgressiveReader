@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appLog } from '@shared/appLog'
 
@@ -661,4 +660,3 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
       </div>
   );
 }
-

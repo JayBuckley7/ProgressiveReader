@@ -5,6 +5,7 @@ import { I18nextProvider } from "react-i18next";
 import App from "./App.tsx";
 import "./index.css";
 import i18n from "./i18n";
+import { appLog } from "@shared/appLog";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -65,7 +66,7 @@ function startApp() {
       </React.StrictMode>
     );
   } catch (error) {
-    console.error("Failed to start app:", error);
+    appLog.error("Failed to start app:", error);
     renderFatalError(
       "App Error",
       "Failed to start application. Check console for details.",
@@ -80,6 +81,6 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')
-      .catch((err) => console.warn('Service worker registration failed', err));
+      .catch((err) => appLog.warn('Service worker registration failed', err));
   });
 }
