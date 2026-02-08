@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from ....models import db, Vocabulary as VocabularyModel
+from ....infrastructure.sqlalchemy.models import Vocabulary as VocabularyModel
 from ..ports import VocabularyRepositoryPort
 from ..schemas import Vocabulary as VocabularySchema
 
 
 class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
+    def __init__(self, session: Any) -> None:
+        self._session = session
+
     def add_vocabulary_word(
         self,
         user_id: Optional[str],
@@ -28,8 +31,8 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
             context=context,
             difficulty=difficulty,
         )
-        db.session.add(vocab)
-        db.session.commit()
+        self._session.add(vocab)
+        self._session.commit()
         return VocabularySchema(
             id=str(vocab.id),
             word=vocab.word,
@@ -50,7 +53,7 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
         book_id: Optional[str] = None,
     ) -> List[VocabularySchema]:
         """Get user's vocabulary words with optional filters."""
-        query = VocabularyModel.query
+        query = self._session.query(VocabularyModel)
         if user_id:
             query = query.filter_by(user_id=user_id)
         if language:
@@ -78,14 +81,14 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
 
     def toggle_mastered(self, user_id: Optional[str], word_id: int, mastered: bool) -> Optional[VocabularySchema]:
         """Toggle mastered status for a vocabulary word."""
-        vocab = VocabularyModel.query.filter_by(id=word_id).first()
+        vocab = self._session.query(VocabularyModel).filter_by(id=word_id).first()
         if not vocab:
             return None
         if user_id and vocab.user_id != user_id:
             return None  # User doesn't own this word
 
         vocab.mastered = mastered
-        db.session.commit()
+        self._session.commit()
         return VocabularySchema(
             id=str(vocab.id),
             word=vocab.word,
@@ -100,16 +103,15 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
 
     def delete_vocabulary_word(self, user_id: Optional[str], word_id: int) -> bool:
         """Delete a vocabulary word."""
-        vocab = VocabularyModel.query.filter_by(id=word_id).first()
+        vocab = self._session.query(VocabularyModel).filter_by(id=word_id).first()
         if not vocab:
             return False
         if user_id and vocab.user_id != user_id:
             return False  # User doesn't own this word
 
-        db.session.delete(vocab)
-        db.session.commit()
+        self._session.delete(vocab)
+        self._session.commit()
         return True
 
 
 __all__ = ["SqlAlchemyVocabularyRepository"]
-

@@ -9,8 +9,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 def _testing_user():
-    # Minimal shape used by routes/tests: `id` and optionally `email_addresses`.
-    return SimpleNamespace(id="test-user", email_addresses=[])
+    # Minimal shape used by routes/tests.
+    return SimpleNamespace(
+        id="test-user",
+        email=None,
+        first_name=None,
+        last_name=None,
+        username=None,
+        image_url=None,
+        created_at=None,
+    )
 
 def get_auth_service():
     """Return the singleton AuthService instance used by auth decorators/routes."""
@@ -24,7 +32,7 @@ def get_auth_service():
 
 
 def get_current_user():
-    """Get the current user from request headers (raw Clerk user for compatibility)."""
+    """Get the current user from request headers (domain user shape)."""
     try:
         user = get_auth_service().get_current_user_from_headers(dict(request.headers))
         if user:
@@ -101,7 +109,10 @@ def get_user_id():
 def get_user_email():
     """Helper function to get the current user's primary email"""
     if hasattr(g, 'user') and g.user:
-        # Clerk stores emails in email_addresses array
+        # Prefer normalized domain user shape (UserInfo.email).
+        if hasattr(g.user, "email") and getattr(g.user, "email", None):
+            return g.user.email
+        # Backwards compatibility: raw Clerk user shape.
         if hasattr(g.user, 'email_addresses') and g.user.email_addresses and len(g.user.email_addresses) > 0:
-            return g.user.email_addresses[0].email_address
+            return getattr(g.user.email_addresses[0], "email_address", None)
     return None

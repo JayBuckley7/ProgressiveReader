@@ -490,16 +490,10 @@ export function wireUpToggle(contentElement: HTMLElement): void {
         const isEnabled = this.checked;
         
         try {
-            // Update server state
-            const response = await fetch('/api/toggle_jlpt', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: isEnabled })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
+            const { setJlptHighlightingEnabled } = await import("@integrations/backend/jlpt");
+            const ok = await setJlptHighlightingEnabled({ enabled: isEnabled });
+
+            if (ok) {
                 if (isEnabled) {
                     await highlightContent(contentElement);
                 } else {

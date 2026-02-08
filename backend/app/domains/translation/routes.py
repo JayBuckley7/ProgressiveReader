@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from flask import Blueprint, request, jsonify, current_app, Response
 from pydantic import ValidationError
-import json
 
 from ...utils.clerk_auth import optional_auth
 from ...utils.request_normalization import normalize_aliases
+from .http import stream_translate_chapter_sse
 from .schemas import TranslateRequest, TranslateResponse
 
 translation_bp = Blueprint('translation', __name__, url_prefix='/api/translate')
@@ -54,23 +54,8 @@ def translate_chapter():
         service = container.make_translation_service(api_key_to_use)
 
         if req.stream:
-            def generate():
-                translated = ""
-                yield "data: {\"status\": \"started\"}\n\n"
-                for part in service.stream_translate_chapter(req):
-                    if part:
-                        translated += part
-                        yield f"data: {json.dumps({'content': part})}\n\n"
-
-                yield (
-                    "data: "
-                    f"{json.dumps({'complete': True, 'translated_text': translated})}"
-                    "\n\n"
-                )
-                yield "data: [DONE]\n\n"
-
             # Explicit content_type to avoid Flask adding charset for this stream.
-            return Response(generate(), content_type="text/event-stream")
+            return Response(stream_translate_chapter_sse(service=service, req=req), content_type="text/event-stream")
         else:
             result = service.translate_chapter(req)
             current_app.logger.info(

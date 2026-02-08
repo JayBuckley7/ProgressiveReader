@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, List
 
-from .schemas import SessionInfo
+from .schemas import SessionInfo, UserInfo
 
 
 class AuthProviderPort(ABC):
@@ -14,8 +14,8 @@ class AuthProviderPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[Any]:
-        """Return a raw user object for compatibility, or None if not authenticated."""
+    def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[UserInfo]:
+        """Return the authenticated user, or None if not authenticated."""
         raise NotImplementedError
 
     @abstractmethod

@@ -33,7 +33,7 @@ def list_files():
     """List files in Google Drive."""
     try:
         container = current_app.extensions["container"]
-        drive_service = container.drive_service
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
 
         user_id = get_user_id()
         if not user_id:
@@ -45,8 +45,7 @@ def list_files():
         except ValidationError as e:
             return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
-        files = drive_service.list_files(user_id, req.folderId)
-        return jsonify([file.model_dump() for file in files])
+        return jsonify(controller.list_files(user_id=user_id, folder_id=req.folderId))
 
     except ValueError as e:
         logger.error(f"Drive error: {e}")
@@ -62,16 +61,13 @@ def upload_file():
     """Upload a file to Google Drive."""
     try:
         container = current_app.extensions["container"]
-        drive_service = container.drive_service
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
 
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
 
-        if 'file' not in request.files:
-            return jsonify({'error': 'Missing file'}), 400
-
-        file = request.files['file']
+        file = request.files.get('file')
         folder_id = request.form.get('folderId')
 
         try:
@@ -79,14 +75,7 @@ def upload_file():
         except ValidationError as e:
             return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
-        file_content = file.read()
-        result = drive_service.upload_file(
-            user_id=user_id,
-            file_content=file_content,
-            filename=file.filename,
-            mimetype=file.mimetype,
-            folder_id=req.folderId
-        )
+        result = controller.upload_file(user_id=user_id, upload=file, folder_id=req.folderId)
         return jsonify(result)
 
     except ValueError as e:
@@ -103,13 +92,13 @@ def download_file(file_id):
     """Download a file from Google Drive."""
     try:
         container = current_app.extensions["container"]
-        drive_service = container.drive_service
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
 
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
 
-        content, content_type = drive_service.download_file(user_id, file_id)
+        content, content_type = controller.download_file(user_id=user_id, file_id=file_id)
         return Response(content, headers={'Content-Type': content_type})
 
     except ValueError as e:
@@ -126,7 +115,7 @@ def thumbnail_file(file_id):
     """Return a thumbnail image for a Drive file, if available."""
     try:
         container = current_app.extensions["container"]
-        drive_service = container.drive_service
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
 
         user_id = get_user_id()
         if not user_id:
@@ -134,7 +123,7 @@ def thumbnail_file(file_id):
 
         size = clamp_thumbnail_size(request.args.get('size'))
 
-        content, content_type = drive_service.get_thumbnail(user_id, file_id, size=size)
+        content, content_type = controller.get_thumbnail(user_id=user_id, file_id=file_id, size=size)
         if not content:
             return jsonify({'error': 'Thumbnail not available'}), 404
 
@@ -161,13 +150,13 @@ def delete_file(file_id):
     """Delete a file from Google Drive."""
     try:
         container = current_app.extensions["container"]
-        drive_service = container.drive_service
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
 
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
 
-        success = drive_service.delete_file(user_id, file_id)
+        success = controller.delete_file(user_id=user_id, file_id=file_id)
         if success:
             return jsonify({'success': True})
         else:

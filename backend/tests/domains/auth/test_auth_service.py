@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, List
 
 from app.domains.auth.ports import AuthProviderPort
 from app.domains.auth.service import AuthService
-from app.domains.auth.schemas import SessionInfo
+from app.domains.auth.schemas import SessionInfo, UserInfo
 
 
 class _MockProvider(AuthProviderPort):
@@ -18,10 +18,10 @@ class _MockProvider(AuthProviderPort):
             return SessionInfo(user_id="u1", session_id="s1", status="verified")
         return None
 
-    def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[Any]:
+    def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[UserInfo]:
         auth = headers.get("Authorization") or ""
         if auth.startswith("Bearer") and self._user:
-            return self._user
+            return UserInfo(id=str(self._user.get("id")))
         return None
 
     def is_admin(self, user_id: str) -> bool:
@@ -44,7 +44,7 @@ def test_get_current_user_from_headers_present():
     service = AuthService(provider)
     user = service.get_current_user_from_headers({"Authorization": "Bearer ok"})
     assert user is not None
-    assert user["id"] == "u1"
+    assert user.id == "u1"
 
 
 def test_get_current_user_from_headers_missing():

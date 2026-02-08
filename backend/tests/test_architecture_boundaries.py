@@ -38,6 +38,10 @@ def _iter_imports(path: Path) -> list[tuple[str, int]]:
 def _is_routes_py(path: Path) -> bool:
     return path.name == "routes.py"
 
+def _is_inbound_adapter_py(path: Path) -> bool:
+    # Keep framework concerns (Flask, request shaping) in inbound adapters only.
+    return path.name in {"routes.py", "controller.py", "http.py"}
+
 
 def _is_adapter_path(path: Path) -> bool:
     return "adapters" in path.parts
@@ -53,16 +57,19 @@ def _domain_name_for_path(path: Path) -> str | None:
     return parts[idx + 1]
 
 
-def test_domains_only_routes_import_flask() -> None:
-    """Enforce a basic hex boundary: Flask stays in routes (web adapter) only."""
+def test_domains_only_inbound_adapters_import_flask() -> None:
+    """Enforce a basic hex boundary: Flask stays in inbound adapters only."""
     offenders: list[str] = []
     for path in _iter_domain_py_files():
         for mod, lineno in _iter_imports(path):
             if mod == "flask" or mod.startswith("flask."):
-                if not _is_routes_py(path):
+                if not _is_inbound_adapter_py(path):
                     offenders.append(f"{path}:{lineno} imports {mod}")
 
-    assert not offenders, "Flask imports must live only in routes.py:\n" + "\n".join(offenders)
+    assert not offenders, (
+        "Flask imports must live only in inbound adapter modules (routes.py/controller.py/http.py):\n"
+        + "\n".join(offenders)
+    )
 
 
 def test_domains_only_adapters_import_openai_sdk() -> None:
@@ -160,14 +167,35 @@ def test_domain_core_does_not_import_adapters() -> None:
     )
 
 
-def test_domains_do_not_import_other_domains_directly() -> None:
-    """Prevent domain-to-domain coupling (prefer ports injected via the container).
+def test_domain_core_does_not_import_infrastructure() -> None:
+    """Core domain modules must not import infrastructure (ORM, bootstrap, etc)."""
+    offenders: list[str] = []
+    for path in _iter_domain_py_files():
+        # Inbound adapters (routes/controllers/http) and outbound adapters may import infra.
+        if _is_inbound_adapter_py(path) or _is_adapter_path(path):
+            continue
+        for mod, lineno in _iter_imports(path):
+            mod_no_dots = mod.lstrip(".")
+            if mod_no_dots.startswith("app.infrastructure") or mod_no_dots.startswith("infrastructure."):
+                offenders.append(f"{path}:{lineno} imports {mod}")
+            # Relative sibling from within app.domains.* into app.infrastructure.*
+            if mod.startswith(".") and "infrastructure" in mod_no_dots.split("."):
+                offenders.append(f"{path}:{lineno} imports {mod}")
 
-    Allow importing from:
-    - the same domain (relative imports)
-    - app.core (shared kernel)
+    assert not offenders, (
+        "Domain core must not import app.infrastructure (keep infra in adapters + container):\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_domains_do_not_import_other_domains_directly() -> None:
+    """Prevent domain-to-domain coupling.
+
+    Allow importing from other domains only via their declared ports module
+    (e.g., app.domains.auth.ports or ..auth.ports).
     """
     offenders: list[str] = []
+    domain_names = {p.name for p in _domains_dir().iterdir() if p.is_dir()}
     for path in _iter_domain_py_files():
         domain = _domain_name_for_path(path)
         if not domain:
@@ -176,21 +204,37 @@ def test_domains_do_not_import_other_domains_directly() -> None:
         for mod, lineno in _iter_imports(path):
             mod_no_dots = mod.lstrip(".")
 
-            # Absolute: app.domains.<other>
+            # Absolute: app.domains.<other>.<module>
             if mod_no_dots.startswith("app.domains."):
                 parts = mod_no_dots.split(".")
                 if len(parts) >= 3:
                     other = parts[2]
                     if other != domain:
+                        # Allow importing only ports from other domains.
+                        if len(parts) >= 4 and parts[3] == "ports":
+                            continue
                         offenders.append(f"{path}:{lineno} imports {mod} (domain={domain})")
+                continue
 
-            # Relative from within app package: ...domains.<other>
+            # Absolute-ish: domains.<other>.<module>
             if mod_no_dots.startswith("domains."):
                 parts = mod_no_dots.split(".")
                 if len(parts) >= 2:
                     other = parts[1]
                     if other != domain:
+                        if len(parts) >= 3 and parts[2] == "ports":
+                            continue
                         offenders.append(f"{path}:{lineno} imports {mod} (domain={domain})")
+                continue
+
+            # Relative: ..<other>.<module> (sibling domain)
+            if mod.startswith("."):
+                first = mod_no_dots.split(".")[0] if mod_no_dots else ""
+                if first in domain_names and first != domain:
+                    parts = mod_no_dots.split(".")
+                    if len(parts) >= 2 and parts[1] == "ports":
+                        continue
+                    offenders.append(f"{path}:{lineno} imports {mod} (domain={domain})")
 
     assert not offenders, (
         "Domain modules must not import other domains directly (use ports + container wiring):\n"

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils';
 import { useTranslation as useReaderTranslation } from '@features/reader/hooks/useTranslation';
 
-vi.mock('@features/reader/services/readerApi', () => ({
+vi.mock('@integrations/backend/translation', () => ({
   translateChapterStream: async function* (_req: any, onChunk?: (chunk: string) => void, onComplete?: (complete: string) => void) {
     const html = '<p>Mock Translation</p>';
     onChunk?.(html);

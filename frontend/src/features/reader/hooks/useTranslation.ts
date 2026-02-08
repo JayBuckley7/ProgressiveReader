@@ -2,11 +2,12 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import type { TranslateRequest } from "~/types/api";
-import { translateChapterStream } from "@features/reader/services/readerApi";
+import { translateChapterStream } from "@integrations/backend/translation";
 import { appLog } from '@shared/appLog'
 import { notifyError } from "@shared/utils/notify";
-import { stripMarkdownCodeFences } from "@shared/utils/markdown";
-import { fetchOpenAIChatCompletions, getOpenAIChatContent } from "@shared/services/openaiChat";
+import { browserOpenAiChatPort } from "@integrations/openai/browserChat";
+import { translateChapterHtmlWithLlm } from "@core/translation/translateChapterHtml";
+import { stripMarkdownCodeFences } from "@core/utils/markdown";
 
 // Helper functions for translation storage
 const getTranslationStorageKey = (bookId: string, chapter: number) => {
@@ -63,31 +64,15 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
       const targetLang = settings?.targetLanguage || "English";
       const model = (localStorage.getItem("openaiModel") || "gpt-4o-mini").trim() || "gpt-4o-mini";
       const cefrLevel = localStorage.getItem("cefrLevel") || "B2";
-
-      let systemPrompt =
-        "You are a professional translator specializing in literary content. " +
-        "Translate the provided chapter HTML into the target language. Preserve all HTML formatting, including headings, paragraphs, and emphasis. " +
-        "Do not add explanations or extra text beyond the translation.";
-      if (useCefr && cefrLevel) {
-        systemPrompt += ` Aim for a CEFR level of ${cefrLevel}. Simplify complex expressions while keeping the meaning.`;
-      }
-
-      const userPrompt = `Translate this chapter into ${targetLang}. Return only HTML without backticks.`;
-      const fullUserPrompt = `${userPrompt}\n\nHTML Content:\n\`\`\`html\n${html}\n\`\`\``;
-
-      const data = await fetchOpenAIChatCompletions({
+      return translateChapterHtmlWithLlm({
+        llm: browserOpenAiChatPort,
         apiKey,
-        body: {
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: fullUserPrompt },
-          ],
-          temperature: 0.3,
-        },
+        html,
+        targetLanguage: targetLang,
+        model,
+        useCefr,
+        cefrLevel,
       });
-      const raw = getOpenAIChatContent(data);
-      return stripMarkdownCodeFences(raw);
     },
     [settings?.targetLanguage]
   );

@@ -13,6 +13,7 @@ function sseResponse(events: Array<Record<string, any>>): HttpResponse {
   });
 }
 
+// Use the standard Response shape for JSON mocks; this plays nicer with happy-dom fetch.
 function jsonResponse(body: any, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
     ...(init || {}),
@@ -37,7 +38,7 @@ export const server = setupServer(
   // Translation: vocabulary translation
   http.post('/api/translate/vocabulary', async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    return HttpResponse.json({
+    return jsonResponse({
       translated_text: `Mock translation of "${body.content || ''}"`,
       model_used: body.model || 'gpt-4o-mini',
     });
@@ -48,23 +49,23 @@ export const server = setupServer(
     const body = (await request.json().catch(() => ({}))) as any;
     const keys = Array.isArray(body?.ambiguousKeys) ? (body.ambiguousKeys as string[]) : [];
     const choices = Object.fromEntries(keys.map((k) => [k, null]));
-    return HttpResponse.json({ choices, model_used: body?.model || 'gpt-4o-mini' });
+    return jsonResponse({ choices, model_used: body?.model || 'gpt-4o-mini' });
   }),
 
   // Bookmarks
-  http.get('/api/bookmarks', () => HttpResponse.json([])),
+  http.get('/api/bookmarks', () => jsonResponse([])),
   http.post('/api/bookmarks', async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    return HttpResponse.json({ id: 'b1', ...body, createdAt: new Date().toISOString() });
+    return jsonResponse({ id: 'b1', ...body, createdAt: new Date().toISOString() });
   }),
 
   // Vocabulary domain routes
   // Vocabulary: list user vocabulary
-  http.get('/api/vocabulary', async () => HttpResponse.json([])),
+  http.get('/api/vocabulary', async () => jsonResponse([])),
 
   // Vocabulary due cards
   http.post('/api/due_cards', async () => {
-    return HttpResponse.json([
+    return jsonResponse([
       { id: '1', term: '誰', meaning: 'who' },
       { id: '2', term: '水', meaning: 'water' },
     ]);
@@ -72,7 +73,7 @@ export const server = setupServer(
 
   // Vocabulary: list user decks
   http.post('/api/list-user-decks', async () => {
-    return HttpResponse.json([
+    return jsonResponse([
       { id: '1', name: 'My Deck', words: 100 },
       { id: '2', name: 'Another Deck', words: 50 },
     ]);
@@ -80,7 +81,7 @@ export const server = setupServer(
 
   // JPDB: deck vocabulary list (pairs)
   http.post('/api/jpdb/deck/list-vocabulary', async () => {
-    return HttpResponse.json({ vocabulary: [[1, 1], [2, 2]] });
+    return jsonResponse({ vocabulary: [[1, 1], [2, 2]] });
   }),
 
   // JPDB: lookup vocabulary details
@@ -101,13 +102,13 @@ export const server = setupServer(
       return fields.map((field: string) => (entry as any)[field] ?? null);
     });
 
-    return HttpResponse.json({ vocabulary_info });
+    return jsonResponse({ vocabulary_info });
   }),
 
   // Vocabulary: add word (now with schema validation)
   http.post('/api/vocabulary', async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    return HttpResponse.json({
+    return jsonResponse({
       success: true,
       id: 'v1',
       word: body.word || '',
@@ -118,7 +119,7 @@ export const server = setupServer(
 
   // JPDB endpoints
   http.post('/api/get_jpdb_data', async () => {
-    return HttpResponse.json([
+    return jsonResponse([
       {
         start: 0,
         length: 5,
@@ -128,9 +129,9 @@ export const server = setupServer(
       },
     ]);
   }),
-  http.post('/api/mine_jpdb_word', async () => HttpResponse.json({ success: true })),
-  http.post('/api/update_jpdb_word_state', async () => HttpResponse.json({ success: true, newState: ['known'] })),
-  http.post('/api/review_jpdb_card', async () => HttpResponse.json({ success: true, newState: ['known'] })),
+  http.post('/api/mine_jpdb_word', async () => jsonResponse({ success: true })),
+  http.post('/api/update_jpdb_word_state', async () => jsonResponse({ success: true, newState: ['known'] })),
+  http.post('/api/review_jpdb_card', async () => jsonResponse({ success: true, newState: ['known'] })),
 
   // Admin: OpenAI keys
   http.get('/api/openai_key_configured', async () => jsonResponse({ openai_key_configured: true, pool_size: 1 })),
@@ -141,7 +142,7 @@ export const server = setupServer(
   // Kanji domain routes
   http.post('/api/kanji/search', async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    return HttpResponse.json({
+    return jsonResponse({
       results: [
         {
           kanji: body.query || '漢',
@@ -153,7 +154,7 @@ export const server = setupServer(
   }),
   http.post('/api/kanji/update', async ({ request }) => {
     const body = await request.json().catch(() => ({}));
-    return HttpResponse.json({
+    return jsonResponse({
       success: true,
       kanji: body.kanji || '漢',
       old_jlpt: 2,
@@ -161,7 +162,7 @@ export const server = setupServer(
     });
   }),
   http.get('/api/kanji/info/:kanji_char', async ({ params }) => {
-    return HttpResponse.json({
+    return jsonResponse({
       kanji: params.kanji_char || '漢',
       meanings: ['kanji', 'character'],
       jlpt: 2,

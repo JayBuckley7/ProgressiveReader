@@ -20,7 +20,7 @@ describe("Architecture boundaries", () => {
 
     // Direct OpenAI calls are allowed only in the designated adapter.
     const allowed = new Set<string>([
-      path.join(srcRoot, "shared", "services", "openaiChat.ts"),
+      path.join(srcRoot, "integrations", "openai", "browserChat.ts"),
     ]);
 
     const offenders: string[] = [];

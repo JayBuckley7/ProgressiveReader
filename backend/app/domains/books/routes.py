@@ -3,14 +3,7 @@ from flask import Blueprint, Response, current_app, g, jsonify, request, session
 from pydantic import ValidationError
 
 from ...utils.clerk_auth import optional_auth
-from .schemas import (
-    GetBookmarksRequest,
-    AddBookmarkRequest,
-    Bookmark as BookmarkSchema,
-    DeleteCachedTranslationRequest,
-    ToggleJlptRequest,
-    ToggleJlptResponse,
-)
+from .controller import BooksController
 
 books_bp = Blueprint('books', __name__, url_prefix='/api')
 
@@ -46,18 +39,14 @@ def get_bookmarks():
     if not book_id:
         return jsonify({'error': 'Missing bookId'}), 400
 
+    user_id = g.user.id if g.get('user') else None
+    controller = BooksController(current_app.extensions["container"].books_service)
     try:
-        req = GetBookmarksRequest(bookId=book_id)
+        return jsonify(controller.get_bookmarks(book_id=book_id, user_id=user_id))
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-
-    user_id = g.user.id if g.get('user') else None
-    books_service = current_app.extensions["container"].books_service
-    bookmarks = books_service.get_bookmarks(book_id=req.bookId, user_id=user_id)
-
-    return jsonify([b.model_dump() for b in bookmarks])
 
 
 @books_bp.route('/bookmarks', methods=['POST'])
@@ -66,23 +55,20 @@ def add_bookmark():
     """Create a bookmark for the current user (if any)."""
     try:
         data = request.get_json() or {}
-        req = AddBookmarkRequest(**data)
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
     user_id = g.user.id if g.get('user') else None
-    books_service = current_app.extensions["container"].books_service
-    bookmark = books_service.add_bookmark(
-        book_id=req.bookId,
-        chapter_index=req.chapterIndex,
-        position=req.position,
-        note=req.note,
-        user_id=user_id,
-    )
-
-    return jsonify(bookmark.model_dump()), 201
+    controller = BooksController(current_app.extensions["container"].books_service)
+    try:
+        bookmark = controller.add_bookmark(payload=data, user_id=user_id)
+        return jsonify(bookmark), 201
+    except ValidationError as e:
+        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
 
 @books_bp.route('/delete_cached_translation', methods=['POST'])
@@ -92,19 +78,26 @@ def delete_cached_translation_route():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid JSON payload'}), 400
-        req = DeleteCachedTranslationRequest(**data)
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
 
-    current_app.logger.info(
-        (
-            "Received signal to acknowledge deletion of cached translation for "
-            f"item index: {req.item_index}."
+    controller = BooksController(current_app.extensions["container"].books_service)
+    try:
+        result = controller.acknowledge_delete_cached_translation(payload=data)
+        current_app.logger.info(
+            (
+                "Received signal to acknowledge deletion of cached translation for "
+                f"item index: {result.get('item_index')}."
+            )
         )
-    )
-    return jsonify({'success': True, 'message': 'Client-side cache deletion acknowledged.'})
+        # Preserve legacy response shape (success/message only).
+        return jsonify({'success': True, 'message': result.get('message')})
+    except ValidationError as e:
+        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
 
 
 @books_bp.route('/toggle_jlpt', methods=['POST'])
@@ -114,13 +107,17 @@ def toggle_jlpt():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid JSON payload'}), 400
-        req = ToggleJlptRequest(**data)
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
 
-    session['jlpt_highlighting_enabled'] = req.enabled
-    current_app.logger.info(f"JLPT highlighting set to: {req.enabled}")
-    response = ToggleJlptResponse(success=True, jlpt_highlighting_enabled=req.enabled)
-    return jsonify(response.model_dump())
+    controller = BooksController(current_app.extensions["container"].books_service)
+    try:
+        response = controller.toggle_jlpt(payload=data, session_store=session)
+        current_app.logger.info(f"JLPT highlighting set to: {response.jlpt_highlighting_enabled}")
+        return jsonify(response.model_dump())
+    except ValidationError as e:
+        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400

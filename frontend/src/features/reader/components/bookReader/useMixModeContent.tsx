@@ -7,11 +7,14 @@ import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { parseHtmlToJsx } from "@features/reader/utils/htmlToJsx";
 import { createEnglishSwapHighlighter, type SwapHighlighter } from "@features/reader/utils/englishSwap";
 import { getRefineCacheKey, refineAmbiguousSwaps } from "@features/reader/utils/englishSwapRefine";
+import { browserOpenAiChatPort } from "@integrations/openai/browserChat";
+import { mixRefineBackendPort } from "@integrations/backend/mix";
 import { normalizeTranslatedHtml } from "@features/reader/utils/bilingualHtml";
 
 import { getGlossIndexAsMap, getKnownVocabAsMap, getMirrorMeta } from "@features/jpdbMirror/db";
 import type { JpdbKnownVocabRecord, JpdbMirrorMeta } from "@features/jpdbMirror/types";
 import type { useSettings } from "@shared/contexts/SettingsContext";
+import { isServerOpenAiKeyConfigured } from "@integrations/backend/openaiKey";
 
 type AppSettings = NonNullable<ReturnType<typeof useSettings>["settings"]>;
 
@@ -303,6 +306,8 @@ export function useMixModeContent(params: {
 
       const toastId = toast.loading("Refining swaps…", { duration: Infinity });
       const choices = await refineAmbiguousSwaps({
+        llm: browserOpenAiChatPort,
+        backend: mixRefineBackendPort,
         model,
         textSample,
         ambiguousKeys,
@@ -348,15 +353,7 @@ export function useMixModeContent(params: {
           return;
         }
 
-        const res = await fetch("/api/openai_key_configured");
-        if (!res.ok) {
-          if (!cancelled) setHasOpenAiKey(false);
-          return;
-        }
-        const data = (await res.json()) as any;
-        const configured = Boolean(
-          data?.openai_key_configured ?? data?.openaiKeyConfigured ?? data?.openaiKeyConfigured
-        );
+        const configured = await isServerOpenAiKeyConfigured();
         if (!cancelled) setHasOpenAiKey(configured);
       } catch {
         if (!cancelled) setHasOpenAiKey(false);

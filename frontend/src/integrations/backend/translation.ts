@@ -1,13 +1,13 @@
-import type { TranslateRequest, TranslateResponse } from '~/types/api';
+import type { TranslateRequest, TranslateResponse } from "~/types/api";
 
 export async function translateChapter(req: TranslateRequest): Promise<TranslateResponse> {
-  const res = await fetch('/api/translate/chapter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/translate/chapter", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...req, stream: false }),
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
+    const text = await res.text().catch(() => "");
     throw new Error(text || `HTTP ${res.status}`);
   }
   return res.json() as Promise<TranslateResponse>;
@@ -18,28 +18,28 @@ export async function* translateChapterStream(
   onChunk?: (chunk: string) => void,
   onComplete?: (complete: string) => void
 ): AsyncGenerator<string, void, unknown> {
-  const res = await fetch('/api/translate/chapter', {
-    method: 'POST',
+  const res = await fetch("/api/translate/chapter", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
     },
     body: JSON.stringify({ ...req, stream: true }),
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
+    const text = await res.text().catch(() => "");
     throw new Error(text || `HTTP ${res.status}`);
   }
 
   if (!res.body) {
-    throw new Error('Response body is null');
+    throw new Error("Response body is null");
   }
 
   const reader = res.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buffer = '';
-  let accumulated = '';
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let accumulated = "";
   let totalBytes = 0;
   let readCount = 0;
 
@@ -52,7 +52,7 @@ export async function* translateChapterStream(
       readCount += 1;
       if (readCount > MAX_READ_COUNT) {
         await reader.cancel().catch(() => {});
-        throw new Error('Translation stream exceeded maximum read iterations');
+        throw new Error("Translation stream exceeded maximum read iterations");
       }
 
       const { value, done } = await reader.read();
@@ -62,21 +62,21 @@ export async function* translateChapterStream(
         totalBytes += value.byteLength;
         if (totalBytes > MAX_TOTAL_BYTES) {
           await reader.cancel().catch(() => {});
-          throw new Error('Translation stream exceeded maximum size');
+          throw new Error("Translation stream exceeded maximum size");
         }
         buffer += decoder.decode(value, { stream: true });
       }
 
       const parts = buffer.split(/\r?\n\r?\n/);
-      buffer = parts.pop() || '';
+      buffer = parts.pop() || "";
 
       for (const part of parts) {
         const lines = part.split(/\r?\n/);
         for (const line of lines) {
-          if (!line.startsWith('data:')) continue;
+          if (!line.startsWith("data:")) continue;
 
           const data = line.slice(5).trimStart();
-          if (data === '[DONE]') {
+          if (data === "[DONE]") {
             onComplete?.(accumulated);
             await reader.cancel().catch(() => {});
             return;
@@ -86,7 +86,7 @@ export async function* translateChapterStream(
             const parsed = JSON.parse(data);
 
             // Some mocks may JSON-encode the sentinel.
-            if (parsed === '[DONE]') {
+            if (parsed === "[DONE]") {
               onComplete?.(accumulated);
               await reader.cancel().catch(() => {});
               return;
@@ -114,9 +114,9 @@ export async function* translateChapterStream(
     if (buffer) {
       const lines = buffer.split(/\r?\n/);
       for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
+        if (!line.startsWith("data:")) continue;
         const data = line.slice(5).trimStart();
-        if (data === '[DONE]') break;
+        if (data === "[DONE]") break;
         try {
           const parsed = JSON.parse(data);
           if (parsed?.content) {

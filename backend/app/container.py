@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 
-from typing import Callable
+from typing import Callable, Any
 
 from .adapters.llm_api_key_resolver import DefaultApiKeyResolver
 from .adapters.memory_key_pool import InMemoryApiKeyPool
@@ -61,7 +61,7 @@ class Container:
     ocr_init_error: str | None
 
 
-def create_container(*, settings: AppSettings) -> Container:
+def create_container(*, settings: AppSettings, db_session: Any) -> Container:
     openai_key_pool = InMemoryApiKeyPool()
     for key in settings.openai_pool_keys:
         openai_key_pool.add_key(key)
@@ -85,7 +85,7 @@ def create_container(*, settings: AppSettings) -> Container:
     drive_service = DriveService(GoogleDriveIntegration(drive_provider))
 
     books_service = BooksService(
-        SqlAlchemyBooksRepository(),
+        SqlAlchemyBooksRepository(db_session),
         LocalDemoStorageProvider(None),
         PublicApiCoverLookup(google_books_api_key=settings.google_books_api_key),
     )
@@ -93,7 +93,7 @@ def create_container(*, settings: AppSettings) -> Container:
         JpdbModuleProvider(deck_id=settings.jpdb_deck_id),
         settings.jpdb_config,
         JpdbHttpProvider(),
-        SqlAlchemyVocabularyRepository(),
+        SqlAlchemyVocabularyRepository(db_session),
     )
 
     def make_kanji_service() -> KanjiService:

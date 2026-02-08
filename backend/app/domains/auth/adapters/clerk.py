@@ -4,7 +4,7 @@ import logging
 from typing import Any, Dict, Optional, List
 
 from ..ports import AuthProviderPort
-from ..schemas import SessionInfo
+from ..schemas import SessionInfo, UserInfo
 from ....utils.runtime_env import is_dev_env
 
 try:
@@ -78,7 +78,7 @@ class ClerkAuthProvider(AuthProviderPort):
             return None
         return parts[1]
 
-    def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[Any]:
+    def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[UserInfo]:
         if not self._secret_key:
             logger.warning("[auth] Clerk secret key not configured in get_current_user_from_headers")
             return None
@@ -95,7 +95,40 @@ class ClerkAuthProvider(AuthProviderPort):
             return None
         logger.debug("[auth] Token verified; session user_id=%s", session.user_id)
         try:
-            user = self.client.users.get(user_id=session.user_id)
+            raw_user = self.client.users.get(user_id=session.user_id)
+
+            def _maybe_str(v: object) -> Optional[str]:
+                if v is None:
+                    return None
+                s = str(v).strip()
+                return s or None
+
+            # Best-effort primary email extraction.
+            email = None
+            email_addresses = getattr(raw_user, "email_addresses", None)
+            if isinstance(email_addresses, list) and email_addresses:
+                first = email_addresses[0]
+                email = _maybe_str(getattr(first, "email_address", None)) or _maybe_str(getattr(first, "email", None))
+
+            created_at_val = getattr(raw_user, "created_at", None)
+            created_at = None
+            if created_at_val is not None:
+                iso = getattr(created_at_val, "isoformat", None)
+                if callable(iso):
+                    created_at = _maybe_str(iso())
+                else:
+                    created_at = _maybe_str(created_at_val)
+
+            user = UserInfo(
+                id=_maybe_str(getattr(raw_user, "id", None)) or session.user_id,
+                email=email,
+                first_name=_maybe_str(getattr(raw_user, "first_name", None)),
+                last_name=_maybe_str(getattr(raw_user, "last_name", None)),
+                username=_maybe_str(getattr(raw_user, "username", None)),
+                image_url=_maybe_str(getattr(raw_user, "image_url", None)),
+                created_at=created_at,
+            )
+
             logger.debug("[auth] User retrieved successfully: %s", user.id)
             return user
         except Exception as exc:

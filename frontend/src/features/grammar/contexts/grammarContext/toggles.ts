@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { isServerOpenAiKeyConfigured } from "@integrations/backend/openaiKey";
 
 function getBoolLocalStorage(key: string): boolean | null {
   if (typeof window === "undefined") return null;
@@ -16,23 +17,13 @@ function setBoolLocalStorage(key: string, value: boolean): void {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 async function detectDefaultMiningEnabled(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   const userKey = (localStorage.getItem("openaiKey") || "").trim();
   if (userKey) return true;
 
   try {
-    const res = await fetch("/api/openai_key_configured");
-    if (!res.ok) return false;
-    const data = (await res.json()) as unknown;
-    if (!isRecord(data)) return false;
-    return Boolean(
-      data.openai_key_configured ?? data.openaiKeyConfigured ?? data.openaiKeyConfigured
-    );
+    return await isServerOpenAiKeyConfigured();
   } catch {
     return false;
   }
@@ -92,4 +83,3 @@ export function useGrammarMiningToggles() {
 
   return { miningEnabled, underlinesEnabled, setMiningEnabled, setUnderlinesEnabled };
 }
-

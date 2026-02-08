@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from ....models import db, Bookmark as BookmarkModel
+from ....infrastructure.sqlalchemy.models import Bookmark as BookmarkModel
 from ..ports import BooksRepositoryPort
 from ..schemas import Bookmark
 
 
 class SqlAlchemyBooksRepository(BooksRepositoryPort):
+    def __init__(self, session: Any) -> None:
+        self._session = session
+
     def get_bookmarks(self, book_id: str, user_id: Optional[str] = None) -> List[Bookmark]:
         """Get bookmarks for a book, optionally filtered by user."""
-        query = BookmarkModel.query.filter_by(book_id=book_id)
+        query = self._session.query(BookmarkModel).filter_by(book_id=book_id)
         if user_id:
             query = query.filter_by(user_id=user_id)
         bookmarks = query.order_by(BookmarkModel.created_at).all()
@@ -42,8 +45,8 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
             position=position,
             note=note,
         )
-        db.session.add(bookmark)
-        db.session.commit()
+        self._session.add(bookmark)
+        self._session.commit()
         return Bookmark(
             id=bookmark.id,
             bookId=bookmark.book_id,
@@ -55,4 +58,3 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
 
 
 __all__ = ["SqlAlchemyBooksRepository"]
-

@@ -5,8 +5,7 @@ from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 
 from ...utils.clerk_auth import optional_auth
-from ...utils.request_normalization import normalize_aliases
-from .schemas import ValidateExamplesRequest, TeachExamplesRequest
+from .controller import GrammarController
 
 grammar_bp = Blueprint("grammar", __name__, url_prefix="/api/grammar")
 
@@ -14,35 +13,19 @@ grammar_bp = Blueprint("grammar", __name__, url_prefix="/api/grammar")
 @optional_auth
 def validate_examples():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-
-        normalize_aliases(
-            data,
-            {
-                "apiKey": ["api_key"],
-                "maxResults": ["max_results"],
-            },
-        )
-
-        req = ValidateExamplesRequest(**data)
+        data = request.get_json() or {}
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
 
-    if not req.candidates:
-        return jsonify({"matches": []}), 200
-
-    container = current_app.extensions["container"]
-    api_key_to_use = container.openai_key_resolver.resolve(req.apiKey, use_server_key=True)
-    if not api_key_to_use:
-        return jsonify({"error": "OpenAI API key not configured"}), 400
-
     try:
-        service = container.make_grammar_service(api_key_to_use)
-        resp = service.validate_examples(req)
+        container = current_app.extensions["container"]
+        controller = GrammarController(
+            openai_key_resolver=container.openai_key_resolver,
+            make_grammar_service=container.make_grammar_service,
+        )
+        resp = controller.validate_examples(data)
         return jsonify(resp.model_dump())
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -55,29 +38,19 @@ def validate_examples():
 @optional_auth
 def teach_examples():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-
-        normalize_aliases(data, {"apiKey": ["api_key"]})
-
-        req = TeachExamplesRequest(**data)
+        data = request.get_json() or {}
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
 
-    if not req.examples:
-        return jsonify({"teachings": []}), 200
-
-    container = current_app.extensions["container"]
-    api_key_to_use = container.openai_key_resolver.resolve(req.apiKey, use_server_key=True)
-    if not api_key_to_use:
-        return jsonify({"error": "OpenAI API key not configured"}), 400
-
     try:
-        service = container.make_grammar_service(api_key_to_use)
-        resp = service.teach_examples(req)
+        container = current_app.extensions["container"]
+        controller = GrammarController(
+            openai_key_resolver=container.openai_key_resolver,
+            make_grammar_service=container.make_grammar_service,
+        )
+        resp = controller.teach_examples(data)
         return jsonify(resp.model_dump())
     except ValueError as e:
         return jsonify({"error": str(e)}), 400

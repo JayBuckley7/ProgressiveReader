@@ -17,6 +17,7 @@ class UserInfo(BaseModel):
     last_name: Optional[str] = None
     username: Optional[str] = None
     image_url: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 class SettingsResponse(BaseModel):
@@ -32,4 +33,3 @@ class SaveSettingsRequest(BaseModel):
 class SaveSettingsResponse(BaseModel):
     """Response schema for saving settings."""
     success: bool
-

@@ -1,23 +1,15 @@
+import { lookupCoverFromBackend } from "@integrations/backend/covers";
+
 export class BookCoverService {
   async lookupCover(title: string): Promise<Blob | undefined> {
     const cleaned = (title || "").trim();
     if (!cleaned) return undefined;
 
-    const params = new URLSearchParams({ title: cleaned });
     const controller = new AbortController();
     const timeoutId = globalThis.setTimeout(() => controller.abort(), 4500);
 
     try {
-      const response = await fetch(`/api/covers/lookup?${params.toString()}`, {
-        method: "GET",
-        signal: controller.signal,
-      });
-      if (response.status === 204) return undefined;
-      if (!response.ok) return undefined;
-      const blob = await response.blob();
-      if (!blob || blob.size === 0) return undefined;
-      if (blob.type && !blob.type.startsWith("image/")) return undefined;
-      return blob;
+      return await lookupCoverFromBackend({ title: cleaned, signal: controller.signal });
     } catch {
       return undefined;
     } finally {
@@ -307,4 +299,3 @@ export class BookCoverService {
     }
   }
 }
-

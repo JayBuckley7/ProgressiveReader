@@ -53,11 +53,7 @@ def get_session():
         'firstName': g.user.first_name,
         'lastName': g.user.last_name,
         'username': g.user.username,
-        'createdAt': (
-            g.user.created_at.isoformat()
-            if hasattr(g.user.created_at, 'isoformat')
-            else str(g.user.created_at)
-        )
+        'createdAt': getattr(g.user, "created_at", None),
     })
 
 
