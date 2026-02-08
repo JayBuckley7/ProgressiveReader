@@ -4,6 +4,8 @@ from pydantic import ValidationError
 import logging
 
 from ...utils.clerk_auth import require_auth, get_user_id
+from .controller import DriveController, clamp_thumbnail_size
+from .errors import DriveProviderNotConfiguredError, GoogleNotConnectedError
 from .schemas import ListFilesRequest, TokenResponse, HealthResponse
 
 logger = logging.getLogger(__name__)
@@ -15,22 +17,14 @@ drive_bp = Blueprint('drive', __name__, url_prefix='/drive')
 def drive_health():
     """Health check endpoint to verify Clerk configuration."""
     container = current_app.extensions["container"]
-    clerk_secret_key = container.clerk_secret_key
-    drive_service = container.drive_service
-
-    health_status = {
-        'clerk_secret_key_configured': bool(clerk_secret_key),
-        'clerk_client_initialized': bool(drive_service.is_provider_configured()),
-        'service': 'drive',
-    }
-
     try:
-        health = HealthResponse(**health_status)
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
+        health = controller.health()
         status_code = 200 if health.clerk_client_initialized else 500
         return jsonify(health.model_dump()), status_code
     except ValidationError as e:
         logger.error(f"Invalid health response: {e}")
-        return jsonify(health_status), 500
+        return jsonify({'service': 'drive'}), 500
 
 
 @drive_bp.route('/files', methods=['GET'])
@@ -138,12 +132,7 @@ def thumbnail_file(file_id):
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
 
-        size_raw = request.args.get('size')
-        try:
-            size = int(size_raw) if size_raw else 420
-            size = max(64, min(size, 1024))
-        except Exception:
-            size = 420
+        size = clamp_thumbnail_size(request.args.get('size'))
 
         content, content_type = drive_service.get_thumbnail(user_id, file_id, size=size)
         if not content:
@@ -198,41 +187,35 @@ def google_token():
     """Return the current user's Google OAuth access token."""
     try:
         container = current_app.extensions["container"]
-        drive_service = container.drive_service
+        controller = DriveController(drive_service=container.drive_service, clerk_secret_key=container.clerk_secret_key)
 
         user_id = get_user_id()
         if not user_id:
             logger.error('[drive-token] No user ID')
             return jsonify({'error': 'Authentication required'}), 401
 
-        # Check if Clerk client is initialized
-        if not drive_service.is_provider_configured():
-            logger.error('[drive-token] Clerk client not initialized')
-            return jsonify({
-                'error': 'Clerk client not configured',
-                'code': 'CLERK_NOT_CONFIGURED'
-            }), 500
-
-        token_info = drive_service.get_access_token_info(user_id)
-
         try:
-            response = TokenResponse(**token_info)
+            response = controller.get_token(user_id=user_id)
             return jsonify(response.model_dump())
         except ValidationError as e:
             logger.error(f"Invalid token response: {e}")
-            return jsonify(token_info)
+            return jsonify({'error': 'Invalid token response'}), 500
 
-    except ValueError as e:
-        error_msg = str(e)
-        logger.error('[drive-token] Error: %s', error_msg)
-        
-        # Check if it's a "no token" error - this means user needs to connect Google account
-        if 'No Google token' in error_msg or 'token' in error_msg.lower():
-            return jsonify({
+    except DriveProviderNotConfiguredError as e:
+        logger.error('[drive-token] Clerk client not initialized')
+        return jsonify({'error': str(e), 'code': 'CLERK_NOT_CONFIGURED'}), 500
+    except GoogleNotConnectedError:
+        return jsonify(
+            {
                 'error': 'Google account not connected',
                 'code': 'GOOGLE_NOT_CONNECTED',
-                'message': 'Please connect your Google account in Clerk to use Google Drive features'
-            }), 404
+                'message': 'Please connect your Google account in Clerk to use Google Drive features',
+            }
+        ), 404
+    except ValueError as e:
+        # Preserve legacy behavior for other ValueErrors from integration layer.
+        error_msg = str(e)
+        logger.error('[drive-token] Error: %s', error_msg)
         return jsonify({'error': error_msg}), 400
         
     except Exception as e:

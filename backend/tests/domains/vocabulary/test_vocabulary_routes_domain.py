@@ -33,11 +33,11 @@ def client(app):
 def mock_vocabulary_service():
     """Create mock vocabulary service."""
     service = Mock(spec=VocabularyService)
-    service.get_due_cards.return_value = [
+    service.get_due_cards_with_auth.return_value = [
         DueCard(id='1', term='誰', meaning='who'),
         DueCard(id='2', term='水', meaning='water'),
     ]
-    service.get_user_decks.return_value = [
+    service.list_user_decks_with_auth.return_value = [
         Deck(id='1', name='My Deck', words=100),
         Deck(id='2', name='Another Deck', words=50),
     ]
@@ -116,5 +116,4 @@ def test_update_jpdb_word_state_validation_error(client):
         'vid': 1
     })
     assert response.status_code == 400
-
 

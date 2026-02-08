@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 
 from ...utils.clerk_auth import require_auth, optional_auth, get_user_id
+from .http import get_jpdb_api_key_from_cookies_or_body
 from .schemas import (
     GetJpdbDataRequest,
     MineWordRequest,
@@ -11,36 +12,13 @@ from .schemas import (
     AddVocabularyWordRequest,
     AddVocabularyWordResponse,
     ToggleMasteredRequest,
+    ListUserDecksRequest,
 )
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 vocabulary_bp = Blueprint('vocabulary', __name__, url_prefix='/api')
-
-
-def _get_jpdb_api_key_from_request(data: Optional[dict] = None) -> str | None:
-    """
-    Get JPDB API key from request cookies/body.
-
-    We intentionally do NOT use Authorization header because it's already used
-    for Clerk session auth in this app.
-    """
-    key = (
-        (request.cookies.get("jpdbApiKey") or "").strip()
-        or (request.cookies.get("jpdb_api_key") or "").strip()
-        or (request.cookies.get("jpdb_api_key".upper()) or "").strip()
-    )
-    if key:
-        return key
-
-    body = data or {}
-    for k in ("jpdbApiKey", "jpdb_api_key", "jpdb_api_key".upper()):
-        v = body.get(k)
-        if isinstance(v, str) and v.strip():
-            return v.strip()
-    return None
 
 
 @vocabulary_bp.route('/due_cards', methods=['POST'])
@@ -48,19 +26,24 @@ def _get_jpdb_api_key_from_request(data: Optional[dict] = None) -> str | None:
 def due_cards():
     """Return JPDB due cards for the authenticated user."""
     data = request.get_json(silent=True) or {}
-    username = data.get('username')
-    password = data.get('password')
-    cookie = data.get('cookie') or request.headers.get('Cookie')
+    try:
+        req = ListUserDecksRequest(**data)
+    except ValidationError as e:
+        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
 
-    if not (username or password or cookie):
-        return jsonify({'error': 'Authentication required'}), 401
+    cookie_string = req.cookie or request.headers.get("Cookie")
+    if not (req.username or req.password or cookie_string):
+        return jsonify({"error": "Authentication required"}), 401
 
     service = current_app.extensions["container"].vocabulary_service
-    cards = service.get_due_cards(username=username, password=password, cookie_string=cookie)
-    if cards is None or (isinstance(cards, list) and not cards):
-        return jsonify({'error': 'Failed to fetch cards'}), 400
-
-    return jsonify([c.model_dump() for c in cards])
+    try:
+        cards = service.get_due_cards_with_auth(request=req, cookie_string=cookie_string)
+        return jsonify([c.model_dump() for c in cards])
+    except PermissionError:
+        return jsonify({"error": "Authentication required"}), 401
+    except Exception as e:
+        current_app.logger.error(f"Error fetching due cards: {e}", exc_info=True)
+        return jsonify({"error": "Failed to fetch cards"}), 400
 
 
 @vocabulary_bp.route('/list-user-decks', methods=['POST'])
@@ -68,35 +51,29 @@ def due_cards():
 def list_user_decks():
     """List the user's JPDB decks with id, name, and word count."""
     data = request.get_json(silent=True) or {}
-    username = data.get('username')
-    password = data.get('password')
-    cookie = data.get('cookie') or request.headers.get('X-JPDB-Cookie')
-
-    if not (username or password or cookie):
-        jpdb_api_key = _get_jpdb_api_key_from_request(data)
-        if not jpdb_api_key:
-            return jsonify({'error': 'JPDB API key not configured'}), 401
-
-        try:
-            service = current_app.extensions["container"].vocabulary_service
-            decks = service.list_user_decks_via_api_key(jpdb_api_key=jpdb_api_key)
-            return jsonify([d.model_dump() for d in decks])
-        except Exception as e:
-            current_app.logger.error(f"Error fetching user decks via JPDB API: {e}", exc_info=True)
-            return jsonify({'error': 'Failed to fetch decks from JPDB'}), 500
-
     try:
-        service = current_app.extensions["container"].vocabulary_service
-        decks = service.get_user_decks(username=username, password=password, cookie_string=cookie)
+        req = ListUserDecksRequest(**data)
+    except ValidationError as e:
+        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
 
-        if decks is None:
-            return jsonify({'error': 'Failed to fetch decks from JPDB'}), 400
+    cookie_string = req.cookie or request.headers.get("X-JPDB-Cookie")
+    jpdb_api_key = get_jpdb_api_key_from_cookies_or_body(cookies=request.cookies, body=data)
 
+    service = current_app.extensions["container"].vocabulary_service
+    try:
+        decks = service.list_user_decks_with_auth(
+            request=req,
+            cookie_string=cookie_string,
+            jpdb_api_key=jpdb_api_key,
+        )
         return jsonify([d.model_dump() for d in decks])
-
+    except PermissionError as e:
+        msg = str(e)
+        status = 401 if "configured" in msg.lower() else 401
+        return jsonify({"error": msg}), status
     except Exception as e:
-        current_app.logger.error(f"Error fetching user decks: {e}")
-        return jsonify({'error': str(e)}), 500
+        current_app.logger.error(f"Error fetching user decks: {e}", exc_info=True)
+        return jsonify({"error": "Failed to fetch decks from JPDB"}), 500
 
 
 @vocabulary_bp.route('/jpdb/deck/list-vocabulary', methods=['POST'])
@@ -112,7 +89,7 @@ def jpdb_list_deck_vocabulary():
         if deck_id.isdigit():
             deck_id = int(deck_id)
 
-    jpdb_api_key = _get_jpdb_api_key_from_request(data)
+    jpdb_api_key = get_jpdb_api_key_from_cookies_or_body(cookies=request.cookies, body=data)
     if not jpdb_api_key:
         return jsonify({"error": "JPDB API key not configured"}), 401
 
@@ -133,7 +110,7 @@ def jpdb_lookup_vocabulary():
     pairs = data.get("list")
     fields = data.get("fields")
 
-    jpdb_api_key = _get_jpdb_api_key_from_request(data)
+    jpdb_api_key = get_jpdb_api_key_from_cookies_or_body(cookies=request.cookies, body=data)
     if not jpdb_api_key:
         return jsonify({"error": "JPDB API key not configured"}), 401
 

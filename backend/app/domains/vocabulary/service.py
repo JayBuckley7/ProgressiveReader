@@ -7,6 +7,7 @@ from .ports import JpdbProvider, JpdbApiProvider, VocabularyRepositoryPort
 from .schemas import (
     DueCard,
     Deck,
+    ListUserDecksRequest,
     GetJpdbDataRequest,
     ProcessedToken,
     MineWordRequest,
@@ -41,6 +42,34 @@ class VocabularyService:
 
     def get_user_decks(self, *, username: Optional[str], password: Optional[str], cookie_string: Optional[str]) -> List[Deck]:
         return self._provider.fetch_user_decks(username=username, password=password, cookie_string=cookie_string)
+
+    def get_due_cards_with_auth(self, *, request: ListUserDecksRequest, cookie_string: Optional[str]) -> List[DueCard]:
+        """Fetch due cards via legacy scraping credentials/cookies (route stays thin)."""
+        if not (request.username or request.password or cookie_string):
+            raise PermissionError("JPDB authentication required")
+        cards = self.get_due_cards(username=request.username, password=request.password, cookie_string=cookie_string)
+        if not cards:
+            raise RuntimeError("Failed to fetch cards")
+        return cards
+
+    def list_user_decks_with_auth(
+        self,
+        *,
+        request: ListUserDecksRequest,
+        cookie_string: Optional[str],
+        jpdb_api_key: Optional[str],
+    ) -> List[Deck]:
+        """List decks using either API key (preferred) or legacy scraping auth."""
+        if request.username or request.password or cookie_string:
+            decks = self.get_user_decks(username=request.username, password=request.password, cookie_string=cookie_string)
+            if decks is None:
+                raise RuntimeError("Failed to fetch decks from JPDB")
+            return decks
+
+        if not (jpdb_api_key or "").strip():
+            raise PermissionError("JPDB API key not configured")
+
+        return self.list_user_decks_via_api_key(jpdb_api_key=jpdb_api_key)  # type: ignore[arg-type]
 
     # --- JPDB API flows ---
     def jpdb_post_endpoint(
