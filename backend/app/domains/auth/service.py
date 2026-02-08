@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
-from .integrations import AuthProvider
+from .ports import AuthProviderPort
 
 
 class AuthService:
-    def __init__(self, provider: AuthProvider) -> None:
+    def __init__(self, provider: AuthProviderPort) -> None:
         self.provider = provider
 
     def get_current_user_from_headers(self, headers: Dict[str, str]) -> Optional[Any]:
@@ -26,4 +26,6 @@ class AuthService:
         """Save user settings."""
         return self.provider.save_settings(user_id, settings)
 
-
+    def get_organization_memberships(self, user_id: str) -> List[Dict[str, Any]]:
+        """List org memberships (serializable)."""
+        return self.provider.get_organization_memberships(user_id)

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { toast } from 'sonner';
 import { appLog } from '@shared/appLog';
+import { notifyError } from '@shared/utils/notify';
 
 interface BookUploadProps {
   onUploadComplete?: () => void;
@@ -26,7 +27,7 @@ export function BookUpload({ onUploadComplete }: BookUploadProps) {
       try {
         await signIn();
       } catch (error) {
-        toast.error('Please sign in to upload books');
+        notifyError(error, { title: 'Please sign in to upload books' });
         return;
       }
     }
@@ -43,7 +44,7 @@ export function BookUpload({ onUploadComplete }: BookUploadProps) {
       }
     } catch (error) {
       appLog.error('[BookUpload] Upload error', error);
-      toast.error('Failed to upload book');
+      notifyError(error, { title: 'Failed to upload book' });
     } finally {
       setIsUploading(false);
     }

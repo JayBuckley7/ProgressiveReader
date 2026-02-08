@@ -1,14 +1,18 @@
 package com.progressivereader.kmp.jpdbMirror
 
 import android.content.Context
+import com.progressivereader.kmp.core.atomicWriteUtf8
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class JpdbMirrorStore(context: Context) {
     private val appContext = context.applicationContext
+    private val writeMutex = Mutex()
 
     private val json =
         Json {
@@ -20,12 +24,19 @@ class JpdbMirrorStore(context: Context) {
 
     private fun rootDir(): File = File(appContext.filesDir, "jpdb_mirror")
     private fun snapshotFile(): File = File(rootDir(), "jpdb_mirror_v1.json")
+    private fun snapshotBakFile(): File = File(rootDir(), "jpdb_mirror_v1.json.bak")
+    private fun legacyTmpFile(): File = File(rootDir(), "jpdb_mirror_v1.json.tmp")
 
     suspend fun loadSnapshot(): JpdbMirrorSnapshot? =
         withContext(Dispatchers.IO) {
             val f = snapshotFile()
-            if (!f.exists()) return@withContext null
-            runCatching { json.decodeFromString(JpdbMirrorSnapshot.serializer(), f.readText()) }.getOrNull()
+            fun parseOrNull(file: File): JpdbMirrorSnapshot? {
+                if (!file.exists()) return null
+                val text = runCatching { file.readText(Charsets.UTF_8) }.getOrNull() ?: return null
+                return runCatching { json.decodeFromString(JpdbMirrorSnapshot.serializer(), text) }.getOrNull()
+            }
+
+            parseOrNull(f) ?: parseOrNull(snapshotBakFile()) ?: parseOrNull(legacyTmpFile())
         }
 
     suspend fun saveSnapshot(snapshot: JpdbMirrorSnapshot) =
@@ -33,12 +44,8 @@ class JpdbMirrorStore(context: Context) {
             val dir = rootDir()
             dir.mkdirs()
             val target = snapshotFile()
-            val tmp = File(dir, "${target.name}.tmp")
-            tmp.writeText(json.encodeToString(JpdbMirrorSnapshot.serializer(), snapshot))
-            if (!tmp.renameTo(target)) {
-                target.writeText(tmp.readText())
-                tmp.delete()
-            }
+            val content = json.encodeToString(JpdbMirrorSnapshot.serializer(), snapshot)
+            writeMutex.withLock { atomicWriteUtf8(target, content) }
         }
 
     suspend fun clear() =
@@ -47,4 +54,3 @@ class JpdbMirrorStore(context: Context) {
             if (dir.exists()) dir.deleteRecursively()
         }
 }
-

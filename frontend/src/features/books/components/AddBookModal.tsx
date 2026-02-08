@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { appLog } from "@shared/appLog";
+import { notifyError } from "@shared/utils/notify";
 
 interface AddBookModalProps {
   onClose: () => void;
@@ -41,7 +42,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
       selectedFile.name.toLowerCase().endsWith('.json');
 
     if (!isValidType) {
-      toast.error("Please select an EPUB, PDF, MOBI, TXT, or JSON file");
+      notifyError("Please select an EPUB, PDF, MOBI, TXT, or JSON file");
       return;
     }
     
@@ -94,7 +95,10 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
         }
       } catch (error) {
         appLog.error("[AddBookModal] Error processing EPUB", error);
-        toast.error("Could not extract EPUB metadata, but you can still upload the file");
+        notifyError(error, {
+          title: "Could not extract EPUB metadata",
+          description: "You can still upload the file.",
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -104,12 +108,12 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !author.trim()) {
-      toast.error("Title and author are required");
+      notifyError("Title and author are required");
       return;
     }
 
     if (!file) {
-      toast.error("Please select a file to upload");
+      notifyError("Please select a file to upload");
       return;
     }
 
@@ -140,9 +144,9 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
               coverBlob = await response.blob();
             }
           }
-        } catch (err) {
-          appLog.warn("[AddBookModal] Could not extract cover image", err);
-        }
+      } catch (err) {
+        appLog.warn("[AddBookModal] Could not extract cover image", err);
+      }
       }
 
       // Use existing upload flow via AppDataContext
@@ -171,7 +175,7 @@ export function AddBookModal({ onClose }: AddBookModalProps) {
       }
     } catch (error) {
       appLog.error("[AddBookModal] Upload error", error);
-      toast.error("Failed to upload book. Please try again.");
+      notifyError(error, { title: "Failed to upload book", description: "Please try again." });
     } finally {
       setIsSubmitting(false);
       setIsProcessing(false);

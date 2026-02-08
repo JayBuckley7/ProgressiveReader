@@ -1,8 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useAppData } from "@shared/contexts/AppDataContext";
-import { bookMetadataService } from "@features/books/services/bookMetadata";
 import { toast } from "sonner";
+import { notifyError } from "@shared/utils/notify";
 
 import { getGrammarPointById } from "@features/grammar/data/grammarCatalog";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
@@ -11,6 +11,9 @@ import { mergeAndLimitExamples } from "@features/grammar/services/grammarExample
 import { loadGrammarStateV2FromLocalStorage, saveGrammarStateV2ToLocalStorage } from "@features/grammar/services/grammarStateStorage";
 import { mineLibraryForGrammarExamples } from "@features/grammar/services/grammarLibraryMiner";
 import { mergeTeachingIntoExamples, teachGrammarExamples } from "@features/grammar/services/grammarTeachApi";
+import { boundaryAdvances, boundaryFromProgress } from "./grammarContext/boundary";
+import { useGrammarDriveSync } from "./grammarContext/driveSync";
+import { useGrammarMiningToggles } from "./grammarContext/toggles";
 
 type GrammarContextValue = {
   state: GrammarStateV2;
@@ -35,81 +38,13 @@ type GrammarContextValue = {
 
 const GrammarContext = createContext<GrammarContextValue | undefined>(undefined);
 
-const DRIVE_RETRY_BACKOFF_MS = 60_000;
-
-let cachedDriveState: { knownIds: string[]; learningIds: string[]; examplesByGrammarId: Record<string, GrammarExample[]> } | null =
-  null;
-let driveLoadPromise:
-  | Promise<{ knownIds: string[]; learningIds: string[]; examplesByGrammarId: Record<string, GrammarExample[]> } | null>
-  | null = null;
-let driveLastAttemptAtMs: number | null = null;
-
-function toUniqueSorted(ids: string[]): string[] {
-  return Array.from(new Set(ids)).sort();
-}
-
-function boundaryAdvances(prev: GrammarScanBoundary | undefined, next: GrammarScanBoundary): boolean {
-  if (!prev) return true;
-  if (next.uptoChapter > prev.uptoChapter) return true;
-  if (next.uptoChapter < prev.uptoChapter) return false;
-  const prevP = typeof prev.uptoPercent === "number" ? prev.uptoPercent : 1;
-  const nextP = typeof next.uptoPercent === "number" ? next.uptoPercent : 1;
-  return nextP > prevP + 1e-6;
-}
-
-function boundaryFromProgress(progress: any): GrammarScanBoundary {
-  if (!progress || typeof progress !== "object") return { uptoChapter: 0, uptoPercent: 0.05 };
-  const ch = typeof progress.currentChapter === "number" ? progress.currentChapter : 0;
-  const scrollTop = typeof progress.currentPosition === "number" ? progress.currentPosition : 0;
-  const scrollHeight = typeof progress.scrollHeight === "number" ? progress.scrollHeight : null;
-  const viewportHeight = typeof progress.viewportHeight === "number" ? progress.viewportHeight : null;
-
-  let percent = 0.1;
-  if (scrollHeight && viewportHeight) {
-    const denom = Math.max(1, scrollHeight - viewportHeight);
-    percent = Math.max(0, Math.min(1, scrollTop / denom));
-  }
-  return { uptoChapter: Math.max(0, ch), uptoPercent: percent > 0 ? percent : 0.1 };
-}
-
-async function detectDefaultMiningEnabled(): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-  const userKey = (localStorage.getItem("openaiKey") || "").trim();
-  if (userKey) return true;
-
-  try {
-    const res = await fetch("/api/openai_key_configured");
-    if (!res.ok) return false;
-    const data = (await res.json()) as any;
-    return Boolean(data?.openai_key_configured ?? data?.openaiKeyConfigured ?? data?.openaiKeyConfigured);
-  } catch {
-    return false;
-  }
-}
-
-function getBoolLocalStorage(key: string): boolean | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(key);
-  if (raw === null) return null;
-  return raw === "true";
-}
-
-function setBoolLocalStorage(key: string, value: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(key, value ? "true" : "false");
-  } catch {
-    // ignore
-  }
-}
-
 export function GrammarProvider({ children }: { children: React.ReactNode }) {
   const { user, isSignedIn } = useUser();
   const { books } = useAppData();
 
   const allowDriveSync =
     isSignedIn &&
-    (user?.externalAccounts?.some((acc) => String((acc as any)?.provider || "").startsWith("google")) ?? false);
+    (user?.externalAccounts?.some((acc) => String((acc as { provider?: unknown })?.provider || "").startsWith("google")) ?? false);
 
   const [state, setState] = useState<GrammarStateV2>(() => loadGrammarStateV2FromLocalStorage());
 
@@ -118,51 +53,8 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
     stateRef.current = state;
   }, [state]);
 
-  const [miningEnabled, setMiningEnabledState] = useState<boolean>(() => getBoolLocalStorage("prGrammarMiningEnabled") ?? false);
-  const [underlinesEnabled, setUnderlinesEnabledState] = useState<boolean>(() => getBoolLocalStorage("prGrammarUnderlinesEnabled") ?? false);
+  const { miningEnabled, underlinesEnabled, setMiningEnabled, setUnderlinesEnabled } = useGrammarMiningToggles();
   const [activeMiningGrammarId, setActiveMiningGrammarId] = useState<string | null>(null);
-
-  // Initialize defaults for the toggles if not explicitly set.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (typeof window === "undefined") return;
-      const miningStored = getBoolLocalStorage("prGrammarMiningEnabled");
-      if (miningStored === null) {
-        const enabled = await detectDefaultMiningEnabled();
-        if (cancelled) return;
-        setMiningEnabledState(enabled);
-        setBoolLocalStorage("prGrammarMiningEnabled", enabled);
-      }
-
-      const underlineStored = getBoolLocalStorage("prGrammarUnderlinesEnabled");
-      if (underlineStored === null) {
-        const shouldEnable = getBoolLocalStorage("prGrammarMiningEnabled") ?? miningEnabled;
-        if (cancelled) return;
-        setUnderlinesEnabledState(Boolean(shouldEnable));
-        setBoolLocalStorage("prGrammarUnderlinesEnabled", Boolean(shouldEnable));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const setMiningEnabled = useCallback((enabled: boolean) => {
-    setMiningEnabledState(enabled);
-    setBoolLocalStorage("prGrammarMiningEnabled", enabled);
-    // If a user enables mining, default underlines on unless explicitly set.
-    if (getBoolLocalStorage("prGrammarUnderlinesEnabled") === null && enabled) {
-      setUnderlinesEnabledState(true);
-      setBoolLocalStorage("prGrammarUnderlinesEnabled", true);
-    }
-  }, []);
-
-  const setUnderlinesEnabled = useCallback((enabled: boolean) => {
-    setUnderlinesEnabledState(enabled);
-    setBoolLocalStorage("prGrammarUnderlinesEnabled", enabled);
-  }, []);
 
   const knownSet = useMemo(() => new Set(state.knownIds), [state.knownIds]);
   const learningSet = useMemo(() => new Set(state.learningIds), [state.learningIds]);
@@ -184,98 +76,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     persistLocal(state);
   }, [persistLocal, state]);
-
-  // Drive load merge
-  useEffect(() => {
-    if (!allowDriveSync) return;
-
-    let cancelled = false;
-    const mergeFromDrive = (drive: { knownIds: string[]; learningIds: string[]; examplesByGrammarId: Record<string, GrammarExample[]> }) => {
-      if (cancelled) return;
-      setState((prev) => {
-        const mergedKnown = toUniqueSorted([...prev.knownIds, ...(drive.knownIds || [])]);
-
-        // Remove anything that is known from learning.
-        const mergedLearningRaw = toUniqueSorted([...prev.learningIds, ...(drive.learningIds || [])]);
-        const mergedLearning = mergedLearningRaw.filter((id) => !mergedKnown.includes(id));
-
-        const mergedExamples: Record<string, GrammarExample[]> = { ...(prev.examplesByGrammarId || {}) };
-        for (const [gid, driveExamples] of Object.entries(drive.examplesByGrammarId || {})) {
-          mergedExamples[gid] = mergeAndLimitExamples(mergedExamples[gid] || [], driveExamples || [], 3);
-        }
-
-        return {
-          ...prev,
-          knownIds: mergedKnown,
-          learningIds: mergedLearning,
-          examplesByGrammarId: mergedExamples,
-          lastUpdatedMs: Date.now(),
-        };
-      });
-    };
-
-    if (cachedDriveState) {
-      mergeFromDrive(cachedDriveState);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const now = Date.now();
-    if (driveLastAttemptAtMs !== null && now - driveLastAttemptAtMs < DRIVE_RETRY_BACKOFF_MS) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (!driveLoadPromise) {
-      driveLastAttemptAtMs = now;
-      driveLoadPromise = bookMetadataService
-        .loadGrammarStateV2()
-        .then((drive) => {
-          if (!drive) return null;
-          cachedDriveState = drive;
-          return drive;
-        })
-        .catch(() => null)
-        .finally(() => {
-          driveLoadPromise = null;
-        });
-    }
-
-    driveLoadPromise.then((drive) => {
-      if (!drive) return;
-      mergeFromDrive(drive);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [allowDriveSync]);
-
-  // Drive save debounce
-  const driveSaveTimeoutRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!allowDriveSync) return;
-    if (driveSaveTimeoutRef.current !== null) window.clearTimeout(driveSaveTimeoutRef.current);
-
-    const payload = {
-      knownIds: state.knownIds,
-      learningIds: state.learningIds,
-      examplesByGrammarId: state.examplesByGrammarId,
-    };
-
-    driveSaveTimeoutRef.current = window.setTimeout(() => {
-      driveSaveTimeoutRef.current = null;
-      void bookMetadataService.saveGrammarStateV2(payload).catch(() => {
-        // ignore save errors
-      });
-    }, 800);
-
-    return () => {
-      if (driveSaveTimeoutRef.current !== null) window.clearTimeout(driveSaveTimeoutRef.current);
-    };
-  }, [allowDriveSync, state.knownIds, state.learningIds, state.examplesByGrammarId]);
+  useGrammarDriveSync({ allowDriveSync, userId: user?.id ?? null, state, setState });
 
   const setKnown = useCallback((grammarId: string, known: boolean) => {
     setState((prev) => {
@@ -402,11 +203,10 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
             lastUpdatedMs: Date.now(),
           };
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         // Prevent background auto-teach from retrying endlessly for this grammarId.
         autoTeachBlockedRef.current.add(grammarId);
-        const msg = String(e?.message || e || "Unknown error");
-        toast.error("Teaching failed", { description: msg });
+        notifyError(e, { title: "Teaching failed" });
       }
     },
     []
@@ -451,8 +251,8 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
-    window.addEventListener("pr:reading-progress-saved", handler as any);
-    return () => window.removeEventListener("pr:reading-progress-saved", handler as any);
+    window.addEventListener("pr:reading-progress-saved", handler);
+    return () => window.removeEventListener("pr:reading-progress-saved", handler);
   }, []);
 
   // Background miner (sequential, one grammar point at a time).
@@ -532,8 +332,8 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
             });
           }
         }
-      } catch (e: any) {
-        if (e?.name === "AbortError") {
+      } catch (e: unknown) {
+        if (e && typeof e === "object" && "name" in e && (e as { name?: unknown }).name === "AbortError") {
           // Ensure aborted jobs do not remain stuck in "scanning".
           setState((prev) => {
             const scanBy = { ...(prev.scanByGrammarId || {}) };
@@ -551,7 +351,14 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         setState((prev) => {
           const scanBy = { ...(prev.scanByGrammarId || {}) };
           const cur = scanBy[grammarId] || { status: "idle" };
-          scanBy[grammarId] = { ...cur, status: "error", lastError: String(e?.message || e || "Unknown error"), lastScanAt: new Date().toISOString() };
+          const message =
+            e && typeof e === "object" && "message" in e ? String((e as { message?: unknown }).message) : undefined;
+          scanBy[grammarId] = {
+            ...cur,
+            status: "error",
+            lastError: message || String(e || "Unknown error"),
+            lastScanAt: new Date().toISOString(),
+          };
           return { ...prev, scanByGrammarId: scanBy, lastUpdatedMs: Date.now() };
         });
       } finally {

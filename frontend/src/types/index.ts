@@ -1,7 +1,8 @@
 // Add global declarations for window.jpHighlighter
 declare global {
     interface Window {
-        jpHighlighter: any; // Or define a more specific interface if needed
+        // Assigned by the JPDB initializer; shape is intentionally loose but not `any`.
+        jpHighlighter?: Record<string, unknown>;
     }
 }
 
@@ -83,6 +84,9 @@ export interface Folder {
 export interface BookMetadata {
   id: string;
   title: string;
+  author?: string;
+  description?: string;
+  language?: string;
   fileType: string;
   // Cloud storage pointers - NO CONTENT
   driveFileId?: string;
@@ -93,6 +97,7 @@ export interface BookMetadata {
   coverImageId?: string;
   coverUrl?: string;
   totalChapters?: number;
+  totalPages?: number;
   uploadedAt: Date;
   // Metadata only
   userId: string;

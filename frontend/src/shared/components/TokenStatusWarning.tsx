@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { toast } from 'sonner';
+import { notifyError } from '@shared/utils/notify';
 
 export function TokenStatusWarning() {
   const { isDriveConnected, isTokenNearExpiry, isRefreshing, refreshToken } = useAppData();
@@ -16,10 +17,10 @@ export function TokenStatusWarning() {
       if (success) {
         toast.success('Google Drive connection refreshed successfully');
       } else {
-        toast.error('Failed to refresh Google Drive connection. You may need to sign in again.');
+        notifyError('Failed to refresh Google Drive connection. You may need to sign in again.');
       }
     } catch (error) {
-      toast.error('Error refreshing Google Drive connection');
+      notifyError(error, { title: 'Error refreshing Google Drive connection' });
     }
   };
 

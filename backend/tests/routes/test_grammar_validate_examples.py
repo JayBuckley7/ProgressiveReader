@@ -38,7 +38,7 @@ def test_validate_examples_caps_candidates(client):
 
 
 def test_validate_examples_success(client, monkeypatch):
-    from app.domains.grammar.integrations import OpenAIProvider
+    from app.domains.grammar.adapters.openai import OpenAIProvider
     from app.domains.grammar.schemas import ValidateExamplesResponse, GrammarValidateMatch, Span
 
     def _mock_validate(self, req):
@@ -75,7 +75,7 @@ def test_validate_examples_success(client, monkeypatch):
 
 
 def test_teach_examples_success(client, monkeypatch):
-    import app.domains.grammar.routes as grammar_routes
+    import app.domains.grammar.adapters.openai as grammar_openai_adapter
 
     class _FakeCompletion:
         def __init__(self, content: str):
@@ -103,7 +103,7 @@ def test_teach_examples_success(client, monkeypatch):
 
             self.chat = _Chat()
 
-    monkeypatch.setattr(grammar_routes, "OpenAI", _FakeOpenAI)
+    monkeypatch.setattr(grammar_openai_adapter, "OpenAI", _FakeOpenAI)
 
     payload = {
         "grammar": {"id": "n5:だから", "title": "だから", "meaning": "because", "level": "n5"},

@@ -1,8 +1,11 @@
 package com.progressivereader.kmp.mix
 
+import com.progressivereader.kmp.core.atomicWriteUtf8
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -21,6 +24,8 @@ class MixRefineStore(private val bookDir: File) {
             encodeDefaults = true
             prettyPrint = true
         }
+
+    private val writeMutex = Mutex()
 
     private fun rootDir(): File = File(bookDir, "mix_refine")
 
@@ -55,13 +60,9 @@ class MixRefineStore(private val bookDir: File) {
             val dir = rootDir()
             dir.mkdirs()
             val f = cacheFile(cacheKey)
-            val tmp = File(dir, "${f.name}.tmp")
             val payload = CachedRefine(choices = choices, createdAtMs = System.currentTimeMillis())
-            tmp.writeText(json.encodeToString(CachedRefine.serializer(), payload), Charsets.UTF_8)
-            if (!tmp.renameTo(f)) {
-                f.writeText(tmp.readText(Charsets.UTF_8), Charsets.UTF_8)
-                tmp.delete()
-            }
+            val content = json.encodeToString(CachedRefine.serializer(), payload)
+            writeMutex.withLock { atomicWriteUtf8(f, content) }
         }
 
     suspend fun setLatest(chapter: Int, cacheKey: String) =
@@ -69,7 +70,7 @@ class MixRefineStore(private val bookDir: File) {
             val dir = rootDir()
             dir.mkdirs()
             val f = latestPointer(chapter)
-            f.writeText(cacheKey.trim(), Charsets.UTF_8)
+            writeMutex.withLock { atomicWriteUtf8(f, cacheKey.trim()) }
         }
 
     suspend fun clearLatest(chapter: Int) =
@@ -77,4 +78,3 @@ class MixRefineStore(private val bookDir: File) {
             runCatching { latestPointer(chapter).delete() }
         }
 }
-

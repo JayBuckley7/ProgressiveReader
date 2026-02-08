@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
+import { notifyError } from '@shared/utils/notify';
 
 interface BookmarkletHelperProps {
   onCookieExtracted: (cookie: string) => void;
@@ -13,6 +14,21 @@ export function BookmarkletHelper({ onCookieExtracted, onClose }: BookmarkletHel
   const bookmarkletCode = `
 javascript:(function(){
   try {
+    function showMsg(msg) {
+      try {
+        const id = 'pr-jpdb-cookie-msg';
+        let el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('div');
+          el.id = id;
+          el.style.cssText = 'position:fixed;top:12px;left:12px;z-index:2147483647;background:#111;color:#fff;padding:10px 12px;border-radius:8px;font:13px/1.3 system-ui;box-shadow:0 6px 18px rgba(0,0,0,.35)';
+          document.body.appendChild(el);
+        }
+        el.textContent = msg;
+        setTimeout(function () { try { el.remove(); } catch (_) {} }, 6000);
+      } catch (_) {}
+    }
+
     // Extract JPDB session cookie
     const cookies = document.cookie.split(';');
     let sidCookie = '';
@@ -26,13 +42,12 @@ javascript:(function(){
     }
     
     if (!sidCookie) {
-      alert('❌ JPDB session cookie not found!\\n\\nPlease make sure you are:\\n1. Logged in to JPDB\\n2. On the jpdb.io domain\\n3. Have a valid session');
+      showMsg('JPDB session cookie not found. Make sure you are logged in to jpdb.io.');
       return;
     }
     
     // Send cookie to our app
     const appUrl = '${window.location.origin}';
-    const cookieData = encodeURIComponent(sidCookie);
     
     // Try to communicate with the parent app
     if (window.opener && !window.opener.closed) {
@@ -40,11 +55,11 @@ javascript:(function(){
         type: 'JPDB_COOKIE_EXTRACTED',
         cookie: sidCookie
       }, appUrl);
-      alert('✅ Cookie extracted successfully!\\n\\nYou can now close this tab and return to the app.');
+      showMsg('Cookie sent to the app. You can close this tab.');
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(sidCookie).then(() => {
-        alert('✅ Cookie copied to clipboard!\\n\\nCookie: ' + sidCookie + '\\n\\nReturn to the app and paste it when prompted.');
+        showMsg('Cookie copied to clipboard. Return to the app and paste it when prompted.');
       }).catch(() => {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
@@ -53,11 +68,11 @@ javascript:(function(){
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        alert('✅ Cookie copied to clipboard!\\n\\nCookie: ' + sidCookie + '\\n\\nReturn to the app and paste it when prompted.');
+        showMsg('Cookie copied to clipboard. Return to the app and paste it when prompted.');
       });
     }
   } catch (error) {
-    alert('❌ Error extracting cookie: ' + error.message + '\\n\\nPlease try the manual method instead.');
+    showMsg('Error extracting cookie. Please try the manual method.');
   }
 })();
   `.trim();
@@ -97,7 +112,7 @@ javascript:(function(){
       const formattedCookie = cookie.startsWith('sid=') ? cookie.trim() : `sid=${cookie.trim()}`;
       onCookieExtracted(formattedCookie);
     } else {
-      toast.error('Please enter a valid cookie');
+      notifyError('Please enter a valid cookie');
     }
   };
 
@@ -105,7 +120,7 @@ javascript:(function(){
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">🔖 JPDB Cookie Extractor</h2>
+          <h2 className="text-xl font-bold">JPDB Cookie Extractor</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"

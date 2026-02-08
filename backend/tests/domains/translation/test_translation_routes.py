@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from app.domains.translation.routes import translation_bp
 from app.domains.translation.service import TranslationService
-from app.domains.translation.integrations import TranslationProvider, OpenAIProvider
+from app.domains.translation.ports import TranslationProvider
 
 
 @pytest.fixture
@@ -14,6 +14,8 @@ def app():
     app = Flask(__name__)
     app.config['TESTING'] = True
     app.config['OPENAI_API_KEY'] = 'test-key'
+    # Container is required by the routes; tests can override per case.
+    app.extensions["container"] = Mock()
     app.register_blueprint(translation_bp)
     return app
 
@@ -36,29 +38,51 @@ def mock_provider():
 
 def test_translate_chapter_non_streaming(client, mock_provider):
     """Test chapter translation endpoint (non-streaming)."""
-    with patch('app.domains.translation.routes.OpenAIProvider', return_value=mock_provider):
-        with patch('app.domains.translation.routes.TranslationService', return_value=TranslationService(mock_provider)):
-            response = client.post('/api/translate/chapter', json={
-                'content': '<p>Test content</p>',
-                'target_lang': 'English',
-                'stream': False
-            })
-            assert response.status_code == 200
-            data = response.get_json()
-            assert 'translated_text' in data
+    container = Mock()
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/chapter', json={
+        'content': '<p>Test content</p>',
+        'target_lang': 'English',
+        'stream': False
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'translated_text' in data
+
+
+def test_translate_chapter_accepts_targetLang_alias(client, mock_provider):
+    """Generated TS types use targetLang; the API should accept it."""
+    container = Mock()
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/chapter', json={
+        'content': '<p>Test content</p>',
+        'targetLang': 'English',
+        'useCefr': True,
+        'cefrLevel': 'B2',
+        'stream': False,
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'translated_text' in data
 
 
 def test_translate_chapter_streaming(client, mock_provider):
     """Test chapter translation endpoint (streaming)."""
-    with patch('app.domains.translation.routes.OpenAIProvider', return_value=mock_provider):
-        with patch('app.domains.translation.routes.TranslationService', return_value=TranslationService(mock_provider)):
-            response = client.post('/api/translate/chapter', json={
-                'content': '<p>Test content</p>',
-                'target_lang': 'English',
-                'stream': True
-            })
-            assert response.status_code == 200
-            assert response.content_type == 'text/event-stream'
+    container = Mock()
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/chapter', json={
+        'content': '<p>Test content</p>',
+        'target_lang': 'English',
+        'stream': True
+    })
+    assert response.status_code == 200
+    assert response.content_type == 'text/event-stream'
 
 
 def test_translate_chapter_validation_error(client):
@@ -72,15 +96,17 @@ def test_translate_chapter_validation_error(client):
 
 def test_translate_vocabulary(client, mock_provider):
     """Test vocabulary translation endpoint."""
-    with patch('app.domains.translation.routes.OpenAIProvider', return_value=mock_provider):
-        with patch('app.domains.translation.routes.TranslationService', return_value=TranslationService(mock_provider)):
-            response = client.post('/api/translate/vocabulary', json={
-                'content': 'test word',
-                'target_lang': 'English'
-            })
-            assert response.status_code == 200
-            data = response.get_json()
-            assert 'translated_text' in data
+    container = Mock()
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/vocabulary', json={
+        'content': 'test word',
+        'target_lang': 'English'
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'translated_text' in data
 
 
 def test_translate_vocabulary_validation_error(client):
@@ -94,14 +120,14 @@ def test_translate_vocabulary_validation_error(client):
 
 def test_translate_chapter_api_key_not_configured(client):
     """Test chapter translation when API key is not configured."""
-    with patch('app.domains.translation.routes._get_api_key', return_value=None):
-        response = client.post('/api/translate/chapter', json={
-            'content': '<p>Test</p>',
-            'target_lang': 'English'
-        })
-        assert response.status_code == 400
-        data = response.get_json()
-        assert 'error' in data
+    container = Mock()
+    container.openai_key_resolver.resolve.return_value = None
+    client.application.extensions["container"] = container
 
-
-
+    response = client.post('/api/translate/chapter', json={
+        'content': '<p>Test</p>',
+        'target_lang': 'English'
+    })
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data

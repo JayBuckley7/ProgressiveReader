@@ -1,4 +1,4 @@
-from app.domains.translation.integrations import TranslationProvider
+from app.domains.translation.ports import TranslationProvider
 from app.domains.translation.service import TranslationService
 from app.domains.translation.schemas import TranslateRequest
 
@@ -16,6 +16,18 @@ class _MockProvider(TranslationProvider):
             'model': model,
         }
         return f"<div>MOCK-{target_lang}-{len(content)}</div>"
+
+    def stream_translate_chapter(self, *, content: str, target_lang: str, use_cefr=False, cefr_level=None, model=None):
+        yield self.translate_chapter(
+            content=content,
+            target_lang=target_lang,
+            use_cefr=use_cefr,
+            cefr_level=cefr_level,
+            model=model,
+        )
+
+    def translate_vocabulary(self, *, content: str, target_lang: str, model=None) -> str:
+        return f"MOCK-{target_lang}-{content}"
 
 
 def test_translate_chapter_basic():
@@ -45,6 +57,3 @@ def test_translate_chapter_cefr_propagation():
     assert provider.last['use_cefr'] is True
     assert provider.last['cefr_level'] == "B2"
     assert provider.last['model'] == "gpt-4o-mini"
-
-
-

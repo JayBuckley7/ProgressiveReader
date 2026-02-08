@@ -1,10 +1,22 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from app.domains.books.integrations import LocalDemoStorageProvider
-from app.domains.books.repository import BooksRepository
+from app.domains.books.adapters.local_demo_storage import LocalDemoStorageProvider
+from app.domains.books.ports import BooksRepositoryPort, CoverLookupPort
+from app.domains.books.schemas import Bookmark
 from app.domains.books.service import BooksService
+
+
+class _NoopRepo(BooksRepositoryPort):
+    def get_bookmarks(self, book_id: str, user_id=None):
+        return []
+
+    def add_bookmark(self, book_id: str, chapter_index: int, position: int, note=None, user_id=None) -> Bookmark:
+        raise AssertionError("not used in this test")
+
+
+class _NullCoverLookup(CoverLookupPort):
+    def lookup_cover_bytes(self, title: str):
+        return None
 
 
 def test_local_demo_storage_provider_lists_epubs(tmp_path):
@@ -16,15 +28,13 @@ def test_local_demo_storage_provider_lists_epubs(tmp_path):
     (demo_dir / 'ignore.txt').write_text('nope')
 
     provider = LocalDemoStorageProvider(demo_dir)
-    service = BooksService(BooksRepository(), provider)
+    service = BooksService(_NoopRepo(), provider, _NullCoverLookup())
     books = service.list_books()
 
     assert len(books) == 2
     titles = sorted(book.title for book in books)
     assert titles == ['Alpha', 'Beta']
     assert all(book.fileType == 'epub' for book in books)
-
-
 
 
 

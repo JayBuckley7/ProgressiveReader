@@ -45,6 +45,10 @@ class MineWordRequest(BaseModel):
     sid: int
     jpdb_api_key: str
     mining_deck_id: Optional[int] = None
+    # Optional helpers for richer clients (web/kmp). These are ignored by older callers.
+    forq: Optional[bool] = None
+    forq_deck_id: Optional[int] = None
+    sentence: Optional[str] = None
 
 
 Flag = Literal['blacklist', 'never-forget', 'forq']
@@ -56,6 +60,12 @@ class UpdateWordStateRequest(BaseModel):
     flag: Flag
     state: Any
     jpdb_api_key: str
+    # Optional deck ids for clients that manage per-user deck configuration.
+    # For `blacklist` / `never-forget`, JPDB also supports using special deck ids
+    # ("blacklist", "never-forget") directly; those don't require numeric ids.
+    blacklist_deck_id: Optional[int] = None
+    never_forget_deck_id: Optional[int] = None
+    forq_deck_id: Optional[int] = None
 
 
 AllowedRating = Literal[
@@ -114,4 +124,3 @@ class VocabularyListResponse(BaseModel):
 class FetchDueCardsGoogleOAuthRequest(BaseModel):
     """Request schema for fetching due cards with Google OAuth."""
     offset: int = 0
-

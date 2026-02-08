@@ -23,7 +23,7 @@ except ImportError:
     HAS_PYMUPDF = False
 
 if HAS_VISION and HAS_PYMUPDF:
-    from app.domains.ocr.service import OCRService
+    from app.domains.ocr.adapters.google_vision import GoogleVisionOcrProcessor as OCRService
 
 
 def load_vision_response_from_cache(cache_path):
@@ -641,7 +641,11 @@ def generate_ocr_processed_pdf():
     
     # Run the full OCR process with mocked API response
     service = OCRService()
-    with patch.object(service.client, 'document_text_detection', return_value=cached_response):
+    class _MockVisionClient:
+        def document_text_detection(self, image):  # noqa: ARG002 - signature compat
+            return cached_response
+
+    with patch.object(service, "_get_client", return_value=_MockVisionClient()):
         result_bytes = service.process_pdf(test_pdf_bytes)
     
     # Verify PDF was created successfully
@@ -817,4 +821,3 @@ def test_ocr_pdf_contains_expected_text(generate_ocr_processed_pdf):
     
     finally:
         doc.close()
-

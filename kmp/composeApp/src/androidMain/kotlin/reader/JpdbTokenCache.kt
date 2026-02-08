@@ -1,9 +1,12 @@
 package com.progressivereader.kmp.reader
 
 import com.progressivereader.kmp.jpdb.JpdbService
+import com.progressivereader.kmp.core.atomicWriteUtf8
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -35,6 +38,8 @@ class JpdbTokenCache(private val bookDir: File) {
             encodeDefaults = true
             prettyPrint = true
         }
+
+    private val writeMutex = Mutex()
 
     private fun safeHashPrefix(sourceHash: String): String {
         val h = sourceHash.trim()
@@ -73,10 +78,8 @@ class JpdbTokenCache(private val bookDir: File) {
         withContext(Dispatchers.IO) {
             val f = fileFor(chapterIndex, entry.sourceHash)
             f.parentFile?.mkdirs()
-            atomicWrite(
-                target = f,
-                content = json.encodeToString(JpdbTokenCacheFile.serializer(), entry),
-            )
+            val content = json.encodeToString(JpdbTokenCacheFile.serializer(), entry)
+            writeMutex.withLock { atomicWriteUtf8(target = f, content = content) }
         }
 
     companion object {
@@ -105,14 +108,5 @@ class JpdbTokenCache(private val bookDir: File) {
                 card = token.card,
                 rubies = token.rubies,
             )
-
-        private fun atomicWrite(target: File, content: String) {
-            val tmp = File(target.parentFile, "${target.name}.tmp")
-            tmp.writeText(content)
-            if (!tmp.renameTo(target)) {
-                target.writeText(content)
-                tmp.delete()
-            }
-        }
     }
 }

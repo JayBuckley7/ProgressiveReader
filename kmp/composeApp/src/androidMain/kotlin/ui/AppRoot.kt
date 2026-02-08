@@ -19,6 +19,8 @@ import com.progressivereader.kmp.navigation.Screen
 import com.progressivereader.kmp.offline.BookCache
 import com.progressivereader.kmp.reader.EpubRepository
 import com.progressivereader.kmp.settings.AppSettings
+import com.progressivereader.kmp.ui.viewmodels.LibraryViewModelFactory
+import com.progressivereader.kmp.ui.viewmodels.ReaderViewModelFactory
 import kotlinx.coroutines.launch
 
 @Composable
@@ -26,6 +28,8 @@ fun AppRoot(
     navigator: Navigator,
     settings: AppSettings,
     sessionJwt: String?,
+    libraryViewModelFactory: LibraryViewModelFactory,
+    readerViewModelFactory: ReaderViewModelFactory,
     bookCache: BookCache,
     epubRepository: EpubRepository,
     onSetSessionJwt: suspend (String?) -> Unit,
@@ -53,11 +57,10 @@ fun AppRoot(
 
     when (val s = navigator.current) {
         Screen.Library ->
-            LibraryScreen(
+            LibraryRoute(
                 settings = settings,
                 sessionJwt = sessionJwt,
-                bookCache = bookCache,
-                epubRepository = epubRepository,
+                viewModelFactory = libraryViewModelFactory,
                 onOpenReader = { bookId -> navigator.push(Screen.Reader(bookId)) },
                 onOpenSettings = { navigator.reset(Screen.Settings(showBack = false)) },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
@@ -82,6 +85,10 @@ fun AppRoot(
 
         Screen.Grammar ->
             GrammarScreen(
+                settings = settings,
+                sessionJwt = sessionJwt,
+                bookCache = bookCache,
+                epubRepository = epubRepository,
                 showBack = false,
                 onBack = { navigator.pop() },
                 bottomBar = { AppBottomBar(current = Screen.Grammar, onSelect = { navigator.reset(it) }) },
@@ -106,12 +113,12 @@ fun AppRoot(
             )
 
         is Screen.Reader ->
-            ReaderHostScreen(
+            ReaderRoute(
                 bookId = s.bookId,
                 settings = settings,
                 sessionJwt = sessionJwt,
+                viewModelFactory = readerViewModelFactory,
                 bookCache = bookCache,
-                epubRepository = epubRepository,
                 onBack = {
                     if (navigator.canPop()) navigator.pop() else navigator.reset(Screen.Library)
                 },

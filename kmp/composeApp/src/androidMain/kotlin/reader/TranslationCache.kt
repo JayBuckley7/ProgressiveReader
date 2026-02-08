@@ -1,5 +1,7 @@
 package com.progressivereader.kmp.reader
 
+import com.progressivereader.kmp.core.atomicWriteUtf8
+import com.progressivereader.kmp.domain.reader.TranslationCacheEntry
 import java.io.File
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -8,20 +10,11 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-
-@Serializable
-data class TranslationCacheEntry(
-    val version: Int = 1,
-    val createdAt: String,
-    val targetLang: String,
-    val useCefr: Boolean,
-    val cefrLevel: String,
-    val sourceHash: String,
-    val html: String,
-)
 
 class TranslationCache(
     private val bookDir: File,
@@ -32,6 +25,8 @@ class TranslationCache(
             encodeDefaults = true
             prettyPrint = true
         }
+
+    private val writeMutex = Mutex()
 
     private fun fileFor(chapterIndex: Int): File =
         File(File(bookDir, "translations"), "$chapterIndex.json")
@@ -62,10 +57,8 @@ class TranslationCache(
         withContext(Dispatchers.IO) {
             val f = fileFor(chapterIndex)
             f.parentFile?.mkdirs()
-            atomicWrite(
-                target = f,
-                content = json.encodeToString(TranslationCacheEntry.serializer(), entry),
-            )
+            val content = json.encodeToString(TranslationCacheEntry.serializer(), entry)
+            writeMutex.withLock { atomicWriteUtf8(target = f, content = content) }
         }
 
     companion object {
@@ -82,15 +75,5 @@ class TranslationCache(
             val bytes = md.digest(text.toByteArray(Charsets.UTF_8))
             return bytes.joinToString(separator = "") { b -> "%02x".format(b) }
         }
-
-        private fun atomicWrite(target: File, content: String) {
-            val tmp = File(target.parentFile, "${target.name}.tmp")
-            tmp.writeText(content)
-            if (!tmp.renameTo(target)) {
-                target.writeText(content)
-                tmp.delete()
-            }
-        }
     }
 }
-

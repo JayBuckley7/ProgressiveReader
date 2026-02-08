@@ -14,5 +14,5 @@ export class Canceled extends Error {
 
 export type PromiseHandle<T> = {
     resolve: (value: T | PromiseLike<T>) => void;
-    reject: (reason?: any) => void;
+    reject: (reason?: unknown) => void;
 };

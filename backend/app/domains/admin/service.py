@@ -11,14 +11,23 @@ from .schemas import (
     OpenAIKeyOperationResponse,
     OpenAIKeyListResponse,
 )
-from ...utils.openai_key_pool import get_openai_key_pool
+from ...core.llm_keys import ApiKeyPoolPort
+from ..auth.ports import AuthProviderPort
 
 
 class AdminService:
     """Service for admin operations including OpenAI key management."""
 
-    def __init__(self):
-        self._key_pool = get_openai_key_pool()
+    def __init__(
+        self,
+        key_pool: ApiKeyPoolPort,
+        auth_provider: AuthProviderPort,
+        *,
+        fallback_key: Optional[str] = None,
+    ):
+        self._key_pool = key_pool
+        self._auth_provider = auth_provider
+        self._fallback_key = (fallback_key or "").strip() or None
 
     def add_openai_key(self, request: AddOpenAIKeyRequest) -> OpenAIKeyOperationResponse:
         """Add an OpenAI API key to the rotation pool."""
@@ -44,9 +53,9 @@ class AdminService:
             keys=self._key_pool.get_all_keys()
         )
 
-    def get_openai_key_status(self, fallback_key: Optional[str] = None) -> OpenAIKeyStatusResponse:
+    def get_openai_key_status(self) -> OpenAIKeyStatusResponse:
         """Get the status of OpenAI key configuration."""
-        configured = self._key_pool.is_configured() or bool(fallback_key)
+        configured = self._key_pool.is_configured() or bool(self._fallback_key)
         return OpenAIKeyStatusResponse(
             openai_key_configured=configured,
             pool_size=self._key_pool.size()
@@ -56,7 +65,6 @@ class AdminService:
         self,
         user_id: str,
         is_admin_func,
-        clerk_client: Optional[Any] = None
     ) -> AdminStatusResponse:
         """Get admin status and organization memberships for a user."""
         debug_info: Dict[str, Any] = {
@@ -65,22 +73,9 @@ class AdminService:
             "memberships": []
         }
 
-        if clerk_client:
-            try:
-                memberships = clerk_client.organization_memberships.list(user_id=[user_id])
-                for m in memberships.data:
-                    org = getattr(m, "organization", None)
-                    org_name = getattr(org, "name", "") if org else ""
-                    debug_info["memberships"].append({
-                        "organization_name": org_name,
-                        "role": m.role,
-                        "is_progressive_reader": org_name == "ProgressiveReader",
-                        "is_admin_role": m.role.lower() == "admin"
-                    })
-            except Exception as e:
-                debug_info["error"] = str(e)
-        else:
-            debug_info["error"] = "Clerk client not initialized"
+        try:
+            debug_info["memberships"] = self._auth_provider.get_organization_memberships(user_id)
+        except Exception as e:
+            debug_info["error"] = str(e)
 
         return AdminStatusResponse(**debug_info)
-

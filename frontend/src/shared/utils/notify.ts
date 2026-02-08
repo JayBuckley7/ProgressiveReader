@@ -22,18 +22,27 @@ export function notifyError(
     description?: string;
   }
 ): void {
-  const title = options?.title ?? "Error";
   const normalized = normalizeError(error);
-  const description = options?.description ?? normalized.message;
+  const title = options?.title ?? (typeof error === "string" ? error : "Error");
+
+  // Default behavior:
+  // - If caller provides an explicit `description`, always show it.
+  // - If the toast title already *is* the message, omit description to avoid redundant UI.
+  // - Otherwise, use the normalized error message.
+  const description =
+    options?.description !== undefined
+      ? options.description
+      : title === normalized.message
+        ? undefined
+        : normalized.message;
 
   // Always log the raw error for debugging (toast text is intentionally short).
   appLog.error(`[notifyError] ${title}`, error);
 
   try {
-    toast.error(title, { description });
+    toast.error(title, description ? { description } : undefined);
   } catch (toastError) {
     // If the toast system isn't available for any reason, don't hide the original error.
     appLog.error("[notifyError] Failed to show toast", toastError);
   }
 }
-

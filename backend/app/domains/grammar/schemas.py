@@ -5,10 +5,10 @@ from typing import Optional, List
 
 
 class GrammarInfo(BaseModel):
-    id: str = Field(..., description="Grammar point id (e.g. n5:ている)")
-    title: str = Field(..., description="Grammar point title")
-    meaning: str = Field(..., description="Short English meaning")
-    level: str = Field(..., description="JLPT level (n5..n1)")
+    id: str = Field(..., min_length=1, description="Grammar point id (e.g. n5:ている)")
+    title: str = Field(..., min_length=1, description="Grammar point title")
+    meaning: str = Field(..., min_length=1, description="Short English meaning (required; used to disambiguate sense)")
+    level: str = Field(..., min_length=2, pattern=r"^n[1-5]$", description="JLPT level (n5..n1)")
 
 
 class Span(BaseModel):

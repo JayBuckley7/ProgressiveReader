@@ -3,8 +3,6 @@ from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 
 from ...utils.clerk_auth import require_admin
-from .service import KanjiService
-from .repository import KanjiRepository
 from .schemas import KanjiSearchRequest, UpdateKanjiJlptRequest
 
 kanji_bp = Blueprint('kanji', __name__, url_prefix='/api/kanji')
@@ -23,10 +21,10 @@ def search_kanji():
         return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
 
     try:
-        repository = KanjiRepository()
-        service = KanjiService(repository)
+        container = current_app.extensions["container"]
+        service = container.make_kanji_service()
         result = service.search_kanji(req)
-        return jsonify(result.dict())
+        return jsonify(result.model_dump())
     except FileNotFoundError as e:
         return jsonify({"error": str(e)}), 404
     except Exception as e:
@@ -47,13 +45,13 @@ def update_kanji_jlpt():
         return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
 
     try:
-        repository = KanjiRepository()
-        service = KanjiService(repository)
+        container = current_app.extensions["container"]
+        service = container.make_kanji_service()
         result = service.update_jlpt_level(req)
         current_app.logger.info(
             f'Updated kanji {req.kanji} JLPT level from {result.old_jlpt} to {result.new_jlpt}'
         )
-        return jsonify(result.dict())
+        return jsonify(result.model_dump())
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except FileNotFoundError as e:
@@ -71,8 +69,8 @@ def get_kanji_info(kanji_char: str):
         return jsonify({"error": "Invalid kanji character"}), 400
 
     try:
-        repository = KanjiRepository()
-        service = KanjiService(repository)
+        container = current_app.extensions["container"]
+        service = container.make_kanji_service()
         kanji_info = service.get_kanji_info(kanji_char)
         return jsonify(kanji_info)
     except ValueError as e:
@@ -82,4 +80,3 @@ def get_kanji_info(kanji_char: str):
     except Exception as e:
         current_app.logger.error(f"Error getting kanji info: {e}", exc_info=True)
         return jsonify({"error": "Failed to get kanji info"}), 500
-

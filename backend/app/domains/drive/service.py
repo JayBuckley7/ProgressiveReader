@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional, List, Dict, Any
 import logging
 
-from .integrations import GoogleDriveIntegration, DriveProvider
+from .ports import DriveIntegrationPort
 from .schemas import DriveFile
 
 logger = logging.getLogger(__name__)
@@ -13,8 +13,11 @@ logger = logging.getLogger(__name__)
 class DriveService:
     """Service layer for Drive operations."""
 
-    def __init__(self, integration: GoogleDriveIntegration) -> None:
+    def __init__(self, integration: DriveIntegrationPort) -> None:
         self.integration = integration
+
+    def is_provider_configured(self) -> bool:
+        return self.integration.is_provider_configured()
 
     def list_files(self, user_id: str, folder_id: Optional[str] = None) -> List[DriveFile]:
         """List files in Google Drive."""

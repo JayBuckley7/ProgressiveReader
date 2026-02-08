@@ -8,6 +8,7 @@ import { syncJpdbKnownMirror, type JpdbMirrorSyncProgress } from "@features/jpdb
 import type { JpdbMirrorMeta } from "@features/jpdbMirror/types";
 import { importMirrorSnapshotFromDrive, isValidDriveSnapshot } from "@features/jpdbMirror/import";
 import { appLog } from "@shared/appLog";
+import { notifyError } from "@shared/utils/notify";
 
 export function MixSettingsModal(props: {
   visible: boolean;
@@ -122,7 +123,7 @@ export function MixSettingsModal(props: {
       } else {
         const msg = String(e?.message || e || "Sync failed");
         setSyncError(msg);
-        toast.error("JPDB sync failed", { description: msg });
+        notifyError("JPDB sync failed", { description: msg });
       }
     } finally {
       setIsSyncing(false);
@@ -336,7 +337,7 @@ export function MixSettingsModal(props: {
               <div className="min-w-0">
                 <div className="text-sm font-medium">Refine ambiguous swaps</div>
                 <div className="text-xs app-muted">
-                  Uses your OpenAI key to disambiguate swaps in this chapter.
+                  Uses OpenAI to disambiguate swaps in this chapter.
                 </div>
               </div>
               <button
@@ -349,7 +350,7 @@ export function MixSettingsModal(props: {
             </div>
             {!props.onRequestRefine ? (
               <div className="text-xs app-muted mt-2">
-                Add an OpenAI key in Settings → General to enable refinement.
+                Configure OpenAI on the server (admin) or add a personal key in Settings → General.
               </div>
             ) : null}
           </div>

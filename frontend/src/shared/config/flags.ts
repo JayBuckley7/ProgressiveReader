@@ -43,7 +43,7 @@ export function loadFlags(): FlagMap {
 }
 
 function parseEnvFlags(): Partial<FlagMap> {
-  const env = (import.meta as any).env || {};
+  const env = import.meta.env as unknown as Record<string, unknown>;
   const out: Partial<FlagMap> = {};
   for (const key of Object.keys(env)) {
     if (!key.startsWith('VITE_FLAG_')) continue;
@@ -80,4 +80,3 @@ export function setFlag(name: FlagName, value: boolean): void {
 export function allFlags(): FlagMap {
   return loadFlags();
 }
-

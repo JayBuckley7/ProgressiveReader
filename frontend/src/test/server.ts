@@ -13,6 +13,16 @@ function sseResponse(events: Array<Record<string, any>>): HttpResponse {
   });
 }
 
+function jsonResponse(body: any, init?: ResponseInit): Response {
+  return new Response(JSON.stringify(body), {
+    ...(init || {}),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+}
+
 export const server = setupServer(
   // Translation domain routes
   // Reader: chapter translation SSE
@@ -29,8 +39,16 @@ export const server = setupServer(
     const body = await request.json().catch(() => ({}));
     return HttpResponse.json({
       translated_text: `Mock translation of "${body.content || ''}"`,
-      model_used: body.model || 'gpt-3.5-turbo',
+      model_used: body.model || 'gpt-4o-mini',
     });
+  }),
+
+  // Mix mode: refine ambiguous swaps
+  http.post('/api/mix/refine', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as any;
+    const keys = Array.isArray(body?.ambiguousKeys) ? (body.ambiguousKeys as string[]) : [];
+    const choices = Object.fromEntries(keys.map((k) => [k, null]));
+    return HttpResponse.json({ choices, model_used: body?.model || 'gpt-4o-mini' });
   }),
 
   // Bookmarks
@@ -115,10 +133,10 @@ export const server = setupServer(
   http.post('/api/review_jpdb_card', async () => HttpResponse.json({ success: true, newState: ['known'] })),
 
   // Admin: OpenAI keys
-  http.get('/api/openai_key_configured', () => HttpResponse.json({ openai_key_configured: true, pool_size: 1 })),
-  http.get('/api/openai_keys', () => HttpResponse.json({ keys: [] })),
-  http.post('/api/openai_keys/add', async () => HttpResponse.json({ success: true, pool_size: 1 })),
-  http.post('/api/openai_keys/remove', async () => HttpResponse.json({ success: true, pool_size: 0 })),
+  http.get('/api/openai_key_configured', async () => jsonResponse({ openai_key_configured: true, pool_size: 1 })),
+  http.get('/api/openai_keys', async () => jsonResponse({ keys: [] })),
+  http.post('/api/openai_keys/add', async () => jsonResponse({ success: true, pool_size: 1 })),
+  http.post('/api/openai_keys/remove', async () => jsonResponse({ success: true, pool_size: 0 })),
 
   // Kanji domain routes
   http.post('/api/kanji/search', async ({ request }) => {

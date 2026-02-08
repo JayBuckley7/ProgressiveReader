@@ -28,7 +28,7 @@ def test_translate_chapter_missing_content(client):
 
 
 def test_translate_chapter_non_stream_success(client, monkeypatch):
-    from app.domains.translation.integrations import OpenAIProvider
+    from app.domains.translation.adapters.openai import OpenAIProvider
 
     def _mock_translate(self, *, content, target_lang, use_cefr=False, cefr_level=None, model=None):
         return f"<div>MOCK-{target_lang}-{len(content)}</div>"
@@ -45,6 +45,5 @@ def test_translate_chapter_non_stream_success(client, monkeypatch):
     data = res.get_json()
     assert 'translated_text' in data
     assert data['translated_text'].startswith('<div>MOCK-English-')
-
 
 

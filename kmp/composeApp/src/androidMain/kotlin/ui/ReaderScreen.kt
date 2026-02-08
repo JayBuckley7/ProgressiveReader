@@ -1,20 +1,21 @@
 package com.progressivereader.kmp.ui
 
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoFixHigh
@@ -28,10 +29,11 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,12 +44,11 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -64,55 +65,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.BorderStroke
-import com.progressivereader.kmp.grammar.GrammarState
-import com.progressivereader.kmp.grammar.GrammarStore
-import com.progressivereader.kmp.grammar.HintQuality
-import com.progressivereader.kmp.grammar.GrammarUnderliner
-import com.progressivereader.kmp.grammar.getGrammarPointById
-import com.progressivereader.kmp.jpdb.JpdbActionsService
-import com.progressivereader.kmp.jpdb.JpdbService
-import com.progressivereader.kmp.jpdbMirror.JpdbMirrorSnapshot
-import com.progressivereader.kmp.jpdbMirror.JpdbMirrorStore
-import com.progressivereader.kmp.mix.EnglishSwapHighlighter
-import com.progressivereader.kmp.mix.MixRefineCandidate
-import com.progressivereader.kmp.mix.MixRefineStore
-import com.progressivereader.kmp.mix.applyEnglishSwapToBodyHtml
-import com.progressivereader.kmp.mix.getMixRefineCacheKey
-import com.progressivereader.kmp.mix.refineAmbiguousSwaps
-import com.progressivereader.kmp.offline.BookCache
-import com.progressivereader.kmp.offline.BookState
-import com.progressivereader.kmp.offline.Bookmark
+import com.progressivereader.kmp.domain.reader.Bookmark
 import com.progressivereader.kmp.reader.EpubBook
-import com.progressivereader.kmp.reader.EpubRepository
 import com.progressivereader.kmp.reader.HtmlContent
-import com.progressivereader.kmp.reader.JpdbHighlighter
-import com.progressivereader.kmp.reader.JpdbTokenCache
-import com.progressivereader.kmp.reader.TranslatedHtmlSanitizer
-import com.progressivereader.kmp.reader.TranslationCache
 import com.progressivereader.kmp.reader.SwipeDirection
-import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.tts.TtsController
-import com.progressivereader.kmp.translate.TranslateService
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import kotlinx.coroutines.Dispatchers
+import com.progressivereader.kmp.ui.viewmodels.JpdbTokenUi
+import com.progressivereader.kmp.ui.viewmodels.ReaderUiState
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import org.jsoup.Jsoup
 
 private enum class JpdbReviewGrade(val label: String, val rating: String, val accent: Color) {
@@ -155,702 +123,94 @@ private fun ReviewGradeButton(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
-    bookId: String,
-    settings: AppSettings,
-    sessionJwt: String?,
-    bookCache: BookCache,
-    epubRepository: EpubRepository,
+    state: ReaderUiState,
+    snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onSetTheme: (String) -> Unit,
     onSetFontSizeSp: (Float) -> Unit,
     onSetTtsRate: (Float) -> Unit,
-    onSetJpdbHighlightEnabled: (Boolean) -> Unit,
+    onSelectChapter: (Int) -> Unit,
+    onPrevChapter: () -> Unit,
+    onNextChapter: () -> Unit,
+    onToggleTranslate: () -> Unit,
+    onToggleHighlights: () -> Unit,
+    onRefineMix: () -> Unit,
+    onClearRefineMix: () -> Unit,
+    onToggleBookmark: () -> Unit,
+    onJpdbMineWord: (tokenId: String, vid: Int, sid: Int) -> Unit,
+    onJpdbSetFlag: (tokenId: String, vid: Int, sid: Int, flag: String, enabled: Boolean) -> Unit,
+    onJpdbReviewCard: (tokenId: String, vid: Int, sid: Int, rating: String, label: String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val snackbarHostState = remember { SnackbarHostState() }
     val clipboard = LocalClipboardManager.current
-    val isOnline = rememberIsOnline()
     val context = LocalContext.current
     val isCompactTopBar = LocalConfiguration.current.screenWidthDp < 420
 
-    val mirrorStore = remember { JpdbMirrorStore(context.applicationContext) }
-    var mirrorSnapshot by remember { mutableStateOf<JpdbMirrorSnapshot?>(null) }
-    LaunchedEffect(Unit) { mirrorSnapshot = mirrorStore.loadSnapshot() }
-    val mixVocabById =
-        remember(mirrorSnapshot) { mirrorSnapshot?.knownVocab?.associateBy { it.id } ?: emptyMap() }
-    val mixGlossIndex =
-        remember(mirrorSnapshot) {
-            mirrorSnapshot?.glossIndexRows?.associate { it.gloss to it.candidateIds } ?: emptyMap()
-        }
-
-    val grammarStore = remember { GrammarStore(context.applicationContext) }
-    val grammarState by grammarStore.stateFlow.collectAsState(initial = GrammarState())
-    val learningGrammarPoints =
-        remember(grammarState.learningIds) {
-            grammarState.learningIds.mapNotNull { getGrammarPointById(it) }
-                .filter { it.hintQuality == HintQuality.OK && it.hints.isNotEmpty() }
-        }
-
     val ttsController = remember { TtsController(context) }
     DisposableEffect(ttsController) { onDispose { ttsController.shutdown() } }
+
     val ttsReady by ttsController.isReady.collectAsState(initial = false)
     val isSpeaking by ttsController.isSpeaking.collectAsState(initial = false)
     val isPaused by ttsController.isPaused.collectAsState(initial = false)
-    var ttsRate by remember { mutableStateOf(settings.reader.ttsRate) }
+
     var showTtsSheet by remember { mutableStateOf(false) }
-
-    val bookDir = remember(bookId) { bookCache.bookDir(bookId) }
-    val translationCache = remember(bookId) { TranslationCache(bookDir) }
-    val jpdbTokenCache = remember(bookId) { JpdbTokenCache(bookDir) }
-    val mixRefineStore = remember(bookId) { MixRefineStore(bookDir) }
-    val jpdbHighlighter =
-        remember(bookId) { JpdbHighlighter(tokenCache = jpdbTokenCache, jpdbService = JpdbService()) }
-    val translateService = remember(sessionJwt) { TranslateService(getSessionToken = { sessionJwt }) }
-    val jpdbActionsService = remember(sessionJwt) { JpdbActionsService(getSessionToken = { sessionJwt }) }
-
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var epubBook by remember { mutableStateOf<EpubBook?>(null) }
-    var bookState by remember { mutableStateOf(BookState()) }
-
-    var chapterIndex by rememberSaveable(bookId) { mutableStateOf(0) }
-    var chapterBodyHtml by remember { mutableStateOf<String?>(null) }
-    var chapterHeadHtml by remember { mutableStateOf("") }
-    var chapterSourceHash by remember { mutableStateOf<String?>(null) }
-    var chapterBaseUrl by remember { mutableStateOf<String?>(null) }
-
-    var mixedBodyHtml by remember { mutableStateOf<String?>(null) }
-    var mixedSourceHash by remember { mutableStateOf<String?>(null) }
-    var isApplyingMix by remember { mutableStateOf(false) }
-    var mixAmbiguousGlosses by remember { mutableStateOf<List<String>>(emptyList()) }
-    var refinedChoices by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
-    var isRefiningMix by remember { mutableStateOf(false) }
-
-    var theme by remember { mutableStateOf(settings.reader.theme) }
-    var fontSizeSp by remember { mutableStateOf(settings.reader.fontSizeSp) }
-    var highlightEnabled by remember { mutableStateOf(settings.reader.jpdbHighlightEnabled) }
-
-    var highlightedBodyHtml by remember { mutableStateOf<String?>(null) }
-    var highlightedSourceHash by remember { mutableStateOf<String?>(null) }
-    var highlightedForTranslatedMode by remember { mutableStateOf(false) }
-    var highlightTokenById by remember { mutableStateOf<Map<String, JpdbService.ProcessedToken>>(emptyMap()) }
-    var isApplyingHighlights by remember { mutableStateOf(false) }
-
-    var grammarMarkedBodyHtml by remember { mutableStateOf<String?>(null) }
-    var grammarMarkedSourceHash by remember { mutableStateOf<String?>(null) }
-
-    var isTranslated by remember { mutableStateOf(false) }
-    var translatedBodyHtml by remember { mutableStateOf<String?>(null) }
-    var isTranslating by remember { mutableStateOf(false) }
-
+    var showOverflowMenu by remember(state.bookId) { mutableStateOf(false) }
     var selectedTokenId by remember { mutableStateOf<String?>(null) }
-    var isJpdbActionBusy by remember { mutableStateOf(false) }
 
-    var showOverflowMenu by remember(bookId) { mutableStateOf(false) }
-
-    LaunchedEffect(settings.reader.theme, settings.reader.fontSizeSp) {
-        theme = settings.reader.theme
-        fontSizeSp = settings.reader.fontSizeSp
-    }
-
-    LaunchedEffect(settings.reader.ttsRate) {
-        ttsRate = settings.reader.ttsRate
+    var ttsRate by remember { mutableStateOf(state.ttsRate) }
+    LaunchedEffect(state.ttsRate) {
+        ttsRate = state.ttsRate
         ttsController.setRate(ttsRate)
     }
 
-    LaunchedEffect(settings.reader.jpdbHighlightEnabled) {
-        highlightEnabled = settings.reader.jpdbHighlightEnabled
-    }
+    val darkModeEffective = isDarkThemeMode(state.theme)
 
-    val darkModeEffective = isDarkThemeMode(theme)
+    val totalChapters = state.epubBook?.chapters?.size ?: 0
+    val isBookmarkedForCurrentChapter = state.bookState.bookmarks.any { it.chapterIndex == state.chapterIndex }
 
-    val epubFile = remember(bookId) { bookCache.epubFile(bookId) }
-    val extractedDir = remember(bookId) { bookCache.extractedDir(bookId) }
-
-    LaunchedEffect(bookId) {
-        isLoading = true
-        error = null
-        chapterBodyHtml = null
-        chapterHeadHtml = ""
-        chapterSourceHash = null
-        chapterBaseUrl = null
-        mixedBodyHtml = null
-        mixedSourceHash = null
-        isApplyingMix = false
-        mixAmbiguousGlosses = emptyList()
-        refinedChoices = emptyMap()
-        isRefiningMix = false
-        epubBook = null
-        highlightedBodyHtml = null
-        highlightedSourceHash = null
-        highlightedForTranslatedMode = false
-        highlightTokenById = emptyMap()
-        isApplyingHighlights = false
-        isTranslated = false
-        translatedBodyHtml = null
-        isTranslating = false
-        selectedTokenId = null
-        try {
-            if (!epubFile.exists()) {
-                error = "Book is not cached."
-                return@LaunchedEffect
-            }
-
-            epubRepository.extractIfNeeded(epubFile = epubFile, extractedDir = extractedDir)
-            val book = epubRepository.loadBook(extractedDir)
-            epubBook = book
-
-            val state = bookCache.loadState(bookId)
-            bookState = state
-
-            val safeIndex =
-                state.lastChapterIndex.coerceIn(0, (book.chapters.lastIndex).coerceAtLeast(0))
-            chapterIndex = safeIndex
-
-            bookCache.markOpened(bookId)
-        } catch (t: Throwable) {
-            error = t.message ?: "Failed to open book"
-        } finally {
-            isLoading = false
-        }
-    }
-
-    LaunchedEffect(epubBook, chapterIndex) {
-        val book = epubBook ?: return@LaunchedEffect
-        val chapter = book.chapters.getOrNull(chapterIndex) ?: return@LaunchedEffect
-
-        // Immediately clear state so the UI responds to a chapter change (no stale chapter flash).
-        chapterBodyHtml = null
-        chapterHeadHtml = ""
-        chapterSourceHash = null
-        chapterBaseUrl = null
-        mixedBodyHtml = null
-        mixedSourceHash = null
-        isApplyingMix = false
-        mixAmbiguousGlosses = emptyList()
-        refinedChoices = emptyMap()
-        isRefiningMix = false
-        highlightedBodyHtml = null
-        highlightedSourceHash = null
-        highlightedForTranslatedMode = false
-        highlightTokenById = emptyMap()
-        isApplyingHighlights = false
-        isTranslated = false
-        translatedBodyHtml = null
-        isTranslating = false
-        selectedTokenId = null
-
-        val sanitized = epubRepository.loadSanitizedChapterHtml(extractedDir, chapter.href)
-        chapterBodyHtml = sanitized?.bodyHtml
-        chapterHeadHtml = sanitized?.headHtml ?: ""
-        chapterSourceHash = sanitized?.bodyHtml?.let { TranslationCache.sha256Hex(it) }
-        chapterBaseUrl = epubRepository.chapterBaseUrl(extractedDir, chapter.href)
-
-        val updated = bookState.copy(lastChapterIndex = chapterIndex)
-        bookState = updated
-        runCatching { bookCache.saveState(bookId, updated) }
-    }
-
-    LaunchedEffect(bookId, chapterIndex) {
-        refinedChoices = runCatching { mixRefineStore.loadLatestChoices(chapterIndex) }.getOrDefault(emptyMap())
-    }
-
-    val mixEnabledSetting = settings.reader.mixEnabled
-    val mixAggressionSetting = settings.reader.mixAggression
-    val mixAutoEnableHighlightSetting = settings.reader.mixAutoEnableHighlight
-
-    val mixActive =
-        mixEnabledSetting &&
-            !isTranslated &&
-            mirrorSnapshot != null &&
-            mirrorSnapshot?.knownVocab?.isNotEmpty() == true &&
-            mirrorSnapshot?.glossIndexRows?.isNotEmpty() == true
-
-    LaunchedEffect(
-        chapterBodyHtml,
-        chapterIndex,
-        mixActive,
-        mixAggressionSetting,
-        mixGlossIndex,
-        mixVocabById,
-        refinedChoices,
-        isTranslated,
-    ) {
-        if (!mixActive) {
-            mixedBodyHtml = null
-            mixedSourceHash = null
-            isApplyingMix = false
-            mixAmbiguousGlosses = emptyList()
-            return@LaunchedEffect
-        }
-
-        val body = chapterBodyHtml
-        if (body.isNullOrBlank()) {
-            mixedBodyHtml = null
-            mixedSourceHash = null
-            isApplyingMix = false
-            mixAmbiguousGlosses = emptyList()
-            return@LaunchedEffect
-        }
-
-        val glossIndexSnapshot = mixGlossIndex
-        val vocabByIdSnapshot = mixVocabById
-        val refinedSnapshot = refinedChoices
-
-        isApplyingMix = true
-        try {
-            val highlighter =
-                EnglishSwapHighlighter(
-                    bookId = bookId,
-                    chapter = chapterIndex,
-                    aggression = mixAggressionSetting.toDouble(),
-                    glossIndex = glossIndexSnapshot,
-                    vocabById = vocabByIdSnapshot,
-                    refinedChoices = refinedSnapshot,
-                )
-            val swapped =
-                withContext(Dispatchers.Default) {
-                    applyEnglishSwapToBodyHtml(
-                        bodyHtml = body,
-                        highlighter = highlighter,
-                    )
-                }
-            mixedBodyHtml = swapped
-            mixedSourceHash = TranslationCache.sha256Hex(swapped)
-            mixAmbiguousGlosses = highlighter.getAmbiguousGlosses()
-        } finally {
-            isApplyingMix = false
-        }
-    }
-
-    val jpdbApiKey = settings.reader.jpdbApiKey
-    val openAiApiKey = settings.reader.openAiApiKey?.trim().orEmpty()
-    val openAiModel = settings.reader.openAiModel.trim().ifBlank { "gpt-4o-mini" }
-    val translationTargetLang = settings.reader.translationTargetLang
-    val cefrLevel = settings.reader.cefrLevel
-    val translatedBodyHash = remember(translatedBodyHtml) { translatedBodyHtml?.let { TranslationCache.sha256Hex(it) } }
-
-    LaunchedEffect(mixActive, mixAutoEnableHighlightSetting, jpdbApiKey) {
-        if (!mixActive) return@LaunchedEffect
-        if (!mixAutoEnableHighlightSetting) return@LaunchedEffect
-        if (highlightEnabled) return@LaunchedEffect
-
-        highlightEnabled = true
-        onSetJpdbHighlightEnabled(true)
-
-        if (jpdbApiKey.isNullOrBlank()) {
-            val res =
-                snackbarHostState.showSnackbar(
-                    message = "Add a JPDB API key to enable highlights.",
-                    actionLabel = "Settings",
-                )
-            if (res == SnackbarResult.ActionPerformed) onOpenSettings()
-        }
-    }
-
-    val highlightErrorKey = rememberSaveable(bookId, chapterIndex) { mutableStateOf(false) }
-    LaunchedEffect(
-        chapterBodyHtml,
-        mixedBodyHtml,
-        mixedSourceHash,
-        translatedBodyHtml,
-        highlightEnabled,
-        jpdbApiKey,
-        isOnline,
-        isTranslated,
-        mixActive,
-    ) {
-        if (!highlightEnabled) {
-            highlightedBodyHtml = null
-            highlightedSourceHash = null
-            highlightedForTranslatedMode = false
-            highlightTokenById = emptyMap()
-            highlightErrorKey.value = false
-            return@LaunchedEffect
-        }
-
-        val body =
-            if (isTranslated) {
-                translatedBodyHtml
-            } else {
-                if (mixActive) {
-                    mixedBodyHtml
-                } else {
-                    chapterBodyHtml
-                }
-            } ?: run {
-            highlightedBodyHtml = null
-            highlightedSourceHash = null
-            highlightedForTranslatedMode = false
-            highlightTokenById = emptyMap()
-            return@LaunchedEffect
-        }
-        val hash =
-            if (isTranslated) {
-                TranslationCache.sha256Hex(body)
-            } else if (mixActive) {
-                mixedSourceHash ?: TranslationCache.sha256Hex(body)
-            } else {
-                chapterSourceHash ?: TranslationCache.sha256Hex(body)
-            }
-        val key = jpdbApiKey?.trim().orEmpty()
-
-        // Ensure we never display stale highlights from a different source.
-        if (highlightedSourceHash != null && (highlightedSourceHash != hash || highlightedForTranslatedMode != isTranslated)) {
-            highlightedBodyHtml = null
-            highlightedSourceHash = null
-            highlightedForTranslatedMode = false
-            highlightTokenById = emptyMap()
-        }
-
-        isApplyingHighlights = true
-        val result =
-            runCatching {
-                jpdbHighlighter.highlightChapter(
-                    bodyHtml = body,
-                    chapterIndex = chapterIndex,
-                    sourceHash = hash,
-                    jpdbApiKey = key,
-                    isOnline = isOnline,
-                )
-            }.getOrNull()
-        isApplyingHighlights = false
-
-        if (result == null) {
-            highlightedBodyHtml = null
-            highlightedSourceHash = null
-            highlightedForTranslatedMode = false
-            highlightTokenById = emptyMap()
-            if (!highlightErrorKey.value) {
-                when {
-                    key.isBlank() -> {
-                        highlightErrorKey.value = true
-                        val res =
-                            snackbarHostState.showSnackbar(
-                                message = "Add a JPDB API key to enable highlights.",
-                                actionLabel = "Settings",
-                            )
-                        if (res == SnackbarResult.ActionPerformed) onOpenSettings()
-                    }
-
-                    !isOnline -> {
-                        highlightErrorKey.value = true
-                        snackbarHostState.showSnackbar("Highlights unavailable offline (not cached).")
-                    }
-                }
-            }
-        } else {
-            highlightedBodyHtml = result.html
-            highlightedSourceHash = hash
-            highlightedForTranslatedMode = isTranslated
-            highlightTokenById = result.tokenById
-            highlightErrorKey.value = false
-        }
-    }
-
-    LaunchedEffect(
-        highlightEnabled,
-        isTranslated,
-        highlightedBodyHtml,
-        highlightedSourceHash,
-        highlightTokenById,
-        grammarState.underlinesEnabled,
-        learningGrammarPoints,
-    ) {
-        val enabled =
-            grammarState.underlinesEnabled &&
-                highlightEnabled &&
-                !isTranslated &&
-                learningGrammarPoints.isNotEmpty()
-        if (!enabled) {
-            grammarMarkedBodyHtml = null
-            grammarMarkedSourceHash = null
-            return@LaunchedEffect
-        }
-
-        val html = highlightedBodyHtml
-        val hash = highlightedSourceHash
-        if (html.isNullOrBlank() || hash.isNullOrBlank()) {
-            grammarMarkedBodyHtml = null
-            grammarMarkedSourceHash = null
-            return@LaunchedEffect
-        }
-
-        val tokenSnapshot = highlightTokenById
-        val pointsSnapshot = learningGrammarPoints
-        val marked =
-            withContext(Dispatchers.Default) {
-                GrammarUnderliner.apply(
-                    highlightedBodyHtml = html,
-                    tokenById = tokenSnapshot,
-                    learningPoints = pointsSnapshot,
-                )
-            }
-        grammarMarkedBodyHtml = marked
-        grammarMarkedSourceHash = hash
-    }
-
-    suspend fun handleTranslateClick() {
-        val body = chapterBodyHtml ?: return
-        val hash = chapterSourceHash ?: return
-
-        if (isTranslated) {
-            isTranslated = false
-            return
-        }
-
-        if (settings.reader.cacheTranslations) {
-            val cached =
-                translationCache.loadIfValid(
-                    chapterIndex = chapterIndex,
-                    sourceHash = hash,
-                    targetLang = translationTargetLang,
-                    useCefr = false,
-                    cefrLevel = cefrLevel,
-                )
-            if (cached != null) {
-                val sanitized = TranslatedHtmlSanitizer.sanitizeBodyHtml(cached.html)
-                translatedBodyHtml = sanitized
-                isTranslated = true
-                // Opportunistically repair older cached translations created before we sanitized output.
-                if (sanitized != cached.html) {
-                    runCatching { translationCache.save(chapterIndex, cached.copy(createdAt = TranslationCache.isoNowUtc(), html = sanitized)) }
-                }
-                return
-            }
-        }
-
-        if (!isOnline) {
-            snackbarHostState.showSnackbar("Translation requires internet (unless cached).")
-            return
-        }
-        if (sessionJwt.isNullOrBlank()) {
-            snackbarHostState.showSnackbar("Sign in to translate.")
-            return
-        }
-
-        isTranslating = true
-        val resp =
-            runCatching {
-                translateService.translateChapter(
-                    TranslateService.ChapterTranslateRequest(
-                        content = body,
-                        target_lang = translationTargetLang,
-                        model = settings.reader.openAiModel,
-                        api_key = settings.reader.openAiApiKey?.trim().orEmpty(),
-                        use_cefr = false,
-                        cefr_level = cefrLevel,
-                    ),
-                )
-            }.getOrNull()
-        isTranslating = false
-
-        if (resp == null) {
-            snackbarHostState.showSnackbar("Translation failed.")
-            return
-        }
-
-        val entry =
-            com.progressivereader.kmp.reader.TranslationCacheEntry(
-                createdAt = TranslationCache.isoNowUtc(),
-                targetLang = translationTargetLang,
-                useCefr = false,
-                cefrLevel = cefrLevel,
-                sourceHash = hash,
-                html = TranslatedHtmlSanitizer.sanitizeBodyHtml(resp.translated_text),
-            )
-        if (settings.reader.cacheTranslations) {
-            runCatching { translationCache.save(chapterIndex, entry) }
-        }
-        translatedBodyHtml = entry.html
-        isTranslated = true
-    }
-
-    suspend fun handleRefineMixClick() {
-        if (!settings.reader.mixEnabled) {
-            snackbarHostState.showSnackbar("Enable mix mode in Settings → Mix.")
-            return
-        }
-        if (isTranslated) {
-            snackbarHostState.showSnackbar("Turn off translation to refine mix mode.")
-            return
-        }
-        if (mirrorSnapshot == null) {
-            snackbarHostState.showSnackbar("Sync JPDB knowledge in Settings → Mix.")
-            return
-        }
-        if (!isOnline) {
-            snackbarHostState.showSnackbar("Refine requires internet.")
-            return
-        }
-        if (openAiApiKey.isBlank()) {
-            val res =
-                snackbarHostState.showSnackbar(
-                    message = "Add an OpenAI key to refine mix swaps.",
-                    actionLabel = "Settings",
-                )
-            if (res == SnackbarResult.ActionPerformed) onOpenSettings()
-            return
-        }
-
-        val ambiguousKeys = mixAmbiguousGlosses.take(30)
-        if (ambiguousKeys.isEmpty()) {
-            snackbarHostState.showSnackbar("No ambiguous swaps detected in this chapter.")
-            return
-        }
-
-        val candidatesByKey = LinkedHashMap<String, List<MixRefineCandidate>>()
-        for (k in ambiguousKeys) {
-            val ids = mixGlossIndex[k].orEmpty().take(3)
-            val rows =
-                ids.mapNotNull { id ->
-                    val rec = mixVocabById[id] ?: return@mapNotNull null
-                    MixRefineCandidate(
-                        id = id,
-                        spelling = rec.spelling,
-                        reading = rec.reading,
-                        meaning = rec.meanings.firstOrNull(),
-                    )
-                }
-            if (rows.isNotEmpty()) candidatesByKey[k] = rows
-        }
-
-        val html = chapterBodyHtml.orEmpty()
-        val textSample =
-            runCatching {
-                Jsoup.parse(html).text().replace(Regex("\\s+"), " ").trim()
-            }.getOrNull()
-                .orEmpty()
-
-        val cacheKey =
-            getMixRefineCacheKey(
-                bookId = bookId,
-                chapter = chapterIndex,
-                model = openAiModel,
-                textSample = textSample,
-                ambiguousKeys = ambiguousKeys,
-                candidatesByKey = candidatesByKey.mapValues { (_, v) -> v.map { it.id } },
-            )
-
-        val cached = runCatching { mixRefineStore.loadChoices(cacheKey) }.getOrNull()
-        if (cached != null) {
-            refinedChoices = cached
-            runCatching { mixRefineStore.setLatest(chapterIndex, cacheKey) }
-            snackbarHostState.showSnackbar("Loaded refined swaps (cached).")
-            return
-        }
-
-        isRefiningMix = true
-        try {
-            val choices =
-                refineAmbiguousSwaps(
-                    openAiKey = openAiApiKey,
-                    model = openAiModel,
-                    textSample = textSample,
-                    ambiguousKeys = ambiguousKeys,
-                    candidatesByKey = candidatesByKey,
-                )
-            runCatching { mixRefineStore.saveChoices(cacheKey, choices) }
-            runCatching { mixRefineStore.setLatest(chapterIndex, cacheKey) }
-            refinedChoices = choices
-            snackbarHostState.showSnackbar("Refined ambiguous swaps.")
-        } catch (t: Throwable) {
-            val msg = t.message?.takeIf { it.isNotBlank() } ?: "Refine failed."
-            snackbarHostState.showSnackbar(msg)
-        } finally {
-            isRefiningMix = false
-        }
-    }
-
-    suspend fun handleClearRefineMixClick() {
-        runCatching { mixRefineStore.clearLatest(chapterIndex) }
-        refinedChoices = emptyMap()
-        snackbarHostState.showSnackbar("Cleared refined swaps for this chapter.")
-    }
-
-    fun isBookmarkedForCurrentChapter(): Boolean =
-        bookState.bookmarks.any { it.chapterIndex == chapterIndex }
-
-    fun toggleBookmark() {
-        val now = isoNowUtc()
-        val updated =
-            if (isBookmarkedForCurrentChapter()) {
-                bookState.copy(bookmarks = bookState.bookmarks.filterNot { it.chapterIndex == chapterIndex })
-            } else {
-                bookState.copy(
-                    bookmarks =
-                        bookState.bookmarks +
-                            Bookmark(chapterIndex = chapterIndex, label = null, createdAt = now),
-                )
-            }
-        bookState = updated
-        scope.launch { bookCache.saveState(bookId, updated) }
-    }
-
-    val totalChapters = epubBook?.chapters?.size ?: 0
-    val maxIdx = (totalChapters - 1).coerceAtLeast(0)
-
-    LaunchedEffect(bookId, chapterIndex) { ttsController.stop() }
-
-    val swipeHintShown = rememberSaveable(bookId) { mutableStateOf(false) }
-    LaunchedEffect(epubBook) {
+    val swipeHintShown = rememberSaveable(state.bookId) { mutableStateOf(false) }
+    LaunchedEffect(state.epubBook?.chapters?.size) {
         if (swipeHintShown.value) return@LaunchedEffect
-        if ((epubBook?.chapters?.size ?: 0) <= 1) return@LaunchedEffect
+        if ((state.epubBook?.chapters?.size ?: 0) <= 1) return@LaunchedEffect
         swipeHintShown.value = true
         snackbarHostState.showSnackbar("Tip: swipe left/right to change chapters.")
     }
 
+    LaunchedEffect(state.bookId, state.chapterIndex) { ttsController.stop() }
+
     val speakUntranslatedHtml =
-        if (mixActive) {
-            mixedBodyHtml ?: chapterBodyHtml
+        if (state.mixActive) {
+            state.mixedBodyHtml ?: state.chapterBodyHtml
         } else {
-            chapterBodyHtml
+            state.chapterBodyHtml
         }
     val speakSourceHtml =
         when {
-            isTranslated -> translatedBodyHtml ?: chapterBodyHtml
-            highlightEnabled -> highlightedBodyHtml ?: speakUntranslatedHtml
+            state.isTranslated -> state.translatedBodyHtml ?: state.chapterBodyHtml
+            state.highlightEnabled -> state.highlightedBodyHtml ?: speakUntranslatedHtml
             else -> speakUntranslatedHtml
         }
     val speakText =
         remember(speakSourceHtml) {
-            if (speakSourceHtml.isNullOrBlank()) "" else Jsoup.parse(speakSourceHtml).text().trim()
+            val html = speakSourceHtml
+            if (html.isNullOrBlank()) "" else Jsoup.parse(html).text().trim()
         }
 
     fun decreaseFontSize() {
-        val next = (fontSizeSp - 2f).coerceAtLeast(12f)
-        fontSizeSp = next
+        val next = (state.fontSizeSp - 2f).coerceAtLeast(12f)
         onSetFontSizeSp(next)
     }
 
     fun increaseFontSize() {
-        val next = (fontSizeSp + 2f).coerceAtMost(32f)
-        fontSizeSp = next
+        val next = (state.fontSizeSp + 2f).coerceAtMost(32f)
         onSetFontSizeSp(next)
     }
 
     fun toggleTheme() {
         val next = if (darkModeEffective) "light" else "dark"
-        theme = next
         onSetTheme(next)
-    }
-
-    fun toggleHighlights() {
-        val next = !highlightEnabled
-        highlightEnabled = next
-        onSetJpdbHighlightEnabled(next)
-        if (next && jpdbApiKey.isNullOrBlank()) {
-            scope.launch {
-                val res =
-                    snackbarHostState.showSnackbar(
-                        message = "Add a JPDB API key to enable highlights.",
-                        actionLabel = "Settings",
-                    )
-                if (res == SnackbarResult.ActionPerformed) onOpenSettings()
-            }
-        }
     }
 
     fun toggleTts() {
@@ -863,76 +223,48 @@ fun ReaderScreen(
         }
     }
 
-    suspend fun updateTokenStateAndRehighlight(tid: String, nextState: List<String>) {
-        val body =
-            if (isTranslated) {
-                translatedBodyHtml
-            } else {
-                chapterBodyHtml
-            } ?: return
-        val hash =
-            if (isTranslated) {
-                TranslationCache.sha256Hex(body)
-            } else {
-                chapterSourceHash ?: TranslationCache.sha256Hex(body)
-            }
-        val cached = jpdbTokenCache.loadIfValid(chapterIndex, hash) ?: return
-
-        val nextStateElement = JsonArray(nextState.map { JsonPrimitive(it) })
-        val targetVidSid: Pair<String, String>? =
-            run {
-                // Token ids are `${vid}/${sid}@${start}-${end}` when card metadata is available.
-                val prefix = tid.substringBefore("@", missingDelimiterValue = "")
-                if (prefix.contains("/")) {
-                    val parts = prefix.split("/", limit = 2)
-                    val vid = parts.getOrNull(0)?.takeIf { it.isNotBlank() }
-                    val sid = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
-                    if (vid != null && sid != null) return@run vid to sid
-                }
-
-                // Fallback: look up the token data we used to render the current highlighted HTML.
-                val token = highlightTokenById[tid]
-                val vid = (token?.card?.get("vid") as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
-                val sid = (token?.card?.get("sid") as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
-                if (vid != null && sid != null) vid to sid else null
-            }
-        val updated =
-            cached.copy(
-                createdAt = isoNowUtc(),
-                tokens =
-                    cached.tokens.map { ct ->
-                        val shouldUpdate =
-                            if (targetVidSid != null) {
-                                val (targetVid, targetSid) = targetVidSid
-                                val vid = (ct.card["vid"] as? JsonPrimitive)?.content
-                                val sid = (ct.card["sid"] as? JsonPrimitive)?.content
-                                vid == targetVid && sid == targetSid
-                            } else {
-                                ct.id == tid
-                            }
-                        if (!shouldUpdate) return@map ct
-                        val updatedCard = JsonObject(ct.card.toMutableMap().apply { this["state"] = nextStateElement })
-                        ct.copy(card = updatedCard)
-                    },
-            )
-        jpdbTokenCache.save(chapterIndex, updated)
-
-        val key = jpdbApiKey?.trim().orEmpty()
-        val res =
-            jpdbHighlighter.highlightChapter(
-                bodyHtml = body,
-                chapterIndex = chapterIndex,
-                sourceHash = hash,
-                jpdbApiKey = key,
-                isOnline = isOnline,
-            )
-        if (res != null) {
-            highlightedBodyHtml = res.html
-            highlightedSourceHash = hash
-            highlightedForTranslatedMode = isTranslated
-            highlightTokenById = res.tokenById
+    val untranslatedBody =
+        if (state.mixActive) {
+            state.mixedBodyHtml ?: state.chapterBodyHtml
+        } else {
+            state.chapterBodyHtml
         }
-    }
+    val untranslatedHash =
+        if (state.mixActive) {
+            state.mixedSourceHash ?: state.chapterSourceHash
+        } else {
+            state.chapterSourceHash
+        }
+
+    val baseBody = if (state.isTranslated) state.translatedBodyHtml else untranslatedBody
+    val baseHash = if (state.isTranslated) state.translatedSourceHash else untranslatedHash
+
+    val canShowHighlights =
+        state.highlightEnabled &&
+            state.highlightedBodyHtml != null &&
+            state.highlightedSourceHash != null &&
+            state.highlightedSourceHash == baseHash &&
+            state.highlightedForTranslatedMode == state.isTranslated
+
+    val highlightedForDisplay =
+        if (canShowHighlights) {
+            val marked = state.grammarMarkedBodyHtml
+            if (!marked.isNullOrBlank() && state.grammarMarkedSourceHash == state.highlightedSourceHash) {
+                marked
+            } else {
+                state.highlightedBodyHtml
+            }
+        } else {
+            null
+        }
+
+    val effectiveBody =
+        when {
+            highlightedForDisplay != null -> highlightedForDisplay
+            else -> baseBody
+        } ?: "<p>Loading…</p>"
+
+    val html = state.chapterHeadHtml + effectiveBody
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -940,11 +272,11 @@ fun ReaderScreen(
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContents(
-                    epubBook = epubBook,
-                    chapterIndex = chapterIndex,
-                    bookmarks = bookState.bookmarks,
+                    epubBook = state.epubBook,
+                    chapterIndex = state.chapterIndex,
+                    bookmarks = state.bookState.bookmarks,
                     onSelectChapter = { idx ->
-                        chapterIndex = idx
+                        onSelectChapter(idx)
                         scope.launch { drawerState.close() }
                     },
                 )
@@ -963,13 +295,13 @@ fun ReaderScreen(
                     title = {
                         Column {
                             Text(
-                                text = epubBook?.title ?: "Reader",
+                                text = state.epubBook?.title ?: state.title,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             if (totalChapters > 0) {
                                 Text(
-                                    text = "Chapter ${chapterIndex + 1} / $totalChapters",
+                                    text = "Chapter ${state.chapterIndex + 1} / $totalChapters",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -981,8 +313,6 @@ fun ReaderScreen(
                         }
                     },
                     actions = {
-                        // On compact devices, the full action set is too wide and overlaps the back button.
-                        // Keep TOC visible and tuck the rest into an overflow menu.
                         if (isCompactTopBar) {
                             IconButton(
                                 enabled = totalChapters > 0,
@@ -999,7 +329,7 @@ fun ReaderScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("A-") },
-                                    enabled = fontSizeSp > 12f,
+                                    enabled = state.fontSizeSp > 12f,
                                     onClick = {
                                         showOverflowMenu = false
                                         decreaseFontSize()
@@ -1007,7 +337,7 @@ fun ReaderScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("A+") },
-                                    enabled = fontSizeSp < 32f,
+                                    enabled = state.fontSizeSp < 32f,
                                     onClick = {
                                         showOverflowMenu = false
                                         increaseFontSize()
@@ -1021,43 +351,43 @@ fun ReaderScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(if (highlightEnabled) "Disable highlights" else "Enable highlights") },
-                                    enabled = chapterBodyHtml != null && !isTranslating && !isApplyingMix && !isRefiningMix,
+                                    text = { Text(if (state.highlightEnabled) "Disable highlights" else "Enable highlights") },
+                                    enabled = state.chapterBodyHtml != null && !state.isTranslating && !state.isApplyingMix && !state.isRefiningMix,
                                     onClick = {
                                         showOverflowMenu = false
-                                        toggleHighlights()
+                                        onToggleHighlights()
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(if (isTranslated) "Show original" else "Translate") },
-                                    enabled = chapterBodyHtml != null && !isApplyingHighlights && !isTranslating,
+                                    text = { Text(if (state.isTranslated) "Show original" else "Translate") },
+                                    enabled = state.chapterBodyHtml != null && !state.isApplyingHighlights && !state.isTranslating,
                                     onClick = {
                                         showOverflowMenu = false
-                                        scope.launch { handleTranslateClick() }
+                                        onToggleTranslate()
                                     },
                                 )
-                                if (settings.reader.mixEnabled) {
+                                if (state.mixEnabled) {
                                     DropdownMenuItem(
                                         text = { Text("Refine mix swaps") },
                                         enabled =
-                                            mixActive &&
-                                                isOnline &&
-                                                openAiApiKey.isNotBlank() &&
-                                                !isApplyingMix &&
-                                                !isRefiningMix &&
-                                                !isApplyingHighlights &&
-                                                !isTranslating,
+                                            state.mixActive &&
+                                                state.isOnline &&
+                                                state.hasOpenAiApiKey &&
+                                                !state.isApplyingMix &&
+                                                !state.isRefiningMix &&
+                                                !state.isApplyingHighlights &&
+                                                !state.isTranslating,
                                         onClick = {
                                             showOverflowMenu = false
-                                            scope.launch { handleRefineMixClick() }
+                                            onRefineMix()
                                         },
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Clear refined swaps") },
-                                        enabled = refinedChoices.isNotEmpty() && !isApplyingMix && !isRefiningMix,
+                                        enabled = state.refinedChoices.isNotEmpty() && !state.isApplyingMix && !state.isRefiningMix,
                                         onClick = {
                                             showOverflowMenu = false
-                                            scope.launch { handleClearRefineMixClick() }
+                                            onClearRefineMix()
                                         },
                                     )
                                 }
@@ -1078,11 +408,11 @@ fun ReaderScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(if (isBookmarkedForCurrentChapter()) "Remove bookmark" else "Add bookmark") },
+                                    text = { Text(if (isBookmarkedForCurrentChapter) "Remove bookmark" else "Add bookmark") },
                                     enabled = totalChapters > 0,
                                     onClick = {
                                         showOverflowMenu = false
-                                        toggleBookmark()
+                                        onToggleBookmark()
                                     },
                                 )
                             }
@@ -1092,17 +422,8 @@ fun ReaderScreen(
                                 onClick = { scope.launch { drawerState.open() } },
                             ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
 
-                            AppTextButton(
-                                text = "A-",
-                                enabled = fontSizeSp > 12f,
-                                onClick = { decreaseFontSize() },
-                            )
-
-                            AppTextButton(
-                                text = "A+",
-                                enabled = fontSizeSp < 32f,
-                                onClick = { increaseFontSize() },
-                            )
+                            AppTextButton(text = "A-", enabled = state.fontSizeSp > 12f, onClick = { decreaseFontSize() })
+                            AppTextButton(text = "A+", enabled = state.fontSizeSp < 32f, onClick = { increaseFontSize() })
 
                             IconButton(onClick = { toggleTheme() }) {
                                 Icon(
@@ -1112,10 +433,10 @@ fun ReaderScreen(
                             }
 
                             IconButton(
-                                enabled = chapterBodyHtml != null && !isTranslating && !isApplyingMix && !isRefiningMix,
-                                onClick = { toggleHighlights() },
+                                enabled = state.chapterBodyHtml != null && !state.isTranslating && !state.isApplyingMix && !state.isRefiningMix,
+                                onClick = { onToggleHighlights() },
                             ) {
-                                if (isApplyingHighlights) {
+                                if (state.isApplyingHighlights) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
                                         strokeWidth = 2.dp,
@@ -1125,17 +446,16 @@ fun ReaderScreen(
                                     Icon(
                                         Icons.Outlined.AutoFixHigh,
                                         contentDescription = "Highlights",
-                                        tint =
-                                            if (highlightEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        tint = if (state.highlightEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
 
                             IconButton(
-                                enabled = chapterBodyHtml != null && !isApplyingHighlights && !isTranslating,
-                                onClick = { scope.launch { handleTranslateClick() } },
+                                enabled = state.chapterBodyHtml != null && !state.isApplyingHighlights && !state.isTranslating,
+                                onClick = { onToggleTranslate() },
                             ) {
-                                if (isTranslating) {
+                                if (state.isTranslating) {
                                     CircularProgressIndicator(
                                         color = MaterialTheme.colorScheme.primary,
                                         strokeWidth = 2.dp,
@@ -1145,8 +465,7 @@ fun ReaderScreen(
                                     Icon(
                                         Icons.Outlined.Language,
                                         contentDescription = "Translate",
-                                        tint =
-                                            if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        tint = if (state.isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             }
@@ -1162,22 +481,21 @@ fun ReaderScreen(
                                         else -> Icons.Outlined.VolumeUp
                                     },
                                     contentDescription = "Text to speech",
-                                    tint =
-                                        if (isSpeaking || isPaused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    tint = if (isSpeaking || isPaused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                 )
                             }
 
                             IconButton(
                                 enabled = totalChapters > 0,
-                                onClick = { toggleBookmark() },
+                                onClick = { onToggleBookmark() },
                             ) {
                                 Icon(
-                                    if (isBookmarkedForCurrentChapter()) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkAdd,
+                                    if (isBookmarkedForCurrentChapter) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkAdd,
                                     contentDescription = "Bookmark",
                                 )
                             }
 
-                            val showMixMenu = settings.reader.mixEnabled || refinedChoices.isNotEmpty()
+                            val showMixMenu = state.mixEnabled || state.refinedChoices.isNotEmpty()
                             if (showMixMenu) {
                                 IconButton(onClick = { showOverflowMenu = true }) {
                                     Icon(Icons.Outlined.MoreVert, contentDescription = "More")
@@ -1195,30 +513,30 @@ fun ReaderScreen(
                                         },
                                     )
 
-                                    if (settings.reader.mixEnabled) {
+                                    if (state.mixEnabled) {
                                         DropdownMenuItem(
                                             text = { Text("Refine mix swaps") },
                                             enabled =
-                                                mixActive &&
-                                                    isOnline &&
-                                                    openAiApiKey.isNotBlank() &&
-                                                    !isApplyingMix &&
-                                                    !isRefiningMix &&
-                                                    !isApplyingHighlights &&
-                                                    !isTranslating,
+                                                state.mixActive &&
+                                                    state.isOnline &&
+                                                    state.hasOpenAiApiKey &&
+                                                    !state.isApplyingMix &&
+                                                    !state.isRefiningMix &&
+                                                    !state.isApplyingHighlights &&
+                                                    !state.isTranslating,
                                             onClick = {
                                                 showOverflowMenu = false
-                                                scope.launch { handleRefineMixClick() }
+                                                onRefineMix()
                                             },
                                         )
                                     }
 
                                     DropdownMenuItem(
                                         text = { Text("Clear refined swaps") },
-                                        enabled = refinedChoices.isNotEmpty() && !isApplyingMix && !isRefiningMix,
+                                        enabled = state.refinedChoices.isNotEmpty() && !state.isApplyingMix && !state.isRefiningMix,
                                         onClick = {
                                             showOverflowMenu = false
-                                            scope.launch { handleClearRefineMixClick() }
+                                            onClearRefineMix()
                                         },
                                     )
                                 }
@@ -1236,118 +554,64 @@ fun ReaderScreen(
                         .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                when {
-                    isLoading -> CircularProgressIndicator()
-                    error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
-                    epubBook == null -> Text("No book loaded.")
-                    else -> {
-                        val untranslatedBody =
-                            if (mixActive) {
-                                mixedBodyHtml ?: chapterBodyHtml
-                            } else {
-                                chapterBodyHtml
-                            }
-                        val untranslatedHash =
-                            if (mixActive) {
-                                mixedSourceHash ?: mixedBodyHtml?.let { TranslationCache.sha256Hex(it) } ?: chapterSourceHash
-                            } else {
-                                chapterSourceHash
-                            }
-
-                        val baseBody = if (isTranslated) translatedBodyHtml else untranslatedBody
-                        val baseHash = if (isTranslated) translatedBodyHash else untranslatedHash
-                        val canShowHighlights =
-                            highlightEnabled &&
-                                highlightedBodyHtml != null &&
-                                highlightedSourceHash != null &&
-                                highlightedSourceHash == baseHash &&
-                                highlightedForTranslatedMode == isTranslated
-                        val highlightedForDisplay =
-                            if (canShowHighlights) {
-                                val marked = grammarMarkedBodyHtml
-                                if (!marked.isNullOrBlank() && grammarMarkedSourceHash == highlightedSourceHash) {
-                                    marked
+                if (state.chapterBodyHtml == null) {
+                    CircularProgressIndicator()
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        HtmlContent(
+                            html = html,
+                            baseUrl = state.chapterBaseUrl,
+                            darkMode = darkModeEffective,
+                            fontSizeSp = state.fontSizeSp,
+                            onUrlClick = { url ->
+                                val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return@HtmlContent false
+                                if (uri.scheme != "pr" || uri.host != "jpdb") return@HtmlContent false
+                                val tid = uri.getQueryParameter("tid")?.takeIf { it.isNotBlank() } ?: return@HtmlContent true
+                                if (canShowHighlights && state.tokenUiById.containsKey(tid)) {
+                                    showTtsSheet = false
+                                    selectedTokenId = tid
                                 } else {
-                                    highlightedBodyHtml
+                                    scope.launch { snackbarHostState.showSnackbar("No token data for that word.") }
                                 }
-                            } else {
-                                null
-                            }
-                        val effectiveBody =
-                            when {
-                                highlightedForDisplay != null -> highlightedForDisplay
-                                else -> baseBody
-                            } ?: "<p>Loading…</p>"
-                        val html = chapterHeadHtml + effectiveBody
-                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                            HtmlContent(
-                                html = html,
-                                baseUrl = chapterBaseUrl,
-                                darkMode = darkModeEffective,
-                                fontSizeSp = fontSizeSp,
-                                onUrlClick = { url ->
-                                    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return@HtmlContent false
-                                    if (uri.scheme != "pr" || uri.host != "jpdb") return@HtmlContent false
-                                    val tid = uri.getQueryParameter("tid")?.takeIf { it.isNotBlank() } ?: return@HtmlContent true
-                                    if (canShowHighlights && highlightTokenById.containsKey(tid)) {
-                                        showTtsSheet = false
-                                        selectedTokenId = tid
-                                    } else {
-                                        scope.launch { snackbarHostState.showSnackbar("No token data for that word.") }
-                                    }
-                                    true
-                                },
-                                onSwipe = { direction ->
-                                    when (direction) {
-                                        SwipeDirection.LEFT -> {
-                                            if (chapterIndex < maxIdx) {
-                                                chapterIndex = (chapterIndex + 1).coerceAtMost(maxIdx)
-                                            } else {
-                                                scope.launch { snackbarHostState.showSnackbar("End of book.") }
-                                            }
-                                        }
+                                true
+                            },
+                            onSwipe = { direction ->
+                                when (direction) {
+                                    SwipeDirection.LEFT -> onNextChapter()
+                                    SwipeDirection.RIGHT -> onPrevChapter()
+                                }
+                            },
+                        )
 
-                                        SwipeDirection.RIGHT -> {
-                                            if (chapterIndex > 0) {
-                                                chapterIndex = (chapterIndex - 1).coerceAtLeast(0)
-                                            } else {
-                                                scope.launch { snackbarHostState.showSnackbar("Start of book.") }
-                                            }
-                                        }
-                                    }
-                                },
-                            )
-
-                            val showBusyOverlay = isTranslating || isApplyingHighlights || isApplyingMix || isRefiningMix
-                            if (showBusyOverlay) {
-                                val label =
-                                    when {
-                                        isRefiningMix -> "Refining mix…"
-                                        isTranslating -> "Translating…"
-                                        isApplyingHighlights -> "Applying highlights…"
-                                        else -> "Applying mix…"
-                                    }
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.TopCenter,
+                        val showBusyOverlay = state.isTranslating || state.isApplyingHighlights || state.isApplyingMix || state.isRefiningMix
+                        if (showBusyOverlay) {
+                            val label =
+                                when {
+                                    state.isRefiningMix -> "Refining mix…"
+                                    state.isTranslating -> "Translating…"
+                                    state.isApplyingHighlights -> "Applying highlights…"
+                                    else -> "Applying mix…"
+                                }
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.TopCenter,
+                            ) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.large,
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                                    tonalElevation = 2.dp,
+                                    modifier = Modifier.padding(top = 10.dp),
                                 ) {
-                                    androidx.compose.material3.Surface(
-                                        shape = MaterialTheme.shapes.large,
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
-                                        tonalElevation = 2.dp,
-                                        modifier = Modifier.padding(top = 10.dp),
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                                            Text(
-                                                text = label,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        }
+                                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
                                     }
                                 }
                             }
@@ -1438,7 +702,7 @@ fun ReaderScreen(
     }
 
     if (selectedTokenId != null) {
-        val token = selectedTokenId?.let { highlightTokenById[it] }
+        val token: JpdbTokenUi? = selectedTokenId?.let { state.tokenUiById[it] }
         ModalBottomSheet(
             onDismissRequest = { selectedTokenId = null },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -1452,19 +716,19 @@ fun ReaderScreen(
                     return@ModalBottomSheet
                 }
 
-                val cardInfo = token.card.toCardInfo()
+                val card = token.card
                 Text(
-                    text = cardInfo.spelling ?: "(unknown)",
+                    text = card.spelling ?: "(unknown)",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
-                if (!cardInfo.reading.isNullOrBlank()) {
-                    AppMutedText(cardInfo.reading!!)
+                if (!card.reading.isNullOrBlank()) {
+                    AppMutedText(card.reading!!)
                 }
 
-                if (cardInfo.meanings.isNotEmpty()) {
+                if (card.meanings.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        cardInfo.meanings.forEach { meaning ->
+                        card.meanings.forEach { meaning ->
                             if (!meaning.partOfSpeech.isNullOrBlank()) {
                                 AppChip(text = meaning.partOfSpeech!!)
                             }
@@ -1479,121 +743,43 @@ fun ReaderScreen(
                     AppMutedText("No meanings available.")
                 }
 
-                fun JsonElement?.asIntOrNull(): Int? {
-                    val primitive = this as? JsonPrimitive ?: return null
-                    return primitive.content.toIntOrNull()
-                }
+                val vid = token.vid
+                val sid = token.sid
 
-                val vid = token.card["vid"].asIntOrNull()
-                val sid = token.card["sid"].asIntOrNull()
-                val existingState =
-                    (token.card["state"] as? JsonArray)
-                        ?.mapNotNull { (it as? JsonPrimitive)?.content?.trim()?.takeIf { s -> s.isNotBlank() } }
-                        .orEmpty()
+                fun Set<String>.hasNeverForget(): Boolean =
+                    contains("never-forget") || contains("never_forget") || contains("neverforget")
 
-                val hasNeverForget = existingState.contains("never-forget")
-                val hasBlacklisted = existingState.contains("blacklisted")
+                val hasNeverForget = token.state.hasNeverForget()
+                val hasBlacklisted = token.state.contains("blacklisted")
 
-                val canUseJpdbActions = isOnline && !jpdbApiKey.isNullOrBlank() && vid != null && sid != null
+                val canUseJpdbActions = state.isOnline && state.hasJpdbApiKey && vid != null && sid != null
 
                 AppSectionTitle("JPDB")
                 if (!canUseJpdbActions) {
                     AppMutedText("Online + JPDB API key required.")
                 } else {
-                    val tid = selectedTokenId!!
-                    val key = jpdbApiKey!!.trim()
+                    val tid = token.id
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         AppTonalButton(
                             text = "Add",
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val res =
-                                            jpdbActionsService.mineWord(
-                                                JpdbActionsService.MineWordRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Mined word" else "Mine failed")
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbMineWord(tid, vid!!, sid!!) },
                             modifier = Modifier.weight(1f),
                         )
 
                         AppTonalButton(
                             text = if (hasNeverForget) "Unset never-forget" else "Never forget",
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val nextOn = !hasNeverForget
-                                        val res =
-                                            jpdbActionsService.updateWordState(
-                                                JpdbActionsService.UpdateWordStateRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    flag = "never-forget",
-                                                    state = nextOn,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        if (res?.success == true) {
-                                            val base = (res.newState ?: existingState).toMutableSet()
-                                            if (nextOn) base.add("never-forget") else base.remove("never-forget")
-                                            updateTokenStateAndRehighlight(tid, base.toList())
-                                            snackbarHostState.showSnackbar(if (nextOn) "Marked never-forget" else "Removed never-forget")
-                                        } else {
-                                            snackbarHostState.showSnackbar("Update failed")
-                                        }
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbSetFlag(tid, vid!!, sid!!, "never-forget", !hasNeverForget) },
                             modifier = Modifier.weight(1f),
                         )
                     }
 
                     AppTonalButton(
                         text = if (hasBlacklisted) "Unblacklist" else "Blacklist",
-                        enabled = !isJpdbActionBusy,
-                        onClick = {
-                            scope.launch {
-                                isJpdbActionBusy = true
-                                try {
-                                    val nextOn = !hasBlacklisted
-                                    val res =
-                                        jpdbActionsService.updateWordState(
-                                            JpdbActionsService.UpdateWordStateRequest(
-                                                vid = vid,
-                                                sid = sid,
-                                                flag = "blacklist",
-                                                state = nextOn,
-                                                jpdbApiKey = key,
-                                            )
-                                        )
-                                    if (res?.success == true) {
-                                        val base = (res.newState ?: existingState).toMutableSet()
-                                        if (nextOn) base.add("blacklisted") else base.remove("blacklisted")
-                                        updateTokenStateAndRehighlight(tid, base.toList())
-                                        snackbarHostState.showSnackbar(if (nextOn) "Blacklisted" else "Removed blacklist")
-                                    } else {
-                                        snackbarHostState.showSnackbar("Update failed")
-                                    }
-                                } finally {
-                                    isJpdbActionBusy = false
-                                }
-                            }
-                        },
+                        enabled = !state.isJpdbActionBusy,
+                        onClick = { onJpdbSetFlag(tid, vid!!, sid!!, "blacklist", !hasBlacklisted) },
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -1602,85 +788,20 @@ fun ReaderScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ReviewGradeButton(
                             grade = JpdbReviewGrade.NOTHING,
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val res =
-                                            jpdbActionsService.reviewCard(
-                                                JpdbActionsService.ReviewCardRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    rating = JpdbReviewGrade.NOTHING.rating,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
-                                            updateTokenStateAndRehighlight(tid, res.newState)
-                                        }
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: nothing" else "Review failed")
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.NOTHING.rating, JpdbReviewGrade.NOTHING.label) },
                             modifier = Modifier.weight(1f),
                         )
-
                         ReviewGradeButton(
                             grade = JpdbReviewGrade.SOMETHING,
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val res =
-                                            jpdbActionsService.reviewCard(
-                                                JpdbActionsService.ReviewCardRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    rating = JpdbReviewGrade.SOMETHING.rating,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
-                                            updateTokenStateAndRehighlight(tid, res.newState)
-                                        }
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: something" else "Review failed")
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.SOMETHING.rating, JpdbReviewGrade.SOMETHING.label) },
                             modifier = Modifier.weight(1f),
                         )
-
                         ReviewGradeButton(
                             grade = JpdbReviewGrade.HARD,
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val res =
-                                            jpdbActionsService.reviewCard(
-                                                JpdbActionsService.ReviewCardRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    rating = JpdbReviewGrade.HARD.rating,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
-                                            updateTokenStateAndRehighlight(tid, res.newState)
-                                        }
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: hard" else "Review failed")
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.HARD.rating, JpdbReviewGrade.HARD.label) },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -1688,62 +809,19 @@ fun ReaderScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ReviewGradeButton(
                             grade = JpdbReviewGrade.OKAY,
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val res =
-                                            jpdbActionsService.reviewCard(
-                                                JpdbActionsService.ReviewCardRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    rating = JpdbReviewGrade.OKAY.rating,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
-                                            updateTokenStateAndRehighlight(tid, res.newState)
-                                        }
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: okay" else "Review failed")
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.OKAY.rating, JpdbReviewGrade.OKAY.label) },
                             modifier = Modifier.weight(1f),
                         )
-
                         ReviewGradeButton(
                             grade = JpdbReviewGrade.EASY,
-                            enabled = !isJpdbActionBusy,
-                            onClick = {
-                                scope.launch {
-                                    isJpdbActionBusy = true
-                                    try {
-                                        val res =
-                                            jpdbActionsService.reviewCard(
-                                                JpdbActionsService.ReviewCardRequest(
-                                                    vid = vid,
-                                                    sid = sid,
-                                                    rating = JpdbReviewGrade.EASY.rating,
-                                                    jpdbApiKey = key,
-                                                )
-                                            )
-                                        if (res?.success == true && !res.newState.isNullOrEmpty()) {
-                                            updateTokenStateAndRehighlight(tid, res.newState)
-                                        }
-                                        snackbarHostState.showSnackbar(if (res?.success == true) "Reviewed: easy" else "Review failed")
-                                    } finally {
-                                        isJpdbActionBusy = false
-                                    }
-                                }
-                            },
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.EASY.rating, JpdbReviewGrade.EASY.label) },
                             modifier = Modifier.weight(1f),
                         )
                     }
 
-                    if (isJpdbActionBusy) {
+                    if (state.isJpdbActionBusy) {
                         AppMutedText("Processing…")
                     }
                 }
@@ -1751,17 +829,17 @@ fun ReaderScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     AppTonalButton(
                         text = "Copy word",
-                        enabled = !cardInfo.spelling.isNullOrBlank(),
+                        enabled = !card.spelling.isNullOrBlank(),
                         onClick = {
-                            cardInfo.spelling?.let { clipboard.setText(AnnotatedString(it)) }
+                            card.spelling?.let { clipboard.setText(AnnotatedString(it)) }
                             scope.launch { snackbarHostState.showSnackbar("Copied word") }
                         },
                     )
                     AppTonalButton(
                         text = "Copy reading",
-                        enabled = !cardInfo.reading.isNullOrBlank(),
+                        enabled = !card.reading.isNullOrBlank(),
                         onClick = {
-                            cardInfo.reading?.let { clipboard.setText(AnnotatedString(it)) }
+                            card.reading?.let { clipboard.setText(AnnotatedString(it)) }
                             scope.launch { snackbarHostState.showSnackbar("Copied reading") }
                         },
                     )
@@ -1771,42 +849,6 @@ fun ReaderScreen(
             }
         }
     }
-}
-
-private data class CardMeaning(
-    val partOfSpeech: String?,
-    val glosses: List<String>,
-)
-
-private data class CardInfo(
-    val spelling: String?,
-    val reading: String?,
-    val meanings: List<CardMeaning>,
-)
-
-private fun JsonObject.toCardInfo(): CardInfo {
-    fun JsonElement?.asStringOrNull(): String? =
-        (this as? JsonPrimitive)?.content?.trim()?.takeIf { it.isNotBlank() }
-
-    val spelling = this["spelling"].asStringOrNull()
-    val reading = this["reading"].asStringOrNull()
-
-    val meanings =
-        (this["meanings"] as? JsonArray)
-            ?.mapNotNull { el ->
-                val obj = el as? JsonObject ?: return@mapNotNull null
-                val pos = obj["partOfSpeech"].asStringOrNull()
-                val glosses =
-                    (obj["glosses"] as? JsonArray)
-                        ?.mapNotNull { g -> g.asStringOrNull() }
-                        ?.filter { it.isNotBlank() }
-                        ?: emptyList()
-                if (pos.isNullOrBlank() && glosses.isEmpty()) return@mapNotNull null
-                CardMeaning(partOfSpeech = pos, glosses = glosses)
-            }
-            ?: emptyList()
-
-    return CardInfo(spelling = spelling, reading = reading, meanings = meanings)
 }
 
 @Composable
@@ -1888,12 +930,4 @@ private fun DrawerContents(
             }
         }
     }
-}
-
-private fun isoNowUtc(): String {
-    val fmt =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-    return fmt.format(Date())
 }

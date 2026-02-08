@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { fetchUserDecks } from "@features/vocabulary/services/vocabApi";
 import type { Deck } from "~/types/api";
 import { appLog } from "@shared/appLog";
+import { notifyError } from "@shared/utils/notify";
 
 interface DeckSelectorProps {
   onDeckSelect?: (deck: Deck) => void;
@@ -26,11 +27,11 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
       appLog.error('[DeckSelector] Error fetching decks', error);
       const message = String(error?.message || '');
       if (message.includes('JPDB API key not configured')) {
-        toast.error('JPDB API key not configured. Add it in Settings → Highlight.');
+        notifyError(error, { title: 'JPDB API key not configured. Add it in Settings → Highlight.' });
       } else if (message.includes('401') || message.includes('Authentication')) {
-        toast.error('Sign in required to load decks.');
+        notifyError(error, { title: 'Sign in required to load decks.' });
       } else {
-        toast.error('Failed to fetch decks. Please try again.');
+        notifyError(error, { title: 'Failed to fetch decks. Please try again.' });
       }
     } finally {
       setIsLoading(false);

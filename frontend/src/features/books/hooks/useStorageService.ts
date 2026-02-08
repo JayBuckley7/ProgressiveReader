@@ -1,44 +1,40 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { BookMetadata, ReadingProgress, Folder } from '~/types';
-import { bookStorageService } from '@features/books/services/bookStorage';
-import { bookMetadataService } from '@features/books/services/bookMetadata';
-import { bookCacheService } from '@features/books/services/bookCache';
-import { gDriveService } from '@integrations/googleDrive/gdriveService';
-import { authManager } from '@shared/services/authManager';
-import { addOfflineBook, getOfflineBooksWithCovers, OFFLINE_BOOKS_KEY, getOfflineBooks } from '@features/books/utils/offlineLibrary';
-import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, clearAllCache } from '@integrations/googleDrive/services/driveCache';
-import { toast } from 'sonner';
-import { useClerk, useUser } from '@clerk/clerk-react';
-import { appLog } from '@shared/appLog'
-import { notifyError } from '@shared/utils/notify';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { useClerk, useUser } from "@clerk/clerk-react";
 
-/**
- * Determine if two book lists contain the same entries.
- * Order is ignored and only stable fields are compared.
- */
-function areBooksEqual(a: BookMetadata[], b: BookMetadata[]): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  const serialize = (arr: BookMetadata[]) =>
-    arr
-      .map(book => `${book.id}-${book.title}-${book.fileType}-${book.coverImageId ?? ''}`)
-      .sort()
-      .join('|');
-  return serialize(a) === serialize(b);
-}
+import type { BookMetadata, Folder, ReadingProgress } from "~/types";
+
+import { bookCacheService } from "@features/books/services/bookCache";
+import { bookMetadataService } from "@features/books/services/bookMetadata";
+import { bookStorageService } from "@features/books/services/bookStorage";
+
+import { authManager } from "@shared/services/authManager";
+import { appLog } from "@shared/appLog";
+import { notifyError } from "@shared/utils/notify";
+
+import { applyBooksUpdate } from "./storageService/books";
+import { useOnlineStatus } from "./storageService/connectivity";
+import { cacheBookForOffline, hasOfflineBooksCached, loadOfflineBooks } from "./storageService/offline";
+import { createFolderActions } from "./storageService/folders";
+import { handleUnauthorizedCloudSettingsLoad, loadCloudSettings, saveCloudSettings, type CloudSettings } from "./storageService/settings";
+import { secureSignOut, signInWithClerk, type ClerkClient } from "./storageService/auth";
 
 function useStorageService() {
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const clerk = useClerk();
+
+  const isOnline = useOnlineStatus();
+
   const [isLoading, setIsLoading] = useState(true);
   const [isDriveBookLoading, setIsDriveBookLoading] = useState(false);
   const [books, setBooks] = useState<BookMetadata[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+
   const booksRef = useRef<BookMetadata[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
-  const SESSION_COOLDOWN = 30_000;
+
+  const SESSION_COOLDOWN_MS = 30_000;
   const lastSessionToastRef = useRef(0);
   const isDriveSyncingRef = useRef(false);
 
@@ -46,78 +42,53 @@ function useStorageService() {
     booksRef.current = books;
   }, [books]);
 
-  // Memoize the silent refresh function to prevent recreation on every render
   const silentRefreshBooks = useCallback(async () => {
-    if (!clerkUser || isRefreshingRef.current) {
-      return;
-    }
+    if (!clerkUser || isRefreshingRef.current) return;
 
     try {
       isRefreshingRef.current = true;
-      if (import.meta.env.DEV) {
-        appLog.debug('[useStorageService] Silently refreshing books...');
-      }
+      if (import.meta.env.DEV) appLog.debug("[useStorageService] Silent refresh starting");
 
       const previous = booksRef.current;
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        appLog.debug(`[useStorageService] Cover ready for book ${bookId} (silent refresh)`);
-        setBooks(currentBooks => {
-          const updatedBooks = currentBooks.map(book =>
-            book.id === bookId ? { ...book, coverUrl } : book
-          );
-          appLog.debug(`[useStorageService] Updated books state for cover ${bookId} (silent refresh) - Total books: ${updatedBooks.length}`);
-          return updatedBooks;
-        });
+        setBooks((currentBooks) =>
+          currentBooks.map((book) => (book.id === bookId ? { ...book, coverUrl } : book))
+        );
       };
 
       const userBooks = await bookMetadataService.getUserBooks(onCoverReady);
 
-      // No need to merge covers manually - storageService handles persistent URLs
-      if (areBooksEqual(userBooks, previous)) {
-        setBooks(userBooks);
-        booksRef.current = userBooks;
-      } else {
-        const newIds = new Set(userBooks.map(b => b.id));
-        const removed = previous.filter(b => !newIds.has(b.id));
-        if (removed.length > 0) {
-          bookCacheService.cleanupBlobUrls(removed);
-        }
-        setBooks(userBooks);
-        booksRef.current = userBooks;
-      }
-
-      if (import.meta.env.DEV) {
-        appLog.debug(`[useStorageService] Silent refresh complete - found ${userBooks.length} books`);
-      }
-
-      // Show success feedback only
-      if (userBooks.length > 0) {
-        toast.success(`Loaded ${userBooks.length} book${userBooks.length === 1 ? '' : 's'} from Google Drive`);
-      }
+      applyBooksUpdate({
+        previous,
+        next: userBooks,
+        setBooks,
+        booksRef,
+        cleanupRemoved: (removed) => bookCacheService.cleanupBlobUrls(removed),
+      });
     } catch (error) {
-      notifyError(error, { title: 'Failed to load books from Google Drive' });
+      notifyError(error, { title: "Failed to load books from Google Drive" });
     } finally {
       isRefreshingRef.current = false;
       setIsDriveBookLoading(false);
     }
   }, [clerkUser]);
 
-  const loadOfflineBooks = useCallback(async () => {
-    setIsLoading(true);
-    const offline = await getOfflineBooksWithCovers();
-    setBooks(offline);
-    setIsLoading(false);
+  const loadOfflineBooksIntoState = useCallback(async () => {
+    await loadOfflineBooks({
+      setIsLoading,
+      setBooks: (next) => setBooks(next),
+    });
   }, []);
 
-  // Simple function: authenticate first, then load everything
   const connectToGoogleDriveAndLoad = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
-      appLog.debug('[useStorageService] Cannot connect: no Clerk user or already loading');
+      if (import.meta.env.DEV) {
+        appLog.debug("[useStorageService] Cannot connect: no Clerk user or already loading");
+      }
       return false;
     }
 
-    appLog.debug('[useStorageService] connectToGoogleDriveAndLoad started');
     setIsLoading(true);
     setIsDriveBookLoading(true);
     isRefreshingRef.current = true;
@@ -126,54 +97,41 @@ function useStorageService() {
     try {
       const isAuthenticated = await authManager.ensureAuthenticated();
       if (!isAuthenticated) {
-        appLog.debug('[useStorageService] Authentication failed');
-        toast.error('Failed to connect to Google Drive');
+        notifyError("Failed to connect to Google Drive");
         return false;
       }
-      appLog.debug('[useStorageService] Google Drive authenticated');
+
       const previous = booksRef.current;
 
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        appLog.debug(`[useStorageService] Cover ready for book ${bookId}`);
-        // Use a ref to batch cover updates and reduce re-renders
-        setBooks(currentBooks => {
-          const updatedBooks = currentBooks.map(book =>
-            book.id === bookId ? { ...book, coverUrl } : book
-          );
-          return updatedBooks;
-        });
+        setBooks((currentBooks) =>
+          currentBooks.map((book) => (book.id === bookId ? { ...book, coverUrl } : book))
+        );
       };
 
       const [userBooks, userFolders] = await Promise.all([
         bookMetadataService.getUserBooks(onCoverReady),
-        bookMetadataService.getFolders(clerkUser)
+        bookMetadataService.getFolders(clerkUser),
       ]);
 
-      appLog.debug('[useStorageService] Loaded library', { books: userBooks.length, folders: userFolders.length });
-
-      if (areBooksEqual(userBooks, previous)) {
-        setBooks(userBooks);
-        booksRef.current = userBooks;
-      } else {
-        const newIds = new Set(userBooks.map(b => b.id));
-        const removed = previous.filter(b => !newIds.has(b.id));
-        if (removed.length > 0) {
-          bookCacheService.cleanupBlobUrls(removed);
-        }
-        setBooks(userBooks);
-        booksRef.current = userBooks;
-      }
-
+      applyBooksUpdate({
+        previous,
+        next: userBooks,
+        setBooks,
+        booksRef,
+        cleanupRemoved: (removed) => bookCacheService.cleanupBlobUrls(removed),
+      });
       setFolders(userFolders);
 
-      // Remember that user successfully connected
-      localStorage.setItem('wasGoogleDriveConnected', 'true');
-
-      toast.success('Google Drive connected and library loaded!');
+      localStorage.setItem("wasGoogleDriveConnected", "true");
+      toast.success("Google Drive connected and library loaded!");
       return true;
     } catch (error) {
-      notifyError(error, { title: 'Failed to connect to Google Drive', description: 'Showing offline books instead.' });
-      await loadOfflineBooks();
+      notifyError(error, {
+        title: "Failed to connect to Google Drive",
+        description: "Showing offline books instead.",
+      });
+      await loadOfflineBooksIntoState();
       return false;
     } finally {
       setIsLoading(false);
@@ -181,325 +139,240 @@ function useStorageService() {
       isRefreshingRef.current = false;
       isDriveSyncingRef.current = false;
     }
-  }, [clerkUser]);
-
-  // Legacy function that calls the new one
-  const loadUserBooks = useCallback(async () => {
-    return await connectToGoogleDriveAndLoad();
-  }, [connectToGoogleDriveAndLoad]);
-
-  // Check online status
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  }, [clerkUser, loadOfflineBooksIntoState]);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Auto-connect to Drive only on pages that need books, and delay slightly to avoid
-    // Clerk session-finalization races that can cause auth state churn.
-
-    // Only log auth status in development mode to reduce spam
+    // Auto-connect to Drive only on pages that need books.
     if (import.meta.env.DEV) {
-      appLog.debug(`[useStorageService] Status: loaded=${clerkLoaded}, user=${!!clerkUser}, userId=${clerkUser?.id}`);
+      appLog.debug(
+        `[useStorageService] Status: loaded=${clerkLoaded}, user=${Boolean(clerkUser)}, userId=${clerkUser?.id}`
+      );
     }
-    if (clerkLoaded) {
-      setIsLoading(false);
-      if (clerkUser) {
-        // Check if this is a different user to avoid redundant loads
-        const currentUserId = clerkUser.id;
-        if (lastUserIdRef.current !== currentUserId) {
-          appLog.debug('[useStorageService] User signed in with Clerk:', clerkUser);
-          lastUserIdRef.current = currentUserId;
 
-          // Check if user signed in with Google via Clerk (has Google external account)
-          const wasGoogleClerkLogin = clerkUser.externalAccounts?.some(
-            (acc) => acc.provider.startsWith("google")
-          );
+    if (!clerkLoaded) return;
 
-          if (wasGoogleClerkLogin) {
-            // Only auto-connect to Google Drive if user is on a page that needs books
-            // Don't auto-connect on admin pages or other non-library pages
-            const currentPath = window.location.pathname;
-            const needsBooks = currentPath === '/' || currentPath.startsWith('/vocabulary') || currentPath.startsWith('/book/');
+    setIsLoading(false);
 
-            appLog.debug(`[useStorageService] Current path: '${currentPath}', needsBooks: ${needsBooks}`);
+    if (clerkUser) {
+      const currentUserId = clerkUser.id;
+      if (lastUserIdRef.current === currentUserId) return;
 
-            if (needsBooks) {
-              appLog.debug('[useStorageService] User signed in with Google via Clerk - auto-connecting to Google Drive...');
-              // Auto-connect to Google Drive after a small delay to ensure Clerk is fully ready
-              setTimeout(() => {
-                connectToGoogleDriveAndLoad();
-              }, 1000); // 1 second delay to ensure Clerk is fully ready
-            } else {
-              appLog.debug(`[useStorageService] User on ${currentPath} - skipping auto Google Drive connection`);
-            }
-          } else {
-            appLog.debug('[useStorageService] User did not sign in with Google, skipping Google Drive auto-connect');
-          }
-        }
-      } else {
-        // User is not signed in
-        if (!isOnline) {
-          // OFFLINE MODE: Only load offline books if we are TRULY offline
-          const offlineBooks = getOfflineBooks();
+      lastUserIdRef.current = currentUserId;
 
-          if (offlineBooks.length > 0) {
-            appLog.debug('[useStorageService] User offline/unauthenticated but has cached books - loading offline mode');
-            // Don't clear books, instead ensure they are loaded
-            // We rely on "signOut" to explicitly clear this cache if the user truly wants to logout
-            loadOfflineBooks();
-          }
-        } else {
-          // ONLINE MODE: User is not signed in and is online -> Force fresh state for Sign In
-          appLog.debug('User not signed in with Clerk and is Online - enforcing secure state');
+      const wasGoogleClerkLogin = clerkUser.externalAccounts?.some((acc) => acc.provider.startsWith("google"));
+      if (!wasGoogleClerkLogin) return;
 
-          // Clean up blob URLs before clearing books
-          if (books.length > 0) {
-            bookCacheService.cleanupBlobUrls(books);
-          }
+      const currentPath = window.location.pathname;
+      const needsBooks =
+        currentPath === "/" || currentPath.startsWith("/vocabulary") || currentPath.startsWith("/book/");
+      if (!needsBooks) return;
 
-          setBooks([]);
-          lastUserIdRef.current = null;
-        }
+      // Delay slightly to avoid Clerk session-finalization races that can cause auth state churn.
+      setTimeout(() => {
+        void connectToGoogleDriveAndLoad();
+      }, 1000);
+      return;
+    }
+
+    // User is not signed in.
+    if (!isOnline) {
+      if (hasOfflineBooksCached()) {
+        void loadOfflineBooksIntoState();
       }
+      return;
     }
-  }, [clerkUser?.id, clerkLoaded, loadUserBooks, loadOfflineBooks, isOnline]); // Added isOnline dependency
 
-  // Listen for authentication state changes but DON'T auto-load data
+    // Online + unauthenticated: enforce fresh state for sign-in.
+    if (books.length > 0) {
+      bookCacheService.cleanupBlobUrls(books);
+    }
+    setBooks([]);
+    setFolders([]);
+    lastUserIdRef.current = null;
+  }, [books, clerkLoaded, clerkUser, connectToGoogleDriveAndLoad, isOnline, loadOfflineBooksIntoState]);
+
+  // Listen for auth state changes but don't auto-load data.
   useEffect(() => {
     if (!clerkUser) return;
-
     const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
-      appLog.debug(`[useStorageService] Auth state changed: ${isAuthenticated}`);
-      // Just log the state change, don't auto-load anything
-      // The user will manually trigger connectToGoogleDriveAndLoad when they want to
+      if (import.meta.env.DEV) appLog.debug(`[useStorageService] Auth state changed: ${isAuthenticated}`);
     });
+    return unsubscribe;
+  }, [clerkUser]);
 
-    return () => {
-      appLog.debug('[useStorageService] Cleaning up auth listener');
-      unsubscribe();
-    };
-  }, [clerkUser?.id]);
-
-  // Cleanup blob URLs when component unmounts
+  // Cleanup blob URLs when component unmounts.
   useEffect(() => {
     return () => {
-      // Clean up any remaining blob URLs on unmount
       if (books.length > 0) {
         bookCacheService.cleanupBlobUrls(books);
       }
     };
   }, [books]);
 
-  const uploadBook = async (
-    file: File,
-    meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean },
-    onOCRProgress?: (progress: { page?: number; total?: number; percent?: number }) => void
-  ) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to upload books');
-      return null;
-    }
+  const uploadBook = useCallback(
+    async (
+      file: File,
+      meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean },
+      onOCRProgress?: (progress: { page?: number; total?: number; percent?: number }) => void
+    ) => {
+      if (!clerkUser) {
+        notifyError("Please sign in to upload books");
+        return null;
+      }
 
-    try {
-      const book = await bookMetadataService.uploadBook(file, meta, clerkUser, onOCRProgress);
-      await loadUserBooks(); // Refresh the list
-      toast.success('Book uploaded successfully to your cloud storage!');
-      return book;
-    } catch (error) {
-      notifyError(error, { title: 'Failed to upload book to cloud storage' });
-      throw error;
-    }
-  };
+      try {
+        const book = await bookMetadataService.uploadBook(file, meta, clerkUser, onOCRProgress);
+        await connectToGoogleDriveAndLoad();
+        toast.success("Book uploaded successfully to your cloud storage!");
+        return book;
+      } catch (error) {
+        notifyError(error, { title: "Failed to upload book to cloud storage" });
+        throw error;
+      }
+    },
+    [clerkUser, connectToGoogleDriveAndLoad]
+  );
 
-  const downloadBook = async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
+  const downloadBook = useCallback(async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
     if (!clerkUser) {
-      toast.error('Please sign in to download books');
+      notifyError("Please sign in to download books");
       return null;
     }
 
     try {
       return await bookStorageService.downloadBook(bookId, metadata);
     } catch (error) {
-      notifyError(error, { title: 'Failed to download book from cloud storage' });
+      notifyError(error, { title: "Failed to download book from cloud storage" });
       throw error;
     }
-  };
+  }, [clerkUser]);
 
-  const downloadBookForOffline = async (meta: BookMetadata) => {
-    const blob = await downloadBook(meta.id, meta);
-    if (!blob) return;
+  const downloadBookForOffline = useCallback(
+    async (meta: BookMetadata) => {
+      await cacheBookForOffline({ meta, downloadBook });
+    },
+    [downloadBook]
+  );
 
-    if (meta.coverImageId) {
-      let cover = await getCoverForFile(meta.id);
-      if (!cover) {
-        cover = await getCachedCover(meta.coverImageId);
-        if (!cover && gDriveService.isSignedIn()) {
-          cover = await gDriveService.downloadFile(meta.coverImageId);
-          if (cover) {
-            await cacheCover(meta.coverImageId, cover);
-          }
-        }
-        if (cover) {
-          await cacheCoverForFile(meta.id, cover);
-        }
+  const deleteBook = useCallback(
+    async (id: string) => {
+      if (!clerkUser) {
+        notifyError("Please sign in to delete books");
+        return;
       }
-    }
-    addOfflineBook(meta);
-    toast.success('Book cached for offline use');
-  };
 
-  const deleteBook = async (id: string) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to delete books');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await bookMetadataService.deleteBook(id);
-      // Refresh books after delete
-      await silentRefreshBooks();
-      toast.success('Book deleted successfully');
-    } catch (error) {
-      notifyError(error, { title: 'Failed to delete book' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setIsLoading(true);
+      try {
+        await bookMetadataService.deleteBook(id);
+        await silentRefreshBooks();
+        toast.success("Book deleted successfully");
+      } catch (error) {
+        notifyError(error, { title: "Failed to delete book" });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [clerkUser, silentRefreshBooks]
+  );
 
-  const updateBookCover = async (bookId: string, coverFile: File) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to update book covers');
-      return;
-    }
+  const updateBookCover = useCallback(
+    async (bookId: string, coverFile: File) => {
+      if (!clerkUser) {
+        notifyError("Please sign in to update book covers");
+        return;
+      }
 
-    try {
-      const newCoverImageId = await bookMetadataService.updateBookCover(bookId, coverFile);
-      // Refresh books to show the new cover
-      await silentRefreshBooks();
-      toast.success('Book cover updated successfully');
-      return newCoverImageId;
-    } catch (error) {
-      notifyError(error, { title: 'Failed to update book cover' });
-      throw error;
-    }
-  };
+      try {
+        const newCoverImageId = await bookMetadataService.updateBookCover(bookId, coverFile);
+        await silentRefreshBooks();
+        toast.success("Book cover updated successfully");
+        return newCoverImageId;
+      } catch (error) {
+        notifyError(error, { title: "Failed to update book cover" });
+        throw error;
+      }
+    },
+    [clerkUser, silentRefreshBooks]
+  );
 
-  const getReadingProgress = async (bookId: string): Promise<ReadingProgress | null> => {
+  const getReadingProgress = useCallback(async (bookId: string): Promise<ReadingProgress | null> => {
     try {
       return await bookStorageService.getReadingProgress(bookId);
     } catch (error) {
-      appLog.error('Error getting reading progress:', error);
+      appLog.error("[useStorageService] Error getting reading progress", error);
       return null;
     }
-  };
+  }, []);
 
-  const saveReadingProgress = async (progress: ReadingProgress) => {
+  const saveReadingProgress = useCallback(async (progress: ReadingProgress) => {
     try {
       await bookStorageService.saveReadingProgress(progress);
     } catch (error) {
-      appLog.error('Error saving reading progress:', error);
+      appLog.error("[useStorageService] Error saving reading progress", error);
     }
-  };
+  }, []);
 
-  const saveBookProgress = async (
-    bookId: string,
-    currentChapter: number,
-    currentPosition: number = 0,
-    currentPage?: number,
-    totalPages?: number,
-    fileType?: string,
-    scrollHeight?: number,
-    viewportHeight?: number
-  ): Promise<void> => {
-    try {
-      await bookStorageService.saveBookProgress(bookId, currentChapter, currentPosition, currentPage, totalPages, fileType, scrollHeight, viewportHeight);
-    } catch (error) {
-      appLog.error('Error saving book progress:', error);
-    }
-  };
-
-  const signIn = async () => {
-    if (!clerk.loaded) {
-      toast.error('Authentication system not loaded yet');
-      return;
-    }
-    clerk.redirectToSignIn();
-  };
-
-  const signOut = async () => {
-    if (!clerk.loaded) {
-      toast.error('Authentication system not loaded yet');
-      return;
-    }
-
-    try {
-      await clerk.signOut();
-    } catch (error) {
-      notifyError(error, { title: 'Sign out failed' });
-      return;
-    }
-
-    setBooks([]); // Clear books when signing out
-    lastUserIdRef.current = null;
-    lastSessionToastRef.current = 0;
-
-    // SECURITY: Clear Google Drive tokens when Clerk user signs out
-    // This prevents token leakage between different user sessions
-    gDriveService.onClerkSignOut();
-
-    // SECURITY: Explicitly wipe all local data to prevent access by next user
-    localStorage.removeItem(OFFLINE_BOOKS_KEY);
-
-    // Clear all reading progress from localStorage
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('reading_progress_')) {
-        localStorage.removeItem(key);
+  const saveBookProgress = useCallback(
+    async (
+      bookId: string,
+      currentChapter: number,
+      currentPosition: number = 0,
+      currentPage?: number,
+      totalPages?: number,
+      fileType?: string,
+      scrollHeight?: number,
+      viewportHeight?: number
+    ): Promise<void> => {
+      try {
+        await bookStorageService.saveBookProgress(
+          bookId,
+          currentChapter,
+          currentPosition,
+          currentPage,
+          totalPages,
+          fileType,
+          scrollHeight,
+          viewportHeight
+        );
+      } catch (error) {
+        appLog.error("[useStorageService] Error saving book progress", error);
       }
+    },
+    []
+  );
+
+  const signIn = useCallback(() => {
+    signInWithClerk(clerk as unknown as ClerkClient);
+  }, [clerk]);
+
+  const signOut = useCallback(async () => {
+    await secureSignOut({
+      clerk: clerk as unknown as ClerkClient,
+      onSignedOut: () => {
+        setBooks([]);
+        setFolders([]);
+        lastUserIdRef.current = null;
+        lastSessionToastRef.current = 0;
+      },
     });
+  }, [clerk]);
 
-    // Clear IndexedDB (files and covers)
-    try {
-      await clearAllCache();
-      appLog.debug('[useStorageService] Secure logout: local cache wiped');
-    } catch (e) {
-      appLog.error('[useStorageService] Failed to wipe cache on logout', e);
-    }
-
-    // Clear persisted settings
-    document.cookie = 'prSettings=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-    localStorage.removeItem('prSettings');
-    localStorage.removeItem('showPopupOnHover');
-    localStorage.removeItem('touchscreenSupport');
-    localStorage.removeItem('disableFadeAnimation');
-  };
-
-  const openCloudFolder = async () => {
+  const openCloudFolder = useCallback(async () => {
     if (!clerkUser) {
-      toast.error('Please sign in to access your cloud storage folder');
+      notifyError("Please sign in to access your cloud storage folder");
       return;
     }
 
     try {
       await bookMetadataService.openCloudFolder(clerkUser);
     } catch (error) {
-      notifyError(error, { title: 'Failed to open cloud storage folder' });
+      notifyError(error, { title: "Failed to open cloud storage folder" });
     }
-  };
+  }, [clerkUser]);
 
-  const syncBooks = async () => {
+  const syncBooks = useCallback(async () => {
     if (!clerkUser) {
-      toast.error('Please sign in to sync your books');
+      notifyError("Please sign in to sync your books");
       return;
     }
 
@@ -507,151 +380,54 @@ function useStorageService() {
     isDriveSyncingRef.current = true;
     try {
       const onCoverReady = (bookId: string, coverUrl: string) => {
-        appLog.debug(`[useStorageService] Cover ready for book ${bookId} (sync) - URL: ${coverUrl.substring(0, 50)}...`);
-        setBooks((current) => {
-          const updatedBooks = current.map((b) => (b.id === bookId ? { ...b, coverUrl } : b));
-          appLog.debug(`[useStorageService] Updated books state for cover ${bookId} (sync) - Total books: ${updatedBooks.length}`);
-          return updatedBooks;
-        });
+        setBooks((current) => current.map((b) => (b.id === bookId ? { ...b, coverUrl } : b)));
       };
 
       const synced = await bookMetadataService.syncBooks(clerkUser, onCoverReady);
       setBooks(synced);
-      toast.success('Library synced successfully');
+      booksRef.current = synced;
+      toast.success("Library synced successfully");
       lastSessionToastRef.current = 0;
     } catch (error) {
-      notifyError(error, { title: 'Failed to sync books' });
+      notifyError(error, { title: "Failed to sync books" });
     } finally {
       setIsLoading(false);
       isDriveSyncingRef.current = false;
     }
-  };
+  }, [clerkUser]);
 
-  const saveSettings = async (settings: any) => {
-    if (!clerkUser) {
-      appLog.debug('Cannot save settings: user not authenticated');
-      return false;
-    }
+  const saveSettings = useCallback(
+    async (settings: CloudSettings) => {
+      return await saveCloudSettings({ clerkUserId: clerkUser?.id ?? null, settings });
+    },
+    [clerkUser?.id]
+  );
 
-    try {
-      const success = await bookMetadataService.saveSettings(settings);
-      if (success) {
-        appLog.debug('Settings saved to cloud successfully');
-      } else {
-        appLog.debug('Failed to save settings to cloud');
-      }
-      return success;
-    } catch (error) {
-      appLog.error('Error saving settings:', error);
-      return false;
-    }
-  };
+  const loadSettings = useCallback(async (): Promise<CloudSettings | null> => {
+    return await loadCloudSettings({
+      ensureAuthenticated: authManager.ensureAuthenticated,
+      onUnauthorized: () => {
+        handleUnauthorizedCloudSettingsLoad({
+          sessionCooldownMs: SESSION_COOLDOWN_MS,
+          lastSessionToastRef,
+          isDriveSyncingRef,
+        });
+      },
+    });
+  }, []);
 
-  const loadSettings = async (): Promise<any | null> => {
-    // Use centralized auth manager instead of direct Clerk check
-    const isAuthenticated = await authManager.ensureAuthenticated();
-    if (!isAuthenticated) {
-      appLog.debug('Authentication failed, cannot load cloud settings');
-      return null;
-    }
-
-    try {
-      const settings = await bookMetadataService.loadSettings();
-      return settings;
-    } catch (error: any) {
-      if (error.message === 'UNAUTHORIZED') {
-        if (Date.now() - lastSessionToastRef.current > SESSION_COOLDOWN) {
-          if (isDriveSyncingRef.current) {
-            toast.info('Drive syncing…');
-          } else {
-            toast.error('Session expired, please sign in again');
-          }
-          lastSessionToastRef.current = Date.now();
-        }
-        throw error;
-      } else {
-        appLog.error('Error loading settings:', error);
-        // Don't show error toast for generic settings loading failure - just use defaults
-        return null;
-      }
-    }
-  };
-
-  // Folder management methods
-  const createFolder = async (name: string, parentId?: string) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to create folders');
-      return;
-    }
-
-    try {
-      const newFolder = await bookMetadataService.createFolder(name, parentId, clerkUser);
-      setFolders(current => [...current, newFolder]);
-      toast.success(`Folder "${name}" created successfully`);
-    } catch (error) {
-      notifyError(error, { title: 'Failed to create folder' });
-    }
-  };
-
-  const updateFolder = async (folderId: string, updates: { name?: string; parentId?: string }) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to update folders');
-      return;
-    }
-
-    try {
-      const updatedFolder = await bookMetadataService.updateFolder(folderId, updates, clerkUser);
-      setFolders(current =>
-        current.map(folder =>
-          folder.id === folderId ? updatedFolder : folder
-        )
-      );
-      toast.success('Folder updated successfully');
-    } catch (error) {
-      notifyError(error, { title: 'Failed to update folder' });
-    }
-  };
-
-  const deleteFolder = async (folderId: string) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to delete folders');
-      return;
-    }
-
-    try {
-      await bookMetadataService.deleteFolder(folderId, clerkUser);
-      setFolders(current => current.filter(folder => folder.id !== folderId));
-      toast.success('Folder deleted successfully');
-    } catch (error) {
-      notifyError(error, { title: 'Failed to delete folder' });
-    }
-  };
-
-  const moveBookToFolder = async (bookId: string, folderId: string | null) => {
-    if (!clerkUser) {
-      toast.error('Please sign in to move books');
-      return;
-    }
-
-    try {
-      await bookMetadataService.moveBookToFolder(bookId, folderId, clerkUser);
-      setBooks(current =>
-        current.map(book =>
-          book.id === bookId ? { ...book, folderId: folderId ?? undefined } : book
-        )
-      );
-      toast.success('Book moved successfully');
-    } catch (error) {
-      notifyError(error, { title: 'Failed to move book' });
-    }
-  };
+  const folderActions = createFolderActions({
+    clerkUser,
+    setFolders,
+    setBooks,
+  });
 
   return {
     books,
     folders,
     isLoading,
     isDriveBookLoading,
-    isAuthenticated: !!clerkUser && clerkLoaded,
+    isAuthenticated: Boolean(clerkUser) && clerkLoaded,
     signIn,
     signOut,
     uploadBook,
@@ -666,11 +442,11 @@ function useStorageService() {
     downloadBookForOffline,
     saveSettings,
     loadSettings,
-    connectToGoogleDriveAndLoad, // NEW: Manual connection function 
-    createFolder,
-    updateFolder,
-    deleteFolder,
-    moveBookToFolder
+    connectToGoogleDriveAndLoad,
+    createFolder: folderActions.createFolder,
+    updateFolder: folderActions.updateFolder,
+    deleteFolder: folderActions.deleteFolder,
+    moveBookToFolder: folderActions.moveBookToFolder,
   };
 }
 

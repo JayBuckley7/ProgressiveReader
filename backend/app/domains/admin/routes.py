@@ -3,8 +3,7 @@ from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 from flask import g
 
-from ...utils.clerk_auth import require_auth, require_admin, is_progressive_reader_admin, get_clerk_client
-from .service import AdminService
+from ...utils.clerk_auth import require_auth, require_admin, is_progressive_reader_admin
 from .schemas import (
     AddOpenAIKeyRequest,
     RemoveOpenAIKeyRequest,
@@ -24,22 +23,20 @@ def debug_admin_check():
     if not user:
         return jsonify({"error": "No user found"}), 401
 
-    service = AdminService()
+    service = current_app.extensions["container"].admin_service
     result = service.get_admin_status(
         user_id=user.id,
         is_admin_func=is_progressive_reader_admin,
-        clerk_client=get_clerk_client()
     )
-    return jsonify(result.dict())
+    return jsonify(result.model_dump())
 
 
 @admin_bp.route('/openai_key_configured', methods=['GET'])
 def openai_key_configured():
     """Return whether the server has at least one OpenAI API key."""
-    fallback_key = current_app.config.get('OPENAI_API_KEY')
-    service = AdminService()
-    result = service.get_openai_key_status(fallback_key=fallback_key)
-    return jsonify(result.dict())
+    service = current_app.extensions["container"].admin_service
+    result = service.get_openai_key_status()
+    return jsonify(result.model_dump())
 
 
 @admin_bp.route('/openai_keys/add', methods=['POST'])
@@ -56,10 +53,10 @@ def add_openai_key():
     except Exception as e:
         return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
     
-    service = AdminService()
+    service = current_app.extensions["container"].admin_service
     result = service.add_openai_key(req)
     current_app.logger.info(f'Added OpenAI key. Pool size now {result.pool_size}')
-    return jsonify(result.dict())
+    return jsonify(result.model_dump())
 
 
 @admin_bp.route('/openai_keys/remove', methods=['POST'])
@@ -77,10 +74,10 @@ def remove_openai_key():
         return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
     
     try:
-        service = AdminService()
+        service = current_app.extensions["container"].admin_service
         result = service.remove_openai_key(req)
         current_app.logger.info(f'Removed OpenAI key. Pool size now {result.pool_size}')
-        return jsonify(result.dict())
+        return jsonify(result.model_dump())
     except ValueError as e:
         return jsonify({'error': str(e)}), 404
 
@@ -89,7 +86,6 @@ def remove_openai_key():
 @require_admin
 def list_openai_keys():
     """Return the list of stored OpenAI API keys."""
-    service = AdminService()
+    service = current_app.extensions["container"].admin_service
     result = service.list_openai_keys()
-    return jsonify(result.dict())
-
+    return jsonify(result.model_dump())

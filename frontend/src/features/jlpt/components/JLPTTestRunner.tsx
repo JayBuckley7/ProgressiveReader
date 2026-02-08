@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appLog } from '@shared/appLog'
+import { notifyError } from '@shared/utils/notify'
 
 const furiganaPattern = /((?:[\p{sc=Han}々〆ヶ]+)|\(\)|（）)\(([^)]+)\)/gu;
 
@@ -238,7 +239,7 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
 
   const readTranscript = () => {
     if (!('speechSynthesis' in window)) {
-      alert(t('jlptTest.runner.textToSpeechNotSupported'));
+      notifyError(t('jlptTest.runner.textToSpeechNotSupported'), { title: 'Text-to-speech' });
       return;
     }
 

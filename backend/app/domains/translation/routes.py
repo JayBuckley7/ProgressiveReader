@@ -3,30 +3,13 @@ from __future__ import annotations
 
 from flask import Blueprint, request, jsonify, current_app, Response
 from pydantic import ValidationError
-from typing import Optional
 import json
 
 from ...utils.clerk_auth import optional_auth
-from ...utils.openai_key_pool import get_openai_key_pool
-from .service import TranslationService
-from .integrations import OpenAIProvider
+from ...utils.request_normalization import normalize_aliases
 from .schemas import TranslateRequest, TranslateResponse
 
 translation_bp = Blueprint('translation', __name__, url_prefix='/api/translate')
-
-
-def _get_api_key(user_api_key: Optional[str], use_server_key: bool = True) -> Optional[str]:
-    """Get API key from user key or server pool."""
-    if user_api_key:
-        return user_api_key
-    if use_server_key:
-        pool = get_openai_key_pool()
-        key = pool.get_next_key()
-        if key:
-            return key
-        return current_app.config.get("OPENAI_API_KEY")
-    return None
-
 
 @translation_bp.route('/chapter', methods=['POST'])
 @optional_auth
@@ -37,18 +20,18 @@ def translate_chapter():
         if not data:
             return jsonify({"error": "Invalid JSON payload"}), 400
 
-        # Normalize field names
-        if 'target_lang' not in data:
-            for alt in ['target_language', 'targetLanguage']:
-                if alt in data:
-                    data['target_lang'] = data.pop(alt)
-                    break
-
-        if 'source_lang' not in data:
-            for alt in ['source_language', 'sourceLanguage']:
-                if alt in data:
-                    data['source_lang'] = data.pop(alt)
-                    break
+        normalize_aliases(
+            data,
+            {
+                "target_lang": ["target_language", "targetLanguage", "targetLang"],
+                "source_lang": ["source_language", "sourceLanguage", "sourceLang"],
+                # Some clients send camelCase for flags/settings.
+                "api_key": ["apiKey"],
+                "use_cefr": ["useCefr"],
+                "cefr_level": ["cefrLevel"],
+                "translation_service": ["translationService"],
+            },
+        )
 
         req = TranslateRequest(**data)
     except ValidationError as e:
@@ -56,8 +39,9 @@ def translate_chapter():
     except Exception as e:
         return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
 
-    # Get API key
-    api_key_to_use = _get_api_key(req.api_key, use_server_key=True)
+    container = current_app.extensions["container"]
+    # Get API key (user key if provided, otherwise server pool/config).
+    api_key_to_use = container.openai_key_resolver.resolve(req.api_key, use_server_key=True)
     if not api_key_to_use:
         return jsonify({"error": "OpenAI API key not configured"}), 400
 
@@ -67,53 +51,32 @@ def translate_chapter():
     )
 
     try:
-        provider = OpenAIProvider(api_key=api_key_to_use)
-        service = TranslationService(provider)
+        service = container.make_translation_service(api_key_to_use)
 
         if req.stream:
             def generate():
-                buffer = ""
-                last_chunk = ""
-
+                translated = ""
                 yield "data: {\"status\": \"started\"}\n\n"
                 for part in service.stream_translate_chapter(req):
                     if part:
-                        buffer += part
-                        last_chunk += part
-                        # Clean markdown code fences
-                        while "```html" in buffer:
-                            buffer = buffer.replace("```html", "", 1)
-                        while "```" in buffer:
-                            buffer = buffer.replace("```", "", 1)
-                        yield f"data: {json.dumps({'content': buffer})}\n\n"
-                        buffer = ""
-
-                if buffer:
-                    yield f"data: {json.dumps({'content': buffer})}\n\n"
-
-                # Clean final text
-                clean_translated_text = last_chunk
-                if clean_translated_text.startswith("```html"):
-                    clean_translated_text = clean_translated_text[7:].strip()
-                elif clean_translated_text.startswith("```"):
-                    clean_translated_text = clean_translated_text[3:].strip()
-                if clean_translated_text.endswith("```"):
-                    clean_translated_text = clean_translated_text[:-3].strip()
+                        translated += part
+                        yield f"data: {json.dumps({'content': part})}\n\n"
 
                 yield (
                     "data: "
-                    f"{json.dumps({'complete': True, 'translated_text': clean_translated_text})}"
+                    f"{json.dumps({'complete': True, 'translated_text': translated})}"
                     "\n\n"
                 )
                 yield "data: [DONE]\n\n"
 
-            return Response(generate(), mimetype="text/event-stream")
+            # Explicit content_type to avoid Flask adding charset for this stream.
+            return Response(generate(), content_type="text/event-stream")
         else:
             result = service.translate_chapter(req)
             current_app.logger.info(
                 f"Chapter translation successful. First 100 chars: {result.translated_text[:100]}..."
             )
-            return jsonify(result.dict())
+            return jsonify(result.model_dump())
 
     except Exception as e:
         current_app.logger.error(f"Error calling OpenAI API for chapter: {e}", exc_info=True)
@@ -129,20 +92,19 @@ def translate_vocabulary():
         if not data:
             return jsonify({"error": "Invalid JSON payload"}), 400
 
-        # Normalize field names
-        if 'target_lang' not in data:
-            for alt in ['target_language', 'targetLanguage']:
-                if alt in data:
-                    data['target_lang'] = data.pop(alt)
-                    break
-            if 'target_lang' not in data:
-                data['target_lang'] = 'English'  # Default for vocabulary
+        normalize_aliases(
+            data,
+            {
+                "target_lang": ["target_language", "targetLanguage", "targetLang"],
+                "api_key": ["apiKey"],
+                "translation_service": ["translationService"],
+                "use_server_key": ["useServerKey"],
+                "model": ["modelName"],
+            },
+        )
 
-        # Set vocabulary-optimized defaults
-        if 'translation_service' not in data:
-            data['translation_service'] = 'openai'
-        if 'model' not in data:
-            data['model'] = 'gpt-3.5-turbo'
+        # Default for vocabulary
+        data.setdefault("target_lang", "English")
 
         req = TranslateRequest(**data)
     except ValidationError as e:
@@ -156,22 +118,21 @@ def translate_vocabulary():
     )
 
     # Get API key
-    use_server_key = request.get_json().get('use_server_key', True) if request.get_json() else True
-    api_key_to_use = _get_api_key(req.api_key, use_server_key=use_server_key)
+    use_server_key = data.get('use_server_key', True)
+    container = current_app.extensions["container"]
+    api_key_to_use = container.openai_key_resolver.resolve(req.api_key, use_server_key=bool(use_server_key))
     if not api_key_to_use:
         return jsonify({"error": "OpenAI API key not configured"}), 400
 
     try:
-        provider = OpenAIProvider(api_key=api_key_to_use)
-        service = TranslationService(provider)
+        service = container.make_translation_service(api_key_to_use)
         result = service.translate_vocabulary(req)
 
         current_app.logger.info(
             f"Vocabulary OpenAI translation successful: '{req.content}' -> '{result.translated_text}'"
         )
-        return jsonify(result.dict())
+        return jsonify(result.model_dump())
 
     except Exception as e:
         current_app.logger.error(f"Error calling OpenAI API for vocabulary: {e}", exc_info=True)
         return jsonify({"error": f"Error during vocabulary translation: {e}"}), 500
-

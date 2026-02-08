@@ -1,5 +1,6 @@
 package com.progressivereader.kmp.reader
 
+import com.progressivereader.kmp.domain.reader.TranslationCacheEntry
 import com.progressivereader.kmp.jpdb.JpdbService
 import java.nio.file.Files
 import kotlin.test.assertEquals

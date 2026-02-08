@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChapterTitle } from "~/types";
+import type { Bookmark } from "~/types/api";
 
 interface ContentsDrawerProps {
   visible: boolean;
@@ -8,7 +9,7 @@ interface ContentsDrawerProps {
   chapterTitles: ChapterTitle[];
   currentChapter: number;
   onSelectChapter: (index: number) => void;
-  bookmarks: any[];
+  bookmarks: Bookmark[];
 }
 
 export default function ContentsDrawer({ visible, onClose, chapterTitles, currentChapter, onSelectChapter, bookmarks, }: ContentsDrawerProps) {
@@ -54,10 +55,18 @@ export default function ContentsDrawer({ visible, onClose, chapterTitles, curren
             <div>
               {bookmarks && bookmarks.length > 0 ? (
                 <ul className="space-y-2">
-                  {bookmarks.map((bookmark: any) => (
-                    <li key={bookmark._id || bookmark.id} className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <div className="text-sm font-medium">{chapterTitles?.[bookmark.chapterIndex]?.label || t('reader.chapterNumber', { number: bookmark.chapterIndex + 1 })}</div>
-                      {bookmark.note && (<div className="text-xs text-gray-600 dark:text-gray-400">{bookmark.note}</div>)}
+                  {bookmarks.map((bookmark) => (
+                    <li
+                      key={String(bookmark.id ?? `${bookmark.bookId}:${bookmark.chapterIndex}:${bookmark.position}`)}
+                      className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <div className="text-sm font-medium">
+                        {chapterTitles?.[bookmark.chapterIndex]?.label ||
+                          t("reader.chapterNumber", { number: bookmark.chapterIndex + 1 })}
+                      </div>
+                      {typeof bookmark.note === "string" && bookmark.note.trim() ? (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">{bookmark.note}</div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -71,5 +80,4 @@ export default function ContentsDrawer({ visible, onClose, chapterTitles, curren
     </div>
   );
 }
-
 

@@ -72,13 +72,11 @@ let currentConfigInstance: JpHighlighterConfig = { ...defaultConfig };
 
 // Function to get the current configuration
 export function getCurrentConfig(): JpHighlighterConfig {
-    //appLog.debug('[api-adapter] getCurrentConfig called, returning:', JSON.stringify(currentConfigInstance));
     return currentConfigInstance;
 }
 
 // Load configuration from cookies/localStorage
 export function loadConfig(): JpHighlighterConfig {
-    //appLog.debug('[api-adapter] loadConfig called');
     const loadedConfig = { ...defaultConfig }; // Start with defaults
     
     // Load from cookies
@@ -183,7 +181,6 @@ export function loadConfig(): JpHighlighterConfig {
     // loadedConfig[keybindKey] would be undefined. The spread above handles this by keeping the default.
     // If it *was* in localStorage and parsed to { code: 'None', ... }, that will correctly override a different default.
 
-    // appLog.debug('[api-adapter] loadConfig finished, currentConfigInstance is now:', JSON.stringify(currentConfigInstance, null, 2));
     return currentConfigInstance; // Return the new config instance
 }
 

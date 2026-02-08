@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 import { appLog } from '@shared/appLog';
+import { notifyError } from '@shared/utils/notify';
 
 interface BookFileData {
   id: string;
@@ -46,7 +47,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
   const validateFile = (file: File): boolean => {
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
     if (!fileExtension || !supportedFormats.includes(fileExtension)) {
-      toast.error(t('massUpload.toasts.unsupportedFormat', { fileName: file.name }));
+      notifyError(t('massUpload.toasts.unsupportedFormat', { fileName: file.name }));
       return false;
     }
     return true;
@@ -238,7 +239,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
         error: error.message || t('massUpload.toasts.uploadFailed'),
         progress: 0 
       });
-             toast.error(t('massUpload.toasts.retryFailed', { title: book.title }));
+      notifyError(error, { title: t('massUpload.toasts.retryFailed', { title: book.title }) });
      }
    };
 
@@ -258,7 +259,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
       try {
         await signIn();
       } catch (error) {
-        toast.error(t('massUpload.toasts.signInRequired'));
+        notifyError(error, { title: t('massUpload.toasts.signInRequired') });
         return;
       }
     }

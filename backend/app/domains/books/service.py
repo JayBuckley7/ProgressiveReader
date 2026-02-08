@@ -2,19 +2,22 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from .integrations import StorageProvider
-from .repository import BooksRepository
+from .ports import BooksRepositoryPort, StorageProviderPort, CoverLookupPort
 from .schemas import Book, Bookmark
 
 
 class BooksService:
-    def __init__(self, repository: BooksRepository, storage: StorageProvider) -> None:
+    def __init__(self, repository: BooksRepositoryPort, storage: StorageProviderPort, cover_lookup: CoverLookupPort) -> None:
         self._repo = repository
         self._storage = storage
+        self._cover_lookup = cover_lookup
 
     def list_books(self) -> List[Book]:
         # In future: merge DB metadata with storage presence
         return self._storage.list_books()
+
+    def lookup_cover_bytes(self, title: str) -> tuple[bytes, str] | None:
+        return self._cover_lookup.lookup_cover_bytes(title)
 
     def get_bookmarks(self, book_id: str, user_id: Optional[str] = None) -> List[Bookmark]:
         """Get bookmarks for a book."""
@@ -36,4 +39,3 @@ class BooksService:
             note=note,
             user_id=user_id,
         )
-

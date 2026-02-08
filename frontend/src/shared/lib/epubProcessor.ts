@@ -269,14 +269,14 @@ class EpubProcessor {
         }
 
         try {
-            /* 1️⃣ render() auto-rewrites asset URLs to blob: */
+            /* 1) render() auto-rewrites asset URLs to blob: */
             const rawHtml = await spineItem.render(this.book.load.bind(this.book));
 
-            /* 2️⃣ strip scripts + external styles */
+            /* 2) strip scripts + external styles */
             const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
             this._stripScriptsAndStyles(doc);
 
-            /* 3️⃣ return body.innerHTML or fallback documentElement */
+            /* 3) return body.innerHTML or fallback documentElement */
             if (doc.body && doc.body.innerHTML.trim()) {
                 return doc.body.innerHTML;
             }

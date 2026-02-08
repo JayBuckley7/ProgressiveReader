@@ -4,6 +4,7 @@ import { EditBookModal } from './EditBookModal';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
 import { toast } from 'sonner';
 import { appLog } from '@shared/appLog'
+import { notifyError } from '@shared/utils/notify';
 
 interface BookCardHoverProps {
   book: BookMetadata;
@@ -125,13 +126,13 @@ export function BookCardHover({
       const coverFile = new File([coverBlob], `${safeBase}.${ext}`, { type: mime });
 
       await onUpdateCover(book.id as string, coverFile);
-    } catch (error) {
-      appLog.error('[BookCardHover] Error looking up cover', error);
-      toast.error('Failed to find cover');
-    } finally {
-      setIsUpdatingCover(false);
-    }
-  };
+	    } catch (error) {
+	      appLog.error('[BookCardHover] Error looking up cover', error);
+	      notifyError(error, { title: 'Failed to find cover' });
+	    } finally {
+	      setIsUpdatingCover(false);
+	    }
+	  };
 
   const triggerCoverFilePicker = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -147,7 +148,7 @@ export function BookCardHover({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      notifyError('Please select an image file');
       return;
     }
 

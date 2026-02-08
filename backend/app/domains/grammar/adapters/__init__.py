@@ -1,0 +1,2 @@
+"""Grammar adapters (OpenAI, etc.)."""
+

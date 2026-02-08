@@ -147,7 +147,7 @@ function shouldMergeCompound(current: string, next: string): boolean {
 }
 
 export async function parseWithLocalLookup(text: string): Promise<Token[]> {
-  appLog.debug('📝 Parsing text with TinySegmenter (local lookup mode)');
+  appLog.debug('[localTextParser] Parsing text with TinySegmenter (local lookup)');
   
   const startTime = performance.now();
   
@@ -155,12 +155,16 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
     // Initial segmentation with TinySegmenter
     const segmentationStart = performance.now();
     const rawSegments = segmenter.segment(text);
-    appLog.debug(`📝 Raw segments: ${rawSegments.length} (${(performance.now() - segmentationStart).toFixed(1)}ms)`);
+    appLog.debug(
+      `[localTextParser] Raw segments=${rawSegments.length} (${(performance.now() - segmentationStart).toFixed(1)}ms)`
+    );
     
     // Improve segmentation with post-processing
     const improveStart = performance.now();
     const improvedSegments = await improveSegmentation(rawSegments);
-    appLog.debug(`✨ Improved segments: ${improvedSegments.length} (${(performance.now() - improveStart).toFixed(1)}ms)`);
+    appLog.debug(
+      `[localTextParser] Improved segments=${improvedSegments.length} (${(performance.now() - improveStart).toFixed(1)}ms)`
+    );
     
     // Generate tokens for local JLPT lookup (no external API calls)
     const tokens: Token[] = [];
@@ -208,7 +212,9 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
     }
     
     const totalTime = performance.now() - startTime;
-    appLog.debug(`Generated ${tokens.length} tokens in ${totalTime.toFixed(1)}ms (local lookup mode)`);
+    appLog.debug(
+      `[localTextParser] Tokens=${tokens.length} (${totalTime.toFixed(1)}ms, local lookup)`
+    );
     
     return tokens;
     

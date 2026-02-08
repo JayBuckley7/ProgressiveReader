@@ -1,5 +1,6 @@
-// Centralized Authentication Manager
-// This is the ONLY place that should trigger Google Drive authentication
+// Centralized coordinator for Drive auth/initialization.
+// UI flows should call `authManager.ensureAuthenticated()` rather than calling
+// `gDriveService.safeInitialize()` directly.
 
 import { gDriveService } from '@integrations/googleDrive/gdriveService';
 import { appLog } from '@shared/appLog'
@@ -23,8 +24,7 @@ class AuthManager {
   }
 
   /**
-   * The ONLY method that should be called to ensure Google Drive authentication
-   * All other parts of the app should call this instead of directly calling gDriveService.signIn()
+   * Ensure Drive is initialized and the user has a usable token.
    */
   public async ensureAuthenticated(): Promise<boolean> {
     // If authentication is already in progress, wait for it

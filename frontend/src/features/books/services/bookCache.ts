@@ -106,16 +106,16 @@ class BookCacheService {
                     // Create persistent blob URL
                     const coverUrl = URL.createObjectURL(coverBlob);
                     this.coverUrlCache.set(bookId, coverUrl);
-                    appLog.debug(`✅ [Cover Cache] Created persistent URL for book ${bookId}`);
+                    appLog.debug(`[Cover Cache] Created persistent URL for book ${bookId}`);
                     return coverUrl;
                 } else {
-                    appLog.debug(`⚠️ [Cover Cache] Invalid image blob for book ${bookId}`);
+                    appLog.debug(`[Cover Cache] Invalid image blob for book ${bookId}`);
                 }
             }
 
             return null;
         } catch (error) {
-            appLog.debug(`⚠️ [Cover Cache] Failed to get cover for book ${bookId}:`, error);
+            appLog.debug(`[Cover Cache] Failed to get cover for book ${bookId}:`, error);
             return null;
         }
     }
@@ -161,13 +161,13 @@ class BookCacheService {
 
                 const coverUrl = await this.getPersistentCoverUrl(bookId, coverImageId);
                 if (coverUrl) {
-                    appLog.debug(`✅ [Cover Debug] Cover ready for: ${bookTitle}`);
+                    appLog.debug(`[Cover Debug] Cover ready for: ${bookTitle}`);
                     onCoverReady(bookId, coverUrl);
                 } else {
-                    appLog.debug(`⚠️ [Cover Debug] No cover available for book ${bookTitle}`);
+                    appLog.debug(`[Cover Debug] No cover available for book ${bookTitle}`);
                 }
             } catch (error) {
-                appLog.debug(`⚠️ [Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
+                appLog.debug(`[Cover Debug] Failed to download cover for book ${bookTitle}:`, error);
             }
         };
 
@@ -240,19 +240,19 @@ class BookCacheService {
             const img = new Image();
 
             const timeoutId = setTimeout(() => {
-                appLog.debug('⏰ Blob URL validation timeout');
+                appLog.debug('[Cover Cache] Blob URL validation timeout');
                 resolve(false);
             }, 3000);
 
             img.onload = () => {
                 clearTimeout(timeoutId);
-                appLog.debug(`✅ Blob URL is valid: ${img.width}x${img.height}`);
+                appLog.debug(`[Cover Cache] Blob URL is valid: ${img.width}x${img.height}`);
                 resolve(true);
             };
 
             img.onerror = () => {
                 clearTimeout(timeoutId);
-                appLog.debug('❌ Blob URL is not valid or not an image');
+                appLog.debug('[Cover Cache] Blob URL is not valid or not an image');
                 resolve(false);
             };
 
@@ -271,21 +271,21 @@ class BookCacheService {
 
             const timeoutId = setTimeout(() => {
                 URL.revokeObjectURL(url);
-                appLog.debug('⏰ Image validation timeout');
+                appLog.debug('[Cover Cache] Image validation timeout');
                 resolve(false);
             }, 5000);
 
             img.onload = () => {
                 clearTimeout(timeoutId);
                 URL.revokeObjectURL(url);
-                appLog.debug(`✅ Blob is valid image: ${img.width}x${img.height}`);
+                appLog.debug(`[Cover Cache] Blob is valid image: ${img.width}x${img.height}`);
                 resolve(true);
             };
 
             img.onerror = () => {
                 clearTimeout(timeoutId);
                 URL.revokeObjectURL(url);
-                appLog.debug('❌ Blob is not a valid image');
+                appLog.debug('[Cover Cache] Blob is not a valid image');
                 resolve(false);
             };
 

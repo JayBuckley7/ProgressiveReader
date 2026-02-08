@@ -4,6 +4,7 @@ import { BookMetadata, ReadingProgress } from '~/types';
 import { EditBookModal } from './EditBookModal';
 import { bookMetadataService } from '@features/books/services/bookMetadata';
 import { appLog } from '@shared/appLog'
+import { notifyError } from '@shared/utils/notify';
 
 interface Book {
   _id: string;
@@ -134,7 +135,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      notifyError('Please select an image file');
       return;
     }
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { appLog } from "@shared/appLog";
+import { notifyError } from "@shared/utils/notify";
 
 export function useTextToSpeech(contentRef: React.RefObject<HTMLDivElement | null>) {
   const { settings } = useSettings();
@@ -238,7 +239,7 @@ export function useTextToSpeech(contentRef: React.RefObject<HTMLDivElement | nul
     const text = el.textContent || '';
     if (!text.trim()) return;
     if (!('speechSynthesis' in window)) {
-      alert('Sorry, your browser does not support text-to-speech.');
+      notifyError("Text-to-speech is not supported in this browser.");
       return;
     }
     textNodeMapRef.current = buildIndexMap(el);

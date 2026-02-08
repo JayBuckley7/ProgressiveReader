@@ -1,18 +1,16 @@
 """Authentication routes for Clerk integration"""
-from flask import Blueprint, jsonify, g, request
+from flask import Blueprint, jsonify, g, request, current_app
 from pydantic import ValidationError
-from ...utils.clerk_auth import optional_auth, require_auth, get_user_id, get_user_email
-from .service import AuthService
-from .integrations import ClerkAuthProvider
+from ...utils.clerk_auth import (
+    optional_auth,
+    require_auth,
+    get_user_id,
+    get_user_email,
+)
 from .schemas import SettingsResponse, SaveSettingsRequest, SaveSettingsResponse
-import os
 import logging
 
 logger = logging.getLogger(__name__)
-
-# Initialize service
-auth_provider = ClerkAuthProvider(secret_key=os.getenv("CLERK_SECRET_KEY"))
-auth_service = AuthService(auth_provider)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -91,9 +89,10 @@ def get_settings():
         if not user_id:
             return jsonify({"error": "Authentication required"}), 401
 
-        settings = auth_service.get_settings(user_id)
+        service = current_app.extensions["container"].auth_service
+        settings = service.get_settings(user_id)
         response = SettingsResponse(settings=settings)
-        return jsonify(response.dict())
+        return jsonify(response.model_dump())
     except ValueError as e:
         logger.error(f"Error getting settings: {e}")
         return jsonify({"error": str(e)}), 500
@@ -117,9 +116,10 @@ def save_settings():
         except ValidationError as e:
             return jsonify({"error": f"Invalid request: {str(e)}"}), 400
 
-        success = auth_service.save_settings(user_id, req.settings)
+        service = current_app.extensions["container"].auth_service
+        success = service.save_settings(user_id, req.settings)
         response = SaveSettingsResponse(success=success)
-        return jsonify(response.dict())
+        return jsonify(response.model_dump())
     except ValueError as e:
         logger.error(f"Error saving settings: {e}")
         return jsonify({"error": str(e)}), 500

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List, Dict, Any, Optional
 
-from .repository import KanjiRepository
+from .ports import KanjiRepositoryPort
 from .schemas import (
     KanjiSearchRequest,
     KanjiSearchResult,
@@ -14,7 +14,7 @@ from .schemas import (
 
 
 class KanjiService:
-    def __init__(self, repository: KanjiRepository) -> None:
+    def __init__(self, repository: KanjiRepositoryPort) -> None:
         self._repository = repository
 
     def search_kanji(self, req: KanjiSearchRequest) -> KanjiSearchResponse:
@@ -43,4 +43,3 @@ class KanjiService:
             old_jlpt=old_jlpt,
             new_jlpt=new_jlpt,
         )
-

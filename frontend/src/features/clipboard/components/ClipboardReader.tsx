@@ -6,6 +6,7 @@ import { useSettings } from "@shared/contexts/SettingsContext";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useTranslation } from "react-i18next";
 import { appLog } from "@shared/appLog";
+import { notifyError } from "@shared/utils/notify";
 
 // Simple sanitizer to wrap plain text in paragraphs
 function textToHtml(text: string): string {
@@ -185,30 +186,30 @@ export default function ClipboardReader() {
     return () => window.removeEventListener('paste', handlePaste as unknown as EventListener);
   }, [ingestText, t]);
 
-  const enableClipboardSync = async () => {
-    // Trigger a permission prompt (when possible) by reading in direct response to a user gesture
-    try {
-      const text = await navigator.clipboard.readText();
-      const changed = ingestText(text);
-      toast.success(changed ? t('clipboard.toasts.permissionGranted') : t('clipboard.toasts.permissionUpToDate'));
-    } catch (e: any) {
-      // Fallback to manual paste area
-      pasteAreaRef.current?.focus();
-      toast.error(t('clipboard.toasts.blocked'));
-    }
-  };
+	  const enableClipboardSync = async () => {
+	    // Trigger a permission prompt (when possible) by reading in direct response to a user gesture
+	    try {
+	      const text = await navigator.clipboard.readText();
+	      const changed = ingestText(text);
+	      toast.success(changed ? t('clipboard.toasts.permissionGranted') : t('clipboard.toasts.permissionUpToDate'));
+	    } catch (e: any) {
+	      // Fallback to manual paste area
+	      pasteAreaRef.current?.focus();
+	      notifyError(e, { title: t('clipboard.toasts.blocked') });
+	    }
+	  };
 
-  const handlePasteClick = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      const changed = ingestText(text);
-      if (changed) {
-        toast.success(t('clipboard.toasts.pasted'));
-      }
-    } catch (e) {
-      toast.error(t('clipboard.toasts.denied'));
-    }
-  };
+	  const handlePasteClick = async () => {
+	    try {
+	      const text = await navigator.clipboard.readText();
+	      const changed = ingestText(text);
+	      if (changed) {
+	        toast.success(t('clipboard.toasts.pasted'));
+	      }
+	    } catch (e) {
+	      notifyError(e, { title: t('clipboard.toasts.denied') });
+	    }
+	  };
 
   const handleToggleAppend = (checked: boolean) => {
     setAppendMode(checked);
@@ -250,11 +251,16 @@ export default function ClipboardReader() {
       const text = appendMode ? (sortAscending ? [...entries].reverse() : entries).map(e => e.raw).join('\n\n') : rawText;
       const cleaned = sanitizeClipboardText(text);
       if (!cleaned) {
-        toast.error(t('clipboard.toasts.nothingToSave'));
+        notifyError(t('clipboard.toasts.nothingToSave'));
         return;
       }
       if (!isAuthenticated) {
-        try { await signIn(); } catch { toast.error(t('clipboard.toasts.signInRequired')); return; }
+        try {
+          await signIn();
+        } catch (error) {
+          notifyError(error, { title: t('clipboard.toasts.signInRequired') });
+          return;
+        }
       }
       const title = buildTitleFromText(cleaned);
       const fileName = `${title}.txt`;
@@ -266,7 +272,7 @@ export default function ClipboardReader() {
       }
     } catch (e: any) {
       appLog.error("[ClipboardReader] Save to library failed", e);
-      toast.error(t('clipboard.toasts.saveFailed'));
+      notifyError(e, { title: t('clipboard.toasts.saveFailed') });
     }
   };
 
@@ -415,4 +421,3 @@ export default function ClipboardReader() {
     </div>
   );
 }
-

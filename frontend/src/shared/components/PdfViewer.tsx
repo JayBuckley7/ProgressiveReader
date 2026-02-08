@@ -13,6 +13,42 @@ const pdfJsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min
 const pdfViewerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.js';
 const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+type PdfViewportLike = {
+  width: number;
+  height: number;
+};
+
+type PdfPageLike = {
+  getViewport: (opts: { scale: number }) => PdfViewportLike;
+  render: (opts: { canvasContext: CanvasRenderingContext2D | null; viewport: PdfViewportLike }) => { promise: Promise<unknown> };
+  getTextContent: () => Promise<unknown>;
+};
+
+type PdfDocumentLike = {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PdfPageLike>;
+};
+
+type PdfLoadingTaskLike = {
+  promise: Promise<PdfDocumentLike>;
+};
+
+type PdfJsLibLike = {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument: (opts: { data: ArrayBuffer }) => PdfLoadingTaskLike;
+  renderTextLayer: (opts: { textContent: unknown; container: HTMLElement; viewport: PdfViewportLike; textDivs: unknown[] }) => unknown;
+};
+
+function getPdfJsLib(): PdfJsLibLike | null {
+  const w = window as unknown as { pdfjsLib?: PdfJsLibLike };
+  return w.pdfjsLib ?? null;
+}
+
+function hasPdfJsViewer(): boolean {
+  const w = window as unknown as { pdfjsViewer?: unknown };
+  return Boolean(w.pdfjsViewer);
+}
+
 function loadScript(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${url}"]`)) {
@@ -40,23 +76,23 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       },
     }));
 
-    useEffect(() => {
-      const renderPdf = async () => {
-        if (!containerRef.current) return;
-        containerRef.current.innerHTML = '';
-        pageRefs.current = [];
-        if (!(window as any).pdfjsLib) {
-          await loadScript(pdfJsUrl);
-        }
-        if (!(window as any).pdfjsViewer) {
-          await loadScript(pdfViewerUrl);
-        }
-        const pdfjsLib = (window as any).pdfjsLib;
-        if (!pdfjsLib) return;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-        const loadingTask = pdfjsLib.getDocument({ data });
-        const pdf = await loadingTask.promise;
-        onPageCount?.(pdf.numPages);
+	    useEffect(() => {
+	      const renderPdf = async () => {
+	        if (!containerRef.current) return;
+	        containerRef.current.innerHTML = '';
+	        pageRefs.current = [];
+	        if (!getPdfJsLib()) {
+	          await loadScript(pdfJsUrl);
+	        }
+	        if (!hasPdfJsViewer()) {
+	          await loadScript(pdfViewerUrl);
+	        }
+	        const pdfjsLib = getPdfJsLib();
+	        if (!pdfjsLib) return;
+	        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+	        const loadingTask = pdfjsLib.getDocument({ data });
+	        const pdf = await loadingTask.promise;
+	        onPageCount?.(pdf.numPages);
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 1.5 });

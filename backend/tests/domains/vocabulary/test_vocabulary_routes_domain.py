@@ -1,11 +1,10 @@
 """Tests for vocabulary domain routes."""
 import pytest
 from flask import Flask
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from app.domains.vocabulary.routes import vocabulary_bp
 from app.domains.vocabulary.service import VocabularyService
-from app.domains.vocabulary.integrations import JpdbModuleProvider, JpdbHttpProvider
 from app.domains.vocabulary.schemas import DueCard, Deck
 
 
@@ -19,6 +18,7 @@ def app():
     app.config['JPDB_TOKEN_FIELDS'] = ['position', 'length', 'vocabulary_index', 'furigana']
     app.config['JPDB_VOCAB_FIELDS'] = ['vid', 'sid', 'rid', 'spelling', 'reading']
     app.config['JPDB_API_URL'] = 'https://api.jpdb.io/v1/parse'
+    app.extensions["container"] = Mock()
     app.register_blueprint(vocabulary_bp)
     return app
 
@@ -46,16 +46,18 @@ def mock_vocabulary_service():
 
 def test_due_cards_success(client, mock_vocabulary_service):
     """Test fetching due cards successfully."""
-    with patch('app.domains.vocabulary.routes.VocabularyService', return_value=mock_vocabulary_service):
-        with patch('app.domains.vocabulary.routes.JpdbModuleProvider'):
-            response = client.post('/api/due_cards', json={
-                'username': 'test',
-                'password': 'test'
-            })
-            assert response.status_code == 200
-            data = response.get_json()
-            assert isinstance(data, list)
-            assert len(data) == 2
+    container = Mock()
+    container.vocabulary_service = mock_vocabulary_service
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/due_cards', json={
+        'username': 'test',
+        'password': 'test'
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 2
 
 
 def test_due_cards_auth_required(client):
@@ -66,16 +68,18 @@ def test_due_cards_auth_required(client):
 
 def test_list_user_decks_success(client, mock_vocabulary_service):
     """Test fetching user decks successfully."""
-    with patch('app.domains.vocabulary.routes.VocabularyService', return_value=mock_vocabulary_service):
-        with patch('app.domains.vocabulary.routes.JpdbModuleProvider'):
-            response = client.post('/api/list-user-decks', json={
-                'username': 'test',
-                'password': 'test'
-            })
-            assert response.status_code == 200
-            data = response.get_json()
-            assert isinstance(data, list)
-            assert len(data) == 2
+    container = Mock()
+    container.vocabulary_service = mock_vocabulary_service
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/list-user-decks', json={
+        'username': 'test',
+        'password': 'test'
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) == 2
 
 
 def test_get_jpdb_data_validation_error(client):
@@ -91,17 +95,18 @@ def test_mine_jpdb_word_success(client):
     """Test mining JPDB word successfully."""
     mock_service = Mock()
     mock_service.mine_word.return_value = {'success': True}
-    with patch('app.domains.vocabulary.routes.VocabularyService', return_value=mock_service):
-        with patch('app.domains.vocabulary.routes.JpdbModuleProvider'):
-            with patch('app.domains.vocabulary.routes.JpdbHttpProvider'):
-                response = client.post('/api/mine_jpdb_word', json={
-                    'vid': 1,
-                    'sid': 1,
-                    'jpdb_api_key': 'test-key'
-                })
-                assert response.status_code == 200
-                data = response.get_json()
-                assert data['success'] is True
+    container = Mock()
+    container.vocabulary_service = mock_service
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/mine_jpdb_word', json={
+        'vid': 1,
+        'sid': 1,
+        'jpdb_api_key': 'test-key'
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['success'] is True
 
 
 def test_update_jpdb_word_state_validation_error(client):
@@ -111,6 +116,5 @@ def test_update_jpdb_word_state_validation_error(client):
         'vid': 1
     })
     assert response.status_code == 400
-
 
 

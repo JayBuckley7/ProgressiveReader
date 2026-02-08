@@ -54,7 +54,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.progressivereader.kmp.offline.BookCache
-import com.progressivereader.kmp.offline.BookState
+import com.progressivereader.kmp.domain.reader.BookState
 import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.tts.TtsController
 import com.tom_roush.pdfbox.pdmodel.PDDocument

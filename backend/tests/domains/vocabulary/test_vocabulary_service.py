@@ -1,8 +1,32 @@
 from typing import List, Optional
 
-from app.domains.vocabulary.integrations import JpdbProvider
+from app.domains.vocabulary.ports import JpdbProvider
 from app.domains.vocabulary.schemas import Deck, DueCard
+from app.domains.vocabulary.config import JpdbConfig
 from app.domains.vocabulary.service import VocabularyService
+
+
+def _jpdb_config() -> JpdbConfig:
+    return JpdbConfig(
+        max_bytes_per_api_batch=1024,
+        max_segments_per_api_batch=10,
+        token_fields=["vocabulary_index", "position", "length", "furigana"],
+        vocab_fields=[
+            "vid",
+            "sid",
+            "rid",
+            "spelling",
+            "reading",
+            "frequency_rank",
+            "part_of_speech",
+            "meanings_chunks",
+            "meanings_part_of_speech",
+            "card_state",
+            "pitch_accent",
+        ],
+        api_url="http://example.test",
+        review_url="http://example.test/review",
+    )
 
 
 class _MockJpdb(JpdbProvider):
@@ -26,14 +50,14 @@ class _MockJpdb(JpdbProvider):
 
 
 def test_due_cards_service():
-    svc = VocabularyService(_MockJpdb())
+    svc = VocabularyService(_MockJpdb(), _jpdb_config())
     cards = svc.get_due_cards(username=None, password=None, cookie_string="cookie")
     assert len(cards) == 1
     assert cards[0].term == "誰"
 
 
 def test_decks_service():
-    svc = VocabularyService(_MockJpdb())
+    svc = VocabularyService(_MockJpdb(), _jpdb_config())
     decks = svc.get_user_decks(username=None, password=None, cookie_string="cookie")
     assert len(decks) == 1
     assert decks[0].name == "Core"
@@ -48,7 +72,7 @@ class _EmptyJpdb(JpdbProvider):
 
 
 def test_empty_results():
-    svc = VocabularyService(_EmptyJpdb())
+    svc = VocabularyService(_EmptyJpdb(), _jpdb_config())
     assert svc.get_due_cards(username=None, password=None, cookie_string=None) == []
     assert svc.get_user_decks(username=None, password=None, cookie_string=None) == []
 
@@ -62,7 +86,7 @@ class _ErrorJpdb(JpdbProvider):
 
 
 def test_provider_error_propagates():
-    svc = VocabularyService(_ErrorJpdb())
+    svc = VocabularyService(_ErrorJpdb(), _jpdb_config())
     try:
         _ = svc.get_due_cards(username=None, password=None, cookie_string=None)
         assert False, "expected exception"
@@ -73,7 +97,5 @@ def test_provider_error_propagates():
         assert False, "expected exception"
     except RuntimeError:
         pass
-
-
 
 

@@ -1,3 +1,5 @@
+import { fetchOpenAIChatCompletions, getOpenAIChatContent } from "@shared/services/openaiChat";
+
 export type RefineChoices = Record<string, string | null>;
 
 function fnv1a32(input: string): number {
@@ -69,7 +71,6 @@ export function getRefineCacheKey(args: {
 }
 
 export async function refineAmbiguousSwaps(args: {
-  openAiKey: string;
   model: string;
   textSample: string;
   ambiguousKeys: string[];
@@ -77,10 +78,8 @@ export async function refineAmbiguousSwaps(args: {
     string,
     Array<{ id: string; spelling: string; reading?: string; meaning?: string }>
   >;
+  apiKey?: string;
 }): Promise<RefineChoices> {
-  const key = (args.openAiKey || "").trim();
-  if (!key) throw new Error("Missing OpenAI API key");
-
   const model = (args.model || "gpt-4o-mini").trim() || "gpt-4o-mini";
   const keys = Array.from(new Set(args.ambiguousKeys || []))
     .map((k) => k.trim())
@@ -89,46 +88,99 @@ export async function refineAmbiguousSwaps(args: {
 
   if (keys.length === 0) return {};
 
-  const payload = keys.map((glossKey) => {
-    const candidates = (args.candidatesByKey[glossKey] || []).slice(0, 3);
-    return {
+  const apiKey = (args.apiKey || "").trim();
+
+  const candidatesByKey = Object.fromEntries(
+    keys.map((glossKey) => [
       glossKey,
-      examples: pickExampleSentences(args.textSample || "", glossKey, 5),
-      candidates: candidates.map((c) => ({
-        id: c.id,
-        spelling: c.spelling,
-        reading: c.reading || "",
-        meaning: c.meaning || "",
-      })),
-    };
-  });
+      (args.candidatesByKey[glossKey] || [])
+        .filter((c) => c && typeof c.id === "string" && typeof c.spelling === "string")
+        .slice(0, 3)
+        .map((c) => ({
+          id: c.id,
+          spelling: c.spelling,
+          reading: c.reading || "",
+          meaning: c.meaning || "",
+        })),
+    ])
+  );
 
-  const system =
-    "You choose the best Japanese vocabulary candidate for each English noun phrase in context. " +
-    "Return STRICT JSON only, no prose, no markdown.";
+  // If the user supplied their own OpenAI key, call OpenAI directly from the browser so
+  // the backend never receives the user's book content.
+  if (apiKey) {
+    const payload = keys.map((glossKey) => {
+      const candidates = (candidatesByKey[glossKey] || []).slice(0, 3);
+      return {
+        glossKey,
+        examples: pickExampleSentences(args.textSample || "", glossKey, 5),
+        candidates,
+      };
+    });
 
-  const user =
-    "Given the following English context and candidate Japanese words, pick the best replacement for each glossKey. " +
-    "If none fit, set it to null.\n\n" +
-    "Return JSON in this exact shape:\n" +
-    '{ "choices": { "glossKey": "vid/sid or null", "...": null } }\n\n' +
-    `Context (excerpt):\n${String(args.textSample || "").slice(0, 4000)}\n\n` +
-    `Tasks:\n${JSON.stringify(payload, null, 2)}\n`;
+    const system =
+      "You choose the best Japanese vocabulary candidate for each English noun phrase in context. " +
+      "Return STRICT JSON only, no prose, no markdown.";
 
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const user =
+      "Given the following English context and candidate Japanese words, pick the best replacement for each glossKey. " +
+      "If none fit, set it to null.\n\n" +
+      "Return JSON in this exact shape:\n" +
+      '{ "choices": { "glossKey": "vid/sid or null", "...": null } }\n\n' +
+      `Context (excerpt):\n${String(args.textSample || "").slice(0, 4000)}\n\n` +
+      `Tasks:\n${JSON.stringify(payload, null, 2)}\n`;
+
+    const data = await fetchOpenAIChatCompletions({
+      apiKey,
+      body: {
+        model,
+        temperature: 0,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      },
+    });
+
+    const raw = getOpenAIChatContent(data);
+    const text = stripCodeFences(raw);
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // If response_format is ignored, attempt a last-ditch extraction.
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}");
+      if (start >= 0 && end > start) {
+        parsed = JSON.parse(text.slice(start, end + 1));
+      } else {
+        throw new Error("Failed to parse refine response");
+      }
+    }
+
+    const choices = parsed?.choices;
+    if (!choices || typeof choices !== "object") return {};
+
+    const out: RefineChoices = {};
+    for (const glossKey of keys) {
+      const v = (choices as any)[glossKey];
+      if (v === null) out[glossKey] = null;
+      else if (typeof v === "string" && v.trim()) out[glossKey] = v.trim();
+      else out[glossKey] = null;
+    }
+    return out;
+  }
+
+  const resp = await fetch("/api/mix/refine", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
       model,
-      temperature: 0,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      response_format: { type: "json_object" },
+      textSample: String(args.textSample || "").slice(0, 4000),
+      ambiguousKeys: keys,
+      candidatesByKey,
     }),
   });
 
@@ -136,24 +188,8 @@ export async function refineAmbiguousSwaps(args: {
     throw new Error(await resp.text().catch(() => `HTTP ${resp.status}`));
   }
 
-  const data = await resp.json();
-  const raw = String(data?.choices?.[0]?.message?.content || "").trim();
-  const text = stripCodeFences(raw);
-  let parsed: any = null;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    // If response_format is ignored, attempt a last-ditch extraction.
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      parsed = JSON.parse(text.slice(start, end + 1));
-    } else {
-      throw new Error("Failed to parse refine response");
-    }
-  }
-
-  const choices = parsed?.choices;
+  const data = (await resp.json()) as unknown;
+  const choices = (data as any)?.choices;
   if (!choices || typeof choices !== "object") return {};
 
   const out: RefineChoices = {};
@@ -161,7 +197,7 @@ export async function refineAmbiguousSwaps(args: {
     const v = (choices as any)[glossKey];
     if (v === null) out[glossKey] = null;
     else if (typeof v === "string" && v.trim()) out[glossKey] = v.trim();
+    else out[glossKey] = null;
   }
   return out;
 }
-

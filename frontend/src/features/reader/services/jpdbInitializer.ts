@@ -446,7 +446,7 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
 
         // Properly expose the module interface to global scope
         window.jpHighlighter = {
-            ...window.jpHighlighter, // Preserve any existing properties
+            ...(window.jpHighlighter ?? {}), // Preserve any existing properties
             initialize, // Expose initialize function
             loadConfig, // Direct access to loadConfig
             getCurrentConfig, // Expose getCurrentConfig

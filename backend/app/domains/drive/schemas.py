@@ -39,5 +39,3 @@ class HealthResponse(BaseModel):
     clerk_secret_key_configured: bool
     clerk_client_initialized: bool
     service: str
-    clerk_secret_key_length: Optional[int] = None
-    clerk_secret_key_prefix: Optional[str] = None

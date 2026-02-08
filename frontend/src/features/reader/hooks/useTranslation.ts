@@ -4,6 +4,9 @@ import { useSettings } from "@shared/contexts/SettingsContext";
 import type { TranslateRequest } from "~/types/api";
 import { translateChapterStream } from "@features/reader/services/readerApi";
 import { appLog } from '@shared/appLog'
+import { notifyError } from "@shared/utils/notify";
+import { stripMarkdownCodeFences } from "@shared/utils/markdown";
+import { fetchOpenAIChatCompletions, getOpenAIChatContent } from "@shared/services/openaiChat";
 
 // Helper functions for translation storage
 const getTranslationStorageKey = (bookId: string, chapter: number) => {
@@ -53,52 +56,46 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
   const [lastUseCefr, setLastUseCefr] = useState(false);
   const suppressAutoloadKeyRef = useRef<string | null>(null);
 
-  // Translate using the user's personal OpenAI key entirely in the browser
-  const translateWithOpenAI = async (html: string, useCefr: boolean): Promise<string> => {
-    const targetLang = settings?.targetLanguage || "English";
-    const model = localStorage.getItem("openaiModel") || "gpt-4o-mini";
-    const cefrLevel = localStorage.getItem("cefrLevel") || "B2";
-    const apiKey = localStorage.getItem("openaiKey") || "";
+  // Translate using the user's personal OpenAI key entirely in the browser.
+  // This is required for the app's privacy promise: the backend must not see book content when the user brings their own key.
+  const translateWithOpenAI = useCallback(
+    async (html: string, useCefr: boolean, apiKey: string): Promise<string> => {
+      const targetLang = settings?.targetLanguage || "English";
+      const model = (localStorage.getItem("openaiModel") || "gpt-4o-mini").trim() || "gpt-4o-mini";
+      const cefrLevel = localStorage.getItem("cefrLevel") || "B2";
 
-    const systemPrompt =
-      "You are a helpful translator. You translate the provided HTML content while preserving the HTML structure. ONLY return the translated HTML content, with no introductory text, explanations, or markdown formatting like ```html.";
-    let userPrompt = `Translate the following HTML content to ${targetLang}`;
-    if (useCefr) {
-      userPrompt += `, simplifying for CEFR level ${cefrLevel}. Preserve HTML tags.`;
-    } else {
-      userPrompt += ". Preserve HTML tags.";
-    }
+      let systemPrompt =
+        "You are a professional translator specializing in literary content. " +
+        "Translate the provided chapter HTML into the target language. Preserve all HTML formatting, including headings, paragraphs, and emphasis. " +
+        "Do not add explanations or extra text beyond the translation.";
+      if (useCefr && cefrLevel) {
+        systemPrompt += ` Aim for a CEFR level of ${cefrLevel}. Simplify complex expressions while keeping the meaning.`;
+      }
 
-    const body = {
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `${userPrompt}\n\nHTML Content:\n\`\`\`html\n${html}\n\`\`\`` }
-      ]
-    };
+      const userPrompt = `Translate this chapter into ${targetLang}. Return only HTML without backticks.`;
+      const fullUserPrompt = `${userPrompt}\n\nHTML Content:\n\`\`\`html\n${html}\n\`\`\``;
 
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!resp.ok) {
-      throw new Error(await resp.text());
-    }
-    const data = await resp.json();
-    let text = data.choices?.[0]?.message?.content?.trim() || "";
-    if (text.startsWith("```html")) text = text.slice(7).trim();
-    else if (text.startsWith("```")) text = text.slice(3).trim();
-    if (text.endsWith("```")) text = text.slice(0, -3).trim();
-    return `<div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8"><div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">${text}</div></div>`;
-  };
+      const data = await fetchOpenAIChatCompletions({
+        apiKey,
+        body: {
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: fullUserPrompt },
+          ],
+          temperature: 0.3,
+        },
+      });
+      const raw = getOpenAIChatContent(data);
+      return stripMarkdownCodeFences(raw);
+    },
+    [settings?.targetLanguage]
+  );
 
   /**
-   * Translate the current chapter using the backend API.
+   * Translate the current chapter.
+   * If the user has a personal OpenAI key configured, call OpenAI directly from the browser.
+   * Otherwise, fall back to the backend OpenAI pool.
    * @param useCefr - If true include the CEFR level in the request.
    */
   const translateCurrent = useCallback(async (useCefr: boolean) => {
@@ -115,17 +112,18 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
     // Always translate from the original chapter HTML
     const contentToTranslate = currentChapterContent;
 
-    const personalKey = localStorage.getItem("openaiKey") || "";
+    const personalKey = (localStorage.getItem("openaiKey") || "").trim();
     if (personalKey) {
       try {
-        const finalWrapped = await translateWithOpenAI(contentToTranslate, useCefr);
-        setTranslatedContent(finalWrapped);
+        const cleaned = await translateWithOpenAI(contentToTranslate, useCefr, personalKey);
+        setTranslatedContent(cleaned);
         setIsTranslated(true);
         setIsAutoloaded(false);
-        saveTranslationToStorage(bookId, chapter, finalWrapped, useCefr, settings);
+        saveTranslationToStorage(bookId, chapter, cleaned, useCefr, settings);
+        toast.success("Translation complete!", { id: toastId });
       } catch (err) {
         appLog.error("[useTranslation] Translation error", err);
-        toast.error("Translation error");
+        notifyError(err, { title: "Translation error" });
       } finally {
         setIsTranslating(false);
         toast.dismiss(toastId);
@@ -135,14 +133,13 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
 
     const payload: TranslateRequest = {
       content: contentToTranslate,
-      target_lang: settings?.targetLanguage || "English",
+      targetLang: settings?.targetLanguage || "English",
       model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
-      api_key: localStorage.getItem("openaiKey") || "",
-      use_cefr: useCefr,
+      useCefr: useCefr,
       stream: true,
     };
     if (useCefr) {
-      (payload as any).cefr_level = localStorage.getItem("cefrLevel") || "B2";
+      payload.cefrLevel = localStorage.getItem("cefrLevel") || "B2";
     }
     
     try {
@@ -154,26 +151,13 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
           firstChunk = false;
         }
         accumulated += chunk;
-        const wrapped = `
-          <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
-            <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
-              ${accumulated}
-            </div>
-          </div>
-        `;
-        setTranslatedContent(wrapped);
+        setTranslatedContent(accumulated);
       }, (complete) => {
-        const wrapped = `
-          <div class="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
-            <div class="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
-              ${complete}
-            </div>
-          </div>
-        `;
-        setTranslatedContent(wrapped);
+        const cleaned = stripMarkdownCodeFences(complete);
+        setTranslatedContent(cleaned);
         setIsTranslated(true);
         setIsAutoloaded(false);
-        saveTranslationToStorage(bookId, chapter, wrapped, useCefr, settings);
+        saveTranslationToStorage(bookId, chapter, cleaned, useCefr, settings);
         toast.success("Translation complete!", { id: toastId });
       });
       
@@ -183,12 +167,12 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
       }
     } catch (error) {
       appLog.error("[useTranslation] Translation error", error);
-      toast.error("Translation error");
+      notifyError(error, { title: "Translation error" });
     } finally {
       setIsTranslating(false);
       toast.dismiss(toastId);
     }
-  }, [bookId, chapter, currentChapterContent, settings]);
+  }, [bookId, chapter, currentChapterContent, settings, translateWithOpenAI]);
 
   const clearTranslation = useCallback((options?: { suppressAutoload?: boolean }) => {
     if (isTranslated) {
@@ -253,11 +237,11 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
           const isSuppressed = suppressAutoloadKeyRef.current === currentKey;
 
           if (isSuppressed) {
-            appLog.debug('🛑 Autoload suppressed (user chose original) for chapter', chapter);
+            appLog.debug('[useTranslation] Autoload suppressed (user chose original)', { chapter });
             return;
           }
 
-          appLog.debug('✅ Autoloading stored translation for chapter', chapter);
+          appLog.debug('[useTranslation] Autoloading stored translation', { chapter });
           setTranslatedContent(storedTranslation.content);
           setIsTranslated(true);
           setIsAutoloaded(true);
@@ -265,7 +249,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
             setLastUseCefr(storedTranslation.useCefr);
           }
         } else {
-          appLog.debug('❌ Stored translation is outdated, removing from storage');
+          appLog.debug('[useTranslation] Stored translation is outdated; removing from storage');
           const key = getTranslationStorageKey(bookId, chapter);
           localStorage.removeItem(key);
         }

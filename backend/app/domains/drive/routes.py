@@ -1,46 +1,33 @@
 """Drive domain routes."""
 from flask import Blueprint, request, jsonify, Response, current_app
 from pydantic import ValidationError
-import os
 import logging
 
 from ...utils.clerk_auth import require_auth, get_user_id
-from .integrations import ClerkDriveProvider, GoogleDriveIntegration
-from .service import DriveService
 from .schemas import ListFilesRequest, TokenResponse, HealthResponse
 
 logger = logging.getLogger(__name__)
 
 drive_bp = Blueprint('drive', __name__, url_prefix='/drive')
 
-# Initialize provider and service
-clerk_secret_key = os.getenv('CLERK_SECRET_KEY')
-drive_provider = ClerkDriveProvider(secret_key=clerk_secret_key)
-drive_integration = GoogleDriveIntegration(drive_provider)
-drive_service = DriveService(drive_integration)
-
 
 @drive_bp.route('/health', methods=['GET'])
 def drive_health():
     """Health check endpoint to verify Clerk configuration."""
-    logger.info('🏥 [DRIVE HEALTH] Health check called')
+    container = current_app.extensions["container"]
+    clerk_secret_key = container.clerk_secret_key
+    drive_service = container.drive_service
 
     health_status = {
         'clerk_secret_key_configured': bool(clerk_secret_key),
-        'clerk_client_initialized': bool(drive_provider.client),
-        'service': 'drive'
+        'clerk_client_initialized': bool(drive_service.is_provider_configured()),
+        'service': 'drive',
     }
-
-    if clerk_secret_key:
-        health_status['clerk_secret_key_length'] = len(clerk_secret_key)
-        health_status['clerk_secret_key_prefix'] = clerk_secret_key[:8] + '...' if len(clerk_secret_key) > 8 else clerk_secret_key
-
-    logger.info(f'🏥 [DRIVE HEALTH] Status: {health_status}')
 
     try:
         health = HealthResponse(**health_status)
         status_code = 200 if health.clerk_client_initialized else 500
-        return jsonify(health.dict()), status_code
+        return jsonify(health.model_dump()), status_code
     except ValidationError as e:
         logger.error(f"Invalid health response: {e}")
         return jsonify(health_status), 500
@@ -51,6 +38,9 @@ def drive_health():
 def list_files():
     """List files in Google Drive."""
     try:
+        container = current_app.extensions["container"]
+        drive_service = container.drive_service
+
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
@@ -62,7 +52,7 @@ def list_files():
             return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
         files = drive_service.list_files(user_id, req.folderId)
-        return jsonify([file.dict() for file in files])
+        return jsonify([file.model_dump() for file in files])
 
     except ValueError as e:
         logger.error(f"Drive error: {e}")
@@ -77,6 +67,9 @@ def list_files():
 def upload_file():
     """Upload a file to Google Drive."""
     try:
+        container = current_app.extensions["container"]
+        drive_service = container.drive_service
+
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
@@ -115,6 +108,9 @@ def upload_file():
 def download_file(file_id):
     """Download a file from Google Drive."""
     try:
+        container = current_app.extensions["container"]
+        drive_service = container.drive_service
+
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
@@ -135,6 +131,9 @@ def download_file(file_id):
 def thumbnail_file(file_id):
     """Return a thumbnail image for a Drive file, if available."""
     try:
+        container = current_app.extensions["container"]
+        drive_service = container.drive_service
+
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
@@ -172,6 +171,9 @@ def thumbnail_file(file_id):
 def delete_file(file_id):
     """Delete a file from Google Drive."""
     try:
+        container = current_app.extensions["container"]
+        drive_service = container.drive_service
+
         user_id = get_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
@@ -194,45 +196,35 @@ def delete_file(file_id):
 @require_auth
 def google_token():
     """Return the current user's Google OAuth access token."""
-    logger.info('🔗 [DRIVE TOKEN] ==========================================')
-    logger.info('🔗 [DRIVE TOKEN] /drive/token endpoint called')
-
     try:
-        logger.info('🔗 [DRIVE TOKEN] Getting user ID...')
+        container = current_app.extensions["container"]
+        drive_service = container.drive_service
+
         user_id = get_user_id()
         if not user_id:
-            logger.error('🔗 [DRIVE TOKEN] ❌ No user ID')
+            logger.error('[drive-token] No user ID')
             return jsonify({'error': 'Authentication required'}), 401
 
-        logger.info('🔗 [DRIVE TOKEN] ✅ User ID: %s', user_id)
-
         # Check if Clerk client is initialized
-        if not drive_provider.client:
-            logger.error('🔗 [DRIVE TOKEN] ❌ Clerk client not initialized')
+        if not drive_service.is_provider_configured():
+            logger.error('[drive-token] Clerk client not initialized')
             return jsonify({
                 'error': 'Clerk client not configured',
                 'code': 'CLERK_NOT_CONFIGURED'
             }), 500
 
-        logger.info('🔗 [DRIVE TOKEN] Getting Google token object...')
         token_info = drive_service.get_access_token_info(user_id)
-
-        logger.info('🔗 [DRIVE TOKEN] ✅ Returning token response')
-        logger.info('🔗 [DRIVE TOKEN] Token preview: %s...', str(token_info['access_token'])[:20])
-        logger.info('🔗 [DRIVE TOKEN] Expires in: %s seconds', token_info['expires_in'])
-        logger.info('🔗 [DRIVE TOKEN] ==========================================')
 
         try:
             response = TokenResponse(**token_info)
-            return jsonify(response.dict())
+            return jsonify(response.model_dump())
         except ValidationError as e:
             logger.error(f"Invalid token response: {e}")
             return jsonify(token_info)
 
     except ValueError as e:
         error_msg = str(e)
-        logger.error('🔗 [DRIVE TOKEN] ❌ Error: %s', error_msg)
-        logger.info('🔗 [DRIVE TOKEN] ==========================================')
+        logger.error('[drive-token] Error: %s', error_msg)
         
         # Check if it's a "no token" error - this means user needs to connect Google account
         if 'No Google token' in error_msg or 'token' in error_msg.lower():
@@ -244,9 +236,8 @@ def google_token():
         return jsonify({'error': error_msg}), 400
         
     except Exception as e:
-        logger.error('🔗 [DRIVE TOKEN] ❌ Unexpected error in google_token endpoint: %s', e, exc_info=True)
-        logger.error('🔗 [DRIVE TOKEN] Exception type: %s', type(e).__name__)
-        logger.info('🔗 [DRIVE TOKEN] ==========================================')
+        logger.error('[drive-token] Unexpected error in google_token endpoint: %s', e, exc_info=True)
+        logger.error('[drive-token] Exception type: %s', type(e).__name__)
         return jsonify({
             'error': 'Internal server error',
             'code': 'INTERNAL_ERROR',

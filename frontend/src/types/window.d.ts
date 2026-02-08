@@ -2,7 +2,6 @@ export {};
 
 declare global {
   interface Window {
-    Clerk?: any;
+    Clerk?: unknown;
   }
 }
-

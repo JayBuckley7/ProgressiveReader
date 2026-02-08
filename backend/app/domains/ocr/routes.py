@@ -1,178 +1,12 @@
 """OCR domain routes."""
-from flask import Blueprint, request, send_file, jsonify, current_app, Response
-from io import BytesIO
+from flask import Blueprint, request, jsonify, current_app, Response
 import logging
-import json
-import base64
-import queue
-import threading
-import time
 
 from ...utils.clerk_auth import optional_auth
-from .service import OCRService
 
 logger = logging.getLogger(__name__)
 
 ocr_bp = Blueprint('ocr', __name__, url_prefix='/api/ocr')
-
-# Initialize service - store error for better error messages
-init_error = None
-try:
-    ocr_service = OCRService()
-except Exception as e:
-    logger.error(f"Failed to initialize OCR service: {e}", exc_info=True)
-    ocr_service = None
-    init_error = str(e)
-
-
-def _generate_ocr_with_progress(pdf_bytes, filename):
-    """Generator function that yields progress updates and final PDF."""
-    progress_queue = queue.Queue()
-    result_queue = queue.Queue()
-    pdf_sent = False  # Guard to prevent sending PDF multiple times
-    
-    def collect_progress(page_num, total_pages):
-        """Progress callback that puts updates in the queue."""
-        progress_data = {
-            'type': 'progress',
-            'page': page_num,
-            'total': total_pages,
-            'percent': int((page_num / total_pages) * 100)
-        }
-        progress_queue.put(progress_data)
-    
-    def process_in_thread():
-        """Process OCR in a separate thread."""
-        try:
-            logger.info(f"📄 [OCR Routes] Starting OCR processing thread for PDF: {len(pdf_bytes)} bytes")
-            ocr_pdf_bytes = ocr_service.process_pdf(pdf_bytes, progress_callback=collect_progress)
-            logger.info(f"📄 [OCR Routes] OCR processing completed successfully: {len(ocr_pdf_bytes)} bytes")
-            result_queue.put(('success', ocr_pdf_bytes))
-        except Exception as e:
-            logger.error(f"📄 [OCR Routes] OCR processing error in thread: {e}", exc_info=True)
-            result_queue.put(('error', str(e)))
-    
-    # Start OCR processing in a background thread
-    thread = threading.Thread(target=process_in_thread)
-    thread.daemon = True
-    thread.start()
-    
-    # Yield progress updates as they arrive
-    while True:
-        try:
-            # Check for progress updates (non-blocking)
-            try:
-                progress_update = progress_queue.get_nowait()
-                # Encode SSE messages as bytes for consistent streaming
-                yield f"data: {json.dumps(progress_update)}\n\n".encode('utf-8')
-            except queue.Empty:
-                pass
-            
-            # Check if processing is complete (only if PDF not already sent)
-            if not pdf_sent:
-                try:
-                    status, result = result_queue.get_nowait()
-                    if status == 'success':
-                        pdf_sent = True  # Mark as sent to prevent duplicates
-                        # Send completion WITHOUT PDF (too large for base64 in SSE)
-                        completion_data = {
-                            'type': 'complete',
-                            'filename': filename,
-                            'size': len(result)
-                        }
-                        # Send completion message as SSE text (encoded as bytes)
-                        completion_msg = f"data: {json.dumps(completion_data)}\n\n"
-                        yield completion_msg.encode('utf-8')
-                        # Now stream PDF as binary chunks
-                        logger.info(f"Starting to stream PDF: {len(result)} bytes in chunks")
-                        chunk_size = 8192  # 8KB chunks
-                        chunks_sent = 0
-                        total_bytes_sent = 0
-                        for i in range(0, len(result), chunk_size):
-                            chunk = result[i:i + chunk_size]
-                            # Ensure chunk is bytes, not string
-                            yield bytes(chunk)
-                            chunks_sent += 1
-                            total_bytes_sent += len(chunk)
-                            if chunks_sent % 1000 == 0:  # Log every ~8MB
-                                logger.info(f"Sent {chunks_sent} chunks ({total_bytes_sent} bytes / {len(result)} bytes)")
-                        logger.info(f"Finished streaming PDF: {chunks_sent} chunks, {total_bytes_sent} bytes sent (expected {len(result)} bytes)")
-                        # CRITICAL: Break immediately after sending PDF
-                        return  # Use return instead of break to ensure generator stops
-                    else:
-                        # Error occurred
-                        error_data = {
-                            'type': 'error',
-                            'error': result
-                        }
-                        yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
-                        break
-                except queue.Empty:
-                    pass
-            
-            # Check if thread is still alive (only if PDF not already sent)
-            if not pdf_sent and not thread.is_alive():
-                # Thread finished, check for final result
-                try:
-                    status, result = result_queue.get_nowait()
-                    if status == 'success':
-                        pdf_sent = True  # Mark as sent to prevent duplicates
-                        # Send completion WITHOUT PDF (too large for base64 in SSE)
-                        completion_data = {
-                            'type': 'complete',
-                            'filename': filename,
-                            'size': len(result)
-                        }
-                        # Send completion message as SSE text (encoded as bytes)
-                        completion_msg = f"data: {json.dumps(completion_data)}\n\n"
-                        yield completion_msg.encode('utf-8')
-                        # Stream PDF as binary chunks
-                        logger.info(f"Thread finished - streaming PDF: {len(result)} bytes in chunks")
-                        chunk_size = 8192  # 8KB chunks
-                        chunks_sent = 0
-                        total_bytes_sent = 0
-                        for i in range(0, len(result), chunk_size):
-                            chunk = result[i:i + chunk_size]
-                            # Ensure chunk is bytes, not string
-                            yield bytes(chunk)
-                            chunks_sent += 1
-                            total_bytes_sent += len(chunk)
-                            if chunks_sent % 1000 == 0:  # Log every ~8MB
-                                logger.info(f"Sent {chunks_sent} chunks ({total_bytes_sent} bytes / {len(result)} bytes)")
-                        logger.info(f"Finished streaming PDF: {chunks_sent} chunks, {total_bytes_sent} bytes sent (expected {len(result)} bytes)")
-                        # CRITICAL: Return immediately after sending PDF
-                        return  # Use return instead of break to ensure generator stops
-                    else:
-                        error_data = {
-                            'type': 'error',
-                            'error': result
-                        }
-                        yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
-                        break
-                except queue.Empty:
-                    # No result found, likely an error occurred
-                    error_data = {
-                        'type': 'error',
-                        'error': 'OCR processing failed unexpectedly'
-                    }
-                    yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
-                    break
-            
-            # If PDF already sent, we're done
-            if pdf_sent:
-                break
-            
-            # Small sleep to avoid busy-waiting
-            time.sleep(0.1)
-            
-        except Exception as e:
-            logger.error(f"Error in progress generator: {e}", exc_info=True)
-            error_data = {
-                'type': 'error',
-                'error': str(e)
-            }
-            yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
-            break
 
 
 @ocr_bp.route('/process', methods=['POST'])
@@ -184,6 +18,10 @@ def process_ocr():
     Expects multipart/form-data with 'pdf' file field.
     Returns Server-Sent Events (SSE) stream with progress updates, then final PDF.
     """
+    container = current_app.extensions["container"]
+    ocr_service = getattr(container, "ocr_service", None)
+    init_error = getattr(container, "ocr_init_error", None)
+
     if ocr_service is None:
         error_msg = 'OCR service not available.'
         if init_error:
@@ -216,7 +54,7 @@ def process_ocr():
         # Return streaming response with progress updates
         # Note: Starts as text/event-stream for SSE, then switches to binary for PDF
         return Response(
-            _generate_ocr_with_progress(pdf_bytes, pdf_file.filename),
+            ocr_service.stream_process_pdf(pdf_bytes, filename=pdf_file.filename),
             mimetype='application/octet-stream',
             headers={
                 'Cache-Control': 'no-cache',
@@ -231,4 +69,3 @@ def process_ocr():
     except Exception as e:
         logger.error(f"OCR processing error: {e}", exc_info=True)
         return jsonify({'error': f'OCR processing failed: {str(e)}'}), 500
-

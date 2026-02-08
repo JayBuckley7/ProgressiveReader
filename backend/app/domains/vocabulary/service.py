@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import List, Optional, Dict, Any, TYPE_CHECKING
+from typing import List, Optional, Dict, Any
 
-from .integrations import JpdbProvider, JpdbApiProvider
+from .config import JpdbConfig
+from .ports import JpdbProvider, JpdbApiProvider, VocabularyRepositoryPort
 from .schemas import (
     DueCard,
     Deck,
@@ -14,27 +15,25 @@ from .schemas import (
     AddVocabularyWordRequest,
     Vocabulary as VocabularySchema,
 )
-
-if TYPE_CHECKING:
-    from .repository import VocabularyRepository
+import time
 
 
 class VocabularyService:
     def __init__(
         self,
         provider: JpdbProvider,
+        jpdb_config: JpdbConfig,
         api_provider: Optional[JpdbApiProvider] = None,
-        repository: Optional["VocabularyRepository"] = None,
+        repository: Optional[VocabularyRepositoryPort] = None,
     ) -> None:
         self._provider = provider
+        self._jpdb_config = jpdb_config
         self._api_provider = api_provider
         self._repository = repository
 
-    def _get_repository(self) -> "VocabularyRepository":
+    def _require_repository(self) -> VocabularyRepositoryPort:
         if self._repository is None:
-            from .repository import VocabularyRepository
-
-            self._repository = VocabularyRepository()
+            raise RuntimeError("VocabularyRepositoryPort not configured")
         return self._repository
 
     def get_due_cards(self, *, username: Optional[str], password: Optional[str], cookie_string: Optional[str]) -> List[DueCard]:
@@ -44,17 +43,142 @@ class VocabularyService:
         return self._provider.fetch_user_decks(username=username, password=password, cookie_string=cookie_string)
 
     # --- JPDB API flows ---
+    def jpdb_post_endpoint(
+        self,
+        endpoint: str,
+        *,
+        jpdb_api_key: str,
+        payload: dict,
+        retries: int = 3,
+    ) -> Dict[str, Any]:
+        assert self._api_provider is not None, "JpdbApiProvider not configured"
+        return self._api_provider.post_endpoint(
+            endpoint,
+            jpdb_api_key=jpdb_api_key,
+            payload=payload,
+            retries=retries,
+        )
+
+    def list_user_decks_via_api_key(self, *, jpdb_api_key: str) -> List[Deck]:
+        """List JPDB decks using the user's JPDB API key (v1 list-user-decks)."""
+        jpdb_payload = self.jpdb_post_endpoint(
+            "list-user-decks",
+            jpdb_api_key=jpdb_api_key,
+            payload={"fields": ["id", "name", "word_count"]},
+            retries=3,
+        )
+        raw_decks = jpdb_payload.get("decks") or []
+        decks: List[Deck] = []
+        if not isinstance(raw_decks, list):
+            return []
+
+        for row in raw_decks:
+            deck_id = None
+            name = None
+            words = None
+
+            if isinstance(row, dict):
+                deck_id = row.get("id") or row.get("deck_id")
+                name = row.get("name") or row.get("title")
+                words = row.get("word_count") or row.get("words") or row.get("count")
+            elif isinstance(row, list):
+                if len(row) >= 2:
+                    deck_id = row[0]
+                    name = row[1]
+                    words = row[2] if len(row) > 2 else None
+
+            if deck_id is None or name is None:
+                continue
+
+            words_int: Optional[int] = None
+            if isinstance(words, int):
+                words_int = words
+            elif isinstance(words, str) and words.strip().isdigit():
+                words_int = int(words.strip())
+
+            decks.append(Deck(id=str(deck_id), name=str(name), words=words_int))
+
+        return decks
+
+    def list_deck_vocabulary_via_api_key(self, *, jpdb_api_key: str, deck_id: int | str) -> list[Any]:
+        """Proxy JPDB deck/list-vocabulary using the user's JPDB API key."""
+        result = self.jpdb_post_endpoint(
+            "deck/list-vocabulary",
+            jpdb_api_key=jpdb_api_key,
+            payload={"id": deck_id},
+            retries=3,
+        )
+        vocab = result.get("vocabulary")
+        if not isinstance(vocab, list):
+            raise ValueError("Unexpected JPDB response: missing vocabulary list")
+        return vocab
+
+    def lookup_vocabulary_info_via_api_key(
+        self,
+        *,
+        jpdb_api_key: str,
+        pairs: list[Any],
+        fields: list[Any],
+        chunk_size: int = 300,
+    ) -> list[Any]:
+        """Proxy JPDB lookup-vocabulary using the user's JPDB API key.
+
+        JPDB limits payload sizes; we chunk to keep requests reliable.
+        """
+        if not isinstance(pairs, list) or not pairs:
+            raise ValueError("Missing list")
+        if not isinstance(fields, list) or not fields:
+            raise ValueError("Missing fields")
+
+        chunk_size_int = int(chunk_size) if chunk_size is not None else 300
+        chunk_size_int = max(50, min(600, chunk_size_int))
+
+        combined: List[Any] = []
+        for i in range(0, len(pairs), chunk_size_int):
+            chunk = pairs[i:i + chunk_size_int]
+            result = self.jpdb_post_endpoint(
+                "lookup-vocabulary",
+                jpdb_api_key=jpdb_api_key,
+                payload={"list": chunk, "fields": fields},
+                retries=3,
+            )
+            info = result.get("vocabulary_info") or []
+            if not isinstance(info, list):
+                raise ValueError("Unexpected JPDB response: missing vocabulary_info list")
+            combined.extend(info)
+            if i + chunk_size_int < len(pairs):
+                time.sleep(0.25)
+        return combined
+
+    def update_word_state_with_predicted_state(self, *, request: UpdateWordStateRequest) -> List[str]:
+        """Update JPDB word state and return the predicted UI state (legacy behavior)."""
+        result = self.update_word_state(request=request)
+        if not (isinstance(result, dict) and result.get("success") is True):
+            raise RuntimeError("JPDB update failed")
+
+        # JPDB doesn't return the full card state in this API; preserve legacy predicted state behavior.
+        return ["known"] if bool(request.state) else ["new"]
+
+    def review_card_with_predicted_state(self, *, request: ReviewCardRequest) -> List[str]:
+        """Record a review and return the predicted UI state (legacy behavior)."""
+        _ = self.review_card(request=request)
+        rating = request.rating
+        if rating in ("good", "easy", "pass", "known"):
+            return ["known"]
+        if rating in ("nothing", "hard", "fail"):
+            return ["failed"]
+        return ["learning"]
+
     def get_jpdb_data(
         self,
         *,
         request: GetJpdbDataRequest,
-        config: Dict[str, Any],
     ) -> List[ProcessedToken]:
         assert self._api_provider is not None, "JpdbApiProvider not configured"
 
         text_segments_raw = request.text_segments
         # Keep segments as-is for correct token offsets.
-        # JPDB returns token positions/lengths in UTF-16 code units (see integrations.py),
+        # JPDB returns token positions/lengths in UTF-16 code units (position_length_encoding="utf16"),
         # and the frontend applies offsets using JS string indices (also UTF-16).
         # Collapsing whitespace or otherwise normalizing text will desync highlighting.
         all_clean_segments: List[str] = []
@@ -68,11 +192,11 @@ class VocabularyService:
         if not all_clean_segments:
             return []
 
-        MAX_BYTES_PER_API_BATCH = config['MAX_BYTES_PER_API_BATCH']
-        MAX_SEGMENTS_PER_API_BATCH = config['MAX_SEGMENTS_PER_API_BATCH']
-        TOKEN_FIELDS = config['JPDB_TOKEN_FIELDS']
-        VOCAB_FIELDS = config['JPDB_VOCAB_FIELDS']
-        jpdb_api_url: str = config['JPDB_API_URL']
+        MAX_BYTES_PER_API_BATCH = self._jpdb_config.max_bytes_per_api_batch
+        MAX_SEGMENTS_PER_API_BATCH = self._jpdb_config.max_segments_per_api_batch
+        TOKEN_FIELDS = self._jpdb_config.token_fields
+        VOCAB_FIELDS = self._jpdb_config.vocab_fields
+        jpdb_api_url: str = self._jpdb_config.api_url
 
         def _utf8_len(s: str) -> int:
             return len(s.encode('utf-8'))
@@ -270,24 +394,41 @@ class VocabularyService:
     def mine_word(self, *, request: MineWordRequest) -> Dict[str, Any]:
         assert self._api_provider is not None, "JpdbApiProvider not configured"
         return self._api_provider.mine_word(
-            vid=request.vid, sid=request.sid, jpdb_api_key=request.jpdb_api_key, mining_deck_id=request.mining_deck_id
+            vid=request.vid,
+            sid=request.sid,
+            jpdb_api_key=request.jpdb_api_key,
+            mining_deck_id=request.mining_deck_id,
+            forq=request.forq,
+            forq_deck_id=request.forq_deck_id,
+            sentence=request.sentence,
         )
 
     def update_word_state(self, *, request: UpdateWordStateRequest) -> Dict[str, Any]:
         assert self._api_provider is not None, "JpdbApiProvider not configured"
         return self._api_provider.update_word_state(
-            vid=request.vid, sid=request.sid, flag=request.flag, state=request.state, jpdb_api_key=request.jpdb_api_key
+            vid=request.vid,
+            sid=request.sid,
+            flag=request.flag,
+            state=request.state,
+            jpdb_api_key=request.jpdb_api_key,
+            blacklist_deck_id=request.blacklist_deck_id,
+            never_forget_deck_id=request.never_forget_deck_id,
+            forq_deck_id=request.forq_deck_id,
         )
 
-    def review_card(self, *, request: ReviewCardRequest, review_url: str) -> Dict[str, Any]:
+    def review_card(self, *, request: ReviewCardRequest) -> Dict[str, Any]:
         assert self._api_provider is not None, "JpdbApiProvider not configured"
         return self._api_provider.review_card(
-            vid=request.vid, sid=request.sid, rating=request.rating, jpdb_api_key=request.jpdb_api_key, review_url=review_url
+            vid=request.vid,
+            sid=request.sid,
+            rating=request.rating,
+            jpdb_api_key=request.jpdb_api_key,
+            review_url=self._jpdb_config.review_url,
         )
 
     def add_vocabulary_word(self, *, request: AddVocabularyWordRequest, user_id: Optional[str]) -> VocabularySchema:
         """Add a vocabulary word to the user's collection."""
-        return self._get_repository().add_vocabulary_word(
+        return self._require_repository().add_vocabulary_word(
             user_id=user_id,
             word=request.word,
             translation=request.translation,
@@ -299,7 +440,7 @@ class VocabularyService:
 
     def toggle_mastered(self, *, user_id: Optional[str], word_id: int, mastered: bool) -> Optional[VocabularySchema]:
         """Toggle mastered status for a vocabulary word."""
-        return self._get_repository().toggle_mastered(user_id=user_id, word_id=word_id, mastered=mastered)
+        return self._require_repository().toggle_mastered(user_id=user_id, word_id=word_id, mastered=mastered)
 
     def get_user_vocabulary(
         self,
@@ -310,10 +451,9 @@ class VocabularyService:
         book_id: Optional[str] = None,
     ) -> List[VocabularySchema]:
         """Get user's vocabulary words with optional filters."""
-        return self._get_repository().get_user_vocabulary(
+        return self._require_repository().get_user_vocabulary(
             user_id=user_id,
             language=language,
             mastered=mastered,
             book_id=book_id,
         )
-

@@ -23,7 +23,15 @@ def test_get_jpdb_data_invalid_payload(client):
     assert resp.status_code == 400
 
 
-def test_update_jpdb_word_state_predicts_state(client):
+def test_update_jpdb_word_state_predicts_state(client, monkeypatch):
+    # Patch provider's update_word_state to avoid network
+    from app.domains.vocabulary.adapters.jpdb_http import JpdbHttpProvider
+
+    def _mock_update(self, *, vid, sid, flag, state, jpdb_api_key, **kwargs):
+        return {"success": True}
+
+    monkeypatch.setattr(JpdbHttpProvider, 'update_word_state', _mock_update)
+
     resp = client.post('/api/update_jpdb_word_state', json={
         'vid': 1,
         'sid': 2,
@@ -39,7 +47,7 @@ def test_update_jpdb_word_state_predicts_state(client):
 
 def test_review_jpdb_card_success(client, monkeypatch):
     # Patch provider's review_card to avoid network
-    from app.domains.vocabulary.integrations import JpdbHttpProvider
+    from app.domains.vocabulary.adapters.jpdb_http import JpdbHttpProvider
 
     def _mock_review(self, *, vid, sid, rating, jpdb_api_key, review_url):
         return {"success": True}
@@ -56,5 +64,3 @@ def test_review_jpdb_card_success(client, monkeypatch):
     data = resp.get_json()
     assert data['success'] is True
     assert data['newState'] == ['known']
-
-

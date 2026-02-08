@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BookMetadata } from '~/types';
 import { toast } from 'sonner';
 import { appLog } from '@shared/appLog';
+import { notifyError } from '@shared/utils/notify';
 
 interface EditBookModalProps {
   book: BookMetadata;
@@ -22,7 +23,7 @@ export function EditBookModal({ book, onClose, onSave }: EditBookModalProps) {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      toast.error('Title is required');
+      notifyError('Title is required');
       return;
     }
 
@@ -33,7 +34,7 @@ export function EditBookModal({ book, onClose, onSave }: EditBookModalProps) {
       onClose();
     } catch (error) {
       appLog.error('[EditBookModal] Error updating book', error);
-      toast.error('Failed to update book details');
+      notifyError(error, { title: 'Failed to update book details' });
     } finally {
       setIsSaving(false);
     }
