@@ -1,5 +1,5 @@
-import { getAuthHeaders } from "@shared/utils/auth";
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
+import type { VocabularyBackendPort } from "@core/backend/ports";
+import type { DrivePort } from "@core/drive/ports";
 
 import type { Deck } from "~/types/api";
 
@@ -58,33 +58,6 @@ async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-async function postJson<T>(
-  url: string,
-  body: unknown,
-  args: { headers: HeadersInit; signal?: AbortSignal }
-): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { ...args.headers, "Content-Type": "application/json" },
-    body: JSON.stringify(body ?? {}),
-    signal: args.signal,
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    let msg = text || `HTTP ${response.status}`;
-    try {
-      const parsed = JSON.parse(text);
-      msg = parsed?.error || parsed?.message || msg;
-    } catch {
-      // ignore
-    }
-    throw new Error(msg);
-  }
-
-  return (await response.json()) as T;
-}
-
 function nowMs(): number {
   return Date.now();
 }
@@ -98,24 +71,25 @@ function normalizeMeanings(value: unknown): string[] {
 }
 
 export async function syncJpdbKnownMirror(args: {
+  backend: VocabularyBackendPort;
+  drive?: DrivePort;
   signal?: AbortSignal;
   onProgress?: (p: JpdbMirrorSyncProgress) => void;
   backupToDrive?: boolean;
 }): Promise<void> {
+  const backend = args.backend;
+  const drive = args.drive;
   const signal = args.signal;
   const onProgress = args.onProgress;
   const backupToDrive = args.backupToDrive ?? true;
 
   abortIfNeeded(signal);
 
-  // Ensure we have auth headers once (Clerk token).
-  const headers = await getAuthHeaders();
-
   onProgress?.({ phase: "decks", message: "Loading decks…" });
-  const decks = await postJson<Deck[]>("/api/list-user-decks", {}, { headers, signal });
+  const decks = await backend.fetchUserDecks({}, { signal });
   abortIfNeeded(signal);
 
-  const deckList = Array.isArray(decks) ? decks : [];
+  const deckList = Array.isArray(decks) ? (decks as Deck[]) : [];
   onProgress?.({ phase: "decks", loaded: 1, total: 1, message: `Found ${deckList.length} decks` });
 
   onProgress?.({ phase: "pairs", loaded: 0, total: deckList.length, message: "Listing deck vocabulary…" });
@@ -127,15 +101,10 @@ export async function syncJpdbKnownMirror(args: {
     const deckId = deck?.id;
     if (!deckId) continue;
 
-    const payload = await postJson<{ vocabulary: unknown }>(
-      "/api/jpdb/deck/list-vocabulary",
-      { id: deckId },
-      { headers, signal }
-    );
-    const pairs = Array.isArray(payload?.vocabulary) ? (payload.vocabulary as any[]) : [];
-    for (const p of pairs) {
-      const vid = Number(p?.[0]);
-      const sid = Number(p?.[1]);
+    const pairs = await backend.listDeckVocabulary(deckId, { signal });
+    for (const p of pairs as any[]) {
+      const vid = Number((p as any)?.[0]);
+      const sid = Number((p as any)?.[1]);
       if (!Number.isFinite(vid) || !Number.isFinite(sid)) continue;
       pairSet.add(`${vid}/${sid}`);
     }
@@ -165,23 +134,9 @@ export async function syncJpdbKnownMirror(args: {
     abortIfNeeded(signal);
     const chunkPairs = pairs.slice(i, i + batchSize);
 
-    const payload = await postJson<{ vocabulary_info: any[] }>(
-      "/api/jpdb/lookup-vocabulary",
-      { list: chunkPairs, fields, chunkSize: batchSize },
-      { headers, signal }
-    );
-    const infoRows = Array.isArray(payload?.vocabulary_info) ? payload.vocabulary_info : [];
-
-    for (let j = 0; j < chunkPairs.length; j += 1) {
-      const pair = chunkPairs[j];
-      const row = infoRows[j];
-      const entry: any = { vid: pair[0], sid: pair[1] };
-      if (Array.isArray(row)) {
-        for (let k = 0; k < fields.length; k += 1) {
-          entry[fields[k]] = row[k];
-        }
-      }
-      allEntries.push(entry);
+    const entries = await backend.lookupVocabulary(chunkPairs, fields, { signal });
+    for (const e of entries as any[]) {
+      if (e && typeof e === "object") allEntries.push(e as any);
     }
 
     onProgress?.({
@@ -254,9 +209,8 @@ export async function syncJpdbKnownMirror(args: {
   onProgress?.({ phase: "save", message: "Saving mirror…" });
   await writeMirrorSnapshot({ meta, knownVocab: knownRecords, glossIndexRows });
 
-  if (backupToDrive && gDriveService.isSignedIn()) {
+  if (backupToDrive && drive?.isSignedIn()) {
     onProgress?.({ phase: "backup", message: "Backing up mirror to Google Drive…" });
-    // These helpers are added in gDriveService as part of this feature.
     const snapshot = {
       version: 1,
       syncedAtMs: meta.syncedAtMs,
@@ -267,7 +221,7 @@ export async function syncJpdbKnownMirror(args: {
     // Only attempt backup if mirror exists locally (avoid writing empty snapshots).
     const existing = await getMirrorMeta();
     if (existing) {
-      await gDriveService.saveJpdbMirror(snapshot);
+      await drive.saveJpdbMirror(snapshot);
     }
   }
 }

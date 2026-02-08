@@ -1,4 +1,4 @@
-import type { JpdbLookupVocabularyEntry, JpdbVocabPair } from "@features/vocabulary/services/vocabApi";
+import type { JpdbLookupVocabularyEntry, JpdbVocabPair } from "./types";
 import { DeckSelector } from "../DeckSelector";
 import type { DueGroup } from "./due";
 import { formatDueDate } from "./due";

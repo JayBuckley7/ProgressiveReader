@@ -34,11 +34,6 @@ class AddBookmarkRequest(BaseModel):
     note: Optional[str] = None
 
 
-class DeleteCachedTranslationRequest(BaseModel):
-    """Request schema for acknowledging cached translation deletion."""
-    item_index: int
-
-
 class ToggleJlptRequest(BaseModel):
     """Request schema for toggling JLPT highlighting."""
     enabled: bool
@@ -48,4 +43,3 @@ class ToggleJlptResponse(BaseModel):
     """Response schema for JLPT toggle."""
     success: bool
     jlpt_highlighting_enabled: bool
-

@@ -61,22 +61,6 @@ def update_kanji_jlpt():
         return jsonify({"error": "Failed to update kanji"}), 500
 
 
-@kanji_bp.route('/info/<kanji_char>', methods=['GET'])
-@require_admin
-def get_kanji_info(kanji_char: str):
-    """Get detailed information about a specific kanji."""
-    if not kanji_char or len(kanji_char) != 1:
-        return jsonify({"error": "Invalid kanji character"}), 400
-
-    try:
-        container = current_app.extensions["container"]
-        service = container.make_kanji_service()
-        kanji_info = service.get_kanji_info(kanji_char)
-        return jsonify(kanji_info)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except FileNotFoundError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        current_app.logger.error(f"Error getting kanji info: {e}", exc_info=True)
-        return jsonify({"error": "Failed to get kanji info"}), 500
+#
+# NOTE: `/api/kanji/info/<kanji_char>` was removed (unused by the frontend).
+#

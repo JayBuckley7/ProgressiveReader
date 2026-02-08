@@ -2,53 +2,15 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import type { TranslateRequest } from "~/types/api";
-import { translateChapterStream } from "@integrations/backend/translation";
 import { appLog } from '@shared/appLog'
 import { notifyError } from "@shared/utils/notify";
-import { browserOpenAiChatPort } from "@integrations/openai/browserChat";
 import { translateChapterHtmlWithLlm } from "@core/translation/translateChapterHtml";
 import { stripMarkdownCodeFences } from "@core/utils/markdown";
-
-// Helper functions for translation storage
-const getTranslationStorageKey = (bookId: string, chapter: number) => {
-  return `translation_${bookId}_${chapter}`;
-};
-
-const saveTranslationToStorage = (bookId: string, chapter: number, translatedContent: string, useCefr: boolean, settings?: any) => {
-  if (settings && settings.cacheTranslations === false) return;
-  const key = getTranslationStorageKey(bookId, chapter);
-  const translationData = {
-    content: translatedContent,
-    timestamp: Date.now(),
-    useCefr,
-    targetLanguage: settings?.targetLanguage || "English",
-    cefrLevel: localStorage.getItem("cefrLevel") || "3"
-  };
-  localStorage.setItem(key, JSON.stringify(translationData));
-  appLog.debug('Translation saved to storage:', key, 'with settings:', {
-    targetLanguage: translationData.targetLanguage,
-    cefrLevel: translationData.cefrLevel,
-    useCefr
-  });
-};
-
-export const loadTranslationFromStorage = (bookId: string, chapter: number) => {
-  const key = getTranslationStorageKey(bookId, chapter);
-  const stored = localStorage.getItem(key);
-  if (stored) {
-    try {
-      const translationData = JSON.parse(stored);
-      appLog.debug('Translation loaded from storage:', key);
-      return translationData;
-    } catch (error) {
-      appLog.warn('[useTranslation] Error parsing stored translation', error);
-      localStorage.removeItem(key); // Remove corrupted data
-    }
-  }
-  return null;
-};
+import { makeTranslationCacheEntry, isTranslationCacheValid } from "@core/translation/cache";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 export function useTranslation(bookId: string, chapter: number, currentChapterContent: string | null) {
+  const deps = useAppDeps();
   const { settings } = useSettings();
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false);
@@ -62,10 +24,10 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
   const translateWithOpenAI = useCallback(
     async (html: string, useCefr: boolean, apiKey: string): Promise<string> => {
       const targetLang = settings?.targetLanguage || "English";
-      const model = (localStorage.getItem("openaiModel") || "gpt-4o-mini").trim() || "gpt-4o-mini";
-      const cefrLevel = localStorage.getItem("cefrLevel") || "B2";
+      const model = deps.prefs.getOpenAiModel();
+      const cefrLevel = deps.prefs.getCefrLevel();
       return translateChapterHtmlWithLlm({
-        llm: browserOpenAiChatPort,
+        llm: deps.llmChat,
         apiKey,
         html,
         targetLanguage: targetLang,
@@ -74,7 +36,7 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
         cefrLevel,
       });
     },
-    [settings?.targetLanguage]
+    [deps.llmChat, deps.prefs, settings?.targetLanguage]
   );
 
   /**
@@ -97,14 +59,25 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
     // Always translate from the original chapter HTML
     const contentToTranslate = currentChapterContent;
 
-    const personalKey = (localStorage.getItem("openaiKey") || "").trim();
+    const personalKey = deps.prefs.getOpenAiKey() || "";
     if (personalKey) {
       try {
         const cleaned = await translateWithOpenAI(contentToTranslate, useCefr, personalKey);
         setTranslatedContent(cleaned);
         setIsTranslated(true);
         setIsAutoloaded(false);
-        saveTranslationToStorage(bookId, chapter, cleaned, useCefr, settings);
+        if (settings?.cacheTranslations !== false) {
+          deps.translationCache.set(
+            bookId,
+            chapter,
+            makeTranslationCacheEntry({
+              content: cleaned,
+              useCefr,
+              targetLanguage: settings?.targetLanguage || "English",
+              cefrLevel: deps.prefs.getCefrLevel(),
+            })
+          );
+        }
         toast.success("Translation complete!", { id: toastId });
       } catch (err) {
         appLog.error("[useTranslation] Translation error", err);
@@ -119,18 +92,18 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
     const payload: TranslateRequest = {
       content: contentToTranslate,
       targetLang: settings?.targetLanguage || "English",
-      model: localStorage.getItem("openaiModel") || "gpt-4o-mini",
+      model: deps.prefs.getOpenAiModel(),
       useCefr: useCefr,
       stream: true,
     };
     if (useCefr) {
-      payload.cefrLevel = localStorage.getItem("cefrLevel") || "B2";
+      payload.cefrLevel = deps.prefs.getCefrLevel();
     }
     
     try {
       let accumulated = "";
       let firstChunk = true;
-      const stream = translateChapterStream(payload, (chunk) => {
+      const stream = deps.backend.translation.translateChapterStream(payload, (chunk) => {
         if (firstChunk) {
           setIsTranslated(true);
           firstChunk = false;
@@ -142,7 +115,18 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
         setTranslatedContent(cleaned);
         setIsTranslated(true);
         setIsAutoloaded(false);
-        saveTranslationToStorage(bookId, chapter, cleaned, useCefr, settings);
+        if (settings?.cacheTranslations !== false) {
+          deps.translationCache.set(
+            bookId,
+            chapter,
+            makeTranslationCacheEntry({
+              content: cleaned,
+              useCefr,
+              targetLanguage: settings?.targetLanguage || "English",
+              cefrLevel: deps.prefs.getCefrLevel(),
+            })
+          );
+        }
         toast.success("Translation complete!", { id: toastId });
       });
       
@@ -157,14 +141,14 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
       setIsTranslating(false);
       toast.dismiss(toastId);
     }
-  }, [bookId, chapter, currentChapterContent, settings, translateWithOpenAI]);
+  }, [bookId, chapter, currentChapterContent, deps.backend.translation, deps.prefs, deps.translationCache, settings, translateWithOpenAI]);
 
   const clearTranslation = useCallback((options?: { suppressAutoload?: boolean }) => {
     if (isTranslated) {
       appLog.debug('Clearing translation, returning to original content');
       if (options?.suppressAutoload) {
         // Prevent the autoload effect from immediately re-applying the cached translation.
-        suppressAutoloadKeyRef.current = getTranslationStorageKey(bookId, chapter);
+        suppressAutoloadKeyRef.current = `translation_${bookId}_${chapter}`;
       }
       setTranslatedContent(null);
       setIsTranslated(false);
@@ -201,24 +185,25 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
 
   // Autoload translations when chapter changes if setting is enabled (one-time per chapter load)
   useEffect(() => {
-    const autoloadEnabled = localStorage.getItem("autoloadTranslations") === "true";
+    const autoloadEnabled = deps.prefs.getAutoloadTranslations();
     const cachingEnabled = settings?.cacheTranslations !== false;
     
     // Only autoload on initial chapter load, not when user has already interacted with translations
     if (autoloadEnabled && cachingEnabled && currentChapterContent && !isTranslating && !isTranslated) {
       appLog.debug('Checking for stored translation for autoload...');
-      const storedTranslation = loadTranslationFromStorage(bookId, chapter);
+      const storedTranslation = deps.translationCache.get(bookId, chapter);
       
       if (storedTranslation) {
         // Check if stored translation is still valid (same settings)
         const currentTargetLanguage = settings?.targetLanguage || "English";
-        const currentCefrLevel = localStorage.getItem("cefrLevel") || "3";
-        
-        const isValid = storedTranslation.targetLanguage === currentTargetLanguage &&
-                       storedTranslation.cefrLevel === currentCefrLevel;
+        const currentCefrLevel = deps.prefs.getCefrLevel();
+        const isValid = isTranslationCacheValid(storedTranslation, {
+          targetLanguage: currentTargetLanguage,
+          cefrLevel: currentCefrLevel,
+        });
         
         if (isValid) {
-          const currentKey = getTranslationStorageKey(bookId, chapter);
+          const currentKey = `translation_${bookId}_${chapter}`;
           const isSuppressed = suppressAutoloadKeyRef.current === currentKey;
 
           if (isSuppressed) {
@@ -235,12 +220,11 @@ export function useTranslation(bookId: string, chapter: number, currentChapterCo
           }
         } else {
           appLog.debug('[useTranslation] Stored translation is outdated; removing from storage');
-          const key = getTranslationStorageKey(bookId, chapter);
-          localStorage.removeItem(key);
+          deps.translationCache.remove(bookId, chapter);
         }
       }
     }
-  }, [chapter, currentChapterContent, bookId, settings?.targetLanguage, isTranslating, isTranslated]);
+  }, [bookId, chapter, currentChapterContent, deps.prefs, deps.translationCache, isTranslating, isTranslated, settings?.targetLanguage]);
 
   return {
     translateCurrent,

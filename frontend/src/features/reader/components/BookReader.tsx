@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { useAppData } from "@shared/contexts/AppDataContext";
 
-import { bookStorageService } from "@features/books/services/bookStorage";
 import { useBookContent } from "@features/reader/hooks/useBookContent";
 import { useReadingProgress } from "@features/reader/hooks/useReadingProgress";
 import { useSwipe } from "@features/reader/hooks/useSwipe";
@@ -33,7 +32,7 @@ interface BookReaderProps {
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   const navigate = useNavigate();
-  const { books, getReadingProgress, saveBookProgress } = useAppData();
+  const { books, downloadBook, getReadingProgress, saveBookProgress } = useAppData();
   const { settings } = useSettings();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -152,7 +151,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     if (!bookMetadata || bookMetadata.fileType !== "pdf" || !progressLoaded) return;
 
     const load = async () => {
-      const blob = await bookStorageService.downloadBook(bookId, bookMetadata);
+      const blob = await downloadBook(bookId, bookMetadata);
       if (blob) {
         const arrayBuffer = await blob.arrayBuffer();
         setPdfData(arrayBuffer);
@@ -161,7 +160,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     };
 
     void load();
-  }, [bookMetadata, bookId, progressLoaded]);
+  }, [bookMetadata, bookId, downloadBook, progressLoaded]);
 
   useEffect(() => {
     if (pdfLoaded && pdfViewerRef.current && pdfCurrentPage != null) {
@@ -387,4 +386,3 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
 }
 
 export default BookReader;
-

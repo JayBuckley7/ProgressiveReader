@@ -1,14 +1,14 @@
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
-import { authManager } from "@shared/services/authManager";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
-import { bookCacheService } from "../bookCache";
-import { bookStorageService } from "../bookStorage";
-import { processPDFWithOCR, type OCRProgressCallback } from "../ocrApi";
+import type { BookCacheService } from "../bookCache";
+import type { BookStorageService } from "../bookStorage";
 import type { BookMetadata } from "~/types";
 import type { BookCoverService } from "../bookCovers";
 import type { ClerkUserLike } from "./provider";
 import { assertGoogleProvider, detectProviderFromClerkUser } from "./provider";
+import type { DrivePort } from "@core/drive/ports";
+import type { DriveAuthPort } from "@core/drive/authPort";
+import type { OcrBackendPort, OcrProgressCallback } from "@core/backend/ports";
 
 function getErrorMessage(err: unknown): string {
   if (!err) return "Unknown error";
@@ -18,21 +18,26 @@ function getErrorMessage(err: unknown): string {
 }
 
 export async function uploadBookToDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  driveOcr: OcrBackendPort;
+  bookCache: BookCacheService;
+  bookStorage: BookStorageService;
   file: File;
   meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean };
   covers: BookCoverService;
   clerkUser?: ClerkUserLike;
   onOCRProgress?: OCRProgressCallback;
 }): Promise<BookMetadata> {
-  const { file, meta, covers, clerkUser, onOCRProgress } = params;
+  const { drive, driveAuth, driveOcr, bookCache, bookStorage, file, meta, covers, clerkUser, onOCRProgress } = params;
 
   appLog.debug("[BookLibrary] Uploading book to user's cloud storage (privacy-first).");
 
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
 
-  // Check connection using centralized auth manager.
-  const isAuthenticated = await authManager.ensureAuthenticated();
+  // Check connection using injected drive auth.
+  const isAuthenticated = await driveAuth.ensureAuthenticated();
   if (!isAuthenticated) {
     throw new Error("Failed to authenticate with Google Drive");
   }
@@ -42,13 +47,13 @@ export async function uploadBookToDrive(params: {
 
   if (!coverBlob && meta.fileType === "epub") {
     try {
-      const extractedCover = await bookStorageService.extractCoverFromEpub(file);
+      const extractedCover = await bookStorage.extractCoverFromEpub(file);
       if (extractedCover) coverBlob = extractedCover;
     } catch (error) {
       appLog.warn("[BookLibrary] Failed to extract cover from EPUB", error);
     }
   } else if (!coverBlob && meta.fileType === "pdf") {
-    const extracted = await bookStorageService.extractCoverFromPdf(file);
+    const extracted = await bookStorage.extractCoverFromPdf(file);
     if (extracted) coverBlob = extracted;
   }
 
@@ -65,7 +70,7 @@ export async function uploadBookToDrive(params: {
   let fileToUpload = file;
   if (meta.processOCR && meta.fileType === "pdf") {
     try {
-      fileToUpload = await processPDFWithOCR(file, onOCRProgress);
+      fileToUpload = await driveOcr.processPdf(file, onOCRProgress);
     } catch (error) {
       appLog.error("[BookLibrary] OCR processing failed; uploading original PDF", error);
       notifyError(error, {
@@ -75,7 +80,7 @@ export async function uploadBookToDrive(params: {
     }
   }
 
-  const bookResult = await gDriveService.uploadFile(
+  const bookResult = await drive.uploadFile(
     fileToUpload.name,
     fileToUpload,
     fileToUpload.type || "application/epub+zip"
@@ -95,11 +100,11 @@ export async function uploadBookToDrive(params: {
           ? "svg"
           : "jpg";
     const coverFileName = `${meta.title}_cover.${ext}`;
-    const coverResult = await gDriveService.uploadFile(coverFileName, coverBlob, mime);
+    const coverResult = await drive.uploadFile(coverFileName, coverBlob, mime);
     if (coverResult) coverImageId = coverResult.id;
   }
 
-  await gDriveService.addBookMetadata(bookResult.id, {
+  await drive.addBookMetadata(bookResult.id, {
     title: meta.title,
     fileName: fileToUpload.name,
     fileType: meta.fileType,
@@ -121,7 +126,7 @@ export async function uploadBookToDrive(params: {
   };
 
   // Clear cache since book list has changed.
-  bookCacheService.clearBookListCache();
+  bookCache.clearBookListCache();
 
   appLog.debug("[BookLibrary] Book uploaded successfully");
   return bookMetadata;
@@ -131,4 +136,3 @@ export function wrapUploadError(error: unknown): Error {
   const msg = getErrorMessage(error);
   return new Error(`Failed to upload to Google Drive: ${msg}`);
 }
-

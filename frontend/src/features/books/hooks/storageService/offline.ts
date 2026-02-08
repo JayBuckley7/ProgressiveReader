@@ -1,27 +1,23 @@
 import { toast } from "sonner";
 import type { BookMetadata } from "~/types";
 
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
-import {
-  cacheCover,
-  cacheCoverForFile,
-  getCachedCover,
-  getCoverForFile,
-} from "@integrations/googleDrive/services/driveCache";
-
 import {
   addOfflineBook,
   getOfflineBooks,
   getOfflineBooksWithCovers,
 } from "@features/books/utils/offlineLibrary";
+import type { DriveCachePort } from "@core/drive/cachePort";
+import type { DrivePort } from "@core/drive/ports";
 
 export async function loadOfflineBooks(params: {
   setIsLoading: (v: boolean) => void;
   setBooks: (books: BookMetadata[]) => void;
+  driveCache: DriveCachePort;
+  drive?: DrivePort;
 }) {
-  const { setIsLoading, setBooks } = params;
+  const { setIsLoading, setBooks, driveCache, drive } = params;
   setIsLoading(true);
-  const offline = await getOfflineBooksWithCovers();
+  const offline = await getOfflineBooksWithCovers({ driveCache, drive });
   setBooks(offline);
   setIsLoading(false);
 }
@@ -33,24 +29,26 @@ export function hasOfflineBooksCached(): boolean {
 export async function cacheBookForOffline(params: {
   meta: BookMetadata;
   downloadBook: (bookId: string, metadata: BookMetadata) => Promise<Blob | null>;
+  driveCache: DriveCachePort;
+  drive?: DrivePort;
 }) {
-  const { meta, downloadBook } = params;
+  const { meta, downloadBook, driveCache, drive } = params;
 
   const blob = await downloadBook(meta.id, meta);
   if (!blob) return;
 
   if (meta.coverImageId) {
-    let cover = await getCoverForFile(meta.id);
+    let cover = await driveCache.getCoverForFile(meta.id);
     if (!cover) {
-      cover = await getCachedCover(meta.coverImageId);
-      if (!cover && gDriveService.isSignedIn()) {
-        cover = await gDriveService.downloadFile(meta.coverImageId);
+      cover = await driveCache.getCachedCover(meta.coverImageId);
+      if (!cover && drive?.isSignedIn()) {
+        cover = await drive.downloadFile(meta.coverImageId);
         if (cover) {
-          await cacheCover(meta.coverImageId, cover);
+          await driveCache.cacheCover(meta.coverImageId, cover);
         }
       }
       if (cover) {
-        await cacheCoverForFile(meta.id, cover);
+        await driveCache.cacheCoverForFile(meta.id, cover);
       }
     }
   }
@@ -58,4 +56,3 @@ export async function cacheBookForOffline(params: {
   addOfflineBook(meta);
   toast.success("Book cached for offline use");
 }
-

@@ -35,15 +35,6 @@ export const server = setupServer(
     ]);
   }),
 
-  // Translation: vocabulary translation
-  http.post('/api/translate/vocabulary', async ({ request }) => {
-    const body = await request.json().catch(() => ({}));
-    return jsonResponse({
-      translated_text: `Mock translation of "${body.content || ''}"`,
-      model_used: body.model || 'gpt-4o-mini',
-    });
-  }),
-
   // Mix mode: refine ambiguous swaps
   http.post('/api/mix/refine', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as any;
@@ -64,7 +55,7 @@ export const server = setupServer(
   http.get('/api/vocabulary', async () => jsonResponse([])),
 
   // Vocabulary due cards
-  http.post('/api/due_cards', async () => {
+  http.post('/api/due-cards', async () => {
     return jsonResponse([
       { id: '1', term: '誰', meaning: 'who' },
       { id: '2', term: '水', meaning: 'water' },
@@ -118,7 +109,7 @@ export const server = setupServer(
   }),
 
   // JPDB endpoints
-  http.post('/api/get_jpdb_data', async () => {
+  http.post('/api/get-jpdb-data', async () => {
     return jsonResponse([
       {
         start: 0,
@@ -129,15 +120,15 @@ export const server = setupServer(
       },
     ]);
   }),
-  http.post('/api/mine_jpdb_word', async () => jsonResponse({ success: true })),
-  http.post('/api/update_jpdb_word_state', async () => jsonResponse({ success: true, newState: ['known'] })),
-  http.post('/api/review_jpdb_card', async () => jsonResponse({ success: true, newState: ['known'] })),
+  http.post('/api/mine-jpdb-word', async () => jsonResponse({ success: true })),
+  http.post('/api/update-jpdb-word-state', async () => jsonResponse({ success: true, newState: ['known'] })),
+  http.post('/api/review-jpdb-card', async () => jsonResponse({ success: true, newState: ['known'] })),
 
   // Admin: OpenAI keys
-  http.get('/api/openai_key_configured', async () => jsonResponse({ openai_key_configured: true, pool_size: 1 })),
-  http.get('/api/openai_keys', async () => jsonResponse({ keys: [] })),
-  http.post('/api/openai_keys/add', async () => jsonResponse({ success: true, pool_size: 1 })),
-  http.post('/api/openai_keys/remove', async () => jsonResponse({ success: true, pool_size: 0 })),
+  http.get('/api/openai-key-configured', async () => jsonResponse({ openai_key_configured: true, pool_size: 1 })),
+  http.get('/api/openai-keys', async () => jsonResponse({ keys: [] })),
+  http.post('/api/openai-keys/add', async () => jsonResponse({ success: true, pool_size: 1 })),
+  http.post('/api/openai-keys/remove', async () => jsonResponse({ success: true, pool_size: 0 })),
 
   // Kanji domain routes
   http.post('/api/kanji/search', async ({ request }) => {

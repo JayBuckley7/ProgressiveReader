@@ -4,23 +4,23 @@ import { appLog } from "@shared/appLog";
 import { toast } from "sonner";
 
 import { notifyError } from "@shared/utils/notify";
-
-import { bookMetadataService } from "@features/books/services/bookMetadata";
+import type { DrivePort } from "@core/drive/ports";
 
 export type CloudSettings = Record<string, unknown>;
 
 export async function saveCloudSettings(params: {
   clerkUserId: string | null;
   settings: CloudSettings;
+  drive: DrivePort;
 }): Promise<boolean> {
-  const { clerkUserId, settings } = params;
+  const { clerkUserId, settings, drive } = params;
   if (!clerkUserId) {
     appLog.debug("[useStorageService] Cannot save settings: user not authenticated");
     return false;
   }
 
   try {
-    const success = await bookMetadataService.saveSettings(settings);
+    const success = await drive.saveSettings(settings);
     appLog.debug(`[useStorageService] Settings save result: ${success ? "ok" : "failed"}`);
     return success;
   } catch (error) {
@@ -38,8 +38,9 @@ function getErrorMessage(err: unknown): string | undefined {
 export async function loadCloudSettings(params: {
   ensureAuthenticated: () => Promise<boolean>;
   onUnauthorized: () => void;
+  drive: DrivePort;
 }): Promise<CloudSettings | null> {
-  const { ensureAuthenticated, onUnauthorized } = params;
+  const { ensureAuthenticated, onUnauthorized, drive } = params;
 
   const isAuthenticated = await ensureAuthenticated();
   if (!isAuthenticated) {
@@ -48,7 +49,7 @@ export async function loadCloudSettings(params: {
   }
 
   try {
-    const settings = await bookMetadataService.loadSettings();
+    const settings = await drive.loadSettings();
     return (settings && typeof settings === "object") ? (settings as CloudSettings) : null;
   } catch (error) {
     const message = getErrorMessage(error);

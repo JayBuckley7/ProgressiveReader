@@ -6,7 +6,12 @@ import { reverseIndex } from './parse.tsx';
 import { Keybind } from '~/types';
 import { vocabBank } from '@features/vocabulary/services/vocabBank';
 import { parseWithLocalLookup } from '@features/reader/utils/localTextParser';
-import { getJpdbData, mineJpdbWord, updateJpdbWordState, reviewJpdbCard } from '@features/vocabulary/services/vocabApi';
+import type { VocabularyBackendPort } from '@core/backend/ports';
+
+export type JpdbApiPort = Pick<
+    VocabularyBackendPort,
+    'getJpdbData' | 'mineJpdbWord' | 'updateJpdbWordState' | 'reviewJpdbCard'
+>;
 
 // Helper function to convert string[] to CardState
 function toCardState(state: string[]): CardState {
@@ -185,7 +190,7 @@ export function loadConfig(): JpHighlighterConfig {
 }
 
 // Parse text using JPDB API
-export async function parseText(textSegments: string[]): Promise<Token[]> {
+export async function parseText(api: JpdbApiPort, textSegments: string[]): Promise<Token[]> {
     const currentConfig = getCurrentConfig(); // Get current config
     try {
         if (!currentConfig.apiKey) {
@@ -196,7 +201,7 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
             return tokens;
         }
         
-        const processedTokens = await getJpdbData({
+        const processedTokens = await api.getJpdbData({
             text_segments: textSegments,
             jpdb_api_key: currentConfig.apiKey,
         });
@@ -226,14 +231,14 @@ export async function parseText(textSegments: string[]): Promise<Token[]> {
 }
 
 // Mine a word to JPDB
-export async function mineWord(card: Card, forq: boolean, sentence?: string): Promise<boolean> {
+export async function mineWord(api: JpdbApiPort, card: Card, forq: boolean, sentence?: string): Promise<boolean> {
     const currentConfig = getCurrentConfig(); // Get current config
     try {
         if (!currentConfig.apiKey) {
             throw new Error('JPDB API Key is not set. Please set it in settings.');
         }
         
-        const result = await mineJpdbWord({
+        const result = await api.mineJpdbWord({
             vid: card.vid,
             sid: card.sid,
             forq: forq,
@@ -254,14 +259,19 @@ export async function mineWord(card: Card, forq: boolean, sentence?: string): Pr
 }
 
 // Update word state (e.g., blacklist, never-forget)
-export async function updateWordState(card: Card, flag: 'blacklist' | 'never-forget' | 'forq', state: boolean): Promise<boolean> {
+export async function updateWordState(
+    api: JpdbApiPort,
+    card: Card,
+    flag: 'blacklist' | 'never-forget' | 'forq',
+    state: boolean
+): Promise<boolean> {
     const currentConfig = getCurrentConfig(); // Get current config
     try {
         if (!currentConfig.apiKey) {
             throw new Error('JPDB API Key is not set. Please set it in settings.');
         }
         
-        const result = await updateJpdbWordState({
+        const result = await api.updateJpdbWordState({
             vid: card.vid,
             sid: card.sid,
             flag: flag,
@@ -306,14 +316,14 @@ export async function updateWordState(card: Card, flag: 'blacklist' | 'never-for
 }
 
 // Review a card
-export async function reviewCard(card: Card, rating: string): Promise<boolean> {
+export async function reviewCard(api: JpdbApiPort, card: Card, rating: string): Promise<boolean> {
     const currentConfig = getCurrentConfig(); // Get current config
     try {
         if (!currentConfig.apiKey) {
             throw new Error('JPDB API Key is not set. Please set it in settings.');
         }
         
-        const result = await reviewJpdbCard({
+        const result = await api.reviewJpdbCard({
             vid: card.vid,
             sid: card.sid,
             rating: rating as any,

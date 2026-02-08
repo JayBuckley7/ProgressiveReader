@@ -1,9 +1,9 @@
 import type { BookMetadata, Folder } from "~/types";
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
-import { authManager } from "@shared/services/authManager";
 import { appLog } from "@shared/appLog";
-import { bookCacheService } from "../bookCache";
-import { removeCachedCover, removeCoverForFile } from "@integrations/googleDrive/services/driveCache";
+import type { DrivePort } from "@core/drive/ports";
+import type { DriveAuthPort } from "@core/drive/authPort";
+import type { DriveCachePort } from "@core/drive/cachePort";
+import type { BookCacheService } from "../bookCache";
 import type { ClerkUserLike } from "./provider";
 import { assertGoogleProvider, detectProviderFromClerkUser } from "./provider";
 import { listUserBooksFromDrive } from "./list";
@@ -24,34 +24,58 @@ function coerceMetadataFile(value: unknown): MetadataFile & Record<string, unkno
   return { ...value, books, covers };
 }
 
-export async function deleteBookFromDrive(bookId: string): Promise<void> {
-  if (!gDriveService.isSignedIn()) {
+export async function deleteBookFromDrive(args: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  driveCache: DriveCachePort;
+  bookCache: BookCacheService;
+  bookId: string;
+}): Promise<void> {
+  const { drive, driveAuth, driveCache, bookCache, bookId } = args;
+
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
     throw new Error("User not signed in to Google Drive");
   }
 
-  const metadataInfo = await gDriveService.getMetadataFile();
+  const metadataInfo = await drive.getMetadataFile();
   const metadata = coerceMetadataFile(metadataInfo?.data);
   const coverImageId = metadata.covers ? metadata.covers[bookId] : undefined;
 
-  const bookDeleteSuccess = await gDriveService.deleteFile(bookId);
+  const bookDeleteSuccess = await drive.deleteFile(bookId);
   if (!bookDeleteSuccess) throw new Error("Failed to delete book file from Google Drive");
 
   if (coverImageId) {
-    await gDriveService.deleteFile(coverImageId).catch(() => false);
+    await drive.deleteFile(coverImageId).catch(() => false);
   }
 
-  await gDriveService.removeBookMetadata(bookId).catch(() => false);
-  bookCacheService.clearBookListCache();
+  await drive.removeBookMetadata(bookId).catch(() => false);
+
+  // Clear any cached blobs/URLs for this cover.
+  await driveCache.removeCoverForFile(bookId).catch(() => {});
+  if (coverImageId) {
+    await driveCache.removeCachedCover(coverImageId).catch(() => {});
+  }
+
+  bookCache.clearBookListCache();
 }
 
-export async function updateBookCoverOnDrive(params: { bookId: string; coverFile: File }): Promise<string> {
-  const { bookId, coverFile } = params;
+export async function updateBookCoverOnDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  driveCache: DriveCachePort;
+  bookCache: BookCacheService;
+  bookId: string;
+  coverFile: File;
+}): Promise<string> {
+  const { drive, driveAuth, driveCache, bookCache, bookId, coverFile } = params;
 
-  if (!gDriveService.isSignedIn()) {
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
     throw new Error("User not signed in to Google Drive");
   }
 
-  const metadataInfo = await gDriveService.getMetadataFile();
+  const metadataInfo = await drive.getMetadataFile();
   if (!metadataInfo) throw new Error("Could not access metadata file");
 
   const data = coerceMetadataFile(metadataInfo.data);
@@ -61,7 +85,7 @@ export async function updateBookCoverOnDrive(params: { bookId: string; coverFile
   const currentCoverImageId = data.covers ? data.covers[bookId] : undefined;
 
   const fileName = `${bookId}-cover-${Date.now()}.${coverFile.name.split(".").pop()}`;
-  const coverResult = await gDriveService.uploadFile(fileName, coverFile, coverFile.type);
+  const coverResult = await drive.uploadFile(fileName, coverFile, coverFile.type);
   if (!coverResult?.id) throw new Error("Failed to upload new cover image to Google Drive");
 
   const coverImageId = coverResult.id;
@@ -71,38 +95,42 @@ export async function updateBookCoverOnDrive(params: { bookId: string; coverFile
   data.covers = data.covers || {};
   data.covers[bookId] = coverImageId;
 
-  const metadataUpdateSuccess = await gDriveService.updateMetadataFile(metadataInfo.fileId, data);
+  const metadataUpdateSuccess = await drive.updateMetadataFile(metadataInfo.fileId, data);
   if (!metadataUpdateSuccess) {
-    await gDriveService.deleteFile(coverImageId).catch(() => false);
+    await drive.deleteFile(coverImageId).catch(() => false);
     throw new Error("Failed to update book metadata with new cover");
   }
 
-  await removeCoverForFile(bookId);
+  await driveCache.removeCoverForFile(bookId);
   if (currentCoverImageId && currentCoverImageId !== coverImageId) {
-    await removeCachedCover(currentCoverImageId);
+    await driveCache.removeCachedCover(currentCoverImageId);
   }
 
-  bookCacheService.clearCoverUrlCache(bookId);
-  bookCacheService.clearBookListCache();
+  bookCache.clearCoverUrlCache(bookId);
+  bookCache.clearBookListCache();
 
   if (currentCoverImageId && currentCoverImageId !== coverImageId) {
-    await gDriveService.deleteFile(currentCoverImageId).catch(() => false);
+    await drive.deleteFile(currentCoverImageId).catch(() => false);
   }
 
   return coverImageId;
 }
 
 export async function updateBookMetadataOnDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  bookCache: BookCacheService;
   bookId: string;
   updates: { title?: string; author?: string };
 }): Promise<void> {
-  const { bookId, updates } = params;
+  const { drive, driveAuth, bookCache, bookId, updates } = params;
 
-  if (!gDriveService.isSignedIn()) {
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
     throw new Error("User not signed in to Google Drive");
   }
 
-  const metadataInfo = await gDriveService.getMetadataFile();
+  const metadataInfo = await drive.getMetadataFile();
   if (!metadataInfo) throw new Error("Could not access metadata file");
 
   const data = coerceMetadataFile(metadataInfo.data);
@@ -116,17 +144,20 @@ export async function updateBookMetadataOnDrive(params: {
     ...(updates.author && { author: updates.author }),
   };
 
-  const ok = await gDriveService.updateMetadataFile(metadataInfo.fileId, data);
+  const ok = await drive.updateMetadataFile(metadataInfo.fileId, data);
   if (!ok) throw new Error("Failed to update book metadata");
 
-  bookCacheService.clearBookListCache();
+  bookCache.clearBookListCache();
 }
 
 export async function syncBooksFromDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  bookCache: BookCacheService;
   clerkUser?: ClerkUserLike;
   onCoverReady?: (bookId: string, coverUrl: string) => void;
 }): Promise<BookMetadata[]> {
-  const { clerkUser, onCoverReady } = params;
+  const { drive, driveAuth, bookCache, clerkUser, onCoverReady } = params;
 
   if (!clerkUser) {
     appLog.debug("[BookLibrary] syncBooks: No Clerk user provided, skipping sync");
@@ -136,57 +167,111 @@ export async function syncBooksFromDrive(params: {
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
 
-  const isAuthenticated = await authManager.ensureAuthenticated();
+  const isAuthenticated = await driveAuth.ensureAuthenticated();
   if (!isAuthenticated) {
     throw new Error("Google Drive authentication failed. Please connect first.");
   }
 
-  await gDriveService.syncMetadataWithDrive();
-  return await listUserBooksFromDrive({ onCoverReady });
+  await drive.syncMetadataWithDrive();
+  return await listUserBooksFromDrive({ drive, bookCache, onCoverReady });
 }
 
-export async function openCloudFolderOnDrive(clerkUser?: ClerkUserLike): Promise<void> {
+export async function openCloudFolderOnDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  clerkUser?: ClerkUserLike;
+}): Promise<void> {
+  const { drive, driveAuth, clerkUser } = params;
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
 
-  if (!gDriveService.isSignedIn()) {
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
     throw new Error("Google Drive not connected. Please connect first.");
   }
 
-  await gDriveService.openFolder();
+  await drive.openFolder();
 }
 
-export async function createFolderOnDrive(name: string, parentId: string | undefined, clerkUser?: ClerkUserLike): Promise<Folder> {
+export async function createFolderOnDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  name: string;
+  parentId?: string;
+  clerkUser?: ClerkUserLike;
+}): Promise<Folder> {
+  const { drive, driveAuth, name, parentId, clerkUser } = params;
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
-  return await gDriveService.createFolder(name, parentId);
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
+    throw new Error("Google Drive not connected. Please connect first.");
+  }
+  return await drive.createFolder(name, parentId);
 }
 
 export async function updateFolderOnDrive(
-  folderId: string,
-  updates: { name?: string; parentId?: string },
-  clerkUser?: ClerkUserLike
+  params: {
+    drive: DrivePort;
+    driveAuth: DriveAuthPort;
+    folderId: string;
+    updates: { name?: string; parentId?: string };
+    clerkUser?: ClerkUserLike;
+  }
 ): Promise<Folder> {
+  const { drive, driveAuth, folderId, updates, clerkUser } = params;
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
-  return await gDriveService.updateFolder(folderId, updates);
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
+    throw new Error("Google Drive not connected. Please connect first.");
+  }
+  return await drive.updateFolder(folderId, updates);
 }
 
-export async function deleteFolderOnDrive(folderId: string, clerkUser?: ClerkUserLike): Promise<void> {
+export async function deleteFolderOnDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  folderId: string;
+  clerkUser?: ClerkUserLike;
+}): Promise<void> {
+  const { drive, driveAuth, folderId, clerkUser } = params;
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
-  await gDriveService.deleteFolder(folderId);
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
+    throw new Error("Google Drive not connected. Please connect first.");
+  }
+  await drive.deleteFolder(folderId);
 }
 
-export async function listFoldersFromDrive(clerkUser?: ClerkUserLike): Promise<Folder[]> {
+export async function listFoldersFromDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  clerkUser?: ClerkUserLike;
+}): Promise<Folder[]> {
+  const { drive, driveAuth, clerkUser } = params;
   if (!clerkUser) return [];
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
-  return await gDriveService.getFolders();
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) return [];
+  return await drive.getFolders();
 }
 
-export async function moveBookToFolderOnDrive(bookId: string, folderId: string | null, clerkUser?: ClerkUserLike): Promise<void> {
+export async function moveBookToFolderOnDrive(params: {
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
+  bookId: string;
+  folderId: string | null;
+  clerkUser?: ClerkUserLike;
+}): Promise<void> {
+  const { drive, driveAuth, bookId, folderId, clerkUser } = params;
   const provider = detectProviderFromClerkUser(clerkUser);
   assertGoogleProvider(provider);
-  await gDriveService.moveBookToFolder(bookId, folderId);
+  const authed = await driveAuth.ensureAuthenticated();
+  if (!authed || !drive.isSignedIn()) {
+    throw new Error("Google Drive not connected. Please connect first.");
+  }
+  await drive.moveBookToFolder(bookId, folderId);
 }

@@ -71,36 +71,7 @@ def add_bookmark():
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
 
-@books_bp.route('/delete_cached_translation', methods=['POST'])
-def delete_cached_translation_route():
-    """Acknowledge removal of cached translation on the client."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Invalid JSON payload'}), 400
-    except ValidationError as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
-
-    controller = BooksController(current_app.extensions["container"].books_service)
-    try:
-        result = controller.acknowledge_delete_cached_translation(payload=data)
-        current_app.logger.info(
-            (
-                "Received signal to acknowledge deletion of cached translation for "
-                f"item index: {result.get('item_index')}."
-            )
-        )
-        # Preserve legacy response shape (success/message only).
-        return jsonify({'success': True, 'message': result.get('message')})
-    except ValidationError as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
-
-
-@books_bp.route('/toggle_jlpt', methods=['POST'])
+@books_bp.route('/toggle-jlpt', methods=['POST'])
 def toggle_jlpt():
     """Enable or disable JLPT highlighting in the session."""
     try:

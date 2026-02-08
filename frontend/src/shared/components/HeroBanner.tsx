@@ -2,10 +2,11 @@ import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppData } from "@shared/contexts/AppDataContext";
-import { authManager } from "@shared/services/authManager";
 import { vocabBank } from "@features/vocabulary/services/vocabBank";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 export function HeroBanner() {
+  const deps = useAppDeps();
   const { user, isSignedIn, isLoaded } = useUser();
   // Pull the user's library from the storage service so counts reflect
   // the current library after Drive sync completes.
@@ -20,10 +21,10 @@ export function HeroBanner() {
       // Wait for the centralized auth manager to confirm authentication
       // instead of immediately calling vocabBank.load()
       let hasLoaded = false;
-      const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
+      const unsubscribe = deps.driveAuth.onAuthStateChange((isAuthenticated) => {
         if (isAuthenticated && !hasLoaded) {
           hasLoaded = true;
-          vocabBank.load().then(() => {
+          vocabBank.load(deps.drive).then(() => {
             setStats(vocabBank.getStats());
           });
         }
@@ -31,7 +32,7 @@ export function HeroBanner() {
       
       return unsubscribe;
     }
-  }, [isLoaded, isSignedIn]);
+  }, [deps.driveAuth, isLoaded, isSignedIn]);
 
   return (
     <div className="app-hero">

@@ -2,12 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
-
-import {
-  getUserVocabulary,
-  toggleMastered as toggleMasteredApi,
-  type VocabularyWord as ApiVocabularyWord,
-} from "@features/vocabulary/services/vocabApi";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
+import type { Vocabulary as ApiVocabularyWord } from "~/types/api";
 
 import type { FilterMastered, VocabularyStats, VocabularyWord } from "../types";
 
@@ -18,6 +14,7 @@ export function useUserVocabulary(params: {
   searchTerm: string;
 }) {
   const { isSignedIn, selectedLanguage, filterMastered, searchTerm } = params;
+  const deps = useAppDeps();
 
   const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
   const [isLoadingVocabulary, setIsLoadingVocabulary] = useState(false);
@@ -32,7 +29,7 @@ export function useUserVocabulary(params: {
         return;
       }
 
-      const vocab = await getUserVocabulary({
+      const vocab = await deps.backend.vocabulary.getUserVocabulary({
         language: selectedLanguage || undefined,
         mastered: filterMastered === "all" ? undefined : filterMastered === "mastered",
       });
@@ -45,7 +42,7 @@ export function useUserVocabulary(params: {
         bookId: v.bookId || undefined,
         context: v.context || undefined,
         difficulty: (v.difficulty as "easy" | "medium" | "hard" | undefined) || undefined,
-        mastered: v.mastered,
+        mastered: Boolean(v.mastered),
         _creationTime: v.createdAt ? new Date(v.createdAt).getTime() : Date.now(),
       }));
       setVocabulary(converted);
@@ -59,7 +56,7 @@ export function useUserVocabulary(params: {
     } finally {
       setIsLoadingVocabulary(false);
     }
-  }, [filterMastered, isSignedIn, selectedLanguage]);
+  }, [deps.backend.vocabulary, filterMastered, isSignedIn, selectedLanguage]);
 
   useEffect(() => {
     void loadVocabulary();
@@ -71,7 +68,7 @@ export function useUserVocabulary(params: {
         const word = vocabulary.find((w) => w._id === wordId);
         if (!word) return;
 
-        const updatedWord = await toggleMasteredApi(wordId, !word.mastered);
+        const updatedWord = await deps.backend.vocabulary.toggleMastered(wordId, !word.mastered);
         setVocabulary((prev) =>
           prev.map((w) => (w._id === wordId ? { ...w, mastered: updatedWord.mastered } : w))
         );
@@ -81,7 +78,7 @@ export function useUserVocabulary(params: {
         notifyError(error, { title: "Failed to update word status" });
       }
     },
-    [vocabulary]
+    [deps.backend.vocabulary, vocabulary]
   );
 
   const stats: VocabularyStats = useMemo(
@@ -124,4 +121,3 @@ export function useUserVocabulary(params: {
     handleToggleMastered,
   };
 }
-

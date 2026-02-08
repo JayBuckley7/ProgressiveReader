@@ -68,56 +68,9 @@ def translate_chapter():
         return jsonify({"error": f"Error during chapter translation: {e}"}), 500
 
 
-@translation_bp.route('/vocabulary', methods=['POST'])
-@optional_auth
-def translate_vocabulary():
-    """Translate individual words or phrases for vocabulary highlighting, optimized for speed and accuracy."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-
-        normalize_aliases(
-            data,
-            {
-                "target_lang": ["target_language", "targetLanguage", "targetLang"],
-                "api_key": ["apiKey"],
-                "translation_service": ["translationService"],
-                "use_server_key": ["useServerKey"],
-                "model": ["modelName"],
-            },
-        )
-
-        # Default for vocabulary
-        data.setdefault("target_lang", "English")
-
-        req = TranslateRequest(**data)
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
-
-    current_app.logger.info(
-        f"--- Vocabulary Translation Request --- Content: '{req.content[:50]}...', "
-        f"Lang: {req.target_lang}, Service: {req.translation_service}"
-    )
-
-    # Get API key
-    use_server_key = data.get('use_server_key', True)
-    container = current_app.extensions["container"]
-    api_key_to_use = container.openai_key_resolver.resolve(req.api_key, use_server_key=bool(use_server_key))
-    if not api_key_to_use:
-        return jsonify({"error": "OpenAI API key not configured"}), 400
-
-    try:
-        service = container.make_translation_service(api_key_to_use)
-        result = service.translate_vocabulary(req)
-
-        current_app.logger.info(
-            f"Vocabulary OpenAI translation successful: '{req.content}' -> '{result.translated_text}'"
-        )
-        return jsonify(result.model_dump())
-
-    except Exception as e:
-        current_app.logger.error(f"Error calling OpenAI API for vocabulary: {e}", exc_info=True)
-        return jsonify({"error": f"Error during vocabulary translation: {e}"}), 500
+#
+# NOTE: `/api/translate/vocabulary` was intentionally removed.
+# Vocabulary translation is either:
+# - handled via JPDB vocabulary endpoints, or
+# - handled client-side using a user-provided OpenAI key (privacy promise).
+#

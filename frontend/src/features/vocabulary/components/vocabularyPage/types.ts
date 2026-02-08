@@ -1,4 +1,16 @@
-import type { JpdbLookupVocabularyEntry, JpdbVocabPair } from "@features/vocabulary/services/vocabApi";
+export type JpdbVocabPair = [vid: number, sid: number];
+
+export interface JpdbLookupVocabularyEntry {
+  vid: number;
+  sid: number;
+  spelling?: string;
+  reading?: string;
+  frequency_rank?: number;
+  meanings?: string[];
+  due_at?: number | null;
+  card_state?: unknown;
+  [key: string]: unknown;
+}
 
 export type FilterMastered = "all" | "mastered" | "learning";
 
@@ -31,4 +43,3 @@ export interface VocabularyWord {
   mastered: boolean;
   _creationTime: number;
 }
-

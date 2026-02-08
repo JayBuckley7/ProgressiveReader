@@ -15,23 +15,7 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__, url_prefix='/api')
 
 
-@admin_bp.route('/debug/admin_check', methods=['GET'])
-@require_auth
-def debug_admin_check():
-    """Debug endpoint to check admin status and organization memberships."""
-    user = g.user
-    if not user:
-        return jsonify({"error": "No user found"}), 401
-
-    service = current_app.extensions["container"].admin_service
-    result = service.get_admin_status(
-        user_id=user.id,
-        is_admin_func=is_progressive_reader_admin,
-    )
-    return jsonify(result.model_dump())
-
-
-@admin_bp.route('/openai_key_configured', methods=['GET'])
+@admin_bp.route('/openai-key-configured', methods=['GET'])
 def openai_key_configured():
     """Return whether the server has at least one OpenAI API key."""
     service = current_app.extensions["container"].admin_service
@@ -39,7 +23,7 @@ def openai_key_configured():
     return jsonify(result.model_dump())
 
 
-@admin_bp.route('/openai_keys/add', methods=['POST'])
+@admin_bp.route('/openai-keys/add', methods=['POST'])
 @require_admin
 def add_openai_key():
     """Add an API key to the rotation pool."""
@@ -59,7 +43,7 @@ def add_openai_key():
     return jsonify(result.model_dump())
 
 
-@admin_bp.route('/openai_keys/remove', methods=['POST'])
+@admin_bp.route('/openai-keys/remove', methods=['POST'])
 @require_admin
 def remove_openai_key():
     """Remove an API key from the rotation pool."""
@@ -82,7 +66,7 @@ def remove_openai_key():
         return jsonify({'error': str(e)}), 404
 
 
-@admin_bp.route('/openai_keys', methods=['GET'])
+@admin_bp.route('/openai-keys', methods=['GET'])
 @require_admin
 def list_openai_keys():
     """Return the list of stored OpenAI API keys."""

@@ -1,4 +1,4 @@
-import type { JpdbLookupVocabularyEntry } from "@features/vocabulary/services/vocabApi";
+import type { JpdbLookupVocabularyEntry } from "./types";
 import type { DueVocabProgress } from "./types";
 import { formatDueAt } from "./due";
 
@@ -97,4 +97,3 @@ export function DueCardsPanel({
     </div>
   );
 }
-

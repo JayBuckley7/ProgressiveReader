@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@shared/contexts/SettingsContext";
-import { loadTranslationFromStorage } from "@features/reader/hooks/useTranslation";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { isTranslationCacheValid } from "@core/translation/cache";
 
 interface ReaderHeaderProps {
   bookContent: { title?: string; chapterTitles?: Array<{ title: string }>; totalChapters?: number } | null;
@@ -27,6 +28,7 @@ export function ReaderHeader({
 }: ReaderHeaderProps) {
   const { t } = useTranslation();
   const { settings } = useSettings();
+  const deps = useAppDeps();
 
   return (
     <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
@@ -69,12 +71,16 @@ export function ReaderHeader({
                 </>
               )}
               {!isTranslated && (() => {
-                const storedTranslation = settings?.cacheTranslations !== false ? loadTranslationFromStorage(bookId, chapter) : null;
+                const storedTranslation =
+                  settings?.cacheTranslations !== false ? deps.translationCache.get(bookId, chapter) : null;
                 const currentTargetLanguage = settings?.targetLanguage || "English";
-                const currentCefrLevel = localStorage.getItem("cefrLevel") || "3";
-                const hasValidTranslation = storedTranslation && 
-                  storedTranslation.targetLanguage === currentTargetLanguage &&
-                  storedTranslation.cefrLevel === currentCefrLevel;
+                const currentCefrLevel = deps.prefs.getCefrLevel();
+                const hasValidTranslation = storedTranslation
+                  ? isTranslationCacheValid(storedTranslation, {
+                      targetLanguage: currentTargetLanguage,
+                      cefrLevel: currentCefrLevel,
+                    })
+                  : false;
                 
                 return hasValidTranslation ? (
                   <button
@@ -119,4 +125,3 @@ export function ReaderHeader({
     </div>
   );
 }
-

@@ -25,6 +25,7 @@ import ClipboardReader from "./features/clipboard/components/ClipboardReader";
 import { JLPTTestPage } from "./features/jlpt/components/JLPTTestPage";
 import GrammarPage from "./features/grammar/components/GrammarPage";
 import { GrammarProvider } from "@features/grammar/contexts/GrammarContext";
+import { AppDepsProvider } from "@app/deps/AppDepsProvider";
 
 // Helper component to allow access if signed in OR has offline books
 function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
@@ -72,12 +73,12 @@ export default function App({ clerkPubKey }: { clerkPubKey: string }) {
       // Enable session token persistence across page refreshes
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      afterSignInUrl="/"
-      afterSignUpUrl="/"
     >
-      <AppDataProvider>
-        <AppContent />
-      </AppDataProvider>
+      <AppDepsProvider>
+        <AppDataProvider>
+          <AppContent />
+        </AppDataProvider>
+      </AppDepsProvider>
     </ClerkProvider>
   );
 }

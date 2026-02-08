@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { fetchUserDecks } from "@features/vocabulary/services/vocabApi";
 import type { Deck } from "~/types/api";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 interface DeckSelectorProps {
   onDeckSelect?: (deck: Deck) => void;
@@ -11,6 +11,7 @@ interface DeckSelectorProps {
 }
 
 export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps) {
+  const deps = useAppDeps();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +20,7 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
     setIsLoading(true);
     try {
       // Deck listing uses JPDB API key (stored in cookies via Settings → Highlight).
-      const fetchedDecks = await fetchUserDecks({});
+      const fetchedDecks = await deps.backend.vocabulary.fetchUserDecks({});
       setDecks(fetchedDecks);
       setIsOpen(true);
       toast.success(`Found ${fetchedDecks.length} decks`);

@@ -1,9 +1,9 @@
 import { BookMetadata, ReadingProgress } from '~/types';
-import { getCachedFile, cacheFile, findCachedFileByPrefix } from '@integrations/googleDrive/services/driveCache';
 import { addOfflineBook } from '@features/books/utils/offlineLibrary';
-import { gDriveService } from '@integrations/googleDrive/gdriveService';
 import * as pdfjsLib from 'pdfjs-dist';
 import { appLog } from '@shared/appLog'
+import type { DriveCachePort } from '@core/drive/cachePort';
+import type { DrivePort } from '@core/drive/ports';
 
 // Request deduplication cache to prevent multiple simultaneous requests for the same resource
 const activeDownloads = new Map<string, Promise<Blob>>();
@@ -32,7 +32,12 @@ declare global {
 /**
  * Book storage service for file operations and reading progress
  */
-class BookStorageService {
+export class BookStorageService {
+    constructor(
+        private readonly drive: DrivePort,
+        private readonly driveCache: DriveCachePort
+    ) {}
+
     // Coalesce cloud sync writes so rapid progress updates (e.g. PDF page flips) don't spam Drive.
     private cloudSyncTimeoutByBookId: Map<string, number> = new Map();
 
@@ -60,14 +65,14 @@ class BookStorageService {
                     : metadata.driveFileId;
 
                 // ALWAYS check cache first (offline-first) - works even without auth
-                let cached = await getCachedFile(cacheKey);
+                let cached = await this.driveCache.getCachedFile(cacheKey);
 
                 // Fallback: If exact key match fails (e.g. metadata.modifiedTime missing or changed),
                 // try to find by strictly the file ID prefix.
                 // This heals the "Offline Storage" corruption issue where modifiedTime was stripped.
                 if (!cached) {
                     appLog.debug('Exact cache key miss, trying prefix search for:', metadata.driveFileId);
-                    cached = await findCachedFileByPrefix(metadata.driveFileId);
+                    cached = await this.driveCache.findCachedFileByPrefix(metadata.driveFileId);
                 }
 
                 if (cached) {
@@ -78,17 +83,17 @@ class BookStorageService {
                 }
 
                 // Only require auth for cache misses
-                if (!gDriveService.isSignedIn()) {
+                if (!this.drive.isSignedIn()) {
                     throw new Error('Book not cached. Sign in to Drive to download.');
                 }
 
-                const blob = await gDriveService.downloadFile(metadata.driveFileId);
+                const blob = await this.drive.downloadFile(metadata.driveFileId);
                 if (!blob) {
                     throw new Error('Failed to download file from Google Drive, or file was empty.');
                 }
 
                 // Store in cache with versioned key for future use
-                await cacheFile(cacheKey, blob);
+                await this.driveCache.cacheFile(cacheKey, blob);
 
                 // Add to offline library index so it appears when offline
                 addOfflineBook(metadata);
@@ -301,9 +306,9 @@ class BookStorageService {
             }
 
             // Fallback to cloud storage if connected
-            if (gDriveService.isSignedIn()) {
+            if (this.drive.isSignedIn()) {
                 try {
-                    const metadataInfo = await gDriveService.getMetadataFile();
+                    const metadataInfo = await this.drive.getMetadataFile();
                     if (metadataInfo?.data?.progress?.[bookId]) {
                         const cloudProgress = metadataInfo.data.progress[bookId];
                         const progress: ReadingProgress = {
@@ -353,7 +358,7 @@ class BookStorageService {
             }
 
             // Also save to cloud metadata if connected
-            if (gDriveService.isSignedIn()) {
+            if (this.drive.isSignedIn()) {
                 const existingTimeout = this.cloudSyncTimeoutByBookId.get(progress.bookId);
                 if (existingTimeout) {
                     window.clearTimeout(existingTimeout);
@@ -361,7 +366,7 @@ class BookStorageService {
 
                 const timeoutId = window.setTimeout(async () => {
                     try {
-                        const metadataInfo = await gDriveService.getMetadataFile();
+                        const metadataInfo = await this.drive.getMetadataFile();
                         if (metadataInfo) {
                             const { fileId, data } = metadataInfo;
 
@@ -374,7 +379,7 @@ class BookStorageService {
                             data.progress[progress.bookId] = progressToStore;
 
                             // Save back to cloud (gdriveService handles retry/backoff + serialization)
-                            const success = await gDriveService.updateMetadataFile(fileId, data);
+                            const success = await this.drive.updateMetadataFile(fileId, data);
                             if (!success) {
                                 appLog.warn('Failed to sync progress to cloud, but local save succeeded');
                             }
@@ -430,4 +435,9 @@ class BookStorageService {
     }
 }
 
-export const bookStorageService = new BookStorageService();
+export function createBookStorageService(args: {
+    drive: DrivePort;
+    driveCache: DriveCachePort;
+}): BookStorageService {
+    return new BookStorageService(args.drive, args.driveCache);
+}

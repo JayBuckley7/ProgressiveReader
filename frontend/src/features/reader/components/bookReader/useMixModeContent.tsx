@@ -7,14 +7,12 @@ import { ErrorBoundary } from "@shared/components/ErrorBoundary";
 import { parseHtmlToJsx } from "@features/reader/utils/htmlToJsx";
 import { createEnglishSwapHighlighter, type SwapHighlighter } from "@features/reader/utils/englishSwap";
 import { getRefineCacheKey, refineAmbiguousSwaps } from "@features/reader/utils/englishSwapRefine";
-import { browserOpenAiChatPort } from "@integrations/openai/browserChat";
-import { mixRefineBackendPort } from "@integrations/backend/mix";
 import { normalizeTranslatedHtml } from "@features/reader/utils/bilingualHtml";
 
 import { getGlossIndexAsMap, getKnownVocabAsMap, getMirrorMeta } from "@features/jpdbMirror/db";
 import type { JpdbKnownVocabRecord, JpdbMirrorMeta } from "@features/jpdbMirror/types";
 import type { useSettings } from "@shared/contexts/SettingsContext";
-import { isServerOpenAiKeyConfigured } from "@integrations/backend/openaiKey";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 type AppSettings = NonNullable<ReturnType<typeof useSettings>["settings"]>;
 
@@ -31,6 +29,7 @@ export function useMixModeContent(params: {
   // Recompute `hasOpenAiKey` when this changes (ex: modal open/close).
   openAiKeyRefreshSignal?: unknown;
 }) {
+  const deps = useAppDeps();
   const {
     bookId,
     chapter,
@@ -53,12 +52,8 @@ export function useMixModeContent(params: {
   const swapHighlighterRef = useRef<SwapHighlighter | null>(null);
 
   const killSwitchEnabled = useMemo(() => {
-    try {
-      return localStorage.getItem("prDisableMix") === "true";
-    } catch {
-      return false;
-    }
-  }, []);
+    return deps.prefs.getDisableMix();
+  }, [deps.prefs]);
 
   const mixActive =
     Boolean(settings?.mixEnabled) &&
@@ -228,7 +223,7 @@ export function useMixModeContent(params: {
       toast.message("Enable mix mode to refine swaps.");
       return;
     }
-    const apiKey = (localStorage.getItem("openaiKey") || "").trim() || undefined;
+    const apiKey = deps.prefs.getOpenAiKey() || undefined;
 
     const highlighter = swapHighlighterRef.current;
     if (!highlighter) {
@@ -273,7 +268,7 @@ export function useMixModeContent(params: {
       }
     })();
 
-    const model = (localStorage.getItem("openaiModel") || "gpt-4o-mini").trim() || "gpt-4o-mini";
+    const model = deps.prefs.getOpenAiModel();
     const cacheKey = getRefineCacheKey({
       bookId,
       chapter,
@@ -306,8 +301,8 @@ export function useMixModeContent(params: {
 
       const toastId = toast.loading("Refining swaps…", { duration: Infinity });
       const choices = await refineAmbiguousSwaps({
-        llm: browserOpenAiChatPort,
-        backend: mixRefineBackendPort,
+        llm: deps.llmChat,
+        backend: deps.backend.mix,
         model,
         textSample,
         ambiguousKeys,
@@ -334,6 +329,9 @@ export function useMixModeContent(params: {
     bookId,
     chapter,
     currentChapterContent,
+    deps.backend.mix,
+    deps.llmChat,
+    deps.prefs,
     mixActive,
     mirrorGlossIndex,
     mirrorVocabById,
@@ -344,16 +342,14 @@ export function useMixModeContent(params: {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (typeof window === "undefined") return;
-
       try {
-        const userKey = (localStorage.getItem("openaiKey") || "").trim();
+        const userKey = deps.prefs.getOpenAiKey();
         if (userKey) {
           if (!cancelled) setHasOpenAiKey(true);
           return;
         }
 
-        const configured = await isServerOpenAiKeyConfigured();
+        const configured = await deps.backend.openaiKey.isOpenAiKeyConfigured();
         if (!cancelled) setHasOpenAiKey(configured);
       } catch {
         if (!cancelled) setHasOpenAiKey(false);
@@ -363,7 +359,7 @@ export function useMixModeContent(params: {
     return () => {
       cancelled = true;
     };
-  }, [openAiKeyRefreshSignal]);
+  }, [deps.backend.openaiKey, deps.prefs, openAiKeyRefreshSignal]);
 
   return {
     mixActive,

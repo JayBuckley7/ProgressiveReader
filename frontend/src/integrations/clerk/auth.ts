@@ -1,8 +1,5 @@
-/**
- * Shared authentication utilities for API calls
- */
-
-import { appLog } from '@shared/appLog';
+import type { ClerkAuthPort } from "@core/auth/ports";
+import { appLog } from "@shared/appLog";
 
 type ClerkSessionLike = {
   getToken?: () => Promise<string | null | undefined>;
@@ -19,8 +16,8 @@ type ClerkLike = {
 };
 
 function getClerk(): ClerkLike | null {
-  if (typeof window === 'undefined') return null;
-  return (window.Clerk as unknown as ClerkLike | undefined) ?? null;
+  if (typeof window === "undefined") return null;
+  return ((window as any).Clerk as ClerkLike | undefined) ?? null;
 }
 
 export function isClerkLoaded(): boolean {
@@ -37,20 +34,21 @@ export function isClerkSignedIn(): boolean {
     if (clerk.client?.user && clerk.client.session) return true;
     return false;
   } catch (error) {
-    appLog.error('[auth] Error checking Clerk signed-in state', error);
+    appLog.error("[clerk] Error checking signed-in state", error);
     return false;
   }
 }
 
 export async function getClerkToken(): Promise<string | null> {
   const clerk = getClerk();
-  if (!clerk?.session?.getToken) return null;
+  const getToken = clerk?.session?.getToken;
+  if (!getToken) return null;
 
   try {
-    const token = await clerk.session.getToken();
+    const token = await getToken();
     return token ?? null;
   } catch (error) {
-    appLog.error('[auth] Error getting Clerk token', error);
+    appLog.error("[clerk] Error getting Clerk token", error);
     return null;
   }
 }
@@ -60,10 +58,19 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   if (token) {
     return {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
   }
+
   return {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
+  };
+}
+
+export function createClerkAuthPort(): ClerkAuthPort {
+  return {
+    async getToken(): Promise<string | null> {
+      return await getClerkToken();
+    },
   };
 }

@@ -5,6 +5,7 @@ import { Token } from "~/types";
 import { getMeaning, getKunReading, getOnReading, getJlptLevel } from "@shared/services/jlptService";
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 // React version of the pitch renderer
 function renderPitchReact(reading: string, pitch: string): React.ReactElement {
@@ -154,6 +155,7 @@ export function cancelHideDefinitionPopup() {
 }
 
 export function JpdbPopupController() {
+  const deps = useAppDeps();
   const [popup, _setPopup] = useState<PopupState>(null);
   const [isLoading, setIsLoading] = useState(false);
   setPopup = _setPopup;
@@ -259,7 +261,7 @@ export function JpdbPopupController() {
     if (!card || !config.apiKey) return;
     setIsLoading(true);
     try {
-      await mineWord(card, config.forqOnMine, popup.wordData?.sentence);
+      await mineWord(deps.backend.vocabulary, card, config.forqOnMine, popup.wordData?.sentence);
     } finally {
       setIsLoading(false);
     }
@@ -269,7 +271,7 @@ export function JpdbPopupController() {
     if (!card || !config.apiKey) return;
     setIsLoading(true);
     try {
-      await updateWordState(card, flag, !currentState);
+      await updateWordState(deps.backend.vocabulary, card, flag, !currentState);
     } finally {
       setIsLoading(false);
     }
@@ -279,7 +281,7 @@ export function JpdbPopupController() {
     if (!card || !config.apiKey) return;
     setIsLoading(true);
     try {
-      await reviewCard(card, grade);
+      await reviewCard(deps.backend.vocabulary, card, grade);
     } finally {
       setIsLoading(false);
     }

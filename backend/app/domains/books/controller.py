@@ -8,7 +8,6 @@ from typing import Any, MutableMapping, Optional
 from .schemas import (
     GetBookmarksRequest,
     AddBookmarkRequest,
-    DeleteCachedTranslationRequest,
     ToggleJlptRequest,
     ToggleJlptResponse,
 )
@@ -34,14 +33,6 @@ class BooksController:
             user_id=user_id,
         )
         return bookmark.model_dump()
-
-    def acknowledge_delete_cached_translation(self, *, payload: dict[str, Any]) -> dict:
-        req = DeleteCachedTranslationRequest(**payload)
-        return {
-            "success": True,
-            "message": "Client-side cache deletion acknowledged.",
-            "item_index": req.item_index,
-        }
 
     def toggle_jlpt(self, *, payload: dict[str, Any], session_store: MutableMapping[str, Any]) -> ToggleJlptResponse:
         req = ToggleJlptRequest(**payload)

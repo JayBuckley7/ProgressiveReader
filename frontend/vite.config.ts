@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "~": path.resolve(__dirname, "./src"),
+        "@app": path.resolve(__dirname, "./src/app"),
         "@core": path.resolve(__dirname, "./src/core"),
         "@features": path.resolve(__dirname, "./src/features"),
         "@shared": path.resolve(__dirname, "./src/shared"),
@@ -48,17 +49,7 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
             secure: false,
           },
-          '/settings': {
-            target: backendUrl,
-            changeOrigin: true,
-            secure: false,
-          },
           '/drive': {
-            target: backendUrl,
-            changeOrigin: true,
-            secure: false,
-          },
-          '/auth': {
             target: backendUrl,
             changeOrigin: true,
             secure: false,
@@ -67,7 +58,7 @@ export default defineConfig(({ mode }) => {
             target: backendUrl,
             changeOrigin: true,
             secure: false,
-          }
+          },
         },
       }),
       // Allow various hosts for different environments

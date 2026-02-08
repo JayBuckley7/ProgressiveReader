@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { BookMetadata } from '~/types';
-import { bookStorageService } from '@features/books/services/bookStorage';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { EpubProcessorWrapper } from '@shared/lib/epubProcessor.ts';
 import { TextProcessorWrapper } from '@shared/lib/textProcessor.ts';
@@ -23,7 +22,7 @@ interface UseBookContentReturn {
 }
 
 export function useBookContent(bookId: string, currentChapter: number = 0): UseBookContentReturn {
-  const { books, isLoading: isAppLoading } = useAppData();
+  const { books, downloadBook, isLoading: isAppLoading } = useAppData();
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [currentChapterContent, setCurrentChapterContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,7 +125,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         const processors = getProcessors();
 
         // Download book content from Google Drive
-        const bookBlob = await bookStorageService.downloadBook(bookId, bookMetadata);
+        const bookBlob = await downloadBook(bookId, bookMetadata);
         if (!bookBlob) {
           throw new Error('Failed to download book content');
         }
@@ -223,6 +222,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     bookMetadata?.title,
     bookMetadata?.fileType,
     bookMetadata?.driveFileId,
+    downloadBook,
   ]);
 
   // Reset loaded book reference when bookId changes

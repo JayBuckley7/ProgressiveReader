@@ -50,7 +50,7 @@ def test_due_cards_success(client, mock_vocabulary_service):
     container.vocabulary_service = mock_vocabulary_service
     client.application.extensions["container"] = container
 
-    response = client.post('/api/due_cards', json={
+    response = client.post('/api/due-cards', json={
         'username': 'test',
         'password': 'test'
     })
@@ -62,7 +62,7 @@ def test_due_cards_success(client, mock_vocabulary_service):
 
 def test_due_cards_auth_required(client):
     """Test that due cards requires authentication."""
-    response = client.post('/api/due_cards', json={})
+    response = client.post('/api/due-cards', json={})
     assert response.status_code == 401
 
 
@@ -84,7 +84,7 @@ def test_list_user_decks_success(client, mock_vocabulary_service):
 
 def test_get_jpdb_data_validation_error(client):
     """Test JPDB data endpoint with invalid input."""
-    response = client.post('/api/get_jpdb_data', json={
+    response = client.post('/api/get-jpdb-data', json={
         # Missing required fields
         'text_segments': []
     })
@@ -99,7 +99,7 @@ def test_mine_jpdb_word_success(client):
     container.vocabulary_service = mock_service
     client.application.extensions["container"] = container
 
-    response = client.post('/api/mine_jpdb_word', json={
+    response = client.post('/api/mine-jpdb-word', json={
         'vid': 1,
         'sid': 1,
         'jpdb_api_key': 'test-key'
@@ -111,9 +111,8 @@ def test_mine_jpdb_word_success(client):
 
 def test_update_jpdb_word_state_validation_error(client):
     """Test update word state with invalid input."""
-    response = client.post('/api/update_jpdb_word_state', json={
+    response = client.post('/api/update-jpdb-word-state', json={
         # Missing required fields
         'vid': 1
     })
     assert response.status_code == 400
-

@@ -1,81 +1,56 @@
-import { getAuthHeaders } from "@shared/utils/auth";
+import type { BackendFetchPort } from "@core/backend/fetchPort";
+import type { AdminBackendPort } from "@core/backend/ports";
 
-export interface OpenAIKeysResponse {
-  keys: string[];
-}
+export function createAdminBackendPort(fetchPort: BackendFetchPort): AdminBackendPort {
+  return {
+    async listOpenAiKeys(opts?: { signal?: AbortSignal }): Promise<{ keys: string[] } | null> {
+      const res = await fetchPort.request({ path: "/api/openai-keys", method: "GET", signal: opts?.signal });
+      if (res.status === 403) return null;
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      return (await res.json()) as { keys: string[] };
+    },
 
-export interface KanjiInfo {
-  kanji: string;
-  meanings: string[];
-  kun_readings: string[];
-  on_readings: string[];
-  jlpt?: number;
-  stroke_count?: number;
-  grade?: number;
-}
+    async addOpenAiKey(args: { key: string }, opts?: { signal?: AbortSignal }): Promise<void> {
+      await fetchPort.requestJson<unknown>({
+        path: "/api/openai-keys/add",
+        method: "POST",
+        body: { key: args.key },
+        signal: opts?.signal,
+      });
+    },
 
-export interface KanjiSearchResponse {
-  results: KanjiInfo[];
-}
+    async removeOpenAiKey(args: { key: string }, opts?: { signal?: AbortSignal }): Promise<void> {
+      await fetchPort.requestJson<unknown>({
+        path: "/api/openai-keys/remove",
+        method: "POST",
+        body: { key: args.key },
+        signal: opts?.signal,
+      });
+    },
 
-export interface KanjiUpdateResponse {
-  kanji: string;
-  old_jlpt: number | null;
-  new_jlpt: number | null;
-}
+    async searchKanji(args: { query: string }, opts?: { signal?: AbortSignal }): Promise<{ results: any[] }> {
+      return await fetchPort.requestJson<{ results: any[] }>({
+        path: "/api/kanji/search",
+        method: "POST",
+        body: { query: args.query },
+        signal: opts?.signal,
+      });
+    },
 
-async function handleJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(message || `HTTP ${response.status}`);
-  }
-  return response.json() as Promise<T>;
-}
-
-export async function listOpenAiKeys(): Promise<OpenAIKeysResponse | null> {
-  const headers = await getAuthHeaders();
-  const response = await fetch("/api/openai_keys", { headers });
-  if (response.status === 403) return null;
-  return handleJson<OpenAIKeysResponse>(response);
-}
-
-export async function addOpenAiKey(key: string): Promise<void> {
-  const headers = await getAuthHeaders();
-  const response = await fetch("/api/openai_keys/add", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ key }),
-  });
-  await handleJson<unknown>(response);
-}
-
-export async function removeOpenAiKey(key: string): Promise<void> {
-  const headers = await getAuthHeaders();
-  const response = await fetch("/api/openai_keys/remove", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ key }),
-  });
-  await handleJson<unknown>(response);
-}
-
-export async function searchKanji(query: string): Promise<KanjiSearchResponse> {
-  const headers = await getAuthHeaders();
-  const response = await fetch("/api/kanji/search", {
-    method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-  });
-  return handleJson<KanjiSearchResponse>(response);
-}
-
-export async function updateKanjiJlpt(kanji: string, jlpt_level: number | null): Promise<KanjiUpdateResponse> {
-  const headers = await getAuthHeaders();
-  const response = await fetch("/api/kanji/update", {
-    method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ kanji, jlpt_level }),
-  });
-  return handleJson<KanjiUpdateResponse>(response);
+    async updateKanjiJlpt(
+      args: { kanji: string; jlpt_level: number | null },
+      opts?: { signal?: AbortSignal }
+    ): Promise<{ kanji: string; old_jlpt: number | null; new_jlpt: number | null }> {
+      return await fetchPort.requestJson<{ kanji: string; old_jlpt: number | null; new_jlpt: number | null }>({
+        path: "/api/kanji/update",
+        method: "POST",
+        body: { kanji: args.kanji, jlpt_level: args.jlpt_level },
+        signal: opts?.signal,
+      });
+    },
+  };
 }
 

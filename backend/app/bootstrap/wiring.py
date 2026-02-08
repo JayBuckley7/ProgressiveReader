@@ -22,7 +22,6 @@ def register_domain_blueprints(app) -> None:
     from ..domains.grammar.routes import grammar_bp
     from ..domains.mix.routes import mix_bp
     from ..domains.admin.routes import admin_bp
-    from ..domains.auth.routes import auth_bp
     from ..domains.drive import drive_bp as drive_domain_bp
     from ..domains.ocr.routes import ocr_bp
 
@@ -33,10 +32,8 @@ def register_domain_blueprints(app) -> None:
     app.register_blueprint(grammar_bp)
     app.register_blueprint(mix_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(auth_bp)
     app.register_blueprint(drive_domain_bp)
     app.register_blueprint(ocr_bp)
 
 
 __all__ = ["wire_container", "register_domain_blueprints"]
-

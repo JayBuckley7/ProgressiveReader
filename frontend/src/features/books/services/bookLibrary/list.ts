@@ -1,7 +1,8 @@
 import type { BookMetadata } from "~/types";
-import { gDriveService, BOOK_FILE_EXTENSIONS } from "@integrations/googleDrive/gdriveService";
 import { appLog } from "@shared/appLog";
-import { bookCacheService } from "../bookCache";
+import type { DrivePort } from "@core/drive/ports";
+import { BOOK_FILE_EXTENSIONS } from "@core/drive/constants";
+import type { BookCacheService } from "../bookCache";
 
 type MetadataFile = {
   books?: Record<string, unknown>;
@@ -40,44 +41,46 @@ function coerceBookEntry(value: unknown): MetadataBookEntry {
 }
 
 export async function listUserBooksFromDrive(params: {
+  drive: DrivePort;
+  bookCache: BookCacheService;
   onCoverReady?: (bookId: string, coverUrl: string) => void;
 }): Promise<BookMetadata[]> {
-  const { onCoverReady } = params;
+  const { drive, bookCache, onCoverReady } = params;
 
   const isJsonFileType = (fileType?: string | null) => (fileType || "").toLowerCase() === "json";
 
   try {
-    if (!gDriveService.isSignedIn()) {
+    if (!drive.isSignedIn()) {
       appLog.debug("[BookLibrary] User not signed in to Google Drive");
       return [];
     }
 
-    const cachedBooks = bookCacheService.getBookListCache();
+    const cachedBooks = bookCache.getBookListCache();
     if (cachedBooks) {
       const cachedLibraryBooks = cachedBooks.filter((book) => !isJsonFileType(book.fileType));
 
       return cachedLibraryBooks.map((book) => {
-        const cachedCoverUrl = bookCacheService.getCachedCoverUrl(book.id);
+        const cachedCoverUrl = bookCache.getCachedCoverUrl(book.id);
         const updatedBook = cachedCoverUrl ? { ...book, coverUrl: cachedCoverUrl } : book;
 
         if (onCoverReady && updatedBook.coverUrl) {
           onCoverReady(book.id, updatedBook.coverUrl);
         } else if (onCoverReady && !updatedBook.coverUrl && book.coverImageId) {
-          bookCacheService.downloadCoverAsync(book.id, book.coverImageId, book.title, onCoverReady);
+          bookCache.downloadCoverAsync(book.id, book.coverImageId, book.title, onCoverReady);
         }
 
         return updatedBook;
       });
     }
 
-    const metadataInfo = await gDriveService.getMetadataFile();
+    const metadataInfo = await drive.getMetadataFile();
     if (!metadataInfo) return [];
 
     const metadata = coerceMetadataFile(metadataInfo.data);
     const bookEntries = metadata.books || {};
     const coverEntries = metadata.covers || {};
 
-    const driveFiles = await gDriveService.listFiles();
+    const driveFiles = await drive.listFiles();
     const driveFileIds = new Set(driveFiles.map((file) => file.id));
 
     const books: BookMetadata[] = [];
@@ -94,7 +97,7 @@ export async function listUserBooksFromDrive(params: {
       if (!driveFile) continue;
 
       const coverImageId = coverEntries[bookFileId];
-      const cachedCoverUrl = bookCacheService.getCachedCoverUrl(bookFileId);
+      const cachedCoverUrl = bookCache.getCachedCoverUrl(bookFileId);
 
       const book: BookMetadata = {
         id: bookFileId,
@@ -113,18 +116,17 @@ export async function listUserBooksFromDrive(params: {
 
       if (coverImageId && driveFileIds.has(coverImageId) && onCoverReady) {
         if (!cachedCoverUrl) {
-          void bookCacheService.downloadCoverAsync(bookFileId, coverImageId, book.title, onCoverReady);
+          void bookCache.downloadCoverAsync(bookFileId, coverImageId, book.title, onCoverReady);
         } else {
           onCoverReady(bookFileId, cachedCoverUrl);
         }
       }
     }
 
-    bookCacheService.setBookListCache(books);
+    bookCache.setBookListCache(books);
     return books;
   } catch (error) {
     appLog.error("[BookLibrary] Error fetching books from Google Drive", error);
     return [];
   }
 }
-

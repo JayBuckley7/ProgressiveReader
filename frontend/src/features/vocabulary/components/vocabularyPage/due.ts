@@ -1,4 +1,4 @@
-import type { JpdbLookupVocabularyEntry } from "@features/vocabulary/services/vocabApi";
+import type { JpdbLookupVocabularyEntry } from "./types";
 
 export type DueBucketKey = "overdue" | "today" | "tomorrow" | "week" | "later" | "none";
 
@@ -114,4 +114,3 @@ export function groupDeckVocabularyByDueAt(entries: JpdbLookupVocabularyEntry[])
     }))
     .filter((g) => g.entries.length > 0);
 }
-

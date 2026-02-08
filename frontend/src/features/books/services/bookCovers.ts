@@ -1,15 +1,18 @@
-import { lookupCoverFromBackend } from "@integrations/backend/covers";
+import type { CoversBackendPort } from "@core/backend/ports";
 
 export class BookCoverService {
+  constructor(private readonly coversBackend?: CoversBackendPort) {}
+
   async lookupCover(title: string): Promise<Blob | undefined> {
     const cleaned = (title || "").trim();
     if (!cleaned) return undefined;
+    if (!this.coversBackend) return undefined;
 
     const controller = new AbortController();
     const timeoutId = globalThis.setTimeout(() => controller.abort(), 4500);
 
     try {
-      return await lookupCoverFromBackend({ title: cleaned, signal: controller.signal });
+      return await this.coversBackend.lookupCover({ title: cleaned, signal: controller.signal });
     } catch {
       return undefined;
     } finally {

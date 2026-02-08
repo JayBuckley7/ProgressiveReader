@@ -2,16 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
-
-import {
-  listDeckVocabulary,
-  lookupVocabulary,
-  type JpdbLookupVocabularyEntry,
-  type JpdbVocabPair,
-} from "@features/vocabulary/services/vocabApi";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 import { groupDeckVocabularyByDueAt, isDueEntry, normalizeEpochMs } from "../due";
-import type { DeckVocabCache, DueVocabProgress } from "../types";
+import type { DeckVocabCache, DueVocabProgress, JpdbLookupVocabularyEntry, JpdbVocabPair } from "../types";
 
 const LOOKUP_BATCH_SIZE = 200;
 const DECK_LOOKUP_FIELDS = ["spelling", "reading", "frequency_rank", "meanings", "card_state", "due_at"];
@@ -53,6 +47,7 @@ function saveCachedDue(deckId: string, entries: JpdbLookupVocabularyEntry[]) {
 
 export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm: string }) {
   const { isSignedIn, searchTerm } = params;
+  const deps = useAppDeps();
 
   const [selectedDeckId, setSelectedDeckId] = useState<string>("");
   const [selectedDeckName, setSelectedDeckName] = useState<string>("");
@@ -107,7 +102,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
     setIsLoadingDeckVocab(true);
     setDeckVocabError(null);
     try {
-      const pairs = await listDeckVocabulary(selectedDeckId);
+      const pairs = await deps.backend.vocabulary.listDeckVocabulary(selectedDeckId);
       setDeckVocabById((prev) => ({
         ...prev,
         [selectedDeckId]: {
@@ -123,7 +118,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
       }
 
       const firstChunk = pairs.slice(0, LOOKUP_BATCH_SIZE);
-      const entries = await lookupVocabulary(firstChunk, DECK_LOOKUP_FIELDS);
+      const entries = await deps.backend.vocabulary.lookupVocabulary(firstChunk, DECK_LOOKUP_FIELDS);
       setDeckVocabById((prev) => ({
         ...prev,
         [selectedDeckId]: {
@@ -159,7 +154,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
     setIsLoadingDeckVocab(true);
     setDeckVocabError(null);
     try {
-      const entries = await lookupVocabulary(chunk, DECK_LOOKUP_FIELDS);
+      const entries = await deps.backend.vocabulary.lookupVocabulary(chunk, DECK_LOOKUP_FIELDS);
       setDeckVocabById((prev) => {
         const existing = prev[deckId];
         if (!existing) return prev;
@@ -213,7 +208,8 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
 
     try {
       const deckId = selectedDeckId;
-      const pairs = deckVocabPairs.length > 0 ? deckVocabPairs : await listDeckVocabulary(deckId);
+      const pairs =
+        deckVocabPairs.length > 0 ? deckVocabPairs : await deps.backend.vocabulary.listDeckVocabulary(deckId);
       if (deckVocabPairs.length === 0) {
         setDeckVocabById((prev) => ({
           ...prev,
@@ -238,7 +234,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
       setDueVocabProgress({ phase: "scan", loaded: 0, total: pairs.length });
       for (let i = 0; i < pairs.length; i += DUE_BATCH_SIZE) {
         const chunk = pairs.slice(i, i + DUE_BATCH_SIZE);
-        const scan = await lookupVocabulary(chunk, DUE_SCAN_FIELDS);
+        const scan = await deps.backend.vocabulary.lookupVocabulary(chunk, DUE_SCAN_FIELDS);
         scan.forEach((entry) => {
           if (isDueEntry(entry, nowMs)) duePairs.push([entry.vid, entry.sid]);
         });
@@ -260,7 +256,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
       setDueVocabProgress({ phase: "details", loaded: 0, total: duePairs.length });
       for (let i = 0; i < duePairs.length; i += DUE_BATCH_SIZE) {
         const chunk = duePairs.slice(i, i + DUE_BATCH_SIZE);
-        const detail = await lookupVocabulary(chunk, DUE_DETAIL_FIELDS);
+        const detail = await deps.backend.vocabulary.lookupVocabulary(chunk, DUE_DETAIL_FIELDS);
         dueEntries.push(...detail);
         setDueVocabProgress({
           phase: "details",
@@ -292,6 +288,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
       setDueVocabProgress(null);
     }
   }, [
+    deps.backend.vocabulary,
     deckVocabPairs,
     isLoadingDueVocab,
     isSignedIn,
@@ -317,4 +314,3 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
     refreshDueCards,
   };
 }
-

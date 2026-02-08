@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import ContentsDrawer from "./ContentsDrawer";
-import { getBookmarks, addBookmark } from "@features/reader/services/bookmarksApi";
 import type { ChapterTitle } from "~/types";
 import type { Bookmark } from "~/types/api";
 import { appLog } from "@shared/appLog";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 interface ReaderControlsProps {
   currentChapter: number;
@@ -41,6 +41,7 @@ function ReaderControlsComponent({
   mixEnabled,
   onShowMixSettings,
 }: ReaderControlsProps) {
+  const deps = useAppDeps();
   const [showDrawer, setShowDrawer] = useState(false);
   const { t } = useTranslation();
 
@@ -59,7 +60,8 @@ function ReaderControlsComponent({
   useEffect(() => {
     let cancelled = false;
     setIsLoadingBookmarks(true);
-    getBookmarks({ bookId })
+    deps.backend.bookmarks
+      .getBookmarks({ bookId })
       .then((data) => {
         if (!cancelled) {
           setBookmarks(data);
@@ -79,14 +81,14 @@ function ReaderControlsComponent({
     return () => {
       cancelled = true;
     };
-  }, [bookId]);
+  }, [bookId, deps.backend.bookmarks]);
 
   const handleAddBookmark = async () => {
     const note = prompt("Add a note for this bookmark (optional):");
     if (note !== null) {
       setIsAddingBookmark(true);
       try {
-        const newBookmark = await addBookmark({
+        const newBookmark = await deps.backend.bookmarks.addBookmark({
           bookId,
           chapterIndex: currentChapter,
           position: window.scrollY,

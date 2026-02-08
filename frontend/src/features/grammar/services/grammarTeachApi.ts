@@ -1,22 +1,23 @@
 import type { GrammarExample } from "@features/grammar/types";
 import type { TeachExampleRequest, TeachExampleResponse } from "@core/grammar/teachExamples";
 import { teachGrammarExamplesWithLlm } from "@core/grammar/teachExamples";
-import { browserOpenAiChatPort } from "@integrations/openai/browserChat";
-import { teachGrammarExamplesViaBackend } from "@integrations/backend/grammar";
+import type { GrammarBackendPort } from "@core/backend/ports";
+import type { LlmChatPort } from "@core/llm/ports";
 
 export async function teachGrammarExamples(
   request: TeachExampleRequest,
+  deps: { llm: LlmChatPort; backend: GrammarBackendPort },
   opts?: { signal?: AbortSignal }
 ): Promise<TeachExampleResponse> {
   const apiKey = (request.apiKey || "").trim();
 
   // Privacy promise: if the user provides their own key, never send their reading content to the backend.
   if (apiKey) {
-    return teachGrammarExamplesWithLlm(request, { llm: browserOpenAiChatPort }, opts);
+    return teachGrammarExamplesWithLlm(request, { llm: deps.llm }, opts);
   }
 
   const { apiKey: _apiKey, ...fallbackRequest } = request;
-  return teachGrammarExamplesViaBackend(fallbackRequest, opts);
+  return deps.backend.teachExamples(fallbackRequest, opts);
 }
 
 export function mergeTeachingIntoExamples(

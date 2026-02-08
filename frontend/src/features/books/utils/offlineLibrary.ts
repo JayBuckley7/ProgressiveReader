@@ -1,7 +1,7 @@
 import type { BookMetadata } from '~/types';
 import { appLog } from '@shared/appLog'
-import { getCoverForFile, getCachedCover, cacheCoverForFile, cacheCover, getCachedFile, findCachedFileByPrefix } from '@integrations/googleDrive/services/driveCache';
-import { gDriveService } from '@integrations/googleDrive/gdriveService';
+import type { DriveCachePort } from '@core/drive/cachePort';
+import type { DrivePort } from '@core/drive/ports';
 
 export const OFFLINE_BOOKS_KEY = 'prOfflineBooks';
 
@@ -37,7 +37,11 @@ export function removeOfflineBook(id: string): void {
   localStorage.setItem(OFFLINE_BOOKS_KEY, JSON.stringify(books));
 }
 
-export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {
+export async function getOfflineBooksWithCovers(params: {
+  driveCache: DriveCachePort;
+  drive?: DrivePort;
+}): Promise<BookMetadata[]> {
+  const { driveCache, drive } = params;
   const books = getOfflineBooks();
   const result: BookMetadata[] = [];
 
@@ -50,7 +54,7 @@ export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {
     // Cached files are stored by `driveFileId_modifiedTime` when `modifiedTime` is present.
     // Fall back to a prefix search to support older caches that didn't include `modifiedTime`.
     const cacheKey = b.modifiedTime ? `${b.driveFileId}_${b.modifiedTime}` : b.driveFileId;
-    const cached = (await getCachedFile(cacheKey)) || (await findCachedFileByPrefix(b.driveFileId));
+    const cached = (await driveCache.getCachedFile(cacheKey)) || (await driveCache.findCachedFileByPrefix(b.driveFileId));
     appLog.debug(`[Offline Library] Book "${b.title}" - cachedContent=${!!cached}`);
     if (!cached) {
       continue;
@@ -58,22 +62,22 @@ export async function getOfflineBooksWithCovers(): Promise<BookMetadata[]> {
 
     let coverUrl: string | undefined;
     if (b.coverImageId) {
-      let blob = await getCoverForFile(b.id);
+      let blob = await driveCache.getCoverForFile(b.id);
       if (!blob) {
-        blob = await getCachedCover(b.coverImageId);
-        if (!blob && gDriveService.isSignedIn()) {
+        blob = await driveCache.getCachedCover(b.coverImageId);
+        if (!blob && drive?.isSignedIn()) {
           // Only try download if we think we are online
           try {
-            blob = await gDriveService.downloadFile(b.coverImageId);
+            blob = await drive.downloadFile(b.coverImageId);
             if (blob) {
-              await cacheCover(b.coverImageId, blob);
+              await driveCache.cacheCover(b.coverImageId, blob);
             }
           } catch (e) {
             // Ignore download errors in offline mode logic
           }
         }
         if (blob) {
-          await cacheCoverForFile(b.id, blob);
+          await driveCache.cacheCoverForFile(b.id, blob);
         }
       }
       if (blob) {

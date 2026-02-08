@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useStorageService } from '@features/books/hooks/useStorageService';
-import { gDriveService } from '@integrations/googleDrive/gdriveService';
+import { useAppDeps } from '@app/deps/AppDepsProvider';
+import type { DrivePort } from '@core/drive/ports';
 
 import type { BookMetadata, Folder, ReadingProgress } from '~/types';
 
@@ -10,42 +11,45 @@ function useDriveStatus(): {
   isRefreshing: boolean;
   refreshToken: () => Promise<boolean>;
 } {
-  const [isDriveConnected, setIsDriveConnected] = useState(() => gDriveService.isSignedIn());
-  const [isTokenNearExpiry, setIsTokenNearExpiry] = useState(() => gDriveService.isTokenNearExpiry());
+  const deps = useAppDeps();
+  const drive: DrivePort = deps.drive;
+
+  const [isDriveConnected, setIsDriveConnected] = useState(() => drive.isSignedIn());
+  const [isTokenNearExpiry, setIsTokenNearExpiry] = useState(() => drive.isTokenNearExpiry());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = gDriveService.listenToSigninStatus((status) => {
+    const unsubscribe = drive.listenToSigninStatus((status) => {
       setIsDriveConnected(status);
-      setIsTokenNearExpiry(status ? gDriveService.isTokenNearExpiry() : false);
+      setIsTokenNearExpiry(status ? drive.isTokenNearExpiry() : false);
     });
 
     // Keep token-expiry state reasonably fresh for UI warnings.
     const intervalId = window.setInterval(() => {
-      if (!gDriveService.isSignedIn()) {
+      if (!drive.isSignedIn()) {
         setIsTokenNearExpiry(false);
         return;
       }
-      setIsTokenNearExpiry(gDriveService.isTokenNearExpiry());
+      setIsTokenNearExpiry(drive.isTokenNearExpiry());
     }, 60_000);
 
     return () => {
       unsubscribe();
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [drive]);
 
   const refreshToken = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const ok = await gDriveService.refreshToken();
-      setIsDriveConnected(gDriveService.isSignedIn());
-      setIsTokenNearExpiry(gDriveService.isTokenNearExpiry());
+      const ok = await drive.refreshToken();
+      setIsDriveConnected(drive.isSignedIn());
+      setIsTokenNearExpiry(drive.isTokenNearExpiry());
       return ok;
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [drive]);
 
   return { isDriveConnected, isTokenNearExpiry, isRefreshing, refreshToken };
 }
@@ -64,8 +68,10 @@ type AppDataContextType = {
     meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean },
     onOCRProgress?: (progress: { page?: number; total?: number; percent?: number }) => void
   ) => Promise<BookMetadata | null>;
+  downloadBook: (bookId: string, metadata: BookMetadata) => Promise<Blob | null>;
   deleteBook: (bookId: string) => Promise<void>;
   updateBookCover: (bookId: string, coverFile: File) => Promise<string | undefined>;
+  updateBookMetadata: (bookId: string, updates: { title?: string; author?: string }) => Promise<void>;
   openCloudFolder: () => Promise<void>;
   createFolder: (name: string, parentId?: string) => Promise<void>;
   updateFolder: (folderId: string, updates: { name?: string; parentId?: string }) => Promise<void>;
@@ -112,8 +118,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: storageData.isAuthenticated,
     syncBooks: storageData.syncBooks,
     uploadBook: storageData.uploadBook,
+    downloadBook: storageData.downloadBook,
     deleteBook: storageData.deleteBook,
     updateBookCover: storageData.updateBookCover,
+    updateBookMetadata: storageData.updateBookMetadata,
     openCloudFolder: storageData.openCloudFolder,
     createFolder: storageData.createFolder,
     updateFolder: storageData.updateFolder,

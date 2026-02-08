@@ -1,27 +1,30 @@
-import { getAuthHeaders } from "@shared/utils/auth";
-import type { Bookmark, GetBookmarksRequest, AddBookmarkRequest } from "~/types/api";
+import type { BackendFetchPort } from "@core/backend/fetchPort";
+import type { BookmarksBackendPort } from "@core/backend/ports";
+import type { AddBookmarkRequest, Bookmark, GetBookmarksRequest } from "~/types/api";
 
-export async function getBookmarks(request: GetBookmarksRequest): Promise<Bookmark[]> {
-  const headers = await getAuthHeaders();
-  const response = await fetch(`/api/bookmarks?bookId=${encodeURIComponent(request.bookId)}`, { headers });
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(message || `HTTP ${response.status}`);
-  }
-  return response.json() as Promise<Bookmark[]>;
-}
+export function createBookmarksBackendPort(fetchPort: BackendFetchPort): BookmarksBackendPort {
+  return {
+    async getBookmarks(request: GetBookmarksRequest, opts?: { signal?: AbortSignal }): Promise<Bookmark[]> {
+      const res = await fetchPort.request({
+        path: `/api/bookmarks?bookId=${encodeURIComponent(request.bookId)}`,
+        method: "GET",
+        signal: opts?.signal,
+      });
+      if (!res.ok) {
+        const message = await res.text().catch(() => "");
+        throw new Error(message || `HTTP ${res.status}`);
+      }
+      return (await res.json()) as Bookmark[];
+    },
 
-export async function addBookmark(request: AddBookmarkRequest): Promise<Bookmark> {
-  const headers = await getAuthHeaders();
-  const response = await fetch("/api/bookmarks", {
-    method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
-  if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(message || `HTTP ${response.status}`);
-  }
-  return response.json() as Promise<Bookmark>;
+    async addBookmark(request: AddBookmarkRequest, opts?: { signal?: AbortSignal }): Promise<Bookmark> {
+      return await fetchPort.requestJson<Bookmark>({
+        path: "/api/bookmarks",
+        method: "POST",
+        body: request,
+        signal: opts?.signal,
+      });
+    },
+  };
 }
 

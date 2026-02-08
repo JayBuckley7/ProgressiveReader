@@ -1,5 +1,5 @@
 import { appLog } from "@shared/appLog";
-import { getAuthHeaders } from "@shared/utils/auth";
+import { getAuthHeaders } from "@integrations/clerk/auth";
 import { gDriveCacheService } from "../gdriveCache";
 
 export type ClerkGoogleToken = {
@@ -16,6 +16,12 @@ export async function getTokenFromClerkBackend(): Promise<ClerkGoogleToken | nul
   if (gDriveCacheService.hasPendingAPICall(cacheKey)) {
     return gDriveCacheService.getPendingAPICall<ClerkGoogleToken | null>(cacheKey) ?? null;
   }
+
+  const isAbortError = (error: unknown): boolean => {
+    if (!error || typeof error !== "object") return false;
+    const name = (error as any).name;
+    return name === "AbortError";
+  };
 
   const tokenPromise = (async () => {
     try {
@@ -61,7 +67,7 @@ export async function getTokenFromClerkBackend(): Promise<ClerkGoogleToken | nul
         if (typeof expiresIn === "number" && expiresIn > 1_000_000_000_000) {
           const now = Date.now();
           expiresIn = Math.max(0, Math.floor((expiresIn - now) / 1000));
-          appLog.warn("[tokenBridge] expires_in was a timestamp; converted to seconds:", expiresIn);
+          appLog.debug("[tokenBridge] expires_in was a timestamp; converted to seconds:", expiresIn);
         }
 
         if (typeof accessToken === "string" && typeof expiresIn === "number") {
@@ -74,6 +80,11 @@ export async function getTokenFromClerkBackend(): Promise<ClerkGoogleToken | nul
         window.clearTimeout(timeoutId);
       }
     } catch (error) {
+      // Expected in practice (timeouts, route changes). Don't spam warnings for aborts.
+      if (isAbortError(error)) {
+        appLog.debug("[tokenBridge] Token request aborted");
+        return null;
+      }
       appLog.warn("[tokenBridge] Error fetching token from Clerk backend:", error);
       return null;
     } finally {
@@ -84,4 +95,3 @@ export async function getTokenFromClerkBackend(): Promise<ClerkGoogleToken | nul
   gDriveCacheService.setPendingAPICall(cacheKey, tokenPromise);
   return tokenPromise;
 }
-

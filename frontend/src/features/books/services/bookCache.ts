@@ -1,17 +1,17 @@
 import { BookMetadata } from '~/types';
 import { appLog } from '@shared/appLog';
-import {
-    getCachedCover,
-    cacheCover,
-    getCoverForFile,
-    cacheCoverForFile,
-} from '@integrations/googleDrive/services/driveCache';
-import { gDriveService } from '@integrations/googleDrive/gdriveService';
+import type { DriveCachePort } from '@core/drive/cachePort';
+import type { DrivePort } from '@core/drive/ports';
 
 /**
  * Book cache service for managing in-memory caches and cover URLs
  */
-class BookCacheService {
+export class BookCacheService {
+    constructor(
+        private readonly drive: DrivePort,
+        private readonly driveCache: DriveCachePort
+    ) {}
+
     // Cache for book metadata to prevent redundant API calls
     private bookListCache: { data: BookMetadata[], timestamp: number } | null = null;
     private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
@@ -78,22 +78,22 @@ class BookCacheService {
     private async downloadAndCacheCover(bookId: string, coverImageId: string): Promise<string | null> {
         try {
             // Check file-level cache first
-            let coverBlob = await getCoverForFile(bookId);
+            let coverBlob = await this.driveCache.getCoverForFile(bookId);
             if (coverBlob) {
                 appLog.debug(`[Cover Cache] Found cover in file cache for book ${bookId}`);
             } else {
                 // Check cover-level cache
-                coverBlob = await getCachedCover(coverImageId);
+                coverBlob = await this.driveCache.getCachedCover(coverImageId);
                 if (coverBlob) {
                     appLog.debug(`[Cover Cache] Found cover in cover cache for book ${bookId}`);
-                    await cacheCoverForFile(bookId, coverBlob);
+                    await this.driveCache.cacheCoverForFile(bookId, coverBlob);
                 } else {
                     // Download from Google Drive
                     appLog.debug(`[Cover Cache] Downloading cover from Google Drive for book ${bookId}`);
-                    coverBlob = await gDriveService.downloadFile(coverImageId);
+                    coverBlob = await this.drive.downloadFile(coverImageId);
                     if (coverBlob) {
-                        await cacheCover(coverImageId, coverBlob);
-                        await cacheCoverForFile(bookId, coverBlob);
+                        await this.driveCache.cacheCover(coverImageId, coverBlob);
+                        await this.driveCache.cacheCoverForFile(bookId, coverBlob);
                         appLog.debug(`[Cover Cache] Downloaded and cached cover for book ${bookId}`);
                     }
                 }
@@ -294,4 +294,9 @@ class BookCacheService {
     }
 }
 
-export const bookCacheService = new BookCacheService();
+export function createBookCacheService(args: {
+    drive: DrivePort;
+    driveCache: DriveCachePort;
+}): BookCacheService {
+    return new BookCacheService(args.drive, args.driveCache);
+}

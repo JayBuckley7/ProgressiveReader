@@ -7,8 +7,8 @@ import { MassUploadModal } from "./MassUploadModal";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useUser } from "@clerk/clerk-react";
 import { useSettings } from "@shared/contexts/SettingsContext";
-import { authManager } from "@shared/services/authManager";
 import { vocabBank } from "@features/vocabulary/services/vocabBank";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,7 @@ interface BookLibraryProps {
 }
 
 function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
+  const deps = useAppDeps();
   const navigate = useNavigate();
   const { user: clerkUser, isSignedIn, isLoaded } = useUser();
   const { t } = useTranslation();
@@ -30,14 +31,14 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     let hasLoaded = false;
-    const unsubscribe = authManager.onAuthStateChange((authed) => {
+    const unsubscribe = deps.driveAuth.onAuthStateChange((authed) => {
       if (authed && !hasLoaded) {
         hasLoaded = true;
-        vocabBank.load().then(() => setVocabStats(vocabBank.getStats()));
+        vocabBank.load(deps.drive).then(() => setVocabStats(vocabBank.getStats()));
       }
     });
     return unsubscribe;
-  }, [isLoaded, isSignedIn]);
+  }, [deps.driveAuth, isLoaded, isSignedIn]);
 
   const handleSelectBook = (id: string) => {
     if (onSelectBook) {

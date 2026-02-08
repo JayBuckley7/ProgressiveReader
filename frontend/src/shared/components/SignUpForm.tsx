@@ -15,11 +15,10 @@ export function SignUpForm() {
         </div>
       </ClerkLoading>
       <ClerkLoaded>
-        <SignUp routing="virtual" redirectUrl={redirectUrl} afterSignUpUrl="/" />
+        <SignUp routing="virtual" forceRedirectUrl={redirectUrl} />
       </ClerkLoaded>
     </div>
   );
 }
-
 
 

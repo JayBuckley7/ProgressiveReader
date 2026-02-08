@@ -104,26 +104,6 @@ def test_update_kanji_jlpt_validation_error(client):
     assert response.status_code == 400
 
 
-def test_get_kanji_info_success(client):
-    """Test getting kanji info successfully."""
-    mock_service = Mock(spec=KanjiService)
-    mock_service.get_kanji_info.return_value = {
-        'kanji': '漢',
-        'meanings': ['kanji', 'character'],
-        'jlpt': 2
-    }
-
-    container = Mock()
-    container.make_kanji_service.return_value = mock_service
-    client.application.extensions["container"] = container
-
-    response = client.get('/api/kanji/info/漢')
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data['kanji'] == '漢'
-
-
-def test_get_kanji_info_invalid_char(client):
-    """Test getting kanji info with invalid character."""
-    response = client.get('/api/kanji/info/漢字')  # Multiple characters
-    assert response.status_code == 400
+#
+# NOTE: `/api/kanji/info/<kanji_char>` was removed (unused by the frontend).
+#

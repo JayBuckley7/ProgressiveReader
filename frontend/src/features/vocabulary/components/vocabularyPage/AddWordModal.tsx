@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
-import { addVocabularyWord } from "@features/vocabulary/services/vocabApi";
 import type { BookMetadata } from "~/types";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 export interface AddWordModalProps {
   onClose: () => void;
@@ -13,6 +13,7 @@ export interface AddWordModalProps {
 }
 
 export function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
+  const deps = useAppDeps();
   const { t } = useTranslation();
   const [word, setWord] = useState("");
   const [translation, setTranslation] = useState("");
@@ -30,7 +31,7 @@ export function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
     }
     setIsSubmitting(true);
     try {
-      await addVocabularyWord({
+      await deps.backend.vocabulary.addVocabularyWord({
         word: word.trim(),
         translation: translation.trim(),
         language,
@@ -175,4 +176,3 @@ export function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
     </div>
   );
 }
-

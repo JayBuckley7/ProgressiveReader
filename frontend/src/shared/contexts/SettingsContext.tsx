@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useAppData } from "./AppDataContext";
-import { authManager } from "@shared/services/authManager";
-import { bookMetadataService } from "@features/books/services/bookMetadata";
 import { toast } from "sonner";
 import i18n from "~/i18n";
 import { appLog } from '@shared/appLog'
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 type Theme = "light" | "dark" | "wood" | "space" | "system";
 
@@ -110,6 +109,7 @@ function clearSettingsCookie(): void {
 }
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const deps = useAppDeps();
   // Settings are stored locally and optionally synced to Google Drive (browser-only).
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
@@ -159,13 +159,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Listen to centralized auth manager for settings loading
   useEffect(() => {
     // Listen for authentication state changes through auth manager
-    const unsubscribe = authManager.onAuthStateChange(async (isAuthenticated) => {
+    const unsubscribe = deps.driveAuth.onAuthStateChange(async (isAuthenticated) => {
       if (isAuthenticated && !loadedFromCloudRef.current && !isLoadingFromCloud) {
         setIsLoadingFromCloud(true);
         try {
           appLog.debug('[Settings] Auto-loading settings from Google Drive after authentication');
-          // Don't call authManager.ensureAuthenticated() again since we're already in auth callback
-          const data = await bookMetadataService.loadSettings();
+          // Don't call driveAuth.ensureAuthenticated() again since we're already in auth callback
+          const data = await deps.drive.loadSettings();
           if (data && Object.keys(data).length > 0) {
             appLog.debug('[Settings] Settings auto-loaded from Google Drive successfully');
             toast.success('Settings synced from Google Drive', {
@@ -278,7 +278,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
 
     return unsubscribe;
-  }, []);
+  }, [deps.driveAuth, isLoadingFromCloud]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

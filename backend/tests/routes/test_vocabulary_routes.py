@@ -19,7 +19,7 @@ def client(app):
 
 
 def test_get_jpdb_data_invalid_payload(client):
-    resp = client.post('/api/get_jpdb_data', json={})
+    resp = client.post('/api/get-jpdb-data', json={})
     assert resp.status_code == 400
 
 
@@ -32,7 +32,7 @@ def test_update_jpdb_word_state_predicts_state(client, monkeypatch):
 
     monkeypatch.setattr(JpdbHttpProvider, 'update_word_state', _mock_update)
 
-    resp = client.post('/api/update_jpdb_word_state', json={
+    resp = client.post('/api/update-jpdb-word-state', json={
         'vid': 1,
         'sid': 2,
         'flag': 'blacklist',
@@ -54,7 +54,7 @@ def test_review_jpdb_card_success(client, monkeypatch):
 
     monkeypatch.setattr(JpdbHttpProvider, 'review_card', _mock_review)
 
-    resp = client.post('/api/review_jpdb_card', json={
+    resp = client.post('/api/review-jpdb-card', json={
         'vid': 1,
         'sid': 2,
         'rating': 'good',

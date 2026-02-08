@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { appLog } from "@shared/appLog";
-import {
-  listOpenAiKeys,
-  addOpenAiKey,
-  removeOpenAiKey,
-  searchKanji as searchKanjiApi,
-  updateKanjiJlpt as updateKanjiJlptApi,
-  type KanjiInfo,
-} from "@features/admin/services/adminApi";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
+
+type KanjiInfo = {
+  kanji: string;
+  meanings: string[];
+  kun_readings: string[];
+  on_readings: string[];
+  jlpt?: number;
+};
 
 export function AdminPage() {
+  const deps = useAppDeps();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [keys, setKeys] = useState<string[]>([]);
@@ -28,7 +30,7 @@ export function AdminPage() {
 
   async function loadKeys() {
     setIsLoading(true);
-    const data = await listOpenAiKeys();
+    const data = await deps.backend.admin.listOpenAiKeys();
     if (data === null) {
       setUnauthorized(true);
       setIsLoading(false);
@@ -78,13 +80,13 @@ export function AdminPage() {
   async function addKey() {
     const trimmed = newKey.trim();
     if (!trimmed) return;
-    await addOpenAiKey(trimmed);
+    await deps.backend.admin.addOpenAiKey({ key: trimmed });
     setNewKey("");
     loadKeys();
   }
 
   async function removeKey(key: string) {
-    await removeOpenAiKey(key);
+    await deps.backend.admin.removeOpenAiKey({ key });
     loadKeys();
   }
 
@@ -94,8 +96,9 @@ export function AdminPage() {
     
     setKanjiLoading(true);
     try {
-      const data = await searchKanjiApi(kanjiQuery.trim());
-      setKanjiResults(data.results || []);
+      const data = await deps.backend.admin.searchKanji({ query: kanjiQuery.trim() });
+      const results = Array.isArray((data as any)?.results) ? (data as any).results : [];
+      setKanjiResults(results as KanjiInfo[]);
     } catch (error) {
       appLog.error("[AdminPage] Error searching kanji", error);
       setKanjiResults([]);
@@ -109,7 +112,10 @@ export function AdminPage() {
     
     setKanjiLoading(true);
     try {
-      const data = await updateKanjiJlptApi(selectedKanji.kanji, newJlptLevel);
+      const data = await deps.backend.admin.updateKanjiJlpt({
+        kanji: selectedKanji.kanji,
+        jlpt_level: newJlptLevel,
+      });
       appLog.debug(`Updated ${data.kanji} from N${data.old_jlpt || 'None'} to N${data.new_jlpt || 'None'}`);
 
       const updatedKanji = { ...selectedKanji, jlpt: newJlptLevel ?? undefined };

@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
-import { render } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import { SettingsProvider, useSettings } from '@shared/contexts/SettingsContext';
+import { useSettings } from '@shared/contexts/SettingsContext';
 import { TopActions } from '@shared/components/TopActions';
+import { renderWithProviders } from '../test-utils';
 
 function ToggleLang() {
   const { updateSettings } = useSettings();
@@ -16,13 +15,11 @@ function ToggleLang() {
 
 describe('i18n toggle', () => {
   it('switches UI language via SettingsContext', async () => {
-    render(
-      <BrowserRouter>
-        <SettingsProvider>
-          <TopActions currentPage="library" />
-          <ToggleLang />
-        </SettingsProvider>
-      </BrowserRouter>
+    renderWithProviders(
+      <>
+        <TopActions currentPage="library" />
+        <ToggleLang />
+      </>
     );
 
     // English default

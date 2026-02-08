@@ -1,11 +1,11 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useRef } from "react";
 
-import { bookMetadataService } from "@features/books/services/bookMetadata";
 import type { GrammarExample } from "@features/grammar/types";
 import type { GrammarStateV2 } from "@features/grammar/types";
 import { mergeAndLimitExamples } from "@features/grammar/services/grammarExamples";
 import { toUniqueSorted } from "./boundary";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 type DriveGrammarState = {
   knownIds: string[];
@@ -31,6 +31,7 @@ export function useGrammarDriveSync(params: {
   state: GrammarStateV2;
   setState: Dispatch<SetStateAction<GrammarStateV2>>;
 }) {
+  const deps = useAppDeps();
   const { allowDriveSync, userId, state, setState } = params;
 
   // Drive load merge (cached per-user to avoid cross-user leakage).
@@ -81,7 +82,7 @@ export function useGrammarDriveSync(params: {
 
     if (!driveLoadPromiseByUserId.has(userId)) {
       driveLastAttemptAtMsByUserId.set(userId, now);
-      const p = bookMetadataService
+      const p = deps.drive
         .loadGrammarStateV2()
         .then((drive) => {
           if (!isDriveGrammarState(drive)) return null;
@@ -119,7 +120,7 @@ export function useGrammarDriveSync(params: {
 
     driveSaveTimeoutRef.current = window.setTimeout(() => {
       driveSaveTimeoutRef.current = null;
-      void bookMetadataService.saveGrammarStateV2(payload).catch(() => {
+      void deps.drive.saveGrammarStateV2(payload).catch(() => {
         // ignore save errors
       });
     }, 800);

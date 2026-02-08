@@ -6,6 +6,7 @@ import {
   removeJpdbHighlighting,
 } from "@features/reader/services/jpdbInitializer";
 import { loadConfig as loadJpdbConfig } from "@features/reader/content/api-adapter";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 export function useJpdbHighlighting(params: {
   contentRef: React.RefObject<HTMLElement>;
@@ -17,6 +18,7 @@ export function useJpdbHighlighting(params: {
   mixEnabled: boolean;
   mixAutoEnableHighlight: boolean;
 }) {
+  const deps = useAppDeps();
   const {
     contentRef,
     currentChapterContent,
@@ -50,7 +52,7 @@ export function useJpdbHighlighting(params: {
       // Use requestAnimationFrame to ensure React has finished updating the DOM.
       const frameId = requestAnimationFrame(() => {
         if (!el) return;
-        highlightContent(el).catch((error) => {
+        highlightContent(deps.backend.vocabulary, el).catch((error) => {
           appLog.error("[BookReader] highlightContent failed", error);
         });
       });
@@ -61,7 +63,16 @@ export function useJpdbHighlighting(params: {
     if (!jpdbHighlighted && el) {
       removeJpdbHighlighting(el);
     }
-  }, [contentRef, contentVersion, currentChapterContent, isTranslated, isTranslating, jpdbHighlighted, translatedContent]);
+  }, [
+    contentRef,
+    contentVersion,
+    currentChapterContent,
+    deps.backend.vocabulary,
+    isTranslated,
+    isTranslating,
+    jpdbHighlighted,
+    translatedContent,
+  ]);
 
   // Auto-enable JPDB highlighting when mix mode is enabled (one-way).
   useEffect(() => {
@@ -83,4 +94,3 @@ export function useJpdbHighlighting(params: {
 
   return { jpdbHighlighted, toggleJpdbHighlight, setJpdbHighlighted };
 }
-

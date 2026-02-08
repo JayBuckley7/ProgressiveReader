@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { BookMetadata, Folder } from '~/types';
 import { EditBookModal } from './EditBookModal';
-import { bookMetadataService } from '@features/books/services/bookMetadata';
+import { BookCoverService } from '@features/books/services/bookCovers';
 import { toast } from 'sonner';
 import { appLog } from '@shared/appLog'
 import { notifyError } from '@shared/utils/notify';
+import { useAppDeps } from '@app/deps/AppDepsProvider';
+import { useAppData } from '@shared/contexts/AppDataContext';
 
 interface BookCardHoverProps {
   book: BookMetadata;
@@ -29,6 +31,8 @@ export function BookCardHover({
   onBookUpdated,
   density = "comfortable"
 }: BookCardHoverProps) {
+  const deps = useAppDeps();
+  const { updateBookMetadata } = useAppData();
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
@@ -38,6 +42,8 @@ export function BookCardHover({
   const [isMobile, setIsMobile] = useState(false);
   const [placeholderUrl, setPlaceholderUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const coverService = useMemo(() => new BookCoverService(deps.backend.covers), [deps.backend.covers]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 640px)");
@@ -53,7 +59,7 @@ export function BookCardHover({
       setPlaceholderUrl(null);
       return;
     }
-    bookMetadataService
+    coverService
       .getCachedPlaceholderCoverUrl(book.id, book.title, book.fileType, book.author)
       .then((url) => {
         if (!cancelled) setPlaceholderUrl(url);
@@ -64,7 +70,7 @@ export function BookCardHover({
     return () => {
       cancelled = true;
     };
-  }, [book.coverUrl, book.id, book.title, book.fileType, book.author]);
+  }, [book.coverUrl, book.id, book.title, book.fileType, book.author, coverService]);
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -100,10 +106,10 @@ export function BookCardHover({
 
 	    setIsUpdatingCover(true);
 	    try {
-	      const lookedUp = await bookMetadataService.lookupCover(book.title);
+	      const lookedUp = await coverService.lookupCover(book.title);
 	      const coverBlob =
 	        lookedUp ??
-	        (await bookMetadataService.generatePlaceholderCover(book.title, book.fileType, book.author));
+	        (await coverService.generatePlaceholderCover(book.title, book.fileType, book.author));
 
 	      if (!lookedUp) {
 	        toast.info('No cover found online — generated a placeholder cover');
@@ -182,7 +188,7 @@ export function BookCardHover({
   };
 
   const handleSaveBook = async (bookId: string, updates: { title?: string; author?: string }) => {
-    await bookMetadataService.updateBookMetadata(bookId, updates);
+    await updateBookMetadata(bookId, updates);
     if (onBookUpdated) {
       onBookUpdated();
     }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useSettings } from "@shared/contexts/SettingsContext";
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 import { syncJpdbKnownMirror, type JpdbMirrorSyncProgress } from "@features/jpdbMirror/sync";
 import type { JpdbMirrorMeta } from "@features/jpdbMirror/types";
@@ -19,6 +19,7 @@ export function MixSettingsModal(props: {
   onReloadMirror: () => Promise<void>;
   onRequestRefine?: () => void;
 }) {
+  const deps = useAppDeps();
   const { settings, updateSettings } = useSettings();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<JpdbMirrorSyncProgress | null>(null);
@@ -57,7 +58,7 @@ export function MixSettingsModal(props: {
     if (restoreAttemptedRef.current) return;
     if (props.mirrorMeta) return;
     if (!settings?.mixBackupMirrorToDrive) return;
-    if (!gDriveService.isSignedIn()) return;
+    if (!deps.drive.isSignedIn()) return;
 
     restoreAttemptedRef.current = true;
     setIsRestoring(true);
@@ -65,7 +66,7 @@ export function MixSettingsModal(props: {
 
     (async () => {
       try {
-        const snapshot = await gDriveService.loadJpdbMirror();
+        const snapshot = await deps.drive.loadJpdbMirror();
         if (!isValidDriveSnapshot(snapshot)) return;
         await importMirrorSnapshotFromDrive(snapshot);
         await props.onReloadMirror();
@@ -77,7 +78,7 @@ export function MixSettingsModal(props: {
         setIsRestoring(false);
       }
     })();
-  }, [props.visible, props.mirrorMeta, settings?.mixBackupMirrorToDrive, props.onReloadMirror]);
+  }, [deps.drive, props.visible, props.mirrorMeta, settings?.mixBackupMirrorToDrive, props.onReloadMirror]);
 
   useEffect(() => {
     if (!props.visible) {
@@ -111,6 +112,8 @@ export function MixSettingsModal(props: {
 
     try {
       await syncJpdbKnownMirror({
+        backend: deps.backend.vocabulary,
+        drive: deps.drive,
         signal: controller.signal,
         backupToDrive: settings.mixBackupMirrorToDrive ?? true,
         onProgress: (p) => setSyncProgress(p),

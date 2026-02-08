@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppData } from '@shared/contexts/AppDataContext';
 import { BookMetadata, ReadingProgress } from '~/types';
 import { EditBookModal } from './EditBookModal';
-import { bookMetadataService } from '@features/books/services/bookMetadata';
 import { appLog } from '@shared/appLog'
 import { notifyError } from '@shared/utils/notify';
 
@@ -32,7 +31,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
   const [isDownloading, setIsDownloading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { getReadingProgress, downloadBookForOffline } = useAppData();
+  const { getReadingProgress, downloadBookForOffline, updateBookMetadata } = useAppData();
   const [progress, setProgress] = useState<ReadingProgress | null>(null);
 
   // Add logging for cover URL changes
@@ -160,7 +159,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
   };
 
   const handleSaveBook = async (bookId: string, updates: { title?: string; author?: string }) => {
-    await bookMetadataService.updateBookMetadata(bookId, updates);
+    await updateBookMetadata(bookId, updates);
     if (onBookUpdated) {
       onBookUpdated();
     }

@@ -4,8 +4,9 @@ import type { GrammarExample, GrammarScanBoundary } from "@features/grammar/type
 import { validateGrammarCandidates, type GrammarValidateCandidate } from "@features/grammar/services/grammarApi";
 import { extractPlainTextFromHtml, limitSentencesByPercent, looksJapanese, splitIntoSentences } from "@features/grammar/services/grammarText";
 import { fnv1a32 } from "@features/grammar/services/hash";
-
-import { bookStorageService } from "@features/books/services/bookStorage";
+import type { PreferencesPort } from "@core/prefs/ports";
+import type { GrammarBackendPort } from "@core/backend/ports";
+import type { LlmChatPort } from "@core/llm/ports";
 import { EpubProcessorWrapper } from "@shared/lib/epubProcessor";
 import { TextProcessorWrapper } from "@shared/lib/textProcessor";
 
@@ -145,6 +146,12 @@ function buildCandidatesFromSentences(
 export async function mineLibraryForGrammarExamples(args: {
   grammar: GrammarPoint;
   books: BookMetadata[];
+  deps: {
+    prefs: PreferencesPort;
+    llm: LlmChatPort;
+    backend: GrammarBackendPort;
+    downloadBook: (bookId: string, meta: BookMetadata) => Promise<Blob | null>;
+  };
   alreadyScannedBoundaries?: Record<string, GrammarScanBoundary>;
   budgets?: Partial<MinerBudgets>;
   maxExamples?: number;
@@ -201,7 +208,7 @@ export async function mineLibraryForGrammarExamples(args: {
     args.onProgress?.({ booksScanned, booksTotal, chaptersScanned });
 
     // Download book content and parse chapters.
-    const blob = await bookStorageService.downloadBook(meta.id, meta);
+    const blob = await args.deps.downloadBook(meta.id, meta);
     if (args.signal?.aborted) break;
     if (!blob) continue;
     const buf = await blob.arrayBuffer();
@@ -264,8 +271,8 @@ export async function mineLibraryForGrammarExamples(args: {
     };
   }
 
-  const apiKey = (typeof window !== "undefined" ? (localStorage.getItem("openaiKey") || "") : "") || "";
-  const model = (typeof window !== "undefined" ? (localStorage.getItem("openaiModel") || "") : "") || "gpt-4o-mini";
+  const apiKey = args.deps.prefs.getOpenAiKey() || "";
+  const model = args.deps.prefs.getOpenAiModel();
 
   const resp = await validateGrammarCandidates(
     {
@@ -280,6 +287,7 @@ export async function mineLibraryForGrammarExamples(args: {
       model,
       apiKey: apiKey || undefined,
     },
+    { llm: args.deps.llm, backend: args.deps.backend },
     { signal: args.signal }
   );
 

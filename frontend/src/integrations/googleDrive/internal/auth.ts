@@ -1,5 +1,5 @@
 import { appLog } from "@shared/appLog";
-import { isClerkLoaded, isClerkSignedIn } from "@shared/utils/auth";
+import { isClerkLoaded, isClerkSignedIn } from "@integrations/clerk/auth";
 import { gDriveCacheService } from "../gdriveCache";
 import { type ClerkGoogleToken, getTokenFromClerkBackend } from "./tokenBridge";
 import type { GapiClient } from "./gapiClient";
@@ -184,4 +184,3 @@ export class DriveAuth {
     return Date.now() + expiresInSeconds * 1000;
   }
 }
-

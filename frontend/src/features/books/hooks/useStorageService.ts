@@ -1,16 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useClerk, useUser } from "@clerk/clerk-react";
 
 import type { BookMetadata, Folder, ReadingProgress } from "~/types";
 
-import { bookCacheService } from "@features/books/services/bookCache";
-import { bookMetadataService } from "@features/books/services/bookMetadata";
-import { bookStorageService } from "@features/books/services/bookStorage";
+import { createBookCacheService } from "@features/books/services/bookCache";
+import { createBookStorageService } from "@features/books/services/bookStorage";
+import { BookCoverService } from "@features/books/services/bookCovers";
+import { listUserBooksFromDrive } from "@features/books/services/bookLibrary/list";
+import {
+  deleteBookFromDrive,
+  listFoldersFromDrive,
+  openCloudFolderOnDrive,
+  syncBooksFromDrive,
+  updateBookCoverOnDrive,
+  updateBookMetadataOnDrive,
+} from "@features/books/services/bookLibrary/manage";
+import { uploadBookToDrive } from "@features/books/services/bookLibrary/upload";
 
-import { authManager } from "@shared/services/authManager";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 import { applyBooksUpdate } from "./storageService/books";
 import { useOnlineStatus } from "./storageService/connectivity";
@@ -20,10 +30,23 @@ import { handleUnauthorizedCloudSettingsLoad, loadCloudSettings, saveCloudSettin
 import { secureSignOut, signInWithClerk, type ClerkClient } from "./storageService/auth";
 
 function useStorageService() {
+  const deps = useAppDeps();
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const clerk = useClerk();
 
   const isOnline = useOnlineStatus();
+
+  const bookCache = useMemo(
+    () => createBookCacheService({ drive: deps.drive, driveCache: deps.driveCache }),
+    [deps.drive, deps.driveCache]
+  );
+
+  const bookStorage = useMemo(
+    () => createBookStorageService({ drive: deps.drive, driveCache: deps.driveCache }),
+    [deps.drive, deps.driveCache]
+  );
+
+  const covers = useMemo(() => new BookCoverService(deps.backend.covers), [deps.backend.covers]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDriveBookLoading, setIsDriveBookLoading] = useState(false);
@@ -57,14 +80,14 @@ function useStorageService() {
         );
       };
 
-      const userBooks = await bookMetadataService.getUserBooks(onCoverReady);
+      const userBooks = await listUserBooksFromDrive({ drive: deps.drive, bookCache, onCoverReady });
 
       applyBooksUpdate({
         previous,
         next: userBooks,
         setBooks,
         booksRef,
-        cleanupRemoved: (removed) => bookCacheService.cleanupBlobUrls(removed),
+        cleanupRemoved: (removed) => bookCache.cleanupBlobUrls(removed),
       });
     } catch (error) {
       notifyError(error, { title: "Failed to load books from Google Drive" });
@@ -72,14 +95,16 @@ function useStorageService() {
       isRefreshingRef.current = false;
       setIsDriveBookLoading(false);
     }
-  }, [clerkUser]);
+  }, [bookCache, clerkUser, deps.drive]);
 
   const loadOfflineBooksIntoState = useCallback(async () => {
     await loadOfflineBooks({
       setIsLoading,
       setBooks: (next) => setBooks(next),
+      driveCache: deps.driveCache,
+      drive: deps.drive,
     });
-  }, []);
+  }, [deps.drive, deps.driveCache]);
 
   const connectToGoogleDriveAndLoad = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) {
@@ -95,7 +120,7 @@ function useStorageService() {
     isDriveSyncingRef.current = true;
 
     try {
-      const isAuthenticated = await authManager.ensureAuthenticated();
+      const isAuthenticated = await deps.driveAuth.ensureAuthenticated();
       if (!isAuthenticated) {
         notifyError("Failed to connect to Google Drive");
         return false;
@@ -110,8 +135,8 @@ function useStorageService() {
       };
 
       const [userBooks, userFolders] = await Promise.all([
-        bookMetadataService.getUserBooks(onCoverReady),
-        bookMetadataService.getFolders(clerkUser),
+        listUserBooksFromDrive({ drive: deps.drive, bookCache, onCoverReady }),
+        listFoldersFromDrive({ drive: deps.drive, driveAuth: deps.driveAuth, clerkUser }),
       ]);
 
       applyBooksUpdate({
@@ -119,7 +144,7 @@ function useStorageService() {
         next: userBooks,
         setBooks,
         booksRef,
-        cleanupRemoved: (removed) => bookCacheService.cleanupBlobUrls(removed),
+        cleanupRemoved: (removed) => bookCache.cleanupBlobUrls(removed),
       });
       setFolders(userFolders);
 
@@ -139,7 +164,7 @@ function useStorageService() {
       isRefreshingRef.current = false;
       isDriveSyncingRef.current = false;
     }
-  }, [clerkUser, loadOfflineBooksIntoState]);
+  }, [bookCache, clerkUser, deps.drive, deps.driveAuth, loadOfflineBooksIntoState]);
 
   useEffect(() => {
     // Auto-connect to Drive only on pages that need books.
@@ -184,30 +209,32 @@ function useStorageService() {
 
     // Online + unauthenticated: enforce fresh state for sign-in.
     if (books.length > 0) {
-      bookCacheService.cleanupBlobUrls(books);
+      bookCache.cleanupBlobUrls(books);
+      setBooks([]);
     }
-    setBooks([]);
-    setFolders([]);
+    if (folders.length > 0) {
+      setFolders([]);
+    }
     lastUserIdRef.current = null;
-  }, [books, clerkLoaded, clerkUser, connectToGoogleDriveAndLoad, isOnline, loadOfflineBooksIntoState]);
+  }, [bookCache, books, clerkLoaded, clerkUser, connectToGoogleDriveAndLoad, folders.length, isOnline, loadOfflineBooksIntoState]);
 
   // Listen for auth state changes but don't auto-load data.
   useEffect(() => {
     if (!clerkUser) return;
-    const unsubscribe = authManager.onAuthStateChange((isAuthenticated) => {
+    const unsubscribe = deps.driveAuth.onAuthStateChange((isAuthenticated) => {
       if (import.meta.env.DEV) appLog.debug(`[useStorageService] Auth state changed: ${isAuthenticated}`);
     });
     return unsubscribe;
-  }, [clerkUser]);
+  }, [clerkUser, deps.driveAuth]);
 
   // Cleanup blob URLs when component unmounts.
   useEffect(() => {
     return () => {
       if (books.length > 0) {
-        bookCacheService.cleanupBlobUrls(books);
+        bookCache.cleanupBlobUrls(books);
       }
     };
-  }, [books]);
+  }, [bookCache, books]);
 
   const uploadBook = useCallback(
     async (
@@ -221,7 +248,18 @@ function useStorageService() {
       }
 
       try {
-        const book = await bookMetadataService.uploadBook(file, meta, clerkUser, onOCRProgress);
+        const book = await uploadBookToDrive({
+          drive: deps.drive,
+          driveAuth: deps.driveAuth,
+          driveOcr: deps.backend.ocr,
+          bookCache,
+          bookStorage,
+          file,
+          meta,
+          covers,
+          clerkUser,
+          onOCRProgress,
+        });
         await connectToGoogleDriveAndLoad();
         toast.success("Book uploaded successfully to your cloud storage!");
         return book;
@@ -230,7 +268,7 @@ function useStorageService() {
         throw error;
       }
     },
-    [clerkUser, connectToGoogleDriveAndLoad]
+    [bookCache, bookStorage, clerkUser, connectToGoogleDriveAndLoad, covers, deps.backend.ocr, deps.drive, deps.driveAuth]
   );
 
   const downloadBook = useCallback(async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {
@@ -240,18 +278,18 @@ function useStorageService() {
     }
 
     try {
-      return await bookStorageService.downloadBook(bookId, metadata);
+      return await bookStorage.downloadBook(bookId, metadata);
     } catch (error) {
       notifyError(error, { title: "Failed to download book from cloud storage" });
       throw error;
     }
-  }, [clerkUser]);
+  }, [bookStorage, clerkUser]);
 
   const downloadBookForOffline = useCallback(
     async (meta: BookMetadata) => {
-      await cacheBookForOffline({ meta, downloadBook });
+      await cacheBookForOffline({ meta, downloadBook, driveCache: deps.driveCache, drive: deps.drive });
     },
-    [downloadBook]
+    [deps.drive, deps.driveCache, downloadBook]
   );
 
   const deleteBook = useCallback(
@@ -263,7 +301,13 @@ function useStorageService() {
 
       setIsLoading(true);
       try {
-        await bookMetadataService.deleteBook(id);
+        await deleteBookFromDrive({
+          drive: deps.drive,
+          driveAuth: deps.driveAuth,
+          driveCache: deps.driveCache,
+          bookCache,
+          bookId: id,
+        });
         await silentRefreshBooks();
         toast.success("Book deleted successfully");
       } catch (error) {
@@ -272,7 +316,7 @@ function useStorageService() {
         setIsLoading(false);
       }
     },
-    [clerkUser, silentRefreshBooks]
+    [bookCache, clerkUser, deps.drive, deps.driveAuth, deps.driveCache, silentRefreshBooks]
   );
 
   const updateBookCover = useCallback(
@@ -283,7 +327,14 @@ function useStorageService() {
       }
 
       try {
-        const newCoverImageId = await bookMetadataService.updateBookCover(bookId, coverFile);
+        const newCoverImageId = await updateBookCoverOnDrive({
+          drive: deps.drive,
+          driveAuth: deps.driveAuth,
+          driveCache: deps.driveCache,
+          bookCache,
+          bookId,
+          coverFile,
+        });
         await silentRefreshBooks();
         toast.success("Book cover updated successfully");
         return newCoverImageId;
@@ -292,25 +343,44 @@ function useStorageService() {
         throw error;
       }
     },
-    [clerkUser, silentRefreshBooks]
+    [bookCache, clerkUser, deps.drive, deps.driveAuth, deps.driveCache, silentRefreshBooks]
+  );
+
+  const updateBookMetadata = useCallback(
+    async (bookId: string, updates: { title?: string; author?: string }) => {
+      if (!clerkUser) {
+        notifyError("Please sign in to update book details");
+        return;
+      }
+
+      try {
+        await updateBookMetadataOnDrive({ drive: deps.drive, driveAuth: deps.driveAuth, bookCache, bookId, updates });
+        await silentRefreshBooks();
+        toast.success("Book updated successfully");
+      } catch (error) {
+        notifyError(error, { title: "Failed to update book" });
+        throw error;
+      }
+    },
+    [bookCache, clerkUser, deps.drive, deps.driveAuth, silentRefreshBooks]
   );
 
   const getReadingProgress = useCallback(async (bookId: string): Promise<ReadingProgress | null> => {
     try {
-      return await bookStorageService.getReadingProgress(bookId);
+      return await bookStorage.getReadingProgress(bookId);
     } catch (error) {
       appLog.error("[useStorageService] Error getting reading progress", error);
       return null;
     }
-  }, []);
+  }, [bookStorage]);
 
   const saveReadingProgress = useCallback(async (progress: ReadingProgress) => {
     try {
-      await bookStorageService.saveReadingProgress(progress);
+      await bookStorage.saveReadingProgress(progress);
     } catch (error) {
       appLog.error("[useStorageService] Error saving reading progress", error);
     }
-  }, []);
+  }, [bookStorage]);
 
   const saveBookProgress = useCallback(
     async (
@@ -324,7 +394,7 @@ function useStorageService() {
       viewportHeight?: number
     ): Promise<void> => {
       try {
-        await bookStorageService.saveBookProgress(
+        await bookStorage.saveBookProgress(
           bookId,
           currentChapter,
           currentPosition,
@@ -338,7 +408,7 @@ function useStorageService() {
         appLog.error("[useStorageService] Error saving book progress", error);
       }
     },
-    []
+    [bookStorage]
   );
 
   const signIn = useCallback(() => {
@@ -354,8 +424,10 @@ function useStorageService() {
         lastUserIdRef.current = null;
         lastSessionToastRef.current = 0;
       },
+      drive: deps.drive,
+      driveCache: deps.driveCache,
     });
-  }, [clerk]);
+  }, [clerk, deps.drive, deps.driveCache]);
 
   const openCloudFolder = useCallback(async () => {
     if (!clerkUser) {
@@ -364,11 +436,11 @@ function useStorageService() {
     }
 
     try {
-      await bookMetadataService.openCloudFolder(clerkUser);
+      await openCloudFolderOnDrive({ drive: deps.drive, driveAuth: deps.driveAuth, clerkUser });
     } catch (error) {
       notifyError(error, { title: "Failed to open cloud storage folder" });
     }
-  }, [clerkUser]);
+  }, [clerkUser, deps.drive, deps.driveAuth]);
 
   const syncBooks = useCallback(async () => {
     if (!clerkUser) {
@@ -383,7 +455,7 @@ function useStorageService() {
         setBooks((current) => current.map((b) => (b.id === bookId ? { ...b, coverUrl } : b)));
       };
 
-      const synced = await bookMetadataService.syncBooks(clerkUser, onCoverReady);
+      const synced = await syncBooksFromDrive({ drive: deps.drive, driveAuth: deps.driveAuth, bookCache, clerkUser, onCoverReady });
       setBooks(synced);
       booksRef.current = synced;
       toast.success("Library synced successfully");
@@ -394,18 +466,18 @@ function useStorageService() {
       setIsLoading(false);
       isDriveSyncingRef.current = false;
     }
-  }, [clerkUser]);
+  }, [bookCache, clerkUser, deps.drive, deps.driveAuth]);
 
   const saveSettings = useCallback(
     async (settings: CloudSettings) => {
-      return await saveCloudSettings({ clerkUserId: clerkUser?.id ?? null, settings });
+      return await saveCloudSettings({ clerkUserId: clerkUser?.id ?? null, settings, drive: deps.drive });
     },
-    [clerkUser?.id]
+    [clerkUser?.id, deps.drive]
   );
 
   const loadSettings = useCallback(async (): Promise<CloudSettings | null> => {
     return await loadCloudSettings({
-      ensureAuthenticated: authManager.ensureAuthenticated,
+      ensureAuthenticated: deps.driveAuth.ensureAuthenticated,
       onUnauthorized: () => {
         handleUnauthorizedCloudSettingsLoad({
           sessionCooldownMs: SESSION_COOLDOWN_MS,
@@ -413,11 +485,14 @@ function useStorageService() {
           isDriveSyncingRef,
         });
       },
+      drive: deps.drive,
     });
-  }, []);
+  }, [deps.drive, deps.driveAuth.ensureAuthenticated]);
 
   const folderActions = createFolderActions({
     clerkUser,
+    drive: deps.drive,
+    driveAuth: deps.driveAuth,
     setFolders,
     setBooks,
   });
@@ -434,6 +509,7 @@ function useStorageService() {
     downloadBook,
     deleteBook,
     updateBookCover,
+    updateBookMetadata,
     getReadingProgress,
     saveReadingProgress,
     saveBookProgress,

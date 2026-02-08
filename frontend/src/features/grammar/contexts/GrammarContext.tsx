@@ -14,6 +14,7 @@ import { mergeTeachingIntoExamples, teachGrammarExamples } from "@features/gramm
 import { boundaryAdvances, boundaryFromProgress } from "./grammarContext/boundary";
 import { useGrammarDriveSync } from "./grammarContext/driveSync";
 import { useGrammarMiningToggles } from "./grammarContext/toggles";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 type GrammarContextValue = {
   state: GrammarStateV2;
@@ -39,8 +40,9 @@ type GrammarContextValue = {
 const GrammarContext = createContext<GrammarContextValue | undefined>(undefined);
 
 export function GrammarProvider({ children }: { children: React.ReactNode }) {
+  const deps = useAppDeps();
   const { user, isSignedIn } = useUser();
-  const { books } = useAppData();
+  const { books, downloadBook } = useAppData();
 
   const allowDriveSync =
     isSignedIn &&
@@ -175,22 +177,25 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       const missing = examples.filter((e) => !e.teaching);
       if (missing.length === 0) return;
 
-      const apiKey = (typeof window !== "undefined" ? (localStorage.getItem("openaiKey") || "") : "") || "";
-      const model = (typeof window !== "undefined" ? (localStorage.getItem("openaiModel") || "") : "") || "gpt-4o-mini";
+      const apiKey = deps.prefs.getOpenAiKey() || "";
+      const model = deps.prefs.getOpenAiModel();
 
       try {
-        const resp = await teachGrammarExamples({
-          grammar: { id: point.id, title: point.title, meaning: point.meaning, level: point.level },
-          examples: missing.slice(0, 3).map((e) => ({
-            exampleId: e.id,
-            sentence: e.sentence,
-            before: e.before,
-            after: e.after,
-            matchSpan: e.match ? { start: e.match.start, end: e.match.end, text: e.match.text } : undefined,
-          })),
-          model,
-          apiKey: apiKey || undefined,
-        });
+        const resp = await teachGrammarExamples(
+          {
+            grammar: { id: point.id, title: point.title, meaning: point.meaning, level: point.level },
+            examples: missing.slice(0, 3).map((e) => ({
+              exampleId: e.id,
+              sentence: e.sentence,
+              before: e.before,
+              after: e.after,
+              matchSpan: e.match ? { start: e.match.start, end: e.match.end, text: e.match.text } : undefined,
+            })),
+            model,
+            apiKey: apiKey || undefined,
+          },
+          { llm: deps.llmChat, backend: deps.backend.grammar }
+        );
 
         autoTeachBlockedRef.current.delete(grammarId);
 
@@ -209,7 +214,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         notifyError(e, { title: "Teaching failed" });
       }
     },
-    []
+    [deps.backend.grammar, deps.llmChat, deps.prefs]
   );
 
   // Requeue mining when reading progress advances beyond what we scanned.
@@ -287,6 +292,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         const result = await mineLibraryForGrammarExamples({
           grammar: point,
           books,
+          deps: { prefs: deps.prefs, llm: deps.llmChat, backend: deps.backend.grammar, downloadBook },
           alreadyScannedBoundaries: alreadyScanned,
           signal: minerAbortRef.current.signal,
           onProgress: (p) => {
@@ -365,7 +371,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         setActiveMiningGrammarId(null);
       }
     },
-    [books]
+    [books, deps.backend.grammar, deps.llmChat, deps.prefs]
   );
 
   const cancelMining = useCallback(() => {

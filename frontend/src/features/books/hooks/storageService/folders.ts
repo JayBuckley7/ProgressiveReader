@@ -2,14 +2,23 @@ import { toast } from "sonner";
 import type { Dispatch, SetStateAction } from "react";
 import type { BookMetadata, Folder } from "~/types";
 import { notifyError } from "@shared/utils/notify";
-import { bookMetadataService } from "@features/books/services/bookMetadata";
+import type { DriveAuthPort } from "@core/drive/authPort";
+import type { DrivePort } from "@core/drive/ports";
+import {
+  createFolderOnDrive,
+  deleteFolderOnDrive,
+  moveBookToFolderOnDrive,
+  updateFolderOnDrive,
+} from "@features/books/services/bookLibrary/manage";
 
 export function createFolderActions(params: {
   clerkUser: unknown | null;
+  drive: DrivePort;
+  driveAuth: DriveAuthPort;
   setFolders: Dispatch<SetStateAction<Folder[]>>;
   setBooks: Dispatch<SetStateAction<BookMetadata[]>>;
 }) {
-  const { clerkUser, setFolders, setBooks } = params;
+  const { clerkUser, drive, driveAuth, setFolders, setBooks } = params;
 
   const ensureUser = () => {
     if (!clerkUser) {
@@ -22,7 +31,7 @@ export function createFolderActions(params: {
   const createFolder = async (name: string, parentId?: string) => {
     if (!ensureUser()) return;
     try {
-      const newFolder = await bookMetadataService.createFolder(name, parentId, clerkUser);
+      const newFolder = await createFolderOnDrive({ drive, driveAuth, name, parentId, clerkUser: clerkUser as any });
       setFolders((current) => [...current, newFolder]);
       toast.success(`Folder "${name}" created successfully`);
     } catch (error) {
@@ -33,7 +42,7 @@ export function createFolderActions(params: {
   const updateFolder = async (folderId: string, updates: { name?: string; parentId?: string }) => {
     if (!ensureUser()) return;
     try {
-      const updatedFolder = await bookMetadataService.updateFolder(folderId, updates, clerkUser);
+      const updatedFolder = await updateFolderOnDrive({ drive, driveAuth, folderId, updates, clerkUser: clerkUser as any });
       setFolders((current) => current.map((folder) => (folder.id === folderId ? updatedFolder : folder)));
       toast.success("Folder updated successfully");
     } catch (error) {
@@ -44,7 +53,7 @@ export function createFolderActions(params: {
   const deleteFolder = async (folderId: string) => {
     if (!ensureUser()) return;
     try {
-      await bookMetadataService.deleteFolder(folderId, clerkUser);
+      await deleteFolderOnDrive({ drive, driveAuth, folderId, clerkUser: clerkUser as any });
       setFolders((current) => current.filter((folder) => folder.id !== folderId));
       toast.success("Folder deleted successfully");
     } catch (error) {
@@ -55,7 +64,7 @@ export function createFolderActions(params: {
   const moveBookToFolder = async (bookId: string, folderId: string | null) => {
     if (!ensureUser()) return;
     try {
-      await bookMetadataService.moveBookToFolder(bookId, folderId, clerkUser);
+      await moveBookToFolderOnDrive({ drive, driveAuth, bookId, folderId, clerkUser: clerkUser as any });
       setBooks((current) =>
         current.map((book) => (book.id === bookId ? { ...book, folderId: folderId ?? undefined } : book))
       );

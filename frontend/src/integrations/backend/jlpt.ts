@@ -1,18 +1,20 @@
-export async function setJlptHighlightingEnabled(args: { enabled: boolean; signal?: AbortSignal }): Promise<boolean> {
-  const response = await fetch("/api/toggle_jlpt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enabled: args.enabled }),
-    signal: args.signal,
-  });
+import type { BackendFetchPort } from "@core/backend/fetchPort";
+import type { JlptBackendPort } from "@core/backend/ports";
 
-  if (!response.ok) return false;
-
-  try {
-    const data = (await response.json()) as any;
-    return Boolean(data?.success);
-  } catch {
-    return false;
-  }
+export function createJlptBackendPort(fetchPort: BackendFetchPort): JlptBackendPort {
+  return {
+    async setJlptHighlightingEnabled(args: { enabled: boolean; signal?: AbortSignal }): Promise<boolean> {
+      try {
+        const res = await fetchPort.requestJson<{ success?: boolean }>({
+          path: "/api/toggle-jlpt",
+          method: "POST",
+          body: { enabled: args.enabled },
+          signal: args.signal,
+        });
+        return Boolean((res as any)?.success);
+      } catch {
+        return false;
+      }
+    },
+  };
 }
-

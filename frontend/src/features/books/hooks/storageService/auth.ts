@@ -1,8 +1,8 @@
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
-import { gDriveService } from "@integrations/googleDrive/gdriveService";
-import { clearAllCache } from "@integrations/googleDrive/services/driveCache";
 import { OFFLINE_BOOKS_KEY } from "@features/books/utils/offlineLibrary";
+import type { DrivePort } from "@core/drive/ports";
+import type { DriveCachePort } from "@core/drive/cachePort";
 
 export type ClerkClient = {
   loaded: boolean;
@@ -41,8 +41,10 @@ export function signInWithClerk(clerk: ClerkClient) {
 export async function secureSignOut(params: {
   clerk: ClerkClient;
   onSignedOut: () => void;
+  drive: DrivePort;
+  driveCache: DriveCachePort;
 }) {
-  const { clerk, onSignedOut } = params;
+  const { clerk, onSignedOut, drive, driveCache } = params;
 
   if (!clerk.loaded) {
     notifyError("Authentication system not loaded yet");
@@ -59,14 +61,14 @@ export async function secureSignOut(params: {
   onSignedOut();
 
   // SECURITY: Clear Google Drive tokens when Clerk user signs out.
-  gDriveService.onClerkSignOut();
+  drive.onClerkSignOut();
 
   // SECURITY: Explicitly wipe local data to prevent access by next user.
   localStorage.removeItem(OFFLINE_BOOKS_KEY);
   clearReadingProgress();
 
   try {
-    await clearAllCache();
+    await driveCache.clearAllCache();
     appLog.debug("[useStorageService] Secure logout: local cache wiped");
   } catch (e) {
     appLog.error("[useStorageService] Failed to wipe cache on logout", e);
@@ -74,4 +76,3 @@ export async function secureSignOut(params: {
 
   clearPersistedSettings();
 }
-

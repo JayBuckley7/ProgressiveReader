@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 vocabulary_bp = Blueprint('vocabulary', __name__, url_prefix='/api')
 
 
-@vocabulary_bp.route('/due_cards', methods=['POST'])
+@vocabulary_bp.route('/due-cards', methods=['POST'])
 @require_auth
 def due_cards():
     """Return JPDB due cards for the authenticated user."""
@@ -92,7 +92,7 @@ def jpdb_lookup_vocabulary():
         return jsonify({"error": str(e)}), 502
 
 
-@vocabulary_bp.route('/get_jpdb_data', methods=['POST'])
+@vocabulary_bp.route('/get-jpdb-data', methods=['POST'])
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments via service."""
     try:
@@ -115,7 +115,7 @@ def get_jpdb_data():
         return jsonify({"error": "Failed to process JPDB data"}), 500
 
 
-@vocabulary_bp.route('/mine_jpdb_word', methods=['POST'])
+@vocabulary_bp.route('/mine-jpdb-word', methods=['POST'])
 def mine_jpdb_word():
     """Add a vocabulary word to a JPDB deck via service."""
     try:
@@ -140,7 +140,7 @@ def mine_jpdb_word():
         return jsonify({"success": False, "error": str(e)}), 502
 
 
-@vocabulary_bp.route('/update_jpdb_word_state', methods=['POST'])
+@vocabulary_bp.route('/update-jpdb-word-state', methods=['POST'])
 def update_jpdb_word_state():
     """Update the study state of a JPDB vocabulary entry via service."""
     try:
@@ -163,7 +163,7 @@ def update_jpdb_word_state():
         return jsonify({"success": False, "error": str(e)}), 502
 
 
-@vocabulary_bp.route('/review_jpdb_card', methods=['POST'])
+@vocabulary_bp.route('/review-jpdb-card', methods=['POST'])
 def review_jpdb_card():
     """Record a review rating for a JPDB vocabulary card via service."""
     try:

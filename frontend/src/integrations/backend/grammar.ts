@@ -1,37 +1,33 @@
+import type { BackendFetchPort } from "@core/backend/fetchPort";
+import type { GrammarBackendPort } from "@core/backend/ports";
 import type { GrammarValidateRequest, GrammarValidateResponse } from "@core/grammar/validateCandidates";
 import type { TeachExampleRequest, TeachExampleResponse } from "@core/grammar/teachExamples";
 
-export async function validateGrammarCandidatesViaBackend(
-  request: Omit<GrammarValidateRequest, "apiKey">,
-  opts?: { signal?: AbortSignal }
-): Promise<GrammarValidateResponse> {
-  const res = await fetch("/api/grammar/validate-examples", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-    signal: opts?.signal,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `HTTP ${res.status}`);
-  }
-  return (await res.json()) as GrammarValidateResponse;
-}
+export function createGrammarBackendPort(fetchPort: BackendFetchPort): GrammarBackendPort {
+  return {
+    async validateExamples(
+      request: Omit<GrammarValidateRequest, "apiKey">,
+      opts?: { signal?: AbortSignal }
+    ): Promise<GrammarValidateResponse> {
+      return await fetchPort.requestJson<GrammarValidateResponse>({
+        path: "/api/grammar/validate-examples",
+        method: "POST",
+        body: request,
+        signal: opts?.signal,
+      });
+    },
 
-export async function teachGrammarExamplesViaBackend(
-  request: Omit<TeachExampleRequest, "apiKey">,
-  opts?: { signal?: AbortSignal }
-): Promise<TeachExampleResponse> {
-  const res = await fetch("/api/grammar/teach-examples", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-    signal: opts?.signal,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `HTTP ${res.status}`);
-  }
-  return (await res.json()) as TeachExampleResponse;
+    async teachExamples(
+      request: Omit<TeachExampleRequest, "apiKey">,
+      opts?: { signal?: AbortSignal }
+    ): Promise<TeachExampleResponse> {
+      return await fetchPort.requestJson<TeachExampleResponse>({
+        path: "/api/grammar/teach-examples",
+        method: "POST",
+        body: request,
+        signal: opts?.signal,
+      });
+    },
+  };
 }
 

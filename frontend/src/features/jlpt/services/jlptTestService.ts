@@ -1,5 +1,5 @@
-import { gDriveService } from '@integrations/googleDrive/gdriveService';
 import { appLog } from '@shared/appLog';
+import type { DrivePort } from '@core/drive/ports';
 
 export interface TestFile {
   name: string;
@@ -15,14 +15,14 @@ class JLPTTestService {
   /**
    * Scan for JSON test files in the library (Google Drive)
    */
-  async scanLibraryForTests(): Promise<TestFile[]> {
+  async scanLibraryForTests(drive: DrivePort): Promise<TestFile[]> {
     try {
-      if (!gDriveService.isSignedIn()) {
+      if (!drive.isSignedIn()) {
         return [];
       }
 
       // List all files in Google Drive
-      const files = await gDriveService.listFiles();
+      const files = await drive.listFiles();
       
       // Filter for JSON files that match JLPT test naming pattern
       const testFiles: TestFile[] = files
@@ -87,9 +87,9 @@ class JLPTTestService {
   /**
    * Get all available tests from both library and local sources
    */
-  async getAllTests(): Promise<TestFile[]> {
+  async getAllTests(drive: DrivePort): Promise<TestFile[]> {
     const [libraryTests, localTests] = await Promise.all([
-      this.scanLibraryForTests(),
+      this.scanLibraryForTests(drive),
       this.scanLocalTests(),
     ]);
 
@@ -100,12 +100,13 @@ class JLPTTestService {
    * Load test data from a test file
    * Handles both old format (array of questions) and new format (object with meta and questions)
    */
-  async loadTestData(testFile: TestFile): Promise<{ questions: any[]; meta?: any }> {
+  async loadTestData(drive: DrivePort, testFile: TestFile): Promise<{ questions: any[]; meta?: any }> {
     try {
       let data: any;
       if (testFile.source === 'library') {
         // Download from Google Drive
-        const blob = await gDriveService.downloadFile(testFile.id);
+        const blob = await drive.downloadFile(testFile.id);
+        if (!blob) throw new Error('Drive returned empty file');
         const text = await blob.text();
         data = JSON.parse(text);
       } else {

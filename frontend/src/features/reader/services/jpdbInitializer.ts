@@ -1,6 +1,6 @@
 // JPDB Highlighter Initialization Service
 import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers, reverseIndex } from '@features/reader/content/parse';
-import { getCurrentConfig, loadConfig, parseText } from '@features/reader/content/api-adapter';
+import { getCurrentConfig, loadConfig, parseText, type JpdbApiPort } from '@features/reader/content/api-adapter';
 import { JpdbWord, getJpdbData, getSentences } from '@features/reader/content/word';
 import { notifyError } from '@shared/utils/notify';
 import { showDefinitionPopup, hideDefinitionPopup } from '@features/reader/components/JpdbPopup';
@@ -217,7 +217,7 @@ export function removeJpdbHighlighting(contentElement: HTMLElement): void {
 }
 
 // Main function to apply JPDB highlighting to a content element
-export async function highlightContent(contentElement: HTMLElement): Promise<void> {
+export async function highlightContent(api: JpdbApiPort, contentElement: HTMLElement): Promise<void> {
     appLog.debug('[jpdb] highlightContent');
 
     // Ensure the DOM is clean before applying highlights (prevents nesting on re-run).
@@ -251,7 +251,7 @@ export async function highlightContent(contentElement: HTMLElement): Promise<voi
         const paragraphs = createParagraphFragments(contentElement); // Fragments have global offsets
         appLog.debug('[jpdb] created paragraph fragments', { count: paragraphs.length });
 
-        const tokens = await parseText(textSegments); // Tokens have global offsets
+        const tokens = await parseText(api, textSegments); // Tokens have global offsets
 
         // If the reader rerendered while we were awaiting tokens, offsets no longer match the DOM.
         // This can happen when quickly adjusting mix aggression. In that case, skip applying.
@@ -444,18 +444,6 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
             loadConfig(); // Call loadConfig to update the central instance in api-adapter
         };
 
-        // Properly expose the module interface to global scope
-        window.jpHighlighter = {
-            ...(window.jpHighlighter ?? {}), // Preserve any existing properties
-            initialize, // Expose initialize function
-            loadConfig, // Direct access to loadConfig
-            getCurrentConfig, // Expose getCurrentConfig
-            reinitialize, // Specific function to reload config when settings change
-            wireUpToggle, // Use the actual wireUpToggle function
-            highlightContent, // Use the actual highlightContent function
-            setDebug, // Allow toggling debug logging
-        };
-
         // Apply custom CSS if provided (from original logic)
         const initialConfig = getCurrentConfig(); // Get config for applying styles
         if (initialConfig.customWordCSS) {
@@ -476,36 +464,4 @@ export async function initialize(contentElement: HTMLElement): Promise<void> {
     } catch (error) {
         notifyError(error, { title: 'JPDB highlighter error' });
     }
-}
-
-// Wire up the existing toggle checkbox
-export function wireUpToggle(contentElement: HTMLElement): void {
-    const toggleCheckbox = document.getElementById('jlpt-highlighting') as HTMLInputElement;
-    if (!toggleCheckbox) {
-        appLog.debug('[jpdb] JLPT toggle checkbox not found');
-        return;
-    }
-    
-    toggleCheckbox.addEventListener('change', async function() {
-        const isEnabled = this.checked;
-        
-        try {
-            const { setJlptHighlightingEnabled } = await import("@integrations/backend/jlpt");
-            const ok = await setJlptHighlightingEnabled({ enabled: isEnabled });
-
-            if (ok) {
-                if (isEnabled) {
-                    await highlightContent(contentElement);
-                } else {
-                    removeJpdbHighlighting(contentElement);
-                }
-            } else {
-                notifyError('Error saving JLPT highlighting preference.', { title: 'JLPT highlighting' });
-                this.checked = !isEnabled;
-            }
-        } catch (error) {
-            notifyError(error, { title: 'JLPT highlighting error' });
-            this.checked = !isEnabled;
-        }
-    });
 }

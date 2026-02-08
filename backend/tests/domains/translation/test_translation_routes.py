@@ -32,7 +32,6 @@ def mock_provider():
     provider = Mock(spec=TranslationProvider)
     provider.translate_chapter.return_value = "<p>Translated text</p>"
     provider.stream_translate_chapter.return_value = iter(["<p>", "Translated", " text</p>"])
-    provider.translate_vocabulary.return_value = "translated word"
     return provider
 
 
@@ -88,30 +87,6 @@ def test_translate_chapter_streaming(client, mock_provider):
 def test_translate_chapter_validation_error(client):
     """Test chapter translation with invalid input."""
     response = client.post('/api/translate/chapter', json={
-        # Missing required 'content' field
-        'target_lang': 'English'
-    })
-    assert response.status_code == 400
-
-
-def test_translate_vocabulary(client, mock_provider):
-    """Test vocabulary translation endpoint."""
-    container = Mock()
-    container.make_translation_service.return_value = TranslationService(mock_provider)
-    client.application.extensions["container"] = container
-
-    response = client.post('/api/translate/vocabulary', json={
-        'content': 'test word',
-        'target_lang': 'English'
-    })
-    assert response.status_code == 200
-    data = response.get_json()
-    assert 'translated_text' in data
-
-
-def test_translate_vocabulary_validation_error(client):
-    """Test vocabulary translation with invalid input."""
-    response = client.post('/api/translate/vocabulary', json={
         # Missing required 'content' field
         'target_lang': 'English'
     })

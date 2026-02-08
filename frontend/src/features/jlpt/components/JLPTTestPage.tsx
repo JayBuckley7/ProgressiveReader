@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { jlptTestService, TestFile } from '../services/jlptTestService';
 import { JLPTTestRunner } from '../components/JLPTTestRunner';
+import { useAppDeps } from '@app/deps/AppDepsProvider';
 
 export function JLPTTestPage() {
+  const deps = useAppDeps();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [tests, setTests] = useState<TestFile[]>([]);
@@ -22,7 +24,7 @@ export function JLPTTestPage() {
     try {
       setLoading(true);
       setError(null);
-      const availableTests = await jlptTestService.getAllTests();
+      const availableTests = await jlptTestService.getAllTests(deps.drive);
       setTests(availableTests);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('jlptTest.page.failedToLoadTests'));
@@ -35,7 +37,7 @@ export function JLPTTestPage() {
     try {
       setLoadingTest(true);
       setError(null);
-      const data = await jlptTestService.loadTestData(test);
+      const data = await jlptTestService.loadTestData(deps.drive, test);
       setTestData(data);
       setSelectedTest(test);
     } catch (err) {
@@ -151,4 +153,3 @@ export function JLPTTestPage() {
     </div>
   );
 }
-
