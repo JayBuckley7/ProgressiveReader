@@ -289,7 +289,7 @@ actual fun App() {
             onUpdateReaderMixBackupMirrorToDrive = { enabled -> settingsStore.setReaderMixBackupMirrorToDrive(enabled) },
             onResetDriveOverrides = {
                 settingsStore.setDriveFolderId(null)
-                settingsStore.setBackendBaseUrl("http://10.0.2.2:5000")
+                settingsStore.setBackendBaseUrl("https://progressivereader.net")
             },
         )
     }

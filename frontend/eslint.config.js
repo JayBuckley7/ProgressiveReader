@@ -23,7 +23,7 @@ export default tseslint.config(
       js.configs.recommended,
       ...tseslint.configs.recommended,
     ],
-    files: ["**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
@@ -42,9 +42,7 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
-      // All of these overrides ease getting into
-      // TypeScript, and can be removed for stricter
-      // linting down the line.
+      // Prefer type-safe code in app code; relax in tests/workers via overrides below.
 
       // Only warn on unused variables, and ignore variables starting with `_`
       "@typescript-eslint/no-unused-vars": [
@@ -55,23 +53,38 @@ export default tseslint.config(
       // Auto-remove unused imports
       "unused-imports/no-unused-imports": "error",
 
-      // Allow escaping the compiler
-      "@typescript-eslint/ban-ts-comment": "error",
+      // Allow `@ts-expect-error` when it has a short explanation.
+      "@typescript-eslint/ban-ts-comment": [
+        "warn",
+        {
+          "ts-expect-error": "allow-with-description",
+          "minimumDescriptionLength": 10,
+        },
+      ],
 
-      // Allow explicit `any`s
-      "@typescript-eslint/no-explicit-any": "off",
+      // Discourage explicit `any` in app code (allowed in targeted overrides).
+      "@typescript-eslint/no-explicit-any": "warn",
 
-      // START: Allow implicit `any`s
+      // The no-unsafe-* rules require type-aware linting, which is currently too heavy for this repo.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
-      // END: Allow implicit `any`s
 
       // Allow async functions without await
-      // for consistency (esp. Convex `handler`s)
+      // for consistency in some integration-style code.
       "@typescript-eslint/require-await": "off",
+    },
+  },
+  {
+    files: [
+      "src/test/**/*.{ts,tsx}",
+      "src/workers/**/*.{ts,tsx}",
+      "src/types/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 );

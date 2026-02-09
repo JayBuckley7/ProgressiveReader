@@ -1,5 +1,5 @@
 import type { LlmChatPort } from "@core/llm/ports";
-import { stripMarkdownCodeFences } from "@core/utils/markdown";
+import { isRecord, parseJsonLoose } from "@core/utils/json";
 
 export type TeachExampleRequest = {
   grammar: { id: string; title: string; meaning: string; level: string };
@@ -23,24 +23,6 @@ export type TeachExampleResponse = {
     contrast?: { alternative: string; note: string } | null;
   }>;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function parseJsonLoose(raw: string): any {
-  const text = stripMarkdownCodeFences(raw || "");
-  try {
-    return JSON.parse(text);
-  } catch {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      return JSON.parse(text.slice(start, end + 1));
-    }
-    throw new Error("Failed to parse JSON response");
-  }
-}
 
 export async function teachGrammarExamplesWithLlm(
   request: TeachExampleRequest,
@@ -101,7 +83,7 @@ export async function teachGrammarExamplesWithLlm(
     signal: opts?.signal,
   });
 
-  const parsed = parseJsonLoose(completion.content);
+  const parsed = parseJsonLoose(completion.content) as any;
   const teachingsRaw = parsed?.teachings;
   if (!Array.isArray(teachingsRaw)) return { teachings: [] };
 
@@ -129,4 +111,3 @@ export async function teachGrammarExamplesWithLlm(
 
   return { teachings };
 }
-

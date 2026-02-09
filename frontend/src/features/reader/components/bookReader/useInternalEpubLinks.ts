@@ -81,9 +81,9 @@ export function useInternalEpubLinks(params: {
     // Method 2: Try to parse chapter number from href.
     if (targetChapter === -1) {
       const chapterMatch =
-        href.match(/chapter[_-]?(\\d+)/i) ||
-        href.match(/ch[_-]?(\\d+)/i) ||
-        href.match(/(\\d+)\\.x?html/i);
+        href.match(/chapter[_-]?(\d+)/i) ||
+        href.match(/ch[_-]?(\d+)/i) ||
+        href.match(/(\d+)\.x?html/i);
       if (chapterMatch) {
         const chapterNum = parseInt(chapterMatch[1], 10);
         if (chapterNum >= 1 && chapterNum <= currentBookContent.totalChapters) {
@@ -96,7 +96,7 @@ export function useInternalEpubLinks(params: {
     if (targetChapter === -1 && href.startsWith("#")) {
       const anchorId = href.substring(1);
       const currentContent = contentEl.innerHTML;
-      if (currentContent.includes(`id=\"${anchorId}\"`)) {
+      if (currentContent.includes(`id="${anchorId}"`)) {
         const anchorEl = contentEl.querySelector(`#${anchorId}`);
         if (anchorEl) {
           anchorEl.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -125,4 +125,3 @@ export function useInternalEpubLinks(params: {
     return () => contentEl.removeEventListener("click", handleLinkClick);
   }, [bookId, contentRef, handleLinkClick, isPdf]);
 }
-

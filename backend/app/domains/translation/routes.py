@@ -11,14 +11,18 @@ from .schemas import TranslateRequest, TranslateResponse
 
 translation_bp = Blueprint('translation', __name__, url_prefix='/api/translate')
 
+def _get_json_dict() -> dict:
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ValueError("Invalid JSON payload")
+    return data
+
 @translation_bp.route('/chapter', methods=['POST'])
 @optional_auth
 def translate_chapter():
     """Translate chapter HTML content with OpenAI, optimized for long-form content with streaming support."""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
+        data = _get_json_dict()
 
         normalize_aliases(
             data,
@@ -36,8 +40,10 @@ def translate_chapter():
         req = TranslateRequest(**data)
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        return jsonify({"error": "Invalid JSON payload"}), 400
 
     container = current_app.extensions["container"]
     # Get API key (user key if provided, otherwise server pool/config).
@@ -65,7 +71,7 @@ def translate_chapter():
 
     except Exception as e:
         current_app.logger.error(f"Error calling OpenAI API for chapter: {e}", exc_info=True)
-        return jsonify({"error": f"Error during chapter translation: {e}"}), 500
+        return jsonify({"error": "Error during chapter translation"}), 500
 
 
 #

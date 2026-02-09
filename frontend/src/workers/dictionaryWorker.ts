@@ -1,297 +1,228 @@
-// Dictionary Web Worker for background processing
-// This worker handles heavy dictionary operations off the main thread
+// Background dictionary work (zip parsing + term lookups) off the main thread.
 
-import { Uint8ArrayReader, ZipReader, TextWriter } from '@zip.js/zip.js';
+import { TextWriter, Uint8ArrayReader, ZipReader } from "@zip.js/zip.js";
 
-// Types for worker communication
-export interface WorkerMessage {
+export type WorkerMessage =
+  | { id: string; type: "LOAD_DICTIONARY"; payload: { arrayBuffer: ArrayBuffer } }
+  | { id: string; type: "BUILD_INDEX" }
+  | { id: string; type: "LOOKUP_TERM"; payload: { term: string } }
+  | { id: string; type: "LOOKUP_BATCH"; payload: { terms: string[] } };
+
+export type WorkerResponse =
+  | { id: string; type: "SUCCESS"; payload?: unknown }
+  | { id: string; type: "ERROR"; error: string }
+  | { id: string; type: "PROGRESS"; payload: ProgressPayload };
+
+export type ProgressPayload = {
+  stage: string;
+  progress: number;
+  processedFiles?: number;
+  totalFiles?: number;
+  totalEntries?: number;
+  totalTerms?: number;
+  indexedFiles?: number;
+};
+
+type DictionaryEntry = {
   id: string;
-  type: 'LOAD_DICTIONARY' | 'LOOKUP_TERM' | 'LOOKUP_BATCH' | 'BUILD_INDEX' | 'PROGRESS';
-  payload?: any;
-}
+  term: string;
+  reading: string;
+  definitionTags: unknown[];
+  rules: unknown[];
+  frequency: number;
+  definitions: unknown[];
+  sourceFile: string;
+};
 
-export interface WorkerResponse {
-  id: string;
-  type: 'SUCCESS' | 'ERROR' | 'PROGRESS';
-  payload?: any;
-  error?: string;
-}
+type ZipEntryLike = {
+  filename: string;
+  getData?: (writer: TextWriter) => Promise<string>;
+};
 
-// In-memory optimized data structures
+type TermBankRow = [
+  expression: string,
+  reading: string | null,
+  definitionTags?: unknown[],
+  rules?: unknown[],
+  frequency?: number,
+  definitions?: unknown[],
+];
+
 let termIndex: Map<string, string[]> | null = null; // term -> entry IDs
-let entryCache: Map<string, any> | null = null; // entry ID -> entry data
-let zipEntries: any[] | null = null;
+let entryCache: Map<string, DictionaryEntry> | null = null; // entry ID -> entry
+let zipEntries: ZipEntryLike[] | null = null;
 let isIndexed = false;
 
-/**
- * Parse JSON with error handling
- */
 function parseJson<T = unknown>(content: string): T {
   try {
-    return JSON.parse(content);
-  } catch (error) {
-    console.error('Worker: Failed to parse JSON:', error);
-    throw new Error('Invalid JSON format');
+    return JSON.parse(content) as T;
+  } catch {
+    throw new Error("Invalid JSON format");
   }
 }
 
-/**
- * Get all entries from a zip archive
- */
-async function getDictionaryArchiveEntries(data: ArrayBuffer): Promise<any[]> {
+async function getDictionaryArchiveEntries(data: ArrayBuffer): Promise<ZipEntryLike[]> {
   const zipFileReader = new Uint8ArrayReader(new Uint8Array(data));
   const zipReader = new ZipReader(zipFileReader);
-  return await zipReader.getEntries();
+  return (await zipReader.getEntries()) as unknown as ZipEntryLike[];
 }
 
-/**
- * Read entry data as string
- */
-async function readArchiveEntryDataString(entry: any): Promise<string> {
-  if (!entry.getData) {
-    throw new Error('Cannot get entry data');
-  }
+async function readArchiveEntryDataString(entry: ZipEntryLike): Promise<string> {
+  if (!entry.getData) throw new Error("Cannot get entry data");
   return await entry.getData(new TextWriter());
 }
 
-/**
- * Read entry data as parsed JSON
- */
-async function readArchiveEntryDataJson<T = unknown>(entry: any): Promise<T> {
-  const content = await readArchiveEntryDataString(entry);
-  return parseJson<T>(content);
+async function readArchiveEntryDataJson<T = unknown>(entry: ZipEntryLike): Promise<T> {
+  return parseJson<T>(await readArchiveEntryDataString(entry));
 }
 
-/**
- * Build optimized search index and cache
- */
 async function buildOptimizedIndex(): Promise<void> {
-  if (!zipEntries) {
-    throw new Error('Dictionary not loaded');
-  }
+  if (!zipEntries) throw new Error("Dictionary not loaded");
 
-  postMessage({
-    id: 'build-index',
-    type: 'PROGRESS',
-    payload: { stage: 'starting', progress: 0 }
-  } as WorkerResponse);
+  postMessage({ id: "build-index", type: "PROGRESS", payload: { stage: "starting", progress: 0 } } satisfies WorkerResponse);
 
-  // Initialize data structures
   termIndex = new Map();
   entryCache = new Map();
 
-  // Find all term bank files
-  const termBankFiles = zipEntries.filter((entry: any) => 
-    entry.filename.match(/^term_bank_\d+\.json$/)
-  );
-
-  // Sort by number for consistent processing
-  termBankFiles.sort((a: any, b: any) => {
-    const aNum = parseInt(a.filename.match(/\d+/)?.[0] || '0');
-    const bNum = parseInt(b.filename.match(/\d+/)?.[0] || '0');
+  const termBankFiles = zipEntries.filter((e) => /^term_bank_\d+\.json$/.test(e.filename));
+  termBankFiles.sort((a, b) => {
+    const aNum = Number(a.filename.match(/\d+/)?.[0] || 0);
+    const bNum = Number(b.filename.match(/\d+/)?.[0] || 0);
     return aNum - bNum;
   });
 
   let processedFiles = 0;
   let totalEntries = 0;
 
-  // Process each term bank file
   for (const termBankEntry of termBankFiles) {
     try {
-      // Load term bank data from zip
-      const termBankData = await readArchiveEntryDataJson<any[]>(termBankEntry);
-      
-      // Process each entry in the term bank
+      const termBankData = await readArchiveEntryDataJson<TermBankRow[]>(termBankEntry);
       for (let i = 0; i < termBankData.length; i++) {
-        const entry = termBankData[i];
-        
-        // Jitendex format: [expression, reading, definition_tags, rules, frequency, definitions]
-        const expression = entry[0];
-        const reading = entry[1];
+        const row = termBankData[i];
+        const expression = String(row[0] ?? "");
+        if (!expression) continue;
+
+        const reading = row[1] ? String(row[1]) : "";
         const entryId = `${expression}:${reading}:${termBankEntry.filename}:${i}`;
-        
-        // Store entry in cache
-        const processedEntry = {
+
+        const processedEntry: DictionaryEntry = {
           id: entryId,
           term: expression,
           reading: reading || expression,
-          definitionTags: entry[2] || [],
-          rules: entry[3] || [],
-          frequency: entry[4] || 0,
-          definitions: entry[5] || [],
-          sourceFile: termBankEntry.filename
+          definitionTags: Array.isArray(row[2]) ? row[2] : [],
+          rules: Array.isArray(row[3]) ? row[3] : [],
+          frequency: typeof row[4] === "number" ? row[4] : 0,
+          definitions: Array.isArray(row[5]) ? row[5] : [],
+          sourceFile: termBankEntry.filename,
         };
-        
+
         entryCache.set(entryId, processedEntry);
-        
-        // Index by term
-        if (!termIndex.has(expression)) {
-          termIndex.set(expression, []);
-        }
-        termIndex.get(expression)!.push(entryId);
-        
-        // Index by reading if different
+
+        const byTerm = termIndex.get(expression) ?? [];
+        byTerm.push(entryId);
+        termIndex.set(expression, byTerm);
+
         if (reading && reading !== expression) {
-          if (!termIndex.has(reading)) {
-            termIndex.set(reading, []);
-          }
-          termIndex.get(reading)!.push(entryId);
+          const byReading = termIndex.get(reading) ?? [];
+          byReading.push(entryId);
+          termIndex.set(reading, byReading);
         }
-        
+
         totalEntries++;
       }
-      
+
       processedFiles++;
-      
-      // Send progress updates
-      const progress = (processedFiles / termBankFiles.length) * 100;
-      postMessage({
-        id: 'build-index',
-        type: 'PROGRESS',
-        payload: { 
-          stage: 'processing', 
-          progress,
-          processedFiles,
-          totalFiles: termBankFiles.length,
-          totalEntries
-        }
-      } as WorkerResponse);
-      
-    } catch (error) {
-      console.warn(`Worker: Error processing ${termBankEntry.filename}:`, error);
+
+      const progress = termBankFiles.length ? (processedFiles / termBankFiles.length) * 100 : 100;
+      postMessage(
+        {
+          id: "build-index",
+          type: "PROGRESS",
+          payload: {
+            stage: "processing",
+            progress,
+            processedFiles,
+            totalFiles: termBankFiles.length,
+            totalEntries,
+          },
+        } satisfies WorkerResponse,
+      );
+    } catch {
+      // Skip corrupt/unknown term bank files (best-effort indexing).
     }
   }
 
   isIndexed = true;
 
-  postMessage({
-    id: 'build-index',
-    type: 'SUCCESS',
-    payload: { 
-      stage: 'complete',
-      progress: 100,
-      totalEntries,
-      totalTerms: termIndex.size,
-      indexedFiles: processedFiles
-    }
-  } as WorkerResponse);
+  postMessage(
+    {
+      id: "build-index",
+      type: "SUCCESS",
+      payload: {
+        stage: "complete",
+        progress: 100,
+        totalEntries,
+        totalTerms: termIndex.size,
+        indexedFiles: processedFiles,
+      },
+    } satisfies WorkerResponse,
+  );
 }
 
-/**
- * Fast lookup using in-memory index
- */
-function lookupTerm(term: string): any[] {
-  if (!isIndexed || !termIndex || !entryCache) {
-    throw new Error('Dictionary index not built');
-  }
-
+function lookupTerm(term: string): DictionaryEntry[] {
+  if (!isIndexed || !termIndex || !entryCache) throw new Error("Dictionary index not built");
   const entryIds = termIndex.get(term) || [];
-  const results: any[] = [];
-
+  const results: DictionaryEntry[] = [];
   for (const entryId of entryIds) {
     const entry = entryCache.get(entryId);
-    if (entry) {
-      results.push(entry);
-    }
+    if (entry) results.push(entry);
   }
-
   return results;
 }
 
-/**
- * Batch lookup for multiple terms
- */
-function lookupTermsBatch(terms: string[]): { [term: string]: any[] } {
-  const results: { [term: string]: any[] } = {};
-  
-  for (const term of terms) {
-    results[term] = lookupTerm(term);
-  }
-  
+function lookupTermsBatch(terms: string[]): Record<string, DictionaryEntry[]> {
+  const results: Record<string, DictionaryEntry[]> = {};
+  for (const term of terms) results[term] = lookupTerm(term);
   return results;
 }
 
-/**
- * Load dictionary from zip file
- */
 async function loadDictionary(arrayBuffer: ArrayBuffer): Promise<void> {
-  try {
-    // Load zip entries
-    zipEntries = await getDictionaryArchiveEntries(arrayBuffer);
-    
-    postMessage({
-      id: 'load-dictionary',
-      type: 'SUCCESS',
-      payload: { 
-        loaded: true,
-        totalFiles: zipEntries.length
-      }
-    } as WorkerResponse);
-
-  } catch (error) {
-    postMessage({
-      id: 'load-dictionary',
-      type: 'ERROR',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    } as WorkerResponse);
-  }
+  zipEntries = await getDictionaryArchiveEntries(arrayBuffer);
+  postMessage(
+    {
+      id: "load-dictionary",
+      type: "SUCCESS",
+      payload: { loaded: true, totalFiles: zipEntries.length },
+    } satisfies WorkerResponse,
+  );
 }
 
-// Worker message handler
-self.onmessage = async (event) => {
-  const message: WorkerMessage = event.data;
-  
+self.onmessage = async (event: MessageEvent) => {
+  const message = event.data as WorkerMessage;
+
   try {
     switch (message.type) {
-      case 'LOAD_DICTIONARY':
+      case "LOAD_DICTIONARY":
         await loadDictionary(message.payload.arrayBuffer);
-        break;
-        
-      case 'BUILD_INDEX':
+        return;
+
+      case "BUILD_INDEX":
         await buildOptimizedIndex();
-        break;
-        
-      case 'LOOKUP_TERM':
-        {
-          const results = lookupTerm(message.payload.term);
-          postMessage({
-            id: message.id,
-            type: 'SUCCESS',
-            payload: { results }
-          } as WorkerResponse);
-          break;
-        }
-        
-      case 'LOOKUP_BATCH':
-        {
-          const batchResults = lookupTermsBatch(message.payload.terms);
-          postMessage({
-            id: message.id,
-            type: 'SUCCESS',
-            payload: { results: batchResults }
-          } as WorkerResponse);
-          break;
-        }
-        
-      default:
-        postMessage({
-          id: message.id,
-          type: 'ERROR',
-          error: `Unknown message type: ${message.type}`
-        } as WorkerResponse);
+        return;
+
+      case "LOOKUP_TERM":
+        postMessage({ id: message.id, type: "SUCCESS", payload: { results: lookupTerm(message.payload.term) } } satisfies WorkerResponse);
+        return;
+
+      case "LOOKUP_BATCH":
+        postMessage(
+          { id: message.id, type: "SUCCESS", payload: { results: lookupTermsBatch(message.payload.terms) } } satisfies WorkerResponse,
+        );
+        return;
     }
-  } catch (error) {
-    postMessage({
-      id: message.id,
-      type: 'ERROR',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    } as WorkerResponse);
+  } catch (e) {
+    postMessage({ id: message.id, type: "ERROR", error: e instanceof Error ? e.message : "Unknown error" } satisfies WorkerResponse);
   }
 };
 
-// Handle uncaught errors
-self.onerror = (error) => {
-  console.error('Dictionary worker error:', error);
-};
-
-export {}; // Make this a module 
+export {}; // Make this a module

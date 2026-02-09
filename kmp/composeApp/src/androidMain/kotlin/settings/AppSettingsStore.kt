@@ -130,7 +130,7 @@ class AppSettingsStore(private val context: Context) {
     }
 
     private fun Preferences.toAppSettings(): AppSettings {
-        val backend = this[Keys.backendBaseUrl] ?: "http://10.0.2.2:5000"
+        val backend = this[Keys.backendBaseUrl] ?: "https://progressivereader.net"
         val folderId = this[Keys.driveFolderId]
         val theme =
             this[Keys.theme]

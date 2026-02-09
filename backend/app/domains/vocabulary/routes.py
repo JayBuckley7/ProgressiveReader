@@ -10,6 +10,12 @@ logger = logging.getLogger(__name__)
 
 vocabulary_bp = Blueprint('vocabulary', __name__, url_prefix='/api')
 
+def _get_json_dict() -> dict:
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ValueError("Invalid JSON payload")
+    return data
+
 
 @vocabulary_bp.route('/due-cards', methods=['POST'])
 @require_auth
@@ -27,7 +33,7 @@ def due_cards():
         return jsonify({"error": "Authentication required"}), 401
     except Exception as e:
         current_app.logger.error(f"Error fetching due cards: {e}", exc_info=True)
-        return jsonify({"error": "Failed to fetch cards"}), 400
+        return jsonify({"error": "Failed to fetch cards"}), 500
 
 
 @vocabulary_bp.route('/list-user-decks', methods=['POST'])
@@ -96,13 +102,9 @@ def jpdb_lookup_vocabulary():
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments via service."""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     service = current_app.extensions["container"].vocabulary_service
     try:
@@ -119,13 +121,9 @@ def get_jpdb_data():
 def mine_jpdb_word():
     """Add a vocabulary word to a JPDB deck via service."""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     service = current_app.extensions["container"].vocabulary_service
     try:
@@ -144,13 +142,9 @@ def mine_jpdb_word():
 def update_jpdb_word_state():
     """Update the study state of a JPDB vocabulary entry via service."""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     service = current_app.extensions["container"].vocabulary_service
     try:
@@ -167,13 +161,9 @@ def update_jpdb_word_state():
 def review_jpdb_card():
     """Record a review rating for a JPDB vocabulary card via service."""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON payload"}), 400
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     service = current_app.extensions["container"].vocabulary_service
     try:
@@ -193,11 +183,9 @@ def review_jpdb_card():
 def add_vocabulary_word():
     """Add a vocabulary word to the user's collection."""
     try:
-        data = request.get_json() or {}
-    except ValidationError as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     
     user_id = get_user_id()
     service = current_app.extensions["container"].vocabulary_service
@@ -248,11 +236,9 @@ def get_user_vocabulary():
 def toggle_mastered(word_id: int):
     """Toggle mastered status for a vocabulary word."""
     try:
-        data = request.get_json() or {}
-    except ValidationError as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     
     user_id = get_user_id()
     service = current_app.extensions["container"].vocabulary_service

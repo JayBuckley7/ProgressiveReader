@@ -27,7 +27,7 @@ export async function uploadBookToDrive(params: {
   meta: { title: string; fileType: string; cover?: Blob; processOCR?: boolean };
   covers: BookCoverService;
   clerkUser?: ClerkUserLike;
-  onOCRProgress?: OCRProgressCallback;
+  onOCRProgress?: OcrProgressCallback;
 }): Promise<BookMetadata> {
   const { drive, driveAuth, driveOcr, bookCache, bookStorage, file, meta, covers, clerkUser, onOCRProgress } = params;
 

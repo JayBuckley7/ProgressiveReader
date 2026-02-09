@@ -1,5 +1,5 @@
 import type { LlmChatPort } from "@core/llm/ports";
-import { stripMarkdownCodeFences } from "@core/utils/markdown";
+import { isRecord, parseJsonLoose } from "@core/utils/json";
 
 export type GrammarValidateSpan = {
   start: number;
@@ -34,24 +34,6 @@ export type GrammarValidateMatch = {
 export type GrammarValidateResponse = {
   matches: GrammarValidateMatch[];
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function parseJsonLoose(raw: string): any {
-  const text = stripMarkdownCodeFences(raw || "");
-  try {
-    return JSON.parse(text);
-  } catch {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      return JSON.parse(text.slice(start, end + 1));
-    }
-    throw new Error("Failed to parse JSON response");
-  }
-}
 
 export async function validateGrammarCandidatesWithLlm(
   request: GrammarValidateRequest,
@@ -113,7 +95,7 @@ export async function validateGrammarCandidatesWithLlm(
     signal: opts?.signal,
   });
 
-  const parsed = parseJsonLoose(completion.content);
+  const parsed = parseJsonLoose(completion.content) as any;
   const rawMatches = parsed?.matches;
   if (!Array.isArray(rawMatches)) return { matches: [] };
 
@@ -167,4 +149,3 @@ export async function validateGrammarCandidatesWithLlm(
 
   return { matches };
 }
-

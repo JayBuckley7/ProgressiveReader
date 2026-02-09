@@ -6,7 +6,7 @@ import { notifyError } from "@shared/utils/notify";
 
 import { getGrammarPointById } from "@features/grammar/data/grammarCatalog";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
-import type { GrammarExample, GrammarScanBoundary, GrammarScanState, GrammarStateV2 } from "@features/grammar/types";
+import type { GrammarExample, GrammarScanState, GrammarStateV2 } from "@features/grammar/types";
 import { mergeAndLimitExamples } from "@features/grammar/services/grammarExamples";
 import { loadGrammarStateV2FromLocalStorage, saveGrammarStateV2ToLocalStorage } from "@features/grammar/services/grammarStateStorage";
 import { mineLibraryForGrammarExamples } from "@features/grammar/services/grammarLibraryMiner";

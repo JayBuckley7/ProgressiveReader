@@ -9,15 +9,19 @@ from .controller import GrammarController
 
 grammar_bp = Blueprint("grammar", __name__, url_prefix="/api/grammar")
 
+def _get_json_dict() -> dict:
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise ValueError("Invalid JSON payload")
+    return data
+
 @grammar_bp.route("/validate-examples", methods=["POST"])
 @optional_auth
 def validate_examples():
     try:
-        data = request.get_json() or {}
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     try:
         container = current_app.extensions["container"]
@@ -31,18 +35,16 @@ def validate_examples():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error during grammar validation: {e}", exc_info=True)
-        return jsonify({"error": f"Error during grammar validation: {e}"}), 500
+        return jsonify({"error": "Error during grammar validation"}), 500
 
 
 @grammar_bp.route("/teach-examples", methods=["POST"])
 @optional_auth
 def teach_examples():
     try:
-        data = request.get_json() or {}
-    except ValidationError as e:
-        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Invalid JSON payload: {str(e)}"}), 400
+        data = _get_json_dict()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     try:
         container = current_app.extensions["container"]
@@ -56,4 +58,4 @@ def teach_examples():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error during grammar teaching generation: {e}", exc_info=True)
-        return jsonify({"error": f"Error during grammar teaching generation: {e}"}), 500
+        return jsonify({"error": "Error during grammar teaching generation"}), 500
