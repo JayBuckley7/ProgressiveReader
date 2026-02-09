@@ -56,9 +56,16 @@ def create_app(config_class=None) -> Flask:
 
         config_class = _DefaultConfig
 
+    # IMPORTANT: This factory lives under `app/bootstrap/`, so Flask's default `root_path`
+    # would be `/app/app/bootstrap` in the container. If we used `static_folder="static"`,
+    # Flask would look for assets under `/app/app/bootstrap/static`, but our Dockerfile
+    # copies the Vite build to `/app/app/static`.
+    backend_app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    static_dir = os.path.join(backend_app_dir, "static")
+
     app = Flask(
         __name__,
-        static_folder="static",  # points at backend/app/static
+        static_folder=static_dir,  # points at backend/app/static
         static_url_path="",  # serve at /
     )
 
@@ -89,4 +96,3 @@ def create_app(config_class=None) -> Flask:
 
 
 __all__ = ["create_app"]
-
