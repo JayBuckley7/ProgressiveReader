@@ -31,6 +31,17 @@ def register_spa_routes(app) -> None:
         if path.startswith("api/"):
             return "API endpoint not found", 404
 
+        # DEBUG: Log static folder info
+        try:
+            abs_static = os.path.abspath(app.static_folder)
+            app.logger.error(f"DEBUG: Static folder: {app.static_folder} -> {abs_static}")
+            if os.path.exists(abs_static):
+                app.logger.error(f"DEBUG: Contents: {os.listdir(abs_static)}")
+            else:
+                app.logger.error(f"DEBUG: Static folder does not exist!")
+        except Exception as e:
+            app.logger.error(f"DEBUG: Error checking static folder: {e}")
+
         if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
         return send_from_directory(app.static_folder, "index.html")
