@@ -39,8 +39,8 @@ if [ $curl_status -ne 0 ] || [ -z "$OPENAI_RESPONSE" ]; then
   OPENAI_RESPONSE='{}'
 fi
 echo "OpenAI: $OPENAI_RESPONSE"
-CONFIGURED=$(echo "$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l)
-POOL_SIZE=$(echo "$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+')
+CONFIGURED=$(echo "$OPENAI_RESPONSE" | grep -o '"openai_key_configured"[[:space:]]*:[[:space:]]*true' | wc -l || echo 0)
+POOL_SIZE=$(echo "$OPENAI_RESPONSE" | grep -o '"pool_size"[[:space:]]*:[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo 0)
 if [ "$CONFIGURED" -eq 1 ] && [ "${POOL_SIZE:-0}" -gt 0 ]; then
   echo "笨・OpenAI pool looks healthy (pool_size=${POOL_SIZE})"
 else
