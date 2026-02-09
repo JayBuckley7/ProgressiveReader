@@ -2,7 +2,7 @@
 
 "Your Digital Bookshelf, Reimagined."
 
-## 🚀 Deployment
+##  Deployment
 
 The site is hosted on **Google Cloud Run** and managed via **Terraform** (infrastructure) and **Cloud Build** (app deployment).
 
