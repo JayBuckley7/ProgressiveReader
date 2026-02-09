@@ -477,7 +477,8 @@ function useStorageService() {
 
   const loadSettings = useCallback(async (): Promise<CloudSettings | null> => {
     return await loadCloudSettings({
-      ensureAuthenticated: deps.driveAuth.ensureAuthenticated,
+      // Don't pass the method reference directly (would lose `this` for class-based impls).
+      ensureAuthenticated: () => deps.driveAuth.ensureAuthenticated(),
       onUnauthorized: () => {
         handleUnauthorizedCloudSettingsLoad({
           sessionCooldownMs: SESSION_COOLDOWN_MS,

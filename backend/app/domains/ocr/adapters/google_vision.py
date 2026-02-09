@@ -174,55 +174,32 @@ class GoogleVisionOcrProcessor(OcrProcessorPort):
             output_page.insert_htmlbox(text_rect, html_word)
 
     def _find_windows_cjk_font(self) -> str:
-        """Find Windows CJK font for rendering."""
-        fonts_dir = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts")
-        # Try registry for most reliable mapping
-        try:
-            import winreg  # type: ignore
+        """Best-effort lookup for a Windows-installed CJK font.
 
-            reg_path = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path)
-            num_vals = winreg.QueryInfoKey(key)[1]
-            preferred_names = [
-                "Yu Gothic UI",
-                "Yu Gothic",
-                "Meiryo",
-                "MS Gothic",
-                "MS Mincho",
-                "MS PGothic",
-                "MS PMincho",
-            ]
-            found = {}
-            for i in range(num_vals):
-                try:
-                    name, value, _ = winreg.EnumValue(key, i)
-                except OSError:
-                    continue
-                for pref in preferred_names:
-                    if pref.lower() in name.lower():
-                        font_file = value
-                        if not os.path.isabs(font_file):
-                            font_file = os.path.join(fonts_dir, font_file)
-                        if os.path.exists(font_file):
-                            found[pref] = font_file
-            for pref in preferred_names:
-                if pref in found:
-                    return found[pref]
-        except Exception:
-            pass
-        # Fallback: common filenames
-        fallback_files = [
+        Keep this Windows-only and avoid registry access so the adapter stays
+        deployable in Linux container environments.
+        """
+        if os.name != "nt":
+            return ""
+
+        fonts_dir = os.path.join(os.environ.get("WINDIR", r"C:\\Windows"), "Fonts")
+
+        # Common CJK font filenames across Windows installs. We only need a path that exists.
+        preferred_files = [
             "YuGothR.ttc",
             "YuGothB.ttc",
+            "YuGothM.ttc",
             "meiryo.ttc",
+            "meiryob.ttc",
             "msgothic.ttc",
             "msmincho.ttc",
-            "meiryob.ttc",
         ]
-        for fn in fallback_files:
+
+        for fn in preferred_files:
             p = os.path.join(fonts_dir, fn)
             if os.path.exists(p):
                 return p
+
         return ""
 
     def process_pdf(self, pdf_bytes: bytes, progress_callback: ProgressCallback | None = None) -> bytes:

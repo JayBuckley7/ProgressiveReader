@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import Dict, Optional
 
 from .ports import JsonChatProvider
+from .prompts import build_refine_swaps_messages
 from .schemas import MixRefineRequest, MixRefineResponse
 
 
@@ -63,12 +63,12 @@ class MixService:
 
         text_sample = (req.text_sample or "")[:4000]
 
-        payload = []
+        tasks = []
         allowed_ids_by_key: Dict[str, set[str]] = {}
         for gloss_key in keys:
             candidates = (req.candidates_by_key.get(gloss_key) or [])[:3]
             allowed_ids_by_key[gloss_key] = set(c.id for c in candidates if isinstance(c.id, str) and c.id)
-            payload.append(
+            tasks.append(
                 {
                     "glossKey": gloss_key,
                     "examples": _pick_example_sentences(text_sample, gloss_key, 5),
@@ -85,30 +85,19 @@ class MixService:
                 }
             )
 
-        system = (
-            "You choose the best Japanese vocabulary candidate for each English noun phrase in context. "
-            "Return STRICT JSON only, no prose, no markdown."
-        )
-
-        user = (
-            "Given the following English context and candidate Japanese words, pick the best replacement for each glossKey. "
-            "If none fit, set it to null.\n\n"
-            "Return JSON in this exact shape:\n"
-            '{ "choices": { "glossKey": "vid/sid or null", "...": null } }\n\n'
-            f"Context (excerpt):\n{text_sample}\n\n"
-            f"Tasks:\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n"
-        )
-
         data = self._provider.chat_json(
             model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            messages=build_refine_swaps_messages(text_sample=text_sample, tasks=tasks),
             temperature=0.0,
         )
 
-        raw_choices = data.get("choices") if isinstance(data, dict) else None
+        raw_choices: Dict[str, Optional[str]] | None = None
+        try:
+            parsed = MixRefineResponse.model_validate(data, strict=True)
+            raw_choices = parsed.choices
+        except Exception:
+            raw_choices = None
+
         if not isinstance(raw_choices, dict):
             return MixRefineResponse(choices={k: None for k in keys}, model_used=model)
 

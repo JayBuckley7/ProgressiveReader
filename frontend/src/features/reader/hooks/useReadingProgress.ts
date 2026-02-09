@@ -173,10 +173,46 @@ export function useReadingProgress({
     };
   }, [saveProgress]);
 
+  const navigateToChapter = useCallback(
+    (ch: number) => {
+      // Clear any pending progress save before switching chapters.
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
+      }
+
+      // If chapter is controlled externally, delegate and exit early.
+      if (setCurrentChapter) {
+        setCurrentChapter(ch);
+        return;
+      }
+
+      // Update local state and URL.
+      setLocalChapter(ch);
+      const newParams = new URLSearchParams(searchParamsRef.current);
+      newParams.set("ch", String(ch));
+      setSearchParamsRef.current(newParams, { replace: true });
+
+      // Reset scroll position at the next tick (after new content renders).
+      setTimeout(() => {
+        scrollPositionRef.current = 0;
+        if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+        }
+      }, 0);
+
+      // Save progress for the new chapter starting at position 0.
+      if (bookMetadata && progressLoaded) {
+        saveBookProgress(bookId, ch, 0, undefined, undefined, bookMetadata.fileType);
+      }
+    },
+    [bookId, bookMetadata, contentRef, progressLoaded, saveBookProgress, setCurrentChapter, setLocalChapter]
+  );
+
   return {
     progressLoaded: progressLoaded as boolean,
     scrollPositionRef,
     saveProgressTimeoutRef,
     saveProgress,
+    navigateToChapter,
   };
 }

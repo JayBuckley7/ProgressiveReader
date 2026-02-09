@@ -47,12 +47,13 @@ class DriveAuthManager implements DriveAuthPort {
     });
   }
 
-  async ensureAuthenticated(): Promise<boolean> {
+  // Use arrow fields so consumers can safely pass these functions around without losing `this`.
+  ensureAuthenticated = async (): Promise<boolean> => {
     if (this.isAuthenticating && this.authPromise) return this.authPromise;
     this.isAuthenticating = true;
     this.authPromise = this.performAuthentication();
     return this.authPromise;
-  }
+  };
 
   private async performAuthentication(): Promise<boolean> {
     try {
@@ -63,23 +64,23 @@ class DriveAuthManager implements DriveAuthPort {
     }
   }
 
-  onAuthStateChange(callback: (isAuthenticated: boolean) => void): () => void {
+  onAuthStateChange = (callback: (isAuthenticated: boolean) => void): () => void => {
     this.listeners.push(callback);
     callback(this.drive.isSignedIn());
     return () => {
       this.listeners = this.listeners.filter((cb) => cb !== callback);
     };
-  }
+  };
 
-  isAuthenticated(): boolean {
+  isAuthenticated = (): boolean => {
     return this.drive.isSignedIn();
-  }
+  };
 
-  async signOut(): Promise<void> {
+  signOut = async (): Promise<void> => {
     this.isAuthenticating = false;
     this.authPromise = null;
     await Promise.resolve(this.drive.signOut());
-  }
+  };
 }
 
 function createDrivePort(): DrivePort {
@@ -181,4 +182,3 @@ export function createAppDeps(): AppDeps {
     driveAuth,
   };
 }
-

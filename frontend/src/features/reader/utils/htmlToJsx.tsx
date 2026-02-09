@@ -57,6 +57,26 @@ const convertAttribs = (attribs: Record<string, string>) => {
     if (!isValidDomName(key)) continue;
 
     const keyLower = key.toLowerCase();
+
+    // Normalize common SVG attributes that often show up in EPUB HTML as raw SVG.
+    // React expects camelCase prop names (and cannot accept namespaces like `xlink:href`).
+    if (keyLower === "xlink:href") {
+      converted.xlinkHref = value;
+      continue;
+    }
+    if (keyLower === "xmlns:xlink") {
+      converted.xmlnsXlink = value;
+      continue;
+    }
+    if (keyLower === "viewbox") {
+      converted.viewBox = value;
+      continue;
+    }
+    if (keyLower === "preserveaspectratio") {
+      converted.preserveAspectRatio = value;
+      continue;
+    }
+
     // Convert 'class' to 'className' for JSX compatibility
     if (keyLower === 'class') {
       converted.className = value;
