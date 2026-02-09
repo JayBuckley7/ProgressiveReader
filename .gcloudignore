@@ -183,3 +183,14 @@ setup-*
 #   $ gcloud topic gcloudignore
 #
 env.json
+
+# Heavy directories not needed for Docker build
+frontend/node_modules/**
+node_modules/**
+web/**
+mobile/**
+terraform/**
+kmp/**
+.venv/**
+venv/**
+.git/**

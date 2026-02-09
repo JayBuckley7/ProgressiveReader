@@ -1,0 +1,974 @@
+﻿Build and Deploy	UNKNOWN STEP	・ｿ2026-01-22T01:55:41.6639815Z Current runner version: '2.331.0'
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6676938Z ##[group]Runner Image Provisioner
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6678227Z Hosted Compute Agent
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6679145Z Version: 20251211.462
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6680532Z Commit: 6cbad8c2bb55d58165063d031ccabf57e2d2db61
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6681458Z Build Date: 2025-12-11T16:28:49Z
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6682127Z Worker ID: {852b2d6d-5d85-4a26-83da-425e802a2ed2}
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6682900Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6683719Z ##[group]Operating System
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6684347Z Ubuntu
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6684763Z 24.04.3
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6685301Z LTS
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6685721Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6686236Z ##[group]Runner Image
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6686859Z Image: ubuntu-24.04
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6687330Z Version: 20260111.209.1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6688292Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260111.209/images/ubuntu/Ubuntu2404-Readme.md
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6689864Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260111.209
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6690856Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6691974Z ##[group]GITHUB_TOKEN Permissions
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6694319Z Contents: read
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6694969Z Metadata: read
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6695428Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6697532Z Secret source: Actions
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.6698622Z Prepare workflow directory
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.7113541Z Prepare all required actions
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:41.7172406Z Getting action download info
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:42.0803574Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:42.1945727Z Download action repository 'google-github-actions/auth@v2' (SHA:c200f3691d83b41bf9bbd8638997a462592937ed)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:42.5979272Z Download action repository 'google-github-actions/setup-gcloud@v2' (SHA:e427ad8a34f8676edf47cf7d7925499adf3eb74f)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:42.8971908Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2088211Z Complete job name: Build and Deploy
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2929047Z ##[group]Run actions/checkout@v4
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2930344Z with:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2931140Z   repository: JayBuckley7/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2932448Z   token: ***
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2933168Z   ssh-strict: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2934103Z   ssh-user: git
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2934869Z   persist-credentials: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2935744Z   clean: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2936499Z   sparse-checkout-cone-mode: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2937458Z   fetch-depth: 1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2938217Z   fetch-tags: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2939005Z   show-progress: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2939789Z   lfs: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2940515Z   submodules: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2941304Z   set-safe-directory: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.2942422Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4060386Z Syncing repository: JayBuckley7/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4063268Z ##[group]Getting Git version info
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4065296Z Working directory is '/home/runner/work/ProgressiveReader/ProgressiveReader'
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4067366Z [command]/usr/bin/git version
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4122774Z git version 2.52.0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4150467Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4166211Z Temporarily overriding HOME='/home/runner/work/_temp/bd97dd4c-b92b-4711-8415-13be953fad09' before making global git config changes
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4168877Z Adding repository directory to the temporary git global config as a safe directory
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4180538Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ProgressiveReader/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4222308Z Deleting the contents of '/home/runner/work/ProgressiveReader/ProgressiveReader'
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4225895Z ##[group]Initializing the repository
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4230861Z [command]/usr/bin/git init /home/runner/work/ProgressiveReader/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4328124Z hint: Using 'master' as the name for the initial branch. This default branch name
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4331142Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4334279Z hint: to use in all of your new repositories, which will suppress this warning,
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4336910Z hint: call:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4338148Z hint:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4339842Z hint: 	git config --global init.defaultBranch <name>
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4341913Z hint:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4343956Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4347061Z hint: 'development'. The just-created branch can be renamed via this command:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4349382Z hint:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4350507Z hint: 	git branch -m <name>
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4351938Z hint:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4353105Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4355570Z Initialized empty Git repository in /home/runner/work/ProgressiveReader/ProgressiveReader/.git/
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4360189Z [command]/usr/bin/git remote add origin https://github.com/JayBuckley7/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4382931Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4385557Z ##[group]Disabling automatic garbage collection
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4387677Z [command]/usr/bin/git config --local gc.auto 0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4418333Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4420489Z ##[group]Setting up auth
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4426404Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4459866Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4799193Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.4830436Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.5059922Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.5101076Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.5331504Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.5368283Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.5377228Z ##[group]Fetching the repository
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:43.5379880Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d4a61b7642991603dbb50344b95eec16a70dc836:refs/remotes/origin/main
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6389837Z From https://github.com/JayBuckley7/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6392121Z  * [new ref]         d4a61b7642991603dbb50344b95eec16a70dc836 -> origin/main
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6423112Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6424119Z ##[group]Determining the checkout info
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6426204Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6432934Z [command]/usr/bin/git sparse-checkout disable
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6482348Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6511916Z ##[group]Checking out the ref
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:47.6518399Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1185028Z Switched to a new branch 'main'
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1185902Z branch 'main' set up to track 'origin/main'.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1217364Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1261601Z [command]/usr/bin/git log -1 --format=%H
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1285042Z d4a61b7642991603dbb50344b95eec16a70dc836
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1526706Z ##[group]Run google-github-actions/auth@v2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1527059Z with:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1527580Z   workload_identity_provider: projects/49477009498/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1528463Z   service_account: github-actions@floofgg.iam.gserviceaccount.com
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1528824Z   create_credentials_file: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1529078Z   export_environment_variables: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1529342Z   universe: googleapis.com
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1529567Z   cleanup_credentials: true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1529803Z   access_token_lifetime: 3600s
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1530167Z   access_token_scopes: https://www.googleapis.com/auth/cloud-platform
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1530563Z   id_token_include_email: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.1530800Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.3693650Z Created credentials file at "/home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4666396Z ##[group]Run google-github-actions/setup-gcloud@v2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4666739Z with:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4667053Z   project_id: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4667380Z   version: latest
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4667581Z   skip_install: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4667802Z   skip_tool_cache: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4668012Z env:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4668516Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4669397Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4670173Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4670813Z   CLOUDSDK_CORE_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4671073Z   CLOUDSDK_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4671295Z   GCLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4671514Z   GCP_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4671760Z   GOOGLE_CLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:48.4671992Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:55:50.9380704Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/3ac80778-91c2-422e-9b8a-744aebd2689d -f /home/runner/work/_temp/537fb714-d2c9-4349-950f-7a20f6c6ea42
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:11.0757952Z Successfully authenticated
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.3933217Z Successfully set default project
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4143627Z ##[group]Run actions/setup-node@v4
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4143914Z with:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4144097Z   node-version: 20
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4144294Z   cache: npm
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4144528Z   cache-dependency-path: frontend/package-lock.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4144837Z   always-auth: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4145047Z   check-latest: false
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4145359Z   token: ***
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4145538Z env:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4146039Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4146887Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4147675Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4148200Z   CLOUDSDK_CORE_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4148444Z   CLOUDSDK_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4148699Z   GCLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4148910Z   GCP_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4149124Z   GOOGLE_CLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4149430Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4149777Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.4150043Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.6164343Z Found in cache @ /opt/hostedtoolcache/node/20.19.6/x64
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:12.6172254Z ##[group]Environment details
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.0468398Z node: v20.19.6
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.0468788Z npm: 10.8.2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.0469084Z yarn: 1.22.22
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.0470144Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.0500239Z [command]/opt/hostedtoolcache/node/20.19.6/x64/bin/npm config get cache
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.3470126Z /home/runner/.npm
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:15.5356690Z Cache hit for: node-cache-Linux-x64-npm-ad0cde5218bcf64ec618dd892ae445c52d63477ac2097b06cd0a60e73acdcc57
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:16.6752134Z Received 96468992 of 123104530 (78.4%), 92.0 MBs/sec
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:16.9364340Z Received 123104530 of 123104530 (100.0%), 93.0 MBs/sec
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:16.9365853Z Cache Size: ~117 MB (123104530 B)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:16.9495281Z [command]/usr/bin/tar -xf /home/runner/work/_temp/a9ee4ee3-959d-4074-9723-bab08ae6c704/cache.tzst -P -C /home/runner/work/ProgressiveReader/ProgressiveReader --use-compress-program unzstd
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2161206Z Cache restored successfully
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2405760Z Cache restored from key: node-cache-Linux-x64-npm-ad0cde5218bcf64ec618dd892ae445c52d63477ac2097b06cd0a60e73acdcc57
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2565945Z ##[group]Run set -e
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2566309Z [36;1mset -e[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2566529Z [36;1mnpm ci[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2606900Z shell: /usr/bin/bash -e {0}
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2607166Z env:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2607705Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2608587Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2609399Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2609916Z   CLOUDSDK_CORE_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2610195Z   CLOUDSDK_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2610427Z   GCLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2610655Z   GCP_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2610880Z   GOOGLE_CLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2611233Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2611595Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:17.2611876Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:21.9567617Z npm warn deprecated @types/localforage@0.0.34: This is a stub types definition for localforage (https://github.com/localForage/localForage). localforage provides its own type definitions, so you don't need @types/localforage installed!
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:22.5304334Z npm warn deprecated @xmldom/xmldom@0.7.13: this version is no longer supported, please update to at least 0.8.*
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9086127Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9086919Z added 570 packages, and audited 571 packages in 13s
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9087393Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9087674Z 109 packages are looking for funding
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9088180Z   run `npm fund` for details
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9606981Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9608507Z 12 vulnerabilities (7 moderate, 4 high, 1 critical)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9608953Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9609347Z To address issues that do not require attention, run:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9609894Z   npm audit fix
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9610101Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9610473Z To address all issues (including breaking changes), run:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9611052Z   npm audit fix --force
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9611332Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:29.9611538Z Run `npm audit` for details.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0325104Z ##[group]Run if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0325773Z [36;1mif [[ "${GITHUB_REF_NAME}" == "main" ]]; then[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0326431Z [36;1m  echo "SERVICE_NAME=progressive-reader"  >> $GITHUB_OUTPUT[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0327138Z [36;1m  echo "ENVIRONMENT=prod"                 >> $GITHUB_OUTPUT[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0327691Z [36;1melse[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0328176Z [36;1m  echo "SERVICE_NAME=progressive-reader-dev" >> $GITHUB_OUTPUT[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0328900Z [36;1m  echo "ENVIRONMENT=dev"                  >> $GITHUB_OUTPUT[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0329445Z [36;1mfi[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0370716Z shell: /usr/bin/bash -e {0}
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0371102Z env:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0371974Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0373706Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0375359Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0376248Z   CLOUDSDK_CORE_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0376666Z   CLOUDSDK_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0377045Z   GCLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0377410Z   GCP_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0377766Z   GOOGLE_CLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0378284Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0378884Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0379341Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0527303Z ##[group]Run unset SERVICE_URL || true
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0527858Z [36;1munset SERVICE_URL || true[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0528301Z [36;1mgcloud builds submit \[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0528752Z [36;1m  --project=floofgg \[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0529199Z [36;1m  --config=cloudbuild.yaml \[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0530228Z [36;1m  --substitutions=_COMMIT_SHA=d4a61b7642991603dbb50344b95eec16a70dc836,_SERVICE_NAME=progressive-reader,_ENVIRONMENT=prod \[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0531369Z [36;1m  --gcs-log-dir=gs://floofgg_cloudbuild/logs \[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0531880Z [36;1m  .[0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0573101Z shell: /usr/bin/bash -e {0}
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0573683Z env:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0574573Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0576128Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0577590Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0578500Z   CLOUDSDK_CORE_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0578913Z   CLOUDSDK_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0579316Z   GCLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0579688Z   GCP_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0580056Z   GOOGLE_CLOUD_PROJECT: floofgg
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0580588Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0581204Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:30.0581658Z ##[endgroup]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:31.5065337Z Creating temporary archive of 370 file(s) totalling 222.7 MiB before compression.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:48.5887346Z Uploading tarball of [.] to [gs://floofgg_cloudbuild/source/1769046990.992634-b48386030190432bb48f0a397441d534.tgz]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:49.9257368Z Created [https://cloudbuild.googleapis.com/v1/projects/floofgg/locations/global/builds/371f4f0e-e447-4672-8a8e-f505c716f4da].
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:49.9261348Z Logs are available at [ https://console.cloud.google.com/cloud-build/builds/371f4f0e-e447-4672-8a8e-f505c716f4da?project=49477009498 ].
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:56:50.1319029Z Waiting for build to complete. Polling interval: 1 second(s).
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1536682Z ----------------------------- REMOTE BUILD OUTPUT ------------------------------
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1537644Z starting build "371f4f0e-e447-4672-8a8e-f505c716f4da"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1538054Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1538152Z FETCHSOURCE
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1538921Z Fetching storage object: gs://floofgg_cloudbuild/source/1769046990.992634-b48386030190432bb48f0a397441d534.tgz#1769047009171897
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1539980Z Copying gs://floofgg_cloudbuild/source/1769046990.992634-b48386030190432bb48f0a397441d534.tgz#1769047009171897...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1540753Z / [0 files][    0.0 B/ 83.1 MiB]                                                
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1541128Z -
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1541532Z - [0 files][ 74.2 MiB/ 83.1 MiB]                                                
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1542096Z - [1 files][ 83.1 MiB/ 83.1 MiB]                                                
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1542460Z \
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1542786Z Operation completed over 1 objects/83.1 MiB.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1543639Z BUILD
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1544090Z Starting Step #0 - "Load Frontend Env Vars"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1544748Z Step #0 - "Load Frontend Env Vars": Already have image (with digest): gcr.io/cloud-builders/gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1545947Z Step #0 - "Load Frontend Env Vars": 﨟樣・Loading frontend environment variables from PR-app-config...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1546870Z Step #0 - "Load Frontend Env Vars": debconf: delaying package configuration, since apt-utils is not installed
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1547913Z Step #0 - "Load Frontend Env Vars": 隨ｨ繝ｻFrontend environment variables extracted
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1548425Z Finished Step #0 - "Load Frontend Env Vars"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1549040Z Starting Step #1 - "Build Docker Image"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1549667Z Step #1 - "Build Docker Image": Already have image (with digest): gcr.io/cloud-builders/docker
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1550500Z Step #1 - "Build Docker Image": 﨟樒舞 Building Docker image (frontend build args only)...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1551181Z Step #1 - "Build Docker Image": Sending build context to Docker daemon  190.6MB
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1551536Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1551855Z Step #1 - "Build Docker Image": Step 1/29 : FROM node:20 AS frontend-builder
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1552419Z Step #1 - "Build Docker Image": 20: Pulling from library/node
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1552915Z Step #1 - "Build Docker Image": c1be109a62df: Already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1553571Z Step #1 - "Build Docker Image": 64538a062a61: Already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1554063Z Step #1 - "Build Docker Image": fd1872fa12cc: Already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1554545Z Step #1 - "Build Docker Image": 4925cf9d8be8: Already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1555060Z Step #1 - "Build Docker Image": a4e7ff66fb57: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1555561Z Step #1 - "Build Docker Image": a3a70fd5f6e7: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1556059Z Step #1 - "Build Docker Image": 40d284f66487: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1556603Z Step #1 - "Build Docker Image": 5caff02cd241: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1557119Z Step #1 - "Build Docker Image": 5caff02cd241: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1557634Z Step #1 - "Build Docker Image": 5caff02cd241: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1558151Z Step #1 - "Build Docker Image": a4e7ff66fb57: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1558668Z Step #1 - "Build Docker Image": a4e7ff66fb57: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1559131Z Step #1 - "Build Docker Image": 40d284f66487: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1559585Z Step #1 - "Build Docker Image": 40d284f66487: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1560031Z Step #1 - "Build Docker Image": a4e7ff66fb57: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1560500Z Step #1 - "Build Docker Image": a3a70fd5f6e7: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1560945Z Step #1 - "Build Docker Image": a3a70fd5f6e7: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1561382Z Step #1 - "Build Docker Image": a3a70fd5f6e7: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1561817Z Step #1 - "Build Docker Image": 40d284f66487: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1562245Z Step #1 - "Build Docker Image": 5caff02cd241: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1562929Z Step #1 - "Build Docker Image": Digest: sha256:3680462e16df266d30b103a3e38e2bc315bf917d0ab873fbddbee437bf0bd2d0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1563752Z Step #1 - "Build Docker Image": Status: Downloaded newer image for node:20
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1564201Z Step #1 - "Build Docker Image":  ---> 0bbc9ccc88e2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1564632Z Step #1 - "Build Docker Image": Step 2/29 : WORKDIR /frontend
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1565092Z Step #1 - "Build Docker Image":  ---> Running in dab281a58515
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1565621Z Step #1 - "Build Docker Image": Removing intermediate container dab281a58515
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1566087Z Step #1 - "Build Docker Image":  ---> 43981377de34
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1567405Z Step #1 - "Build Docker Image": Step 3/29 : RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*     && ln -s /usr/bin/python3 /usr/bin/python     && pip3 install --no-cache-dir --break-system-packages "pydantic>=2.11.2"
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1568676Z Step #1 - "Build Docker Image":  ---> Running in f5f9678bbc48
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1569294Z Step #1 - "Build Docker Image": Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1570046Z Step #1 - "Build Docker Image": Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1570885Z Step #1 - "Build Docker Image": Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1571717Z Step #1 - "Build Docker Image": Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8792 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1572674Z Step #1 - "Build Docker Image": Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1573658Z Step #1 - "Build Docker Image": Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [291 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1574342Z Step #1 - "Build Docker Image": Fetched 9344 kB in 2s (5697 kB/s)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1574807Z Step #1 - "Build Docker Image": Reading package lists...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1575229Z Step #1 - "Build Docker Image": Reading package lists...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1575672Z Step #1 - "Build Docker Image": Building dependency tree...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1576130Z Step #1 - "Build Docker Image": Reading state information...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1576688Z Step #1 - "Build Docker Image": python3 is already the newest version (3.11.2-1+b1).
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1577307Z Step #1 - "Build Docker Image": python3 set to manually installed.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1577908Z Step #1 - "Build Docker Image": The following additional packages will be installed:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1578607Z Step #1 - "Build Docker Image":   build-essential javascript-common libjs-jquery libjs-sphinxdoc
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1579390Z Step #1 - "Build Docker Image":   libjs-underscore libpython3-dev libpython3.11 libpython3.11-dev python3-dev
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1580193Z Step #1 - "Build Docker Image":   python3-pkg-resources python3-setuptools python3-wheel python3.11-dev
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1580820Z Step #1 - "Build Docker Image": Suggested packages:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1581326Z Step #1 - "Build Docker Image":   apache2 | lighttpd | httpd python-setuptools-doc
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1581908Z Step #1 - "Build Docker Image": The following NEW packages will be installed:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1582579Z Step #1 - "Build Docker Image":   build-essential javascript-common libjs-jquery libjs-sphinxdoc
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1583502Z Step #1 - "Build Docker Image":   libjs-underscore libpython3-dev libpython3.11 libpython3.11-dev python3-dev
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1584493Z Step #1 - "Build Docker Image":   python3-pip python3-pkg-resources python3-setuptools python3-wheel
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1585056Z Step #1 - "Build Docker Image":   python3.11-dev
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1585636Z Step #1 - "Build Docker Image": 0 upgraded, 14 newly installed, 0 to remove and 0 not upgraded.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1586213Z Step #1 - "Build Docker Image": Need to get 10.1 MB of archives.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1586841Z Step #1 - "Build Docker Image": After this operation, 47.0 MB of additional disk space will be used.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1587682Z Step #1 - "Build Docker Image": Get:1 http://deb.debian.org/debian bookworm/main amd64 build-essential amd64 12.9 [7704 B]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1588588Z Step #1 - "Build Docker Image": Get:2 http://deb.debian.org/debian bookworm/main amd64 javascript-common all 11+nmu1 [6260 B]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1608559Z Step #1 - "Build Docker Image": Get:3 http://deb.debian.org/debian bookworm/main amd64 libjs-jquery all 3.6.1+dfsg+~3.5.14-1 [326 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1610261Z Step #1 - "Build Docker Image": Get:4 http://deb.debian.org/debian bookworm/main amd64 libjs-underscore all 1.13.4~dfsg+~1.11.4-3 [116 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1611995Z Step #1 - "Build Docker Image": Get:5 http://deb.debian.org/debian bookworm/main amd64 libjs-sphinxdoc all 5.3.0-4 [130 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1613785Z Step #1 - "Build Docker Image": Get:6 http://deb.debian.org/debian bookworm/main amd64 libpython3.11 amd64 3.11.2-6+deb12u6 [1987 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1615122Z Step #1 - "Build Docker Image": Get:7 http://deb.debian.org/debian bookworm/main amd64 libpython3.11-dev amd64 3.11.2-6+deb12u6 [4742 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1616118Z Step #1 - "Build Docker Image": Get:8 http://deb.debian.org/debian bookworm/main amd64 libpython3-dev amd64 3.11.2-1+b1 [9572 B]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1617116Z Step #1 - "Build Docker Image": Get:9 http://deb.debian.org/debian bookworm/main amd64 python3.11-dev amd64 3.11.2-6+deb12u6 [615 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1618197Z Step #1 - "Build Docker Image": Get:10 http://deb.debian.org/debian bookworm/main amd64 python3-dev amd64 3.11.2-1+b1 [26.2 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1619232Z Step #1 - "Build Docker Image": Get:11 http://deb.debian.org/debian bookworm/main amd64 python3-pkg-resources all 66.1.1-1+deb12u2 [297 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1620273Z Step #1 - "Build Docker Image": Get:12 http://deb.debian.org/debian bookworm/main amd64 python3-setuptools all 66.1.1-1+deb12u2 [522 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1621246Z Step #1 - "Build Docker Image": Get:13 http://deb.debian.org/debian bookworm/main amd64 python3-wheel all 0.38.4-2 [30.8 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1622203Z Step #1 - "Build Docker Image": Get:14 http://deb.debian.org/debian bookworm/main amd64 python3-pip all 23.0.1+dfsg-1 [1325 kB]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1623671Z Step #1 - "Build Docker Image": [91mdebconf: delaying package configuration, since apt-utils is not installed
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1624464Z Step #1 - "Build Docker Image": [0mFetched 10.1 MB in 1s (19.0 MB/s)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1625097Z Step #1 - "Build Docker Image": Selecting previously unselected package build-essential.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1625660Z Step #1 - "Build Docker Image": (Reading database ... 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1626004Z (Reading database ... 5%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1626263Z (Reading database ... 10%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1626509Z (Reading database ... 15%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1626757Z (Reading database ... 20%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1627005Z (Reading database ... 25%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1627244Z (Reading database ... 30%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1627483Z (Reading database ... 35%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1627726Z (Reading database ... 40%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1627966Z (Reading database ... 45%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1628204Z (Reading database ... 50%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1628435Z (Reading database ... 55%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1628674Z (Reading database ... 60%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1628914Z (Reading database ... 65%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1629153Z (Reading database ... 70%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1629390Z (Reading database ... 75%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1629631Z (Reading database ... 80%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1629872Z (Reading database ... 85%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1630115Z (Reading database ... 90%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1630345Z (Reading database ... 95%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1630588Z (Reading database ... 100%
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1631033Z (Reading database ... 23258 files and directories currently installed.)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1631712Z Step #1 - "Build Docker Image": Preparing to unpack .../00-build-essential_12.9_amd64.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1632328Z Step #1 - "Build Docker Image": Unpacking build-essential (12.9) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1632953Z Step #1 - "Build Docker Image": Selecting previously unselected package javascript-common.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1633921Z Step #1 - "Build Docker Image": Preparing to unpack .../01-javascript-common_11+nmu1_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1634565Z Step #1 - "Build Docker Image": Unpacking javascript-common (11+nmu1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1635192Z Step #1 - "Build Docker Image": Selecting previously unselected package libjs-jquery.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1635920Z Step #1 - "Build Docker Image": Preparing to unpack .../02-libjs-jquery_3.6.1+dfsg+~3.5.14-1_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1636596Z Step #1 - "Build Docker Image": Unpacking libjs-jquery (3.6.1+dfsg+~3.5.14-1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1637249Z Step #1 - "Build Docker Image": Selecting previously unselected package libjs-underscore.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1638170Z Step #1 - "Build Docker Image": Preparing to unpack .../03-libjs-underscore_1.13.4~dfsg+~1.11.4-3_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1638876Z Step #1 - "Build Docker Image": Unpacking libjs-underscore (1.13.4~dfsg+~1.11.4-3) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1639529Z Step #1 - "Build Docker Image": Selecting previously unselected package libjs-sphinxdoc.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1640217Z Step #1 - "Build Docker Image": Preparing to unpack .../04-libjs-sphinxdoc_5.3.0-4_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1640817Z Step #1 - "Build Docker Image": Unpacking libjs-sphinxdoc (5.3.0-4) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1641449Z Step #1 - "Build Docker Image": Selecting previously unselected package libpython3.11:amd64.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1642289Z Step #1 - "Build Docker Image": Preparing to unpack .../05-libpython3.11_3.11.2-6+deb12u6_amd64.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1642968Z Step #1 - "Build Docker Image": Unpacking libpython3.11:amd64 (3.11.2-6+deb12u6) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1643848Z Step #1 - "Build Docker Image": Selecting previously unselected package libpython3.11-dev:amd64.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1644635Z Step #1 - "Build Docker Image": Preparing to unpack .../06-libpython3.11-dev_3.11.2-6+deb12u6_amd64.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:57:33.1645329Z Step #1 - "Build Docker Image": Unpacking libpython3.11-dev:amd64 (3.11.2-6+deb12u6) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4585226Z Step #1 - "Build Docker Image": Selecting previously unselected package libpython3-dev:amd64.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4586625Z Step #1 - "Build Docker Image": Preparing to unpack .../07-libpython3-dev_3.11.2-1+b1_amd64.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4587798Z Step #1 - "Build Docker Image": Unpacking libpython3-dev:amd64 (3.11.2-1+b1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4588567Z Step #1 - "Build Docker Image": Selecting previously unselected package python3.11-dev.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4589310Z Step #1 - "Build Docker Image": Preparing to unpack .../08-python3.11-dev_3.11.2-6+deb12u6_amd64.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4590004Z Step #1 - "Build Docker Image": Unpacking python3.11-dev (3.11.2-6+deb12u6) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4590638Z Step #1 - "Build Docker Image": Selecting previously unselected package python3-dev.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4591322Z Step #1 - "Build Docker Image": Preparing to unpack .../09-python3-dev_3.11.2-1+b1_amd64.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4591956Z Step #1 - "Build Docker Image": Unpacking python3-dev (3.11.2-1+b1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4592589Z Step #1 - "Build Docker Image": Selecting previously unselected package python3-pkg-resources.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4593640Z Step #1 - "Build Docker Image": Preparing to unpack .../10-python3-pkg-resources_66.1.1-1+deb12u2_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4594404Z Step #1 - "Build Docker Image": Unpacking python3-pkg-resources (66.1.1-1+deb12u2) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4595095Z Step #1 - "Build Docker Image": Selecting previously unselected package python3-setuptools.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4595834Z Step #1 - "Build Docker Image": Preparing to unpack .../11-python3-setuptools_66.1.1-1+deb12u2_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4596525Z Step #1 - "Build Docker Image": Unpacking python3-setuptools (66.1.1-1+deb12u2) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4597167Z Step #1 - "Build Docker Image": Selecting previously unselected package python3-wheel.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4597842Z Step #1 - "Build Docker Image": Preparing to unpack .../12-python3-wheel_0.38.4-2_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4598426Z Step #1 - "Build Docker Image": Unpacking python3-wheel (0.38.4-2) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4598987Z Step #1 - "Build Docker Image": Selecting previously unselected package python3-pip.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4599648Z Step #1 - "Build Docker Image": Preparing to unpack .../13-python3-pip_23.0.1+dfsg-1_all.deb ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4600249Z Step #1 - "Build Docker Image": Unpacking python3-pip (23.0.1+dfsg-1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4600835Z Step #1 - "Build Docker Image": Setting up python3-pkg-resources (66.1.1-1+deb12u2) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4601446Z Step #1 - "Build Docker Image": Setting up javascript-common (11+nmu1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4602019Z Step #1 - "Build Docker Image": Setting up python3-setuptools (66.1.1-1+deb12u2) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4602948Z Step #1 - "Build Docker Image": Setting up libpython3.11:amd64 (3.11.2-6+deb12u6) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4603717Z Step #1 - "Build Docker Image": Setting up python3-wheel (0.38.4-2) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4604317Z Step #1 - "Build Docker Image": Setting up libpython3.11-dev:amd64 (3.11.2-6+deb12u6) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4604910Z Step #1 - "Build Docker Image": Setting up python3-pip (23.0.1+dfsg-1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4605437Z Step #1 - "Build Docker Image": Setting up build-essential (12.9) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4606143Z Step #1 - "Build Docker Image": Setting up libjs-jquery (3.6.1+dfsg+~3.5.14-1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4606911Z Step #1 - "Build Docker Image": Setting up libjs-underscore (1.13.4~dfsg+~1.11.4-3) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4607525Z Step #1 - "Build Docker Image": Setting up libpython3-dev:amd64 (3.11.2-1+b1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4608115Z Step #1 - "Build Docker Image": Setting up python3.11-dev (3.11.2-6+deb12u6) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4608658Z Step #1 - "Build Docker Image": Setting up libjs-sphinxdoc (5.3.0-4) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4609188Z Step #1 - "Build Docker Image": Setting up python3-dev (3.11.2-1+b1) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4609797Z Step #1 - "Build Docker Image": Processing triggers for libc-bin (2.36-9+deb12u13) ...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4610329Z Step #1 - "Build Docker Image": Collecting pydantic>=2.11.2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4610905Z Step #1 - "Build Docker Image":   Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4611947Z Step #1 - "Build Docker Image":      笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 463.6/463.6 kB 14.5 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4612560Z Step #1 - "Build Docker Image": Collecting annotated-types>=0.6.0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4613186Z Step #1 - "Build Docker Image":   Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4614088Z Step #1 - "Build Docker Image": Collecting pydantic-core==2.41.5
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4614905Z Step #1 - "Build Docker Image":   Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4615872Z Step #1 - "Build Docker Image":      笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 2.1/2.1 MB 26.9 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4616446Z Step #1 - "Build Docker Image": Collecting typing-extensions>=4.14.1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4617063Z Step #1 - "Build Docker Image":   Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4617893Z Step #1 - "Build Docker Image":      笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 44.6/44.6 kB 81.3 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4618474Z Step #1 - "Build Docker Image": Collecting typing-inspection>=0.4.2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4619106Z Step #1 - "Build Docker Image":   Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4620042Z Step #1 - "Build Docker Image": Installing collected packages: typing-extensions, annotated-types, typing-inspection, pydantic-core, pydantic
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4621273Z Step #1 - "Build Docker Image": Successfully installed annotated-types-0.7.0 pydantic-2.12.5 pydantic-core-2.41.5 typing-extensions-4.15.0 typing-inspection-0.4.2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4623172Z Step #1 - "Build Docker Image": [91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4624761Z Step #1 - "Build Docker Image": [0mRemoving intermediate container f5f9678bbc48
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4625281Z Step #1 - "Build Docker Image":  ---> b711e609dba8
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4625775Z Step #1 - "Build Docker Image": Step 4/29 : ARG VITE_CLERK_PUBLISHABLE_KEY
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4626279Z Step #1 - "Build Docker Image":  ---> Running in d283354f9bea
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4626778Z Step #1 - "Build Docker Image": Removing intermediate container d283354f9bea
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4627401Z Step #1 - "Build Docker Image":  ---> 34938bf645a1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4627854Z Step #1 - "Build Docker Image": Step 5/29 : ARG VITE_GDRIVE_CLIENT_ID
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4628326Z Step #1 - "Build Docker Image":  ---> Running in 4fdd59b5a5a7
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4628821Z Step #1 - "Build Docker Image": Removing intermediate container 4fdd59b5a5a7
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4629267Z Step #1 - "Build Docker Image":  ---> da7071fcf120
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4629673Z Step #1 - "Build Docker Image": Step 6/29 : ARG VITE_GAPI_KEY
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4630104Z Step #1 - "Build Docker Image":  ---> Running in e55d1e6b07f5
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4630595Z Step #1 - "Build Docker Image": Removing intermediate container e55d1e6b07f5
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4631152Z Step #1 - "Build Docker Image":  ---> 74c4ff323076
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4631773Z Step #1 - "Build Docker Image": Step 7/29 : ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4632348Z Step #1 - "Build Docker Image":  ---> Running in 82af89ba47f9
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4632848Z Step #1 - "Build Docker Image": Removing intermediate container 82af89ba47f9
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4633310Z Step #1 - "Build Docker Image":  ---> 2b7117905878
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4634116Z Step #1 - "Build Docker Image": Step 8/29 : ENV VITE_GDRIVE_CLIENT_ID=$VITE_GDRIVE_CLIENT_ID
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4634660Z Step #1 - "Build Docker Image":  ---> Running in c2a1a7ec160a
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4635177Z Step #1 - "Build Docker Image": Removing intermediate container c2a1a7ec160a
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4635629Z Step #1 - "Build Docker Image":  ---> 302e5d704fc7
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4636096Z Step #1 - "Build Docker Image": Step 9/29 : ENV VITE_GAPI_KEY=$VITE_GAPI_KEY
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4636591Z Step #1 - "Build Docker Image":  ---> Running in 8fe5aabd3e29
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4637097Z Step #1 - "Build Docker Image": Removing intermediate container 8fe5aabd3e29
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4637558Z Step #1 - "Build Docker Image":  ---> ed1c7493e081
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4638141Z Step #1 - "Build Docker Image": Step 10/29 : COPY frontend/package.json frontend/package-lock.json ./
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4638673Z Step #1 - "Build Docker Image":  ---> 933420cc2c85
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4639066Z Step #1 - "Build Docker Image": Step 11/29 : RUN npm ci
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4639505Z Step #1 - "Build Docker Image":  ---> Running in ce7bb9f530e4
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4641186Z Step #1 - "Build Docker Image": [91mnpm warn deprecated @types/localforage@0.0.34: This is a stub types definition for localforage (https://github.com/localForage/localForage). localforage provides its own type definitions, so you don't need @types/localforage installed!
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4642872Z Step #1 - "Build Docker Image": [0m[91mnpm warn deprecated @xmldom/xmldom@0.7.13: this version is no longer supported, please update to at least 0.8.*
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4643761Z Step #1 - "Build Docker Image": [0m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4644261Z Step #1 - "Build Docker Image": added 570 packages, and audited 571 packages in 30s
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4644711Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4645119Z Step #1 - "Build Docker Image": 109 packages are looking for funding
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4645580Z Step #1 - "Build Docker Image":   run `npm fund` for details
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4645940Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4646399Z Step #1 - "Build Docker Image": 12 vulnerabilities (7 moderate, 4 high, 1 critical)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4646835Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4647318Z Step #1 - "Build Docker Image": To address issues that do not require attention, run:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4647799Z Step #1 - "Build Docker Image":   npm audit fix
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4648126Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4648614Z Step #1 - "Build Docker Image": To address all issues (including breaking changes), run:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4649144Z Step #1 - "Build Docker Image":   npm audit fix --force
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4649493Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4649863Z Step #1 - "Build Docker Image": Run `npm audit` for details.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4650567Z Step #1 - "Build Docker Image": [91mnpm notice
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4651132Z Step #1 - "Build Docker Image": npm notice New major version of npm available! 10.8.2 -> 11.8.0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4651852Z Step #1 - "Build Docker Image": npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.8.0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4652518Z Step #1 - "Build Docker Image": npm notice To update run: npm install -g npm@11.8.0
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:58:16.4652977Z Step #1 - "Build Docker Image": npm notice
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5645977Z Step #1 - "Build Docker Image": [0mRemoving intermediate container ce7bb9f530e4
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5647883Z Step #1 - "Build Docker Image":  ---> 44e51dab3697
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5648739Z Step #1 - "Build Docker Image": Step 12/29 : COPY scripts/ /scripts/
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5649518Z Step #1 - "Build Docker Image":  ---> 22b887e7da48
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5650184Z Step #1 - "Build Docker Image": Step 13/29 : COPY backend/app /backend/app
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5650961Z Step #1 - "Build Docker Image":  ---> 6cac99227de4
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5651729Z Step #1 - "Build Docker Image": Step 14/29 : COPY frontend/ ./
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5652418Z Step #1 - "Build Docker Image":  ---> 3248c41ab857
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5653120Z Step #1 - "Build Docker Image": Step 15/29 : RUN npm run build
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5654180Z Step #1 - "Build Docker Image":  ---> Running in 09e4824bac1e
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5654551Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5654974Z Step #1 - "Build Docker Image": > progressive-reader@0.0.0 prebuild
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5655456Z Step #1 - "Build Docker Image": > npm run types:generate
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5655832Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5656159Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5656598Z Step #1 - "Build Docker Image": > progressive-reader@0.0.0 types:generate
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5657132Z Step #1 - "Build Docker Image": > python ../scripts/generate_ts_types.py
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5657533Z Step #1 - "Build Docker Image":
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5657899Z Step #1 - "Build Docker Image": Scanning domain schemas...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5662616Z Step #1 - "Build Docker Image": Found 46 models: AddBookmarkRequest, Book, Bookmark, DeleteCachedTranslationRequest, GetBookmarksRequest, ToggleJlptRequest, ToggleJlptResponse, TranslateRequest, TranslateResponse, KanjiSearchRequest, KanjiSearchResponse, KanjiSearchResult, UpdateKanjiJlptRequest, UpdateKanjiJlptResponse, SaveSettingsRequest, SaveSettingsResponse, SessionInfo, SettingsResponse, UserInfo, DriveFile, HealthResponse, ListFilesRequest, TokenResponse, UploadFileRequest, OCRProcessResponse, AddVocabularyWordRequest, AddVocabularyWordResponse, Deck, DueCard, FetchDueCardsGoogleOAuthRequest, GetJpdbDataRequest, ListUserDecksRequest, MineWordRequest, ProcessedToken, ReviewCardRequest, Ruby, ToggleMasteredRequest, UpdateWordStateRequest, Vocabulary, VocabularyListResponse, AddOpenAIKeyRequest, AdminStatusResponse, OpenAIKeyListResponse, OpenAIKeyOperationResponse, OpenAIKeyStatusResponse, RemoveOpenAIKeyRequest
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5666735Z Step #1 - "Build Docker Image": Generated 46 TypeScript interfaces in /frontend/src/types/api.ts
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5667235Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5667643Z Step #1 - "Build Docker Image": > progressive-reader@0.0.0 build
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5668065Z Step #1 - "Build Docker Image": > vite build
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5668384Z Step #1 - "Build Docker Image": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5668804Z Step #1 - "Build Docker Image": vite v6.3.5 building for production...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5669240Z Step #1 - "Build Docker Image": transforming...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5670031Z Step #1 - "Build Docker Image": [91mBrowserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5670683Z Step #1 - "Build Docker Image":   npx update-browserslist-db@latest
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5671399Z Step #1 - "Build Docker Image":   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5672485Z Step #1 - "Build Docker Image": [0m笨・215 modules transformed.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5672915Z Step #1 - "Build Docker Image": rendering chunks...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5673512Z Step #1 - "Build Docker Image": computing gzip size...
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5674257Z Step #1 - "Build Docker Image": dist/index.html                     0.56 kB 笏・gzip:   0.34 kB
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5675012Z Step #1 - "Build Docker Image": dist/assets/index-FZHIlYca.css     58.42 kB 笏・gzip:   9.67 kB
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5675777Z Step #1 - "Build Docker Image": dist/assets/index-Cf0Jueek.js   4,616.56 kB 笏・gzip: 853.92 kB
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5676298Z Step #1 - "Build Docker Image": [91m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5677011Z Step #1 - "Build Docker Image": (!) Some chunks are larger than 500 kB after minification. Consider:
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5677703Z Step #1 - "Build Docker Image": - Using dynamic import() to code-split the application
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5678706Z Step #1 - "Build Docker Image": - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5679738Z Step #1 - "Build Docker Image": - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5680386Z Step #1 - "Build Docker Image": [0m笨・built in 29.72s
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5680887Z Step #1 - "Build Docker Image": Removing intermediate container 09e4824bac1e
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5681363Z Step #1 - "Build Docker Image":  ---> e89bf97ad550
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5681820Z Step #1 - "Build Docker Image": Step 16/29 : FROM python:3.11-slim
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5682335Z Step #1 - "Build Docker Image": 3.11-slim: Pulling from library/python
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5682818Z Step #1 - "Build Docker Image": 119d43eec815: Already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5683273Z Step #1 - "Build Docker Image": 5b09819094bb: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5683960Z Step #1 - "Build Docker Image": 3e731abb5c1d: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5684423Z Step #1 - "Build Docker Image": 0b2bf04f68e9: Pulling fs layer
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5684876Z Step #1 - "Build Docker Image": 0b2bf04f68e9: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5685346Z Step #1 - "Build Docker Image": 0b2bf04f68e9: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5685805Z Step #1 - "Build Docker Image": 5b09819094bb: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5686271Z Step #1 - "Build Docker Image": 5b09819094bb: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5686723Z Step #1 - "Build Docker Image": 3e731abb5c1d: Verifying Checksum
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5687180Z Step #1 - "Build Docker Image": 3e731abb5c1d: Download complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5687617Z Step #1 - "Build Docker Image": 5b09819094bb: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5688061Z Step #1 - "Build Docker Image": 3e731abb5c1d: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5688499Z Step #1 - "Build Docker Image": 0b2bf04f68e9: Pull complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5689182Z Step #1 - "Build Docker Image": Digest: sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5689920Z Step #1 - "Build Docker Image": Status: Downloaded newer image for python:3.11-slim
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5690408Z Step #1 - "Build Docker Image":  ---> fa659464a114
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5690859Z Step #1 - "Build Docker Image": Step 17/29 : ENV PYTHONUNBUFFERED=1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5691339Z Step #1 - "Build Docker Image":  ---> Running in 551dc0959bb1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5691857Z Step #1 - "Build Docker Image": Removing intermediate container 551dc0959bb1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5692312Z Step #1 - "Build Docker Image":  ---> d873b6267fb1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5692714Z Step #1 - "Build Docker Image": Step 18/29 : WORKDIR /app
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5693152Z Step #1 - "Build Docker Image":  ---> Running in 93aadd1b189c
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5693918Z Step #1 - "Build Docker Image": Removing intermediate container 93aadd1b189c
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5694394Z Step #1 - "Build Docker Image":  ---> 296ff01f22f4
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5694894Z Step #1 - "Build Docker Image": Step 19/29 : COPY backend/requirements.txt ./
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5695512Z Step #1 - "Build Docker Image":  ---> f2657e3d68b7
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5696075Z Step #1 - "Build Docker Image": Step 20/29 : RUN pip install --no-cache-dir -r requirements.txt
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5696634Z Step #1 - "Build Docker Image":  ---> Running in afef0506a331
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5697209Z Step #1 - "Build Docker Image": Collecting Flask==3.1.1 (from -r requirements.txt (line 1))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5697888Z Step #1 - "Build Docker Image":   Downloading flask-3.1.1-py3-none-any.whl.metadata (3.0 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5698596Z Step #1 - "Build Docker Image": Collecting EbookLib>=0.18 (from -r requirements.txt (line 3))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5699440Z Step #1 - "Build Docker Image":   Downloading ebooklib-0.20-py3-none-any.whl.metadata (6.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5700228Z Step #1 - "Build Docker Image": Collecting beautifulsoup4==4.12.3 (from -r requirements.txt (line 4))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5701013Z Step #1 - "Build Docker Image":   Downloading beautifulsoup4-4.12.3-py3-none-any.whl.metadata (3.8 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5701747Z Step #1 - "Build Docker Image": Collecting lxml==5.1.0 (from -r requirements.txt (line 5))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5702610Z Step #1 - "Build Docker Image":   Downloading lxml-5.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5703663Z Step #1 - "Build Docker Image": Collecting openai==1.78.1 (from -r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5704380Z Step #1 - "Build Docker Image":   Downloading openai-1.78.1-py3-none-any.whl.metadata (25 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5705103Z Step #1 - "Build Docker Image": Collecting requests==2.31.0 (from -r requirements.txt (line 7))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5705830Z Step #1 - "Build Docker Image":   Downloading requests-2.31.0-py3-none-any.whl.metadata (4.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5706550Z Step #1 - "Build Docker Image": Collecting Werkzeug==3.1.3 (from -r requirements.txt (line 8))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5707276Z Step #1 - "Build Docker Image":   Downloading werkzeug-3.1.3-py3-none-any.whl.metadata (3.7 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5708010Z Step #1 - "Build Docker Image": Collecting gunicorn==21.2.0 (from -r requirements.txt (line 9))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5708726Z Step #1 - "Build Docker Image":   Downloading gunicorn-21.2.0-py3-none-any.whl.metadata (4.1 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5709489Z Step #1 - "Build Docker Image": Collecting async-timeout==5.0.1 (from -r requirements.txt (line 10))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5710248Z Step #1 - "Build Docker Image":   Downloading async_timeout-5.0.1-py3-none-any.whl.metadata (5.1 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5711006Z Step #1 - "Build Docker Image": Collecting python-dotenv==1.1.0 (from -r requirements.txt (line 11))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5711786Z Step #1 - "Build Docker Image":   Downloading python_dotenv-1.1.0-py3-none-any.whl.metadata (24 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5712520Z Step #1 - "Build Docker Image": Collecting Flask-Login==0.6.3 (from -r requirements.txt (line 12))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5713256Z Step #1 - "Build Docker Image":   Downloading Flask_Login-0.6.3-py3-none-any.whl.metadata (5.8 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5714298Z Step #1 - "Build Docker Image": Collecting Flask-SQLAlchemy==3.1.1 (from -r requirements.txt (line 13))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5715076Z Step #1 - "Build Docker Image":   Downloading flask_sqlalchemy-3.1.1-py3-none-any.whl.metadata (3.4 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5715869Z Step #1 - "Build Docker Image": Collecting clerk-backend-api==3.0.1 (from -r requirements.txt (line 14))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5716648Z Step #1 - "Build Docker Image":   Downloading clerk_backend_api-3.0.1-py3-none-any.whl.metadata (42 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5717570Z Step #1 - "Build Docker Image":      笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・42.6/42.6 kB 176.0 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5718286Z Step #1 - "Build Docker Image": Collecting PyJWT==2.10.1 (from -r requirements.txt (line 15))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5718983Z Step #1 - "Build Docker Image":   Downloading PyJWT-2.10.1-py3-none-any.whl.metadata (4.0 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5719874Z Step #1 - "Build Docker Image": Collecting Flask-Cors==6.0.0 (from -r requirements.txt (line 16))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5720634Z Step #1 - "Build Docker Image":   Downloading flask_cors-6.0.0-py3-none-any.whl.metadata (961 bytes)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5721379Z Step #1 - "Build Docker Image": Collecting pydantic>=2.11.2 (from -r requirements.txt (line 17))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5722116Z Step #1 - "Build Docker Image":   Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5723000Z Step #1 - "Build Docker Image":      笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・90.6/90.6 kB 235.3 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5723933Z Step #1 - "Build Docker Image": Collecting flake8==7.3.0 (from -r requirements.txt (line 18))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5724660Z Step #1 - "Build Docker Image":   Downloading flake8-7.3.0-py2.py3-none-any.whl.metadata (3.8 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5725383Z Step #1 - "Build Docker Image": Collecting pytest==7.4.4 (from -r requirements.txt (line 19))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5726090Z Step #1 - "Build Docker Image":   Downloading pytest-7.4.4-py3-none-any.whl.metadata (7.9 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5726859Z Step #1 - "Build Docker Image": Collecting google-cloud-vision>=3.0.0 (from -r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5727674Z Step #1 - "Build Docker Image":   Downloading google_cloud_vision-3.12.0-py3-none-any.whl.metadata (9.8 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5728433Z Step #1 - "Build Docker Image": Collecting PyMuPDF>=1.23.0 (from -r requirements.txt (line 21))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5729247Z Step #1 - "Build Docker Image":   Downloading pymupdf-1.26.7-cp310-abi3-manylinux_2_28_x86_64.whl.metadata (3.4 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5730084Z Step #1 - "Build Docker Image": Collecting blinker>=1.9.0 (from Flask==3.1.1->-r requirements.txt (line 1))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5730834Z Step #1 - "Build Docker Image":   Downloading blinker-1.9.0-py3-none-any.whl.metadata (1.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5731579Z Step #1 - "Build Docker Image": Collecting click>=8.1.3 (from Flask==3.1.1->-r requirements.txt (line 1))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5732317Z Step #1 - "Build Docker Image":   Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5733076Z Step #1 - "Build Docker Image": Collecting itsdangerous>=2.2.0 (from Flask==3.1.1->-r requirements.txt (line 1))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5734125Z Step #1 - "Build Docker Image":   Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5734923Z Step #1 - "Build Docker Image": Collecting jinja2>=3.1.2 (from Flask==3.1.1->-r requirements.txt (line 1))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:20.5735651Z Step #1 - "Build Docker Image":   Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9791389Z Step #1 - "Build Docker Image": Collecting markupsafe>=2.1.1 (from Flask==3.1.1->-r requirements.txt (line 1))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9793228Z Step #1 - "Build Docker Image":   Downloading markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9795395Z Step #1 - "Build Docker Image": Collecting soupsieve>1.2 (from beautifulsoup4==4.12.3->-r requirements.txt (line 4))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9796808Z Step #1 - "Build Docker Image":   Downloading soupsieve-2.8.3-py3-none-any.whl.metadata (4.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9797813Z Step #1 - "Build Docker Image": Collecting anyio<5,>=3.5.0 (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9798736Z Step #1 - "Build Docker Image":   Downloading anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9799668Z Step #1 - "Build Docker Image": Collecting distro<2,>=1.7.0 (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9800571Z Step #1 - "Build Docker Image":   Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9801494Z Step #1 - "Build Docker Image": Collecting httpx<1,>=0.23.0 (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9802386Z Step #1 - "Build Docker Image":   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9803822Z Step #1 - "Build Docker Image": Collecting jiter<1,>=0.4.0 (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9804854Z Step #1 - "Build Docker Image":   Downloading jiter-0.12.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.2 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9805734Z Step #1 - "Build Docker Image": Collecting sniffio (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9806482Z Step #1 - "Build Docker Image":   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9807199Z Step #1 - "Build Docker Image": Collecting tqdm>4 (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9808068Z Step #1 - "Build Docker Image":   Downloading tqdm-4.67.1-py3-none-any.whl.metadata (57 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9809108Z Step #1 - "Build Docker Image":      笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・57.7/57.7 kB 164.8 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9809955Z Step #1 - "Build Docker Image": Collecting typing-extensions<5,>=4.11 (from openai==1.78.1->-r requirements.txt (line 6))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9810802Z Step #1 - "Build Docker Image":   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9811684Z Step #1 - "Build Docker Image": Collecting charset-normalizer<4,>=2 (from requests==2.31.0->-r requirements.txt (line 7))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9812781Z Step #1 - "Build Docker Image":   Downloading charset_normalizer-3.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (37 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9814000Z Step #1 - "Build Docker Image": Collecting idna<4,>=2.5 (from requests==2.31.0->-r requirements.txt (line 7))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9814733Z Step #1 - "Build Docker Image":   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9815517Z Step #1 - "Build Docker Image": Collecting urllib3<3,>=1.21.1 (from requests==2.31.0->-r requirements.txt (line 7))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9816275Z Step #1 - "Build Docker Image":   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9817071Z Step #1 - "Build Docker Image": Collecting certifi>=2017.4.17 (from requests==2.31.0->-r requirements.txt (line 7))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9817831Z Step #1 - "Build Docker Image":   Downloading certifi-2026.1.4-py3-none-any.whl.metadata (2.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9818599Z Step #1 - "Build Docker Image": Collecting packaging (from gunicorn==21.2.0->-r requirements.txt (line 9))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9819340Z Step #1 - "Build Docker Image":   Downloading packaging-26.0-py3-none-any.whl.metadata (3.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9820195Z Step #1 - "Build Docker Image": Collecting sqlalchemy>=2.0.16 (from Flask-SQLAlchemy==3.1.1->-r requirements.txt (line 13))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9821312Z Step #1 - "Build Docker Image":   Downloading sqlalchemy-2.0.46-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9822426Z Step #1 - "Build Docker Image": Collecting cryptography<45.0.0,>=44.0.1 (from clerk-backend-api==3.0.1->-r requirements.txt (line 14))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9823523Z Step #1 - "Build Docker Image":   Downloading cryptography-44.0.3-cp39-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9824452Z Step #1 - "Build Docker Image": Collecting httpcore>=1.0.9 (from clerk-backend-api==3.0.1->-r requirements.txt (line 14))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9825245Z Step #1 - "Build Docker Image":   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9826044Z Step #1 - "Build Docker Image": Collecting mccabe<0.8.0,>=0.7.0 (from flake8==7.3.0->-r requirements.txt (line 18))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9826799Z Step #1 - "Build Docker Image":   Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9827669Z Step #1 - "Build Docker Image": Collecting pycodestyle<2.15.0,>=2.14.0 (from flake8==7.3.0->-r requirements.txt (line 18))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9828494Z Step #1 - "Build Docker Image":   Downloading pycodestyle-2.14.0-py2.py3-none-any.whl.metadata (4.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9829465Z Step #1 - "Build Docker Image": Collecting pyflakes<3.5.0,>=3.4.0 (from flake8==7.3.0->-r requirements.txt (line 18))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9830265Z Step #1 - "Build Docker Image":   Downloading pyflakes-3.4.0-py2.py3-none-any.whl.metadata (3.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9831025Z Step #1 - "Build Docker Image": Collecting iniconfig (from pytest==7.4.4->-r requirements.txt (line 19))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9831767Z Step #1 - "Build Docker Image":   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9832527Z Step #1 - "Build Docker Image": Collecting pluggy<2.0,>=0.12 (from pytest==7.4.4->-r requirements.txt (line 19))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9833534Z Step #1 - "Build Docker Image":   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9834323Z Step #1 - "Build Docker Image": Collecting six (from EbookLib>=0.18->-r requirements.txt (line 3))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9835044Z Step #1 - "Build Docker Image":   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9835857Z Step #1 - "Build Docker Image": Collecting annotated-types>=0.6.0 (from pydantic>=2.11.2->-r requirements.txt (line 17))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9836692Z Step #1 - "Build Docker Image":   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9837548Z Step #1 - "Build Docker Image": Collecting pydantic-core==2.41.5 (from pydantic>=2.11.2->-r requirements.txt (line 17))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9838534Z Step #1 - "Build Docker Image":   Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9839549Z Step #1 - "Build Docker Image": Collecting typing-inspection>=0.4.2 (from pydantic>=2.11.2->-r requirements.txt (line 17))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9840384Z Step #1 - "Build Docker Image":   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9841932Z Step #1 - "Build Docker Image": Collecting google-api-core!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9843257Z Step #1 - "Build Docker Image":   Downloading google_api_core-2.29.0-py3-none-any.whl.metadata (3.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9844431Z Step #1 - "Build Docker Image": Collecting google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1 (from google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9845303Z Step #1 - "Build Docker Image":   Downloading google_auth-2.47.0-py3-none-any.whl.metadata (6.4 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9846156Z Step #1 - "Build Docker Image": Collecting grpcio<2.0.0,>=1.33.2 (from google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9847137Z Step #1 - "Build Docker Image":   Downloading grpcio-1.76.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.7 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9848135Z Step #1 - "Build Docker Image": Collecting proto-plus<2.0.0,>=1.22.3 (from google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9848951Z Step #1 - "Build Docker Image":   Downloading proto_plus-1.27.0-py3-none-any.whl.metadata (2.2 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9849974Z Step #1 - "Build Docker Image": Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2 (from google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9850997Z Step #1 - "Build Docker Image":   Downloading protobuf-6.33.4-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9851958Z Step #1 - "Build Docker Image": Collecting cffi>=1.12 (from cryptography<45.0.0,>=44.0.1->clerk-backend-api==3.0.1->-r requirements.txt (line 14))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9852995Z Step #1 - "Build Docker Image":   Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9855113Z Step #1 - "Build Docker Image": Collecting googleapis-common-protos<2.0.0,>=1.56.2 (from google-api-core!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9856561Z Step #1 - "Build Docker Image":   Downloading googleapis_common_protos-1.72.0-py3-none-any.whl.metadata (9.4 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9858073Z Step #1 - "Build Docker Image": Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0,>=1.34.1->google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9859229Z Step #1 - "Build Docker Image":   Downloading grpcio_status-1.76.0-py3-none-any.whl.metadata (1.1 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9860272Z Step #1 - "Build Docker Image": Collecting pyasn1-modules>=0.2.1 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:25.9861228Z Step #1 - "Build Docker Image":   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2092045Z Step #1 - "Build Docker Image": Collecting rsa<5,>=3.1.4 (from google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2093224Z Step #1 - "Build Docker Image":   Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2094617Z Step #1 - "Build Docker Image": Collecting h11>=0.16 (from httpcore>=1.0.9->clerk-backend-api==3.0.1->-r requirements.txt (line 14))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2095497Z Step #1 - "Build Docker Image":   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2096363Z Step #1 - "Build Docker Image": Collecting greenlet>=1 (from sqlalchemy>=2.0.16->Flask-SQLAlchemy==3.1.1->-r requirements.txt (line 13))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2097438Z Step #1 - "Build Docker Image":   Downloading greenlet-3.3.0-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (4.1 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2098548Z Step #1 - "Build Docker Image": Collecting pycparser (from cffi>=1.12->cryptography<45.0.0,>=44.0.1->clerk-backend-api==3.0.1->-r requirements.txt (line 14))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2099456Z Step #1 - "Build Docker Image":   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2100540Z Step #1 - "Build Docker Image": Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth!=2.24.0,!=2.25.0,<3.0.0,>=2.14.1->google-cloud-vision>=3.0.0->-r requirements.txt (line 20))
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2101492Z Step #1 - "Build Docker Image":   Downloading pyasn1-0.6.2-py3-none-any.whl.metadata (8.4 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2102139Z Step #1 - "Build Docker Image": Downloading flask-3.1.1-py3-none-any.whl (103 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2103130Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・103.3/103.3 kB 204.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2104113Z Step #1 - "Build Docker Image": Downloading beautifulsoup4-4.12.3-py3-none-any.whl (147 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2104967Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 147.9/147.9 kB 23.3 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2105788Z Step #1 - "Build Docker Image": Downloading lxml-5.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (8.1 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2106691Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 8.1/8.1 MB 40.5 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2107339Z Step #1 - "Build Docker Image": Downloading openai-1.78.1-py3-none-any.whl (680 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2108119Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 680.9/680.9 kB 40.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2108757Z Step #1 - "Build Docker Image": Downloading requests-2.31.0-py3-none-any.whl (62 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2109841Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 62.6/62.6 kB 194.8 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2110478Z Step #1 - "Build Docker Image": Downloading werkzeug-3.1.3-py3-none-any.whl (224 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2111257Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 224.5/224.5 kB 81.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2111886Z Step #1 - "Build Docker Image": Downloading gunicorn-21.2.0-py3-none-any.whl (80 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2112660Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 80.2/80.2 kB 214.1 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2113797Z Step #1 - "Build Docker Image": Downloading async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2114556Z Step #1 - "Build Docker Image": Downloading python_dotenv-1.1.0-py3-none-any.whl (20 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2115236Z Step #1 - "Build Docker Image": Downloading Flask_Login-0.6.3-py3-none-any.whl (17 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2115923Z Step #1 - "Build Docker Image": Downloading flask_sqlalchemy-3.1.1-py3-none-any.whl (25 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2116620Z Step #1 - "Build Docker Image": Downloading clerk_backend_api-3.0.1-py3-none-any.whl (321 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2117528Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・321.6/321.6 kB 240.1 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2118189Z Step #1 - "Build Docker Image": Downloading PyJWT-2.10.1-py3-none-any.whl (22 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2118811Z Step #1 - "Build Docker Image": Downloading flask_cors-6.0.0-py3-none-any.whl (11 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2119446Z Step #1 - "Build Docker Image": Downloading flake8-7.3.0-py2.py3-none-any.whl (57 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2120244Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 57.9/57.9 kB 192.0 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2120886Z Step #1 - "Build Docker Image": Downloading pytest-7.4.4-py3-none-any.whl (325 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2121676Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・325.3/325.3 kB 243.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2122307Z Step #1 - "Build Docker Image": Downloading ebooklib-0.20-py3-none-any.whl (40 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2123069Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 41.0/41.0 kB 133.1 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2123843Z Step #1 - "Build Docker Image": Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2124625Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・463.6/463.6 kB 258.8 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2125497Z Step #1 - "Build Docker Image": Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2126465Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 2.1/2.1 MB 119.7 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2127159Z Step #1 - "Build Docker Image": Downloading google_cloud_vision-3.12.0-py3-none-any.whl (538 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2128141Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 538.2/538.2 kB 88.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2128883Z Step #1 - "Build Docker Image": Downloading pymupdf-1.26.7-cp310-abi3-manylinux_2_28_x86_64.whl (24.1 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2129733Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 24.1/24.1 MB 48.0 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2130395Z Step #1 - "Build Docker Image": Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2131045Z Step #1 - "Build Docker Image": Downloading anyio-4.12.1-py3-none-any.whl (113 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2131937Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・113.6/113.6 kB 228.1 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2132588Z Step #1 - "Build Docker Image": Downloading blinker-1.9.0-py3-none-any.whl (8.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2133211Z Step #1 - "Build Docker Image": Downloading certifi-2026.1.4-py3-none-any.whl (152 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2134401Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・152.9/152.9 kB 247.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2135386Z Step #1 - "Build Docker Image": Downloading charset_normalizer-3.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (151 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2136426Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・151.6/151.6 kB 245.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2137060Z Step #1 - "Build Docker Image": Downloading click-8.3.1-py3-none-any.whl (108 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2137843Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・108.3/108.3 kB 226.3 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2138595Z Step #1 - "Build Docker Image": Downloading cryptography-44.0.3-cp39-abi3-manylinux_2_34_x86_64.whl (4.2 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2139453Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 4.2/4.2 MB 183.8 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2140096Z Step #1 - "Build Docker Image": Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2140743Z Step #1 - "Build Docker Image": Downloading google_api_core-2.29.0-py3-none-any.whl (173 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2141551Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・173.9/173.9 kB 246.5 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2142195Z Step #1 - "Build Docker Image": Downloading google_auth-2.47.0-py3-none-any.whl (234 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2142991Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・234.9/234.9 kB 239.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2143926Z Step #1 - "Build Docker Image": Downloading grpcio-1.76.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.6 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2144852Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 6.6/6.6 MB 196.4 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2145499Z Step #1 - "Build Docker Image": Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2146435Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 78.8/78.8 kB 209.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2147054Z Step #1 - "Build Docker Image": Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2147825Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 73.5/73.5 kB 204.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2148441Z Step #1 - "Build Docker Image": Downloading idna-3.11-py3-none-any.whl (71 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2149199Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 71.0/71.0 kB 211.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2149967Z Step #1 - "Build Docker Image": Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2150616Z Step #1 - "Build Docker Image": Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2151389Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・134.9/134.9 kB 238.4 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2152212Z Step #1 - "Build Docker Image": Downloading jiter-0.12.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (364 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2153123Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・364.6/364.6 kB 134.1 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2154275Z Step #1 - "Build Docker Image": Downloading markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2155132Z Step #1 - "Build Docker Image": Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2155755Z Step #1 - "Build Docker Image": Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2156386Z Step #1 - "Build Docker Image": Downloading proto_plus-1.27.0-py3-none-any.whl (50 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:29.2157188Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 50.2/50.2 kB 176.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3857709Z Step #1 - "Build Docker Image": Downloading protobuf-6.33.4-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3859707Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・323.3/323.3 kB 143.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3860661Z Step #1 - "Build Docker Image": Downloading pycodestyle-2.14.0-py2.py3-none-any.whl (31 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3861475Z Step #1 - "Build Docker Image": Downloading pyflakes-3.4.0-py2.py3-none-any.whl (63 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3862436Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 63.6/63.6 kB 161.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3863209Z Step #1 - "Build Docker Image": Downloading soupsieve-2.8.3-py3-none-any.whl (37 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3864643Z Step #1 - "Build Docker Image": Downloading sqlalchemy-2.0.46-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.3 MB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3865899Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 3.3/3.3 MB 125.3 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3866675Z Step #1 - "Build Docker Image": Downloading tqdm-4.67.1-py3-none-any.whl (78 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3867609Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 78.5/78.5 kB 181.5 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3868443Z Step #1 - "Build Docker Image": Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3869430Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 44.6/44.6 kB 192.4 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3870255Z Step #1 - "Build Docker Image": Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3871287Z Step #1 - "Build Docker Image": Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3872226Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・131.6/131.6 kB 231.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3873000Z Step #1 - "Build Docker Image": Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3874066Z Step #1 - "Build Docker Image": Downloading packaging-26.0-py3-none-any.whl (74 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3874979Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 74.4/74.4 kB 210.9 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3875609Z Step #1 - "Build Docker Image": Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3876214Z Step #1 - "Build Docker Image": Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3876999Z Step #1 - "Build Docker Image": Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (215 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3877972Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・215.6/215.6 kB 246.9 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3878684Z Step #1 - "Build Docker Image": Downloading googleapis_common_protos-1.72.0-py3-none-any.whl (297 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3879537Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・297.5/297.5 kB 257.1 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3880385Z Step #1 - "Build Docker Image": Downloading greenlet-3.3.0-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (590 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3881322Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・590.2/590.2 kB 264.7 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3881969Z Step #1 - "Build Docker Image": Downloading grpcio_status-1.76.0-py3-none-any.whl (14 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3882597Z Step #1 - "Build Docker Image": Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3883227Z Step #1 - "Build Docker Image": Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3884165Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏・181.3/181.3 kB 241.2 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3884793Z Step #1 - "Build Docker Image": Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3885390Z Step #1 - "Build Docker Image": Downloading pyasn1-0.6.2-py3-none-any.whl (83 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3886166Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 83.4/83.4 kB 206.5 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3886800Z Step #1 - "Build Docker Image": Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3887572Z Step #1 - "Build Docker Image":    笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤笏≫煤 48.2/48.2 kB 170.6 MB/s eta 0:00:00
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3891489Z Step #1 - "Build Docker Image": Installing collected packages: urllib3, typing-extensions, tqdm, soupsieve, sniffio, six, python-dotenv, PyMuPDF, PyJWT, pyflakes, pycparser, pycodestyle, pyasn1, protobuf, pluggy, packaging, mccabe, markupsafe, lxml, jiter, itsdangerous, iniconfig, idna, h11, greenlet, distro, click, charset-normalizer, certifi, blinker, async-timeout, annotated-types, Werkzeug, typing-inspection, sqlalchemy, rsa, requests, pytest, pydantic-core, pyasn1-modules, proto-plus, jinja2, httpcore, gunicorn, grpcio, googleapis-common-protos, flake8, EbookLib, cffi, beautifulsoup4, anyio, pydantic, httpx, grpcio-status, google-auth, Flask, cryptography, openai, google-api-core, Flask-SQLAlchemy, Flask-Login, Flask-Cors, clerk-backend-api, google-cloud-vision
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3899166Z Step #1 - "Build Docker Image": Successfully installed EbookLib-0.20 Flask-3.1.1 Flask-Cors-6.0.0 Flask-Login-0.6.3 Flask-SQLAlchemy-3.1.1 PyJWT-2.10.1 PyMuPDF-1.26.7 Werkzeug-3.1.3 annotated-types-0.7.0 anyio-4.12.1 async-timeout-5.0.1 beautifulsoup4-4.12.3 blinker-1.9.0 certifi-2026.1.4 cffi-2.0.0 charset-normalizer-3.4.4 clerk-backend-api-3.0.1 click-8.3.1 cryptography-44.0.3 distro-1.9.0 flake8-7.3.0 google-api-core-2.29.0 google-auth-2.47.0 google-cloud-vision-3.12.0 googleapis-common-protos-1.72.0 greenlet-3.3.0 grpcio-1.76.0 grpcio-status-1.76.0 gunicorn-21.2.0 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.11 iniconfig-2.3.0 itsdangerous-2.2.0 jinja2-3.1.6 jiter-0.12.0 lxml-5.1.0 markupsafe-3.0.3 mccabe-0.7.0 openai-1.78.1 packaging-26.0 pluggy-1.6.0 proto-plus-1.27.0 protobuf-6.33.4 pyasn1-0.6.2 pyasn1-modules-0.4.2 pycodestyle-2.14.0 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pyflakes-3.4.0 pytest-7.4.4 python-dotenv-1.1.0 requests-2.31.0 rsa-4.9.1 six-1.17.0 sniffio-1.3.1 soupsieve-2.8.3 sqlalchemy-2.0.46 tqdm-4.67.1 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.6.3
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3904326Z Step #1 - "Build Docker Image": [91mWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3905456Z Step #1 - "Build Docker Image": [0m[91m
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3906007Z Step #1 - "Build Docker Image": [notice] A new release of pip is available: 24.0 -> 25.3
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3906656Z Step #1 - "Build Docker Image": [notice] To update, run: pip install --upgrade pip
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3907340Z Step #1 - "Build Docker Image": [0mRemoving intermediate container afef0506a331
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3907830Z Step #1 - "Build Docker Image":  ---> 27f7997e6b4e
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3908291Z Step #1 - "Build Docker Image": Step 21/29 : COPY backend/app ./app
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3908730Z Step #1 - "Build Docker Image":  ---> d4d430505142
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3909177Z Step #1 - "Build Docker Image": Step 22/29 : COPY backend/run.py ./
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3909601Z Step #1 - "Build Docker Image":  ---> 9cdbc740b397
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3910061Z Step #1 - "Build Docker Image": Step 23/29 : COPY backend/config.py ./
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3910502Z Step #1 - "Build Docker Image":  ---> e5be6a7a452f
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3910941Z Step #1 - "Build Docker Image": Step 24/29 : RUN mkdir -p instance
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3911415Z Step #1 - "Build Docker Image":  ---> Running in 290a6d3b5666
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3911940Z Step #1 - "Build Docker Image": Removing intermediate container 290a6d3b5666
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3912398Z Step #1 - "Build Docker Image":  ---> e245881b8884
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3912871Z Step #1 - "Build Docker Image": Step 25/29 : RUN mkdir -p /app/app/static
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3913488Z Step #1 - "Build Docker Image":  ---> Running in 6033455edfb1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3914013Z Step #1 - "Build Docker Image": Removing intermediate container 6033455edfb1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3914468Z Step #1 - "Build Docker Image":  ---> f7cf8cbdc9fc
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3915075Z Step #1 - "Build Docker Image": Step 26/29 : COPY --from=frontend-builder /frontend/dist/ /app/app/static/
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3915629Z Step #1 - "Build Docker Image":  ---> 345d9249b190
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3916049Z Step #1 - "Build Docker Image": Step 27/29 : EXPOSE 8080
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3916487Z Step #1 - "Build Docker Image":  ---> Running in e6979e66339a
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3917005Z Step #1 - "Build Docker Image": Removing intermediate container e6979e66339a
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3917476Z Step #1 - "Build Docker Image":  ---> abfe419b142b
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3917891Z Step #1 - "Build Docker Image": Step 28/29 : ENV PORT=8080
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3918332Z Step #1 - "Build Docker Image":  ---> Running in e3fb91449c71
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3918991Z Step #1 - "Build Docker Image": Removing intermediate container e3fb91449c71
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3919452Z Step #1 - "Build Docker Image":  ---> fe88fe5f75f7
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3920548Z Step #1 - "Build Docker Image": Step 29/29 : CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "300", "--worker-class", "sync", "--workers", "1", "--max-requests", "500", "--max-requests-jitter", "50", "--preload", "run:app"]
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3921480Z Step #1 - "Build Docker Image":  ---> Running in fcf42ae2afa1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3921991Z Step #1 - "Build Docker Image": Removing intermediate container fcf42ae2afa1
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3922565Z Step #1 - "Build Docker Image":  ---> ecf6f7691708
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3922995Z Step #1 - "Build Docker Image": Successfully built ecf6f7691708
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3924071Z Step #1 - "Build Docker Image": Successfully tagged us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:d4a61b7642991603dbb50344b95eec16a70dc836
+Build and Deploy	UNKNOWN STEP	2026-01-22T01:59:51.3925252Z Step #1 - "Build Docker Image": Successfully tagged us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader:latest
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6003875Z Finished Step #1 - "Build Docker Image"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6004656Z Starting Step #2 - "Push to Artifact Registry"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6005272Z Starting Step #3 - "Push latest tag"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6006329Z Step #2 - "Push to Artifact Registry": Already have image (with digest): gcr.io/cloud-builders/docker
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6007632Z Step #3 - "Push latest tag": Already have image (with digest): gcr.io/cloud-builders/docker
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6009112Z Step #3 - "Push latest tag": The push refers to repository [us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader]
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6010834Z Step #2 - "Push to Artifact Registry": The push refers to repository [us-central1-docker.pkg.dev/floofgg/progressive-reader/progressive-reader]
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6012138Z Step #3 - "Push latest tag": f4addacb8776: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6012712Z Step #3 - "Push latest tag": 60d8204a237d: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6013156Z Step #3 - "Push latest tag": c0a511200257: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6013844Z Step #3 - "Push latest tag": 7a521f09da5e: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6014278Z Step #3 - "Push latest tag": b9af76efa539: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6014673Z Step #3 - "Push latest tag": f288e91c48ee: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6015062Z Step #3 - "Push latest tag": 25e32e8faf6d: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6015448Z Step #3 - "Push latest tag": 1331c1c58720: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6015833Z Step #3 - "Push latest tag": a59f73427598: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6016224Z Step #3 - "Push latest tag": 49d74831a287: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6016611Z Step #3 - "Push latest tag": 5d89b1d5fc98: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6017006Z Step #3 - "Push latest tag": 523062ea36b5: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6017394Z Step #3 - "Push latest tag": e50a58335e13: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6017781Z Step #3 - "Push latest tag": 5d89b1d5fc98: Waiting
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6018161Z Step #3 - "Push latest tag": 523062ea36b5: Waiting
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6018534Z Step #3 - "Push latest tag": e50a58335e13: Waiting
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6018967Z Step #2 - "Push to Artifact Registry": f4addacb8776: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6019432Z Step #2 - "Push to Artifact Registry": 60d8204a237d: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6019876Z Step #2 - "Push to Artifact Registry": c0a511200257: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6020327Z Step #2 - "Push to Artifact Registry": 7a521f09da5e: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6020780Z Step #2 - "Push to Artifact Registry": b9af76efa539: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6021239Z Step #2 - "Push to Artifact Registry": f288e91c48ee: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6021690Z Step #2 - "Push to Artifact Registry": 25e32e8faf6d: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6022150Z Step #2 - "Push to Artifact Registry": 1331c1c58720: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6022950Z Step #2 - "Push to Artifact Registry": a59f73427598: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6023646Z Step #2 - "Push to Artifact Registry": 49d74831a287: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6024105Z Step #2 - "Push to Artifact Registry": 5d89b1d5fc98: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6024555Z Step #2 - "Push to Artifact Registry": 523062ea36b5: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6025109Z Step #2 - "Push to Artifact Registry": e50a58335e13: Preparing
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6025872Z Step #2 - "Push to Artifact Registry": e50a58335e13: Waiting
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6026456Z Step #2 - "Push to Artifact Registry": 5d89b1d5fc98: Waiting
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6026892Z Step #2 - "Push to Artifact Registry": 523062ea36b5: Waiting
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6027531Z Step #3 - "Push latest tag": 49d74831a287: Layer already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6028063Z Step #2 - "Push to Artifact Registry": 49d74831a287: Layer already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6028609Z Step #2 - "Push to Artifact Registry": 5d89b1d5fc98: Layer already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6029117Z Step #3 - "Push latest tag": 5d89b1d5fc98: Layer already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6029622Z Step #2 - "Push to Artifact Registry": 523062ea36b5: Layer already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6030112Z Step #3 - "Push latest tag": 523062ea36b5: Layer already exists
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6030564Z Step #2 - "Push to Artifact Registry": a59f73427598: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6031118Z Step #2 - "Push to Artifact Registry": b9af76efa539: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6031526Z Step #3 - "Push latest tag": a59f73427598: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6031905Z Step #3 - "Push latest tag": b9af76efa539: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6032306Z Step #2 - "Push to Artifact Registry": 1331c1c58720: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6032744Z Step #2 - "Push to Artifact Registry": f288e91c48ee: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6033170Z Step #2 - "Push to Artifact Registry": c0a511200257: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6033766Z Step #3 - "Push latest tag": 1331c1c58720: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6034139Z Step #3 - "Push latest tag": f288e91c48ee: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6034515Z Step #3 - "Push latest tag": c0a511200257: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6034920Z Step #2 - "Push to Artifact Registry": 60d8204a237d: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6035353Z Step #2 - "Push to Artifact Registry": 7a521f09da5e: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6035743Z Step #3 - "Push latest tag": 60d8204a237d: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6036115Z Step #3 - "Push latest tag": 7a521f09da5e: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6036544Z Step #2 - "Push to Artifact Registry": f4addacb8776: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6036951Z Step #3 - "Push latest tag": f4addacb8776: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6037363Z Step #2 - "Push to Artifact Registry": e50a58335e13: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6037765Z Step #3 - "Push latest tag": e50a58335e13: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6038179Z Step #2 - "Push to Artifact Registry": 25e32e8faf6d: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6038585Z Step #3 - "Push latest tag": 25e32e8faf6d: Pushed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6039338Z Step #3 - "Push latest tag": latest: digest: sha256:263ddfe3e5fd6700338a1d890743411cbb088ac3877dcd33fb952ece69650f7d size: 3034
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6039840Z 
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6040380Z BUILD FAILURE: Build step failure: build step 7 "gcr.io/cloud-builders/gcloud" failed: step exited with non-zero status: 1
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6041269Z ERROR: (gcloud.builds.submit) build 371f4f0e-e447-4672-8a8e-f505c716f4da completed with status "FAILURE"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6042408Z Step #2 - "Push to Artifact Registry": d4a61b7642991603dbb50344b95eec16a70dc836: digest: sha256:263ddfe3e5fd6700338a1d890743411cbb088ac3877dcd33fb952ece69650f7d size: 3034
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6043177Z Finished Step #3 - "Push latest tag"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6043800Z Finished Step #2 - "Push to Artifact Registry"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6044201Z Starting Step #4 - "Verify PR-App Config Secret"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6044827Z Step #4 - "Verify PR-App Config Secret": Already have image (with digest): gcr.io/cloud-builders/gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6045880Z Step #4 - "Verify PR-App Config Secret": 﨟槫翁 Verifying PR-app-config secret exists and contents...
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6046769Z Step #4 - "Verify PR-App Config Secret": 隨ｨ繝ｻPR-app-config secret found
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6047340Z Step #4 - "Verify PR-App Config Secret": 隨ｨ繝ｻOPENAI_API_KEYS found
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6047887Z Step #4 - "Verify PR-App Config Secret": 隨ｨ繝ｻCLERK_SECRET_KEY found
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6048737Z Step #4 - "Verify PR-App Config Secret": 隨ｨ繝ｻVITE_CLERK_PUBLISHABLE_KEY found
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6049544Z Step #4 - "Verify PR-App Config Secret": 隨ｨ繝ｻGOOGLE_APPLICATION_CREDENTIALS_JSON found
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6050451Z Step #4 - "Verify PR-App Config Secret": 隨ｨ繝ｻPR-app-config secret verification complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6050971Z Finished Step #4 - "Verify PR-App Config Secret"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6051506Z Starting Step #5 - "Verify Secret Parsing"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6052084Z Step #5 - "Verify Secret Parsing": Already have image (with digest): gcr.io/cloud-builders/gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6052883Z Step #5 - "Verify Secret Parsing": 﨟槫翁 Verifying PR-app-config secret can be parsed as JSON...
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6054017Z Step #5 - "Verify Secret Parsing": 隨ｨ繝ｻSecret parsed successfully
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6056687Z Step #5 - "Verify Secret Parsing": 隨ｨ繝ｻFound keys: ['VITE_GDRIVE_CLIENT_ID', 'VITE_GAPI_KEY', 'GOOGLE_APPLICATION_CREDENTIALS', 'FLASK_SECRET_KEY', 'VITE_CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY', 'GOOGLE_TRANSLATE_API_KEY', 'VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_AUTH_DOMAIN', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_STORAGE_BUCKET', 'VITE_FIREBASE_MESSAGING_SENDER_ID', 'VITE_FIREBASE_APP_ID', 'OPENAI_API_KEYS', 'GOOGLE_APPLICATION_CREDENTIALS_JSON']
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6059922Z Step #5 - "Verify Secret Parsing": 隨ｨ繝ｻRequired keys present: ['CLERK_SECRET_KEY', 'VITE_CLERK_PUBLISHABLE_KEY', 'OPENAI_API_KEYS']
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6061867Z Step #5 - "Verify Secret Parsing": 隨ｨ繝ｻSecret parsing validation complete
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6062888Z Finished Step #5 - "Verify Secret Parsing"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6064050Z Starting Step #6 - "BVT-Pre-Deploy"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6064807Z Step #6 - "BVT-Pre-Deploy": Already have image (with digest): gcr.io/cloud-builders/gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6065786Z Step #6 - "BVT-Pre-Deploy": Pre-deployment BVT: GET https://progressive-reader-tp3vmxen7q-uc.a.run.app/health
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6066754Z Step #6 - "BVT-Pre-Deploy": 隨ｨ繝ｻPre-deployment health check passed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6067277Z Finished Step #6 - "BVT-Pre-Deploy"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6067710Z Starting Step #7 - "Deploy to Cloud Run"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6068429Z Step #7 - "Deploy to Cloud Run": Already have image (with digest): gcr.io/cloud-builders/gcloud
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6069211Z Step #7 - "Deploy to Cloud Run": 﨟槫嵯繝ｻ繝ｻClearing any existing secrets...
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6079160Z Step #7 - "Deploy to Cloud Run": Service exists, clearing secrets...
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6079937Z Step #7 - "Deploy to Cloud Run": Deploying...
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6080919Z Step #7 - "Deploy to Cloud Run": Creating Revision.........................................................................................................................................failed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6081669Z Step #7 - "Deploy to Cloud Run": Deployment failed
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6083889Z Step #7 - "Deploy to Cloud Run": ERROR: (gcloud.run.services.update) The user-provided container failed to start and listen on the port defined provided by the PORT=8080 environment variable within the allocated timeout. This can happen when the container port is misconfigured or if the timeout is too short. The health check timeout can be extended. Logs for this revision might contain more information.
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6085388Z Step #7 - "Deploy to Cloud Run": 
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6087435Z Step #7 - "Deploy to Cloud Run": Logs URL: https://console.cloud.google.com/logs/viewer?project=floofgg&resource=cloud_run_revision/service_name/progressive-reader/revision_name/progressive-reader-00008-cdm&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22progressive-reader%22%0Aresource.labels.revision_name%3D%22progressive-reader-00008-cdm%22 
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6089730Z Step #7 - "Deploy to Cloud Run": For more troubleshooting guidance, see https://cloud.google.com/run/docs/troubleshooting#container-failed-to-start
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6090429Z Finished Step #7 - "Deploy to Cloud Run"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6090691Z ERROR
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6091180Z ERROR: build step 7 "gcr.io/cloud-builders/gcloud" failed: step exited with non-zero status: 1
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6091801Z --------------------------------------------------------------------------------
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.6980216Z ##[error]Process completed with exit code 1.
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.7067497Z Post job cleanup.
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.7895599Z Removed exported credentials at "/home/runner/work/ProgressiveReader/ProgressiveReader/gha-creds-bcd541c12bb39924.json".
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.7999117Z Post job cleanup.
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9027674Z [command]/usr/bin/git version
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9064729Z git version 2.52.0
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9109410Z Temporarily overriding HOME='/home/runner/work/_temp/60447f7b-07eb-4cd4-ace1-e8ddd0709ab7' before making global git config changes
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9111012Z Adding repository directory to the temporary git global config as a safe directory
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9116567Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ProgressiveReader/ProgressiveReader
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9154399Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9188257Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9421080Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9443594Z http.https://github.com/.extraheader
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9457606Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9490604Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9717864Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:50.9750149Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Build and Deploy	UNKNOWN STEP	2026-01-22T02:00:51.0087111Z Cleaning up orphan processes

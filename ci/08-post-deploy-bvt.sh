@@ -18,9 +18,9 @@ else
   echo "Health: $HEALTH_RESPONSE"
 fi
 
-CLERK_OVERALL=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-CLERK_PUB_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
-CLERK_SECRET_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)')
+CLERK_OVERALL=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_overall_healthy"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)' || echo "unknown")
+CLERK_PUB_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_publishable_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)' || echo "unknown")
+CLERK_SECRET_CONFIGURED=$(echo "$HEALTH_RESPONSE" | grep -o '"clerk_secret_key_configured"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o '\(true\|false\)' || echo "unknown")
 
 echo "投 Clerk:"
 echo "  - overall_healthy: ${CLERK_OVERALL:-unknown}"
