@@ -308,17 +308,20 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
 
             if (!fragment.hasRuby) {
                 for (const ruby of token.rubies) {
-                    if (ruby.start >= fragment.start && ruby.end <= fragment.end) {
+                    const rubyStart = token.start + ruby.start;
+                    const rubyEnd = token.start + ruby.end;
+
+                    if (rubyStart >= fragment.start && rubyEnd <= fragment.end) {
                         // Ruby is contained in fragment
-                        if (ruby.start > fragment.start) {
-                            splitFragment(fragments, fragmentIndex, ruby.start);
+                        if (rubyStart > fragment.start) {
+                            splitFragment(fragments, fragmentIndex, rubyStart);
                             const emptyRt = document.createElement('rt');
                             insertAfter(emptyRt, fragment.node);
                             fragment = fragments[++fragmentIndex];
                         }
 
-                        if (ruby.end < fragment.end) {
-                            splitFragment(fragments, fragmentIndex, ruby.end);
+                        if (rubyEnd < fragment.end) {
+                            splitFragment(fragments, fragmentIndex, rubyEnd);
                             const rubyTextRt = document.createElement('rt');
                             rubyTextRt.className = 'jpdb-furi';
                             rubyTextRt.textContent = ruby.text;

@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { mineWord, updateWordState, reviewCard, getCurrentConfig } from "@features/reader/content/api-adapter";
+import { mineWord, updateWordState, reviewCard, getCurrentConfig, parseDeckId } from "@features/reader/content/api-adapter";
 import { Token } from "~/types";
-import { getMeaning, getKunReading, getOnReading, getJlptLevel } from "@shared/services/jlptService";
+import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
@@ -62,8 +62,25 @@ let setPopup: React.Dispatch<React.SetStateAction<PopupState>> | null = null;
 let hideTimeout: number | null = null;
 let isPopupHovered = false;
 let isPopupPinned = false;
+let suppressedHoverElement: Element | null = null;
 
 const HIDE_DELAY = 1500; // ms delay before hiding popup when mouse leaves
+
+function canUsePopupSpeech(): boolean {
+  return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+}
+
+function cancelPopupSpeech() {
+  if (!canUsePopupSpeech()) return;
+  window.speechSynthesis.cancel();
+}
+
+function getJapaneseVoice(): SpeechSynthesisVoice | undefined {
+  if (!canUsePopupSpeech()) return undefined;
+  return window.speechSynthesis
+    .getVoices()
+    .find((voice) => voice.lang.toLowerCase().startsWith("ja"));
+}
 
 function clearHideTimeout() {
     if (hideTimeout !== null) {
@@ -72,15 +89,31 @@ function clearHideTimeout() {
     }
 }
 
+export function isDefinitionPopupSuppressedFor(element: Element): boolean {
+  return suppressedHoverElement === element;
+}
+
+export function clearDefinitionPopupSuppression(element?: Element | null) {
+  if (!element || suppressedHoverElement === element) {
+    suppressedHoverElement = null;
+  }
+}
+
+export function closeDefinitionPopup(suppressSourceElement?: Element | null) {
+  clearHideTimeout();
+  cancelPopupSpeech();
+  isPopupPinned = false;
+  isPopupHovered = false;
+  suppressedHoverElement = suppressSourceElement ?? null;
+  setPopup?.(null);
+}
+
 function scheduleHide() {
     clearHideTimeout();
     if (isPopupPinned) return;
     if (!isPopupHovered) {
         hideTimeout = window.setTimeout(() => {
-            if (setPopup) {
-                isPopupPinned = false;
-                setPopup(null);
-            }
+            closeDefinitionPopup(null);
         }, HIDE_DELAY);
     }
 }
@@ -162,6 +195,11 @@ export function JpdbPopupController() {
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
 
+  const closePopup = useCallback((options?: { suppressSource?: boolean }) => {
+    const shouldSuppressSource = options?.suppressSource ?? true;
+    closeDefinitionPopup(shouldSuppressSource ? popup?.sourceElement ?? null : null);
+  }, [popup?.sourceElement]);
+
   const learningGrammarPoints = useMemo<GrammarPoint[]>(() => {
     const sourceEl = popup?.sourceElement;
     if (!sourceEl || !(sourceEl instanceof Element)) return [];
@@ -199,28 +237,43 @@ export function JpdbPopupController() {
       const target = event.target as Element;
       const popupElement = document.querySelector('[data-jpdb-popup]');
       
-      if (popupElement && !popupElement.contains(target) && setPopup) {
-        isPopupPinned = false;
-        setPopup(null);
+      if (popupElement && !popupElement.contains(target)) {
+        closePopup();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closePopup();
       }
     };
     
     // Add event listener with a small delay to avoid immediate closure
-    setTimeout(() => {
+    const timerId = window.setTimeout(() => {
       document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
     }, 100);
     
     return () => {
+      window.clearTimeout(timerId);
       document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [popup]);
+  }, [closePopup, popup]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       clearHideTimeout();
+      cancelPopupSpeech();
     };
   }, []);
+
+  useEffect(() => {
+    if (!popup) {
+      cancelPopupSpeech();
+    }
+  }, [popup]);
 
   if (!popup) return null;
 
@@ -233,6 +286,10 @@ export function JpdbPopupController() {
   const surfaceWord = token?.card?.spelling || popup.word;
   const reading = token?.card?.reading || "";
   const showReading = Boolean(reading && reading !== surfaceWord);
+  const speechText = reading || surfaceWord;
+  const canSpeak = canUsePopupSpeech() && speechText.length > 0;
+  const miningDeckId = parseDeckId(config.miningDeckId);
+  const canMine = Boolean(card && config.apiKey && miningDeckId !== undefined);
 
   const states = (card?.state || []).filter(Boolean);
   const hasNeverForget = states.includes('never-forget');
@@ -249,16 +306,39 @@ export function JpdbPopupController() {
       .filter((r) => typeof r.text === 'string' && r.text.length > 0 && Number.isFinite(r.start) && Number.isFinite(r.length) && r.length > 0)
       .slice()
       .sort((a, b) => a.start - b.start)
-      .map((r) => ({
-        base: surfaceWord.slice(r.start, r.start + r.length),
-        ruby: r.text as string,
-      }))
+      .map((r) => {
+        const base = surfaceWord.slice(r.start, r.start + r.length);
+        const definitions = getWordKanjiInfo(base)
+          .map((entry) => {
+            const meanings = entry.meanings.slice(0, 3).join(', ');
+            return meanings ? `${entry.kanji}: ${meanings}` : "";
+          })
+          .filter(Boolean);
+
+        return {
+          base,
+          ruby: r.text as string,
+          definitions,
+        };
+      })
       .filter((seg) => seg.base.length > 0);
   })();
 
+  const handleSpeak = () => {
+    if (!canSpeak) return;
+    const utterance = new window.SpeechSynthesisUtterance(speechText);
+    utterance.lang = "ja-JP";
+    const voice = getJapaneseVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
 
   const handleMineWord = async () => {
-    if (!card || !config.apiKey) return;
+    if (!card || !config.apiKey || !canMine) return;
     setIsLoading(true);
     try {
       await mineWord(deps.backend.vocabulary, card, config.forqOnMine, popup.wordData?.sentence);
@@ -306,6 +386,7 @@ export function JpdbPopupController() {
   const flatRed = `${flatBtnBase} border-red-700 text-red-300`;
   const flatRose = `${flatBtnBase} border-rose-700 text-rose-200`;
   const flatOrange = `${flatBtnBase} border-orange-700 text-orange-200`;
+  const addButtonTitle = canMine ? "Add word to mining deck" : "Set a mining deck ID in settings to add words.";
 
   return (
     <div
@@ -328,9 +409,9 @@ export function JpdbPopupController() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleMineWord}
-                    disabled={isLoading}
+                    disabled={isLoading || !canMine}
                     className={flatBlue}
-                    title="Add word to mining deck"
+                    title={addButtonTitle}
                   >
                     Add
                   </button>
@@ -351,6 +432,10 @@ export function JpdbPopupController() {
                     Blacklist
                   </button>
                 </div>
+
+                {!canMine && (
+                  <div className="text-xs text-neutral-400">{addButtonTitle}</div>
+                )}
 
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -409,8 +494,7 @@ export function JpdbPopupController() {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              isPopupPinned = false;
-              setPopup(null);
+              closePopup();
             }}
             className="shrink-0 w-9 h-9 rounded-xl border border-neutral-700 bg-neutral-900/60 text-red-400 hover:text-red-300 hover:bg-neutral-800/70 transition-colors"
             title="Close"
@@ -440,8 +524,7 @@ export function JpdbPopupController() {
                     className="text-xs text-neutral-300 hover:text-neutral-100 underline underline-offset-4"
                     onClick={(e) => {
                       e.stopPropagation();
-                      isPopupPinned = false;
-                      setPopup?.(null);
+                      closePopup({ suppressSource: false });
                       navigate("/grammar");
                     }}
                   >
@@ -454,8 +537,21 @@ export function JpdbPopupController() {
             {showReading && (
               <div className="text-blue-300 text-sm leading-tight">{reading}</div>
             )}
-            <div className="text-blue-400 text-3xl font-semibold leading-none tracking-wide">
-              {surfaceWord}
+            <div className="flex items-center gap-3">
+              <div className="text-blue-400 text-3xl font-semibold leading-none tracking-wide">
+                {surfaceWord}
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSpeak();
+                }}
+                disabled={!canSpeak}
+                className="px-2.5 py-1 rounded-md border border-neutral-700 bg-neutral-900/60 text-xs text-neutral-200 hover:bg-neutral-800/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={canSpeak ? "Speak Japanese" : "Speech is not available in this browser"}
+              >
+                Speak
+              </button>
             </div>
 
             {rubySegments.length > 0 && (
@@ -468,6 +564,11 @@ export function JpdbPopupController() {
                       <div className="px-2.5 py-1 rounded-md bg-neutral-900/50 border border-neutral-700 text-lg">
                         {seg.base}
                       </div>
+                      {seg.definitions.length > 0 && (
+                        <div className="mt-1 max-w-[9rem] text-center text-[11px] leading-snug text-neutral-400">
+                          {seg.definitions.join(' | ')}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

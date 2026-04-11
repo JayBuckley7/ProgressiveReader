@@ -19,6 +19,7 @@ interface BookReaderProps {
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showMixSettings, setShowMixSettings] = useState(false);
+  const [showReaderControls, setShowReaderControls] = useState(false);
 
   const c = useBookReaderController({
     bookId,
@@ -47,6 +48,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onBack={c.handleBack}
         onClearTranslation={() => c.translation.clearTranslation({ suppressAutoload: true })}
         onShowSettings={() => setShowSettings(true)}
+        onShowReaderControls={() => setShowReaderControls(true)}
         onToggleTranslation={c.translation.applyStoredTranslation}
       />
 
@@ -63,6 +65,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       />
 
       <ReaderControls
+        visible={showReaderControls}
+        onClose={() => setShowReaderControls(false)}
         currentChapter={c.isPdf ? c.pdf.currentPage - 1 : c.chapter}
         totalChapters={c.isPdf ? c.pdf.pageCount : c.bookContent?.totalChapters || 1}
         onPrevChapter={c.isPdf ? c.pdf.prevPage : c.nav.prevChapter}

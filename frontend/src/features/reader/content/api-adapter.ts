@@ -19,7 +19,23 @@ function toCardState(state: string[]): CardState {
     return state as CardState;
 }
 
+export function parseDeckId(value: unknown): number | undefined {
+    if (typeof value === 'number') {
+        return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+    }
 
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!/^[1-9]\d*$/.test(trimmed)) {
+        return undefined;
+    }
+
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
 
 // Configuration interface
 export interface JpHighlighterConfig {
@@ -237,6 +253,13 @@ export async function mineWord(api: JpdbApiPort, card: Card, forq: boolean, sent
         if (!currentConfig.apiKey) {
             throw new Error('JPDB API Key is not set. Please set it in settings.');
         }
+
+        const miningDeckId = parseDeckId(currentConfig.miningDeckId);
+        if (miningDeckId === undefined) {
+            throw new Error('Set a mining deck ID in settings to add words.');
+        }
+
+        const forqDeckId = parseDeckId(currentConfig.forqDeckId);
         
         const result = await api.mineJpdbWord({
             vid: card.vid,
@@ -244,12 +267,17 @@ export async function mineWord(api: JpdbApiPort, card: Card, forq: boolean, sent
             forq: forq,
             sentence: sentence,
             jpdb_api_key: currentConfig.apiKey,
-            mining_deck_id: typeof currentConfig.miningDeckId === 'string' ? parseInt(currentConfig.miningDeckId) : currentConfig.miningDeckId,
-            forq_deck_id: typeof currentConfig.forqDeckId === 'string' ? parseInt(currentConfig.forqDeckId) : currentConfig.forqDeckId,
+            mining_deck_id: miningDeckId,
+            forq_deck_id: forqDeckId,
         });
         
         if (result.success) {
             vocabBank.markSaved(card);
+            if (card.state.includes('not-in-deck')) {
+                const nextState = card.state.filter((state) => state !== 'not-in-deck');
+                nextState.push('new');
+                updateUIForCard(card, toCardState(nextState));
+            }
         }
         return result.success;
     } catch (error) {
@@ -277,9 +305,9 @@ export async function updateWordState(
             flag: flag,
             state: state,
             jpdb_api_key: currentConfig.apiKey,
-            blacklist_deck_id: typeof currentConfig.blacklistDeckId === 'string' ? parseInt(currentConfig.blacklistDeckId) : currentConfig.blacklistDeckId,
-            never_forget_deck_id: typeof currentConfig.neverForgetDeckId === 'string' ? parseInt(currentConfig.neverForgetDeckId) : currentConfig.neverForgetDeckId,
-            forq_deck_id: typeof currentConfig.forqDeckId === 'string' ? parseInt(currentConfig.forqDeckId) : currentConfig.forqDeckId,
+            blacklist_deck_id: parseDeckId(currentConfig.blacklistDeckId),
+            never_forget_deck_id: parseDeckId(currentConfig.neverForgetDeckId),
+            forq_deck_id: parseDeckId(currentConfig.forqDeckId),
         });
 
         // Update the UI if successful. Our backend currently returns a coarse

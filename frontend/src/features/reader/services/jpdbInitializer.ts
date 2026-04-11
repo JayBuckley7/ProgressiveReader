@@ -3,7 +3,12 @@ import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers
 import { getCurrentConfig, loadConfig, parseText, type JpdbApiPort } from '@features/reader/content/api-adapter';
 import { JpdbWord, getJpdbData, getSentences } from '@features/reader/content/word';
 import { notifyError } from '@shared/utils/notify';
-import { showDefinitionPopup, hideDefinitionPopup } from '@features/reader/components/JpdbPopup';
+import {
+    showDefinitionPopup,
+    hideDefinitionPopup,
+    isDefinitionPopupSuppressedFor,
+    clearDefinitionPopupSuppression,
+} from '@features/reader/components/JpdbPopup';
 import { Keybind } from '~/types';
 import { appLog } from '@shared/appLog';
 
@@ -329,6 +334,14 @@ function onWordHoverStart(event: MouseEvent): void {
         
         const isClick = event.type === 'click';
 
+        if (!isClick && isDefinitionPopupSuppressedFor(jpdbWordElement)) {
+            return;
+        }
+
+        if (isClick) {
+            clearDefinitionPopupSuppression(jpdbWordElement);
+        }
+
         // Only show popup on hover if the setting is enabled OR the popup key is held.
         // Always show on click/tap.
         const currentConfig = getCurrentConfig();
@@ -363,6 +376,12 @@ function onWordHoverStart(event: MouseEvent): void {
 }
 
 function onWordHoverStop(event?: MouseEvent): void {
+    const target = event?.target as HTMLElement | undefined;
+    const jpdbWordElement = target?.closest?.('.jpdb-word') as JpdbWord | null | undefined;
+    if (jpdbWordElement) {
+        clearDefinitionPopupSuppression(jpdbWordElement);
+    }
+
     currentHover = null;
     
     // Hide popup when hover stops, unless popup key is held
@@ -384,6 +403,9 @@ function globalKeydownListener(event: KeyboardEvent) {
         // If a word is already hovered, show the popup immediately.
         if (currentHover) {
             const [wordElement, x, y] = currentHover;
+            if (isDefinitionPopupSuppressedFor(wordElement)) {
+                return;
+            }
             const jpdbData = getJpdbData(wordElement);
             if (jpdbData) {
                 appLog.debug('[jpdb] Showing popup from hotkey while hovering');
