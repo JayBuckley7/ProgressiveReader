@@ -33,12 +33,7 @@ def test_add_vocabulary_uses_current_deck_endpoint_payload() -> None:
     assert provider.calls == [
         (
             "deck/add-vocabulary",
-            {
-                "id": 42,
-                "vocabulary": [[100, 200]],
-                "ignore_unknown": True,
-                "replace_existing_occurrences": False,
-            },
+            {"id": 42, "vocabulary": [[100, 200]]},
             3,
         )
     ]
@@ -52,7 +47,14 @@ def test_set_card_sentence_uses_current_endpoint_without_deck_prefix() -> None:
     assert provider.calls == [
         (
             "set-card-sentence",
-            {"vid": 100, "sid": 200, "sentence": "example"},
+            {
+                "vid": 100,
+                "sid": 200,
+                "sentence": "example",
+                "translation": "",
+                "clear_audio": True,
+                "clear_image": True,
+            },
             1,
         )
     ]

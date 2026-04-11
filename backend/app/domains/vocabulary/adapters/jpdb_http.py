@@ -85,12 +85,7 @@ class JpdbHttpProvider(JpdbApiProvider):
         return self.post_endpoint(
             "deck/add-vocabulary",
             jpdb_api_key=jpdb_api_key,
-            payload={
-                "id": deck_id,
-                "vocabulary": [[vid, sid]],
-                "ignore_unknown": True,
-                "replace_existing_occurrences": False,
-            },
+            payload={"id": deck_id, "vocabulary": [[vid, sid]]},
         )
 
     def _deck_remove_vocabulary(self, *, deck_id: Union[int, str], vid: int, sid: int, jpdb_api_key: str) -> Dict[str, Any]:
@@ -104,7 +99,14 @@ class JpdbHttpProvider(JpdbApiProvider):
         return self.post_endpoint(
             "set-card-sentence",
             jpdb_api_key=jpdb_api_key,
-            payload={"vid": vid, "sid": sid, "sentence": sentence},
+            payload={
+                "vid": vid,
+                "sid": sid,
+                "sentence": sentence,
+                "translation": "",
+                "clear_audio": True,
+                "clear_image": True,
+            },
             retries=1,
         )
 
