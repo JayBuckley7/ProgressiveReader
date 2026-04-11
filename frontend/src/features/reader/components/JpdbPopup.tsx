@@ -69,6 +69,9 @@ let isPopupHovered = false;
 let isPopupPinned = false;
 let suppressedHoverElement: Element | null = null;
 let suppressedHoverKey: string | null = null;
+const POPUP_HISTORY_KEY = "__progressiveReaderJpdbPopup";
+let popupBackEntryActive = false;
+let ignoreNextPopupPopState = false;
 
 const HIDE_DELAY = 1500; // ms delay before hiding popup when mouse leaves
 
@@ -142,6 +145,62 @@ function getPopupSourceKey(element?: Element | null): string | null {
   return text || null;
 }
 
+function shouldUseBackButtonDismiss(): boolean {
+  if (typeof window === "undefined") return false;
+  const hasTouchPoints = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  return hasTouchPoints || coarsePointer;
+}
+
+function armPopupBackButton() {
+  if (!shouldUseBackButtonDismiss() || popupBackEntryActive) return;
+
+  try {
+    const currentState = window.history.state && typeof window.history.state === "object"
+      ? window.history.state
+      : {};
+    window.history.pushState(
+      { ...currentState, [POPUP_HISTORY_KEY]: true },
+      "",
+      window.location.href
+    );
+    popupBackEntryActive = true;
+    ignoreNextPopupPopState = false;
+  } catch {
+    popupBackEntryActive = false;
+  }
+}
+
+function removePopupBackButtonEntry() {
+  if (!popupBackEntryActive || typeof window === "undefined") return;
+  popupBackEntryActive = false;
+
+  try {
+    if (window.history.state?.[POPUP_HISTORY_KEY]) {
+      ignoreNextPopupPopState = true;
+      window.history.back();
+    }
+  } catch {
+    ignoreNextPopupPopState = false;
+  }
+}
+
+function closeDefinitionPopupInternal(
+  suppressSourceElement?: Element | null,
+  options?: { syncHistory?: boolean }
+) {
+  clearHideTimeout();
+  cancelPopupSpeech();
+  if (options?.syncHistory !== false) {
+    removePopupBackButtonEntry();
+  }
+  isPopupPinned = false;
+  isPopupHovered = false;
+  suppressedHoverElement = suppressSourceElement ?? null;
+  suppressedHoverKey = getPopupSourceKey(suppressSourceElement);
+  setPopup?.(null);
+}
+
 export function isDefinitionPopupSuppressedFor(element: Element): boolean {
   return suppressedHoverElement === element || (
     suppressedHoverKey !== null && getPopupSourceKey(element) === suppressedHoverKey
@@ -155,14 +214,16 @@ export function clearDefinitionPopupSuppression(element?: Element | null) {
   }
 }
 
-export function closeDefinitionPopup(suppressSourceElement?: Element | null) {
-  clearHideTimeout();
-  cancelPopupSpeech();
-  isPopupPinned = false;
-  isPopupHovered = false;
-  suppressedHoverElement = suppressSourceElement ?? null;
-  suppressedHoverKey = getPopupSourceKey(suppressSourceElement);
-  setPopup?.(null);
+export function closeDefinitionPopup(
+  suppressSourceElement?: Element | null,
+  options?: { syncHistory?: boolean }
+) {
+  closeDefinitionPopupInternal(suppressSourceElement, options);
+}
+
+function closeDefinitionPopupFromBrowserBack(suppressSourceElement?: Element | null) {
+  popupBackEntryActive = false;
+  closeDefinitionPopupInternal(suppressSourceElement, { syncHistory: false });
 }
 
 function scheduleHide() {
@@ -226,6 +287,7 @@ export function showDefinitionPopup(
     }
 
     const adjusted = calculatePopupPosition(x, y);
+    armPopupBackButton();
 
     setPopup({
       word,
@@ -252,9 +314,12 @@ export function JpdbPopupController() {
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
 
-  const closePopup = useCallback((options?: { suppressSource?: boolean }) => {
+  const closePopup = useCallback((options?: { suppressSource?: boolean; syncHistory?: boolean }) => {
     const shouldSuppressSource = options?.suppressSource ?? true;
-    closeDefinitionPopup(shouldSuppressSource ? popup?.sourceElement ?? null : null);
+    closeDefinitionPopup(
+      shouldSuppressSource ? popup?.sourceElement ?? null : null,
+      { syncHistory: options?.syncHistory }
+    );
   }, [popup?.sourceElement]);
 
   const learningGrammarPoints = useMemo<GrammarPoint[]>(() => {
@@ -285,16 +350,14 @@ export function JpdbPopupController() {
     if (!isPopupPinned) scheduleHide();
   };
 
-  // Handle click outside to close popup
+  // Handle outside tap/click, Escape, and Android/browser Back to close popup.
   useEffect(() => {
     if (!popup) return;
-    
-    const handleClickOutside = (event: MouseEvent) => {
-      // Check if click is outside the popup
-      const target = event.target as Element;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target as Node | null;
       const popupElement = document.querySelector('[data-jpdb-popup]');
-      
-      if (popupElement && !popupElement.contains(target)) {
+      if (popupElement && target && !popupElement.contains(target)) {
         closePopup();
       }
     };
@@ -304,17 +367,26 @@ export function JpdbPopupController() {
         closePopup();
       }
     };
-    
-    // Add event listener with a small delay to avoid immediate closure
-    const timerId = window.setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('keydown', handleKeyDown);
-    }, 100);
+
+    const handlePopState = () => {
+      if (ignoreNextPopupPopState) {
+        ignoreNextPopupPopState = false;
+        return;
+      }
+
+      if (popupBackEntryActive) {
+        closeDefinitionPopupFromBrowserBack(popup.sourceElement ?? null);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDownOutside, true);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('popstate', handlePopState);
     
     return () => {
-      window.clearTimeout(timerId);
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('pointerdown', handlePointerDownOutside, true);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('popstate', handlePopState);
     };
   }, [closePopup, popup]);
 
@@ -594,7 +666,7 @@ export function JpdbPopupController() {
                     className="text-xs text-neutral-300 hover:text-neutral-100 underline underline-offset-4"
                     onClick={(e) => {
                       e.stopPropagation();
-                      closePopup({ suppressSource: false });
+                      closePopup({ suppressSource: false, syncHistory: false });
                       navigate("/grammar");
                     }}
                   >
