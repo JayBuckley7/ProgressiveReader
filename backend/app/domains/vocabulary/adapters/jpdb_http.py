@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import List, Optional, Dict, Any, Tuple, Union
 
 import requests
 
 from ..ports import JpdbApiProvider
+
+
+logger = logging.getLogger(__name__)
 
 
 class JpdbHttpProvider(JpdbApiProvider):
@@ -81,7 +85,12 @@ class JpdbHttpProvider(JpdbApiProvider):
         return self.post_endpoint(
             "deck/add-vocabulary",
             jpdb_api_key=jpdb_api_key,
-            payload={"id": deck_id, "vocabulary": [[vid, sid]]},
+            payload={
+                "id": deck_id,
+                "vocabulary": [[vid, sid]],
+                "ignore_unknown": True,
+                "replace_existing_occurrences": False,
+            },
         )
 
     def _deck_remove_vocabulary(self, *, deck_id: Union[int, str], vid: int, sid: int, jpdb_api_key: str) -> Dict[str, Any]:
@@ -93,9 +102,10 @@ class JpdbHttpProvider(JpdbApiProvider):
 
     def _set_card_sentence(self, *, vid: int, sid: int, jpdb_api_key: str, sentence: str) -> Dict[str, Any]:
         return self.post_endpoint(
-            "deck/set-card-sentence",
+            "set-card-sentence",
             jpdb_api_key=jpdb_api_key,
             payload={"vid": vid, "sid": sid, "sentence": sentence},
+            retries=1,
         )
 
     def mine_word(
@@ -117,10 +127,15 @@ class JpdbHttpProvider(JpdbApiProvider):
         if bool(forq) and forq_deck_id is not None:
             self._deck_add_vocabulary(deck_id=forq_deck_id, vid=vid, sid=sid, jpdb_api_key=jpdb_api_key)
 
+        result: Dict[str, Any] = {"success": True}
         if isinstance(sentence, str) and sentence.strip():
-            self._set_card_sentence(vid=vid, sid=sid, jpdb_api_key=jpdb_api_key, sentence=sentence.strip())
+            try:
+                self._set_card_sentence(vid=vid, sid=sid, jpdb_api_key=jpdb_api_key, sentence=sentence.strip())
+            except Exception as exc:
+                logger.warning("JPDB sentence attachment failed after vocabulary add: %s", exc)
+                result["sentence_warning"] = str(exc)
 
-        return {"success": True}
+        return result
 
     def update_word_state(
         self,
