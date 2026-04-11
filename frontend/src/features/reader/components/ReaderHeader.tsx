@@ -13,6 +13,7 @@ interface ReaderHeaderProps {
   onClearTranslation: () => void;
   onShowSettings: () => void;
   onShowReaderControls?: () => void;
+  readerControlsVisible?: boolean;
   onToggleTranslation: (translation: { content: string }) => void;
 }
 
@@ -26,6 +27,7 @@ export function ReaderHeader({
   onClearTranslation,
   onShowSettings,
   onShowReaderControls,
+  readerControlsVisible,
   onToggleTranslation,
 }: ReaderHeaderProps) {
   const { t } = useTranslation();
@@ -103,6 +105,9 @@ export function ReaderHeader({
         {onShowReaderControls && (
           <button
             onClick={onShowReaderControls}
+            data-reader-controls-trigger="true"
+            aria-haspopup="dialog"
+            aria-expanded={readerControlsVisible ?? false}
             className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             aria-label="Reader controls"
             title="Reader controls"

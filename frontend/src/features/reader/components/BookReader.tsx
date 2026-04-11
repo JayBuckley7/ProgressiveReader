@@ -48,7 +48,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onBack={c.handleBack}
         onClearTranslation={() => c.translation.clearTranslation({ suppressAutoload: true })}
         onShowSettings={() => setShowSettings(true)}
-        onShowReaderControls={() => setShowReaderControls(true)}
+        onShowReaderControls={() => setShowReaderControls((visible) => !visible)}
+        readerControlsVisible={showReaderControls}
         onToggleTranslation={c.translation.applyStoredTranslation}
       />
 

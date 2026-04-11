@@ -63,6 +63,7 @@ let hideTimeout: number | null = null;
 let isPopupHovered = false;
 let isPopupPinned = false;
 let suppressedHoverElement: Element | null = null;
+let suppressedHoverKey: string | null = null;
 
 const HIDE_DELAY = 1500; // ms delay before hiding popup when mouse leaves
 
@@ -89,13 +90,26 @@ function clearHideTimeout() {
     }
 }
 
+function getPopupSourceKey(element?: Element | null): string | null {
+  const token = (element as (Element & { jpdbData?: WordData }) | null)?.jpdbData?.token;
+  const card = token?.card;
+  if (card && (card.vid || card.sid)) {
+    return `${card.vid || 0}/${card.sid || 0}`;
+  }
+  const text = element?.textContent?.trim();
+  return text || null;
+}
+
 export function isDefinitionPopupSuppressedFor(element: Element): boolean {
-  return suppressedHoverElement === element;
+  return suppressedHoverElement === element || (
+    suppressedHoverKey !== null && getPopupSourceKey(element) === suppressedHoverKey
+  );
 }
 
 export function clearDefinitionPopupSuppression(element?: Element | null) {
-  if (!element || suppressedHoverElement === element) {
+  if (!element || suppressedHoverElement === element || getPopupSourceKey(element) === suppressedHoverKey) {
     suppressedHoverElement = null;
+    suppressedHoverKey = null;
   }
 }
 
@@ -105,6 +119,7 @@ export function closeDefinitionPopup(suppressSourceElement?: Element | null) {
   isPopupPinned = false;
   isPopupHovered = false;
   suppressedHoverElement = suppressSourceElement ?? null;
+  suppressedHoverKey = getPopupSourceKey(suppressSourceElement);
   setPopup?.(null);
 }
 
@@ -336,6 +351,18 @@ export function JpdbPopupController() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const handleCloseButtonPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closePopup();
+  };
+
+  const handleCloseButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closePopup();
+  };
+
 
   const handleMineWord = async () => {
     if (!card || !config.apiKey || !canMine) return;
@@ -492,11 +519,10 @@ export function JpdbPopupController() {
           </div>
 
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              closePopup();
-            }}
+            onPointerDown={handleCloseButtonPointerDown}
+            onClick={handleCloseButtonClick}
             className="shrink-0 w-9 h-9 rounded-xl border border-neutral-700 bg-neutral-900/60 text-red-400 hover:text-red-300 hover:bg-neutral-800/70 transition-colors"
+            aria-label="Close popup"
             title="Close"
           >
             <span className="text-xl leading-none">×</span>
