@@ -58,6 +58,11 @@ type PopupState = {
     sourceElement?: Element | null;
 } | null;
 
+type PopupRubyPart = {
+  base: string;
+  ruby?: string;
+};
+
 let setPopup: React.Dispatch<React.SetStateAction<PopupState>> | null = null;
 let hideTimeout: number | null = null;
 let isPopupHovered = false;
@@ -81,6 +86,43 @@ function getJapaneseVoice(): SpeechSynthesisVoice | undefined {
   return window.speechSynthesis
     .getVoices()
     .find((voice) => voice.lang.toLowerCase().startsWith("ja"));
+}
+
+function buildPopupRubyParts(surfaceWord: string, rubies: Token["rubies"] | undefined): PopupRubyPart[] {
+  const validRubies = (rubies || [])
+    .filter((r) => typeof r.text === "string" && r.text.length > 0 && Number.isFinite(r.start) && Number.isFinite(r.length) && r.length > 0)
+    .slice()
+    .sort((a, b) => a.start - b.start);
+
+  if (!validRubies.length) {
+    return [{ base: surfaceWord }];
+  }
+
+  const parts: PopupRubyPart[] = [];
+  let cursor = 0;
+
+  for (const ruby of validRubies) {
+    const start = Math.max(0, Math.min(surfaceWord.length, ruby.start));
+    const end = Math.max(start, Math.min(surfaceWord.length, ruby.start + ruby.length));
+    if (end <= cursor) continue;
+
+    if (start > cursor) {
+      parts.push({ base: surfaceWord.slice(cursor, start) });
+    }
+
+    const rubyBaseStart = Math.max(start, cursor);
+    const base = surfaceWord.slice(rubyBaseStart, end);
+    if (base.length > 0) {
+      parts.push({ base, ruby: ruby.text });
+    }
+    cursor = end;
+  }
+
+  if (cursor < surfaceWord.length) {
+    parts.push({ base: surfaceWord.slice(cursor) });
+  }
+
+  return parts.length ? parts : [{ base: surfaceWord }];
 }
 
 function clearHideTimeout() {
@@ -300,7 +342,9 @@ export function JpdbPopupController() {
 
   const surfaceWord = token?.card?.spelling || popup.word;
   const reading = token?.card?.reading || "";
-  const showReading = Boolean(reading && reading !== surfaceWord);
+  const popupRubyParts = buildPopupRubyParts(surfaceWord, token?.rubies);
+  const hasPopupRuby = popupRubyParts.some((part) => Boolean(part.ruby));
+  const showReading = Boolean(reading && reading !== surfaceWord && !hasPopupRuby);
   const speechText = reading || surfaceWord;
   const canSpeak = canUsePopupSpeech() && speechText.length > 0;
   const miningDeckId = parseDeckId(config.miningDeckId);
@@ -564,8 +608,17 @@ export function JpdbPopupController() {
               <div className="text-blue-300 text-sm leading-tight">{reading}</div>
             )}
             <div className="flex items-center gap-3">
-              <div className="text-blue-400 text-3xl font-semibold leading-none tracking-wide">
-                {surfaceWord}
+              <div className="text-blue-400 text-3xl font-semibold leading-[1.25] tracking-wide">
+                {popupRubyParts.map((part, idx) => part.ruby ? (
+                  <ruby key={`${part.base}-${idx}`} className="whitespace-nowrap">
+                    {part.base}
+                    <rt className="text-blue-300 text-[0.42em] font-medium leading-none tracking-normal">
+                      {part.ruby}
+                    </rt>
+                  </ruby>
+                ) : (
+                  <span key={`${part.base}-${idx}`}>{part.base}</span>
+                ))}
               </div>
               <button
                 onClick={(e) => {
@@ -583,15 +636,17 @@ export function JpdbPopupController() {
             {rubySegments.length > 0 && (
               <div className="mt-3">
                 <div className="border-b border-dashed border-neutral-600/70 mb-3" />
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-x-4 gap-y-3">
                   {rubySegments.map((seg, idx) => (
-                    <div key={`${seg.base}-${idx}`} className="flex flex-col items-center">
-                      <div className="text-sky-300 text-sm leading-none mb-1">{seg.ruby}</div>
-                      <div className="px-2.5 py-1 rounded-md bg-neutral-900/50 border border-neutral-700 text-lg">
+                    <div key={`${seg.base}-${idx}`} className="flex w-36 flex-col items-center">
+                      <ruby className="px-2.5 pt-3 pb-1 rounded-md bg-neutral-900/50 border border-neutral-700 text-lg leading-[1.15]">
                         {seg.base}
-                      </div>
+                        <rt className="text-sky-300 text-[0.62em] font-medium leading-none tracking-normal">
+                          {seg.ruby}
+                        </rt>
+                      </ruby>
                       {seg.definitions.length > 0 && (
-                        <div className="mt-1 max-w-[9rem] text-center text-[11px] leading-snug text-neutral-400">
+                        <div className="mt-1 w-full text-center text-[11px] leading-snug text-neutral-400">
                           {seg.definitions.join(' | ')}
                         </div>
                       )}
