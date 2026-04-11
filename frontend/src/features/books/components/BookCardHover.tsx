@@ -20,6 +20,9 @@ interface BookCardHoverProps {
   density?: "comfortable" | "compact";
 }
 
+const LONG_PRESS_DELAY_MS = 550;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 12;
+
 export function BookCardHover({ 
   book, 
   onSelectBook, 
@@ -38,10 +41,15 @@ export function BookCardHover({
   const [isUpdatingCover, setIsUpdatingCover] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [showCoverMenu, setShowCoverMenu] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [placeholderUrl, setPlaceholderUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressNextClickRef = useRef(false);
+  const suppressClickTimerRef = useRef<number | null>(null);
 
   const coverService = useMemo(() => new BookCoverService(deps.backend.covers), [deps.backend.covers]);
 
@@ -51,6 +59,13 @@ export function BookCardHover({
     handler();
     media.addEventListener("change", handler);
     return () => media.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current != null) window.clearTimeout(longPressTimerRef.current);
+      if (suppressClickTimerRef.current != null) window.clearTimeout(suppressClickTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -173,12 +188,92 @@ export function BookCardHover({
   };
 
   const handleCardClick = () => {
-    if (showCoverMenu || showFolderMenu) {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
+    if (showCoverMenu || showFolderMenu || showMobileActions) {
       setShowCoverMenu(false);
       setShowFolderMenu(false);
+      setShowMobileActions(false);
       return;
     }
     onSelectBook(book.id as string);
+  };
+
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current != null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  };
+
+  const suppressNextCardClick = () => {
+    suppressNextClickRef.current = true;
+    if (suppressClickTimerRef.current != null) {
+      window.clearTimeout(suppressClickTimerRef.current);
+    }
+    suppressClickTimerRef.current = window.setTimeout(() => {
+      suppressNextClickRef.current = false;
+      suppressClickTimerRef.current = null;
+    }, 1000);
+  };
+
+  const openMobileActions = () => {
+    setShowCoverMenu(false);
+    setShowFolderMenu(false);
+    setShowMobileActions(true);
+  };
+
+  const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobile || e.button !== 0) return;
+
+    clearLongPressTimer();
+    longPressStartRef.current = { x: e.clientX, y: e.clientY };
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null;
+      longPressStartRef.current = null;
+      suppressNextCardClick();
+      openMobileActions();
+    }, LONG_PRESS_DELAY_MS);
+  };
+
+  const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (longPressTimerRef.current == null || !longPressStartRef.current) return;
+
+    const deltaX = Math.abs(e.clientX - longPressStartRef.current.x);
+    const deltaY = Math.abs(e.clientY - longPressStartRef.current.y);
+    if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+      clearLongPressTimer();
+    }
+  };
+
+  const handleCardPointerEnd = () => {
+    clearLongPressTimer();
+  };
+
+  const handleMobileChangeCoverClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMobileActions(false);
+    setShowFolderMenu(false);
+    setShowCoverMenu(true);
+  };
+
+  const handleMobileMoveClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMobileActions(false);
+    setShowCoverMenu(false);
+    setShowFolderMenu(true);
+  };
+
+  const handleMobileEditClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMobileActions(false);
+    setShowEditModal(true);
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -217,10 +312,20 @@ export function BookCardHover({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
-        setShowCoverMenu(false);
-        setShowFolderMenu(false);
+        if (!isMobile) {
+          setShowCoverMenu(false);
+          setShowFolderMenu(false);
+        }
       }}
+      onPointerDown={handleCardPointerDown}
+      onPointerMove={handleCardPointerMove}
+      onPointerUp={handleCardPointerEnd}
+      onPointerCancel={handleCardPointerEnd}
+      onPointerLeave={handleCardPointerEnd}
       onClick={handleCardClick}
+      onContextMenu={(e) => {
+        if (isMobile) e.preventDefault();
+      }}
     >
       <div className="app-card transition-shadow duration-150 hover:shadow-sm">
         {/* Cover Wrapper */}
@@ -265,23 +370,6 @@ export function BookCardHover({
               </div>
             )}
           </div>
-
-          {isMobile && (
-            <button
-              onClick={handleChangeCoverClick}
-              disabled={isUpdatingCover}
-              className="absolute top-2 right-2 z-30 h-8 w-8 rounded-md app-button-muted flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-              title={`Change cover for "${book.title}"`}
-            >
-              {isUpdatingCover ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current opacity-70"></div>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16M14 14l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              )}
-            </button>
-          )}
 
           {/* Hover Actions */}
           {!isMobile && (
@@ -379,14 +467,86 @@ export function BookCardHover({
             </div>
           )}
 
+          {showMobileActions && isMobile && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 flex items-end"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMobileActions(false);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div
+                className="w-full app-card rounded-t-lg p-3"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Actions for ${book.title}`}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-[var(--ui-border)]" />
+                <div className="px-3 py-2">
+                  <div className="text-sm font-semibold line-clamp-2">{book.title}</div>
+                  <div className="text-xs app-muted mt-1">{getCurrentFolderName()}</div>
+                </div>
+                {onMoveToFolder ? (
+                  <button
+                    onClick={handleMobileMoveClick}
+                    className="w-full text-left px-3 py-3 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors"
+                  >
+                    Move to folder
+                  </button>
+                ) : null}
+                <button
+                  onClick={handleMobileChangeCoverClick}
+                  disabled={isUpdatingCover}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Change cover
+                </button>
+                <button
+                  onClick={handleMobileEditClick}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm hover:bg-[var(--ui-surface-alt)] transition-colors"
+                >
+                  Edit details
+                </button>
+                <button
+                  onClick={(e) => {
+                    setShowMobileActions(false);
+                    void handleDeleteClick(e);
+                  }}
+                  disabled={isDeleting}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm text-red-600 hover:bg-[var(--ui-surface-alt)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Delete book
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowMobileActions(false);
+                  }}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm app-muted hover:bg-[var(--ui-surface-alt)] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {showCoverMenu && isMobile && (
             <div
               className="fixed inset-0 z-50 bg-black/40 flex items-end"
-              onClick={() => setShowCoverMenu(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowCoverMenu(false);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <div
                 className="w-full app-card rounded-t-2xl p-3"
                 onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-[var(--ui-border)]" />
                 <button
@@ -413,7 +573,7 @@ export function BookCardHover({
           )}
 
           {/* Folder Menu Dropdown */}
-          {onMoveToFolder && showFolderMenu && (
+          {onMoveToFolder && showFolderMenu && !isMobile && (
             <div
               className="absolute top-11 left-2 z-40 min-w-52 app-card p-1"
               onClick={(e) => e.stopPropagation()}
@@ -455,6 +615,77 @@ export function BookCardHover({
                     No folders
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {onMoveToFolder && showFolderMenu && isMobile && (
+            <div
+              className="fixed inset-0 z-50 bg-black/40 flex items-end"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFolderMenu(false);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div
+                className="w-full app-card rounded-t-lg p-3"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Move ${book.title} to folder`}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-[var(--ui-border)]" />
+                <div className="px-3 py-2">
+                  <div className="text-sm font-semibold">Move to folder</div>
+                  <div className="text-xs app-muted mt-1">
+                    Current: <span className="text-[color:var(--ui-text)]">{getCurrentFolderName()}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleMoveToFolder(null);
+                  }}
+                  className={`w-full text-left px-3 py-3 rounded-md text-sm app-nav-item ${
+                    !currentFolderId ? "app-nav-active" : ""
+                  }`}
+                >
+                  No folder
+                </button>
+                {availableFolders.length > 0 ? (
+                  availableFolders.map((folder) => (
+                    <button
+                      key={folder.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleMoveToFolder(folder.id);
+                      }}
+                      className={`w-full text-left px-3 py-3 rounded-md text-sm app-nav-item ${
+                        currentFolderId === folder.id ? "app-nav-active" : ""
+                      }`}
+                    >
+                      {folder.name}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-3 text-sm app-muted">
+                    No folders
+                  </div>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowFolderMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-3 rounded-md text-sm app-muted hover:bg-[var(--ui-surface-alt)] transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
