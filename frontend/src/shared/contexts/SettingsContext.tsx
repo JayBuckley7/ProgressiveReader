@@ -489,7 +489,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       styleElement.textContent = `
         .jpdb-furi,
         rt.jpdb-furi,
-        ruby rt {
+        .reader-content-transition ruby rt {
           display: none !important;
         }
       `;
