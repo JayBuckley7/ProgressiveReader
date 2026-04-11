@@ -343,7 +343,8 @@ export function JpdbPopupController() {
   const surfaceWord = token?.card?.spelling || popup.word;
   const reading = token?.card?.reading || "";
   const popupRubyParts = buildPopupRubyParts(surfaceWord, token?.rubies);
-  const fullReadingRuby = reading && reading !== surfaceWord ? reading : "";
+  const hasPopupRuby = popupRubyParts.some((part) => Boolean(part.ruby));
+  const fallbackReading = reading && reading !== surfaceWord && !hasPopupRuby ? reading : "";
   const speechText = reading || surfaceWord;
   const canSpeak = canUsePopupSpeech() && speechText.length > 0;
   const miningDeckId = parseDeckId(config.miningDeckId);
@@ -603,29 +604,23 @@ export function JpdbPopupController() {
               </div>
             ) : null}
 
+            {fallbackReading && (
+              <div className="text-blue-300 text-sm leading-tight">{fallbackReading}</div>
+            )}
             <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
               <div className="max-w-full overflow-x-auto pb-1 text-blue-400 text-3xl font-semibold leading-[1.35] tracking-wide">
-                {fullReadingRuby ? (
-                  <ruby className="inline-block whitespace-nowrap">
-                    {surfaceWord}
-                    <rt className="text-blue-300 text-[0.42em] font-medium leading-none tracking-normal">
-                      {fullReadingRuby}
-                    </rt>
-                  </ruby>
-                ) : (
-                  <span className="inline-flex whitespace-nowrap">
-                    {popupRubyParts.map((part, idx) => part.ruby ? (
-                      <ruby key={`${part.base}-${idx}`} className="whitespace-nowrap">
-                        {part.base}
-                        <rt className="text-blue-300 text-[0.42em] font-medium leading-none tracking-normal">
-                          {part.ruby}
-                        </rt>
-                      </ruby>
-                    ) : (
-                      <span key={`${part.base}-${idx}`}>{part.base}</span>
-                    ))}
-                  </span>
-                )}
+                <span className="inline-block whitespace-nowrap">
+                  {popupRubyParts.map((part, idx) => part.ruby ? (
+                    <ruby key={`${part.base}-${idx}`} className="whitespace-nowrap">
+                      {part.base}
+                      <rt className="text-blue-300 text-[0.42em] font-medium leading-none tracking-normal">
+                        {part.ruby}
+                      </rt>
+                    </ruby>
+                  ) : (
+                    <span key={`${part.base}-${idx}`}>{part.base}</span>
+                  ))}
+                </span>
               </div>
               <button
                 onClick={(e) => {
