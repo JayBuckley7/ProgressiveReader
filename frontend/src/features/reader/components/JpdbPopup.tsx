@@ -72,8 +72,10 @@ let suppressedHoverKey: string | null = null;
 const POPUP_HISTORY_KEY = "__progressiveReaderJpdbPopup";
 let popupBackEntryActive = false;
 let ignoreNextPopupPopState = false;
+let suppressPopupActivationUntil = 0;
 
 const HIDE_DELAY = 1500; // ms delay before hiding popup when mouse leaves
+const CLOSE_ACTIVATION_SUPPRESSION_MS = 700;
 
 function canUsePopupSpeech(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -145,6 +147,18 @@ function getPopupSourceKey(element?: Element | null): string | null {
   return text || null;
 }
 
+function nowMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+export function isDefinitionPopupActivationSuppressed(): boolean {
+  return nowMs() < suppressPopupActivationUntil;
+}
+
+function suppressDefinitionPopupActivation() {
+  suppressPopupActivationUntil = nowMs() + CLOSE_ACTIVATION_SUPPRESSION_MS;
+}
+
 function shouldUseBackButtonDismiss(): boolean {
   if (typeof window === "undefined") return false;
   const hasTouchPoints = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
@@ -187,10 +201,13 @@ function removePopupBackButtonEntry() {
 
 function closeDefinitionPopupInternal(
   suppressSourceElement?: Element | null,
-  options?: { syncHistory?: boolean }
+  options?: { syncHistory?: boolean; suppressActivation?: boolean }
 ) {
   clearHideTimeout();
   cancelPopupSpeech();
+  if (options?.suppressActivation) {
+    suppressDefinitionPopupActivation();
+  }
   if (options?.syncHistory !== false) {
     removePopupBackButtonEntry();
   }
@@ -216,14 +233,14 @@ export function clearDefinitionPopupSuppression(element?: Element | null) {
 
 export function closeDefinitionPopup(
   suppressSourceElement?: Element | null,
-  options?: { syncHistory?: boolean }
+  options?: { syncHistory?: boolean; suppressActivation?: boolean }
 ) {
   closeDefinitionPopupInternal(suppressSourceElement, options);
 }
 
 function closeDefinitionPopupFromBrowserBack(suppressSourceElement?: Element | null) {
   popupBackEntryActive = false;
-  closeDefinitionPopupInternal(suppressSourceElement, { syncHistory: false });
+  closeDefinitionPopupInternal(suppressSourceElement, { syncHistory: false, suppressActivation: true });
 }
 
 function scheduleHide() {
@@ -314,11 +331,14 @@ export function JpdbPopupController() {
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
 
-  const closePopup = useCallback((options?: { suppressSource?: boolean; syncHistory?: boolean }) => {
+  const closePopup = useCallback((options?: { suppressSource?: boolean; syncHistory?: boolean; suppressActivation?: boolean }) => {
     const shouldSuppressSource = options?.suppressSource ?? true;
     closeDefinitionPopup(
       shouldSuppressSource ? popup?.sourceElement ?? null : null,
-      { syncHistory: options?.syncHistory }
+      {
+        syncHistory: options?.syncHistory,
+        suppressActivation: options?.suppressActivation ?? true,
+      }
     );
   }, [popup?.sourceElement]);
 
@@ -666,7 +686,7 @@ export function JpdbPopupController() {
                     className="text-xs text-neutral-300 hover:text-neutral-100 underline underline-offset-4"
                     onClick={(e) => {
                       e.stopPropagation();
-                      closePopup({ suppressSource: false, syncHistory: false });
+                      closePopup({ suppressSource: false, syncHistory: false, suppressActivation: false });
                       navigate("/grammar");
                     }}
                   >

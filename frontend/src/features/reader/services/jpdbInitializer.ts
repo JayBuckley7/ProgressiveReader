@@ -7,6 +7,7 @@ import {
     showDefinitionPopup,
     hideDefinitionPopup,
     isDefinitionPopupSuppressedFor,
+    isDefinitionPopupActivationSuppressed,
     clearDefinitionPopupSuppression,
 } from '@features/reader/components/JpdbPopup';
 import { Keybind } from '~/types';
@@ -333,6 +334,14 @@ function onWordHoverStart(event: MouseEvent): void {
         currentHover = [jpdbWordElement, event.clientX, event.clientY];
         
         const isClick = event.type === 'click';
+
+        if (isDefinitionPopupActivationSuppressed()) {
+            if (isClick) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            return;
+        }
 
         if (!isClick && isDefinitionPopupSuppressedFor(jpdbWordElement)) {
             return;
