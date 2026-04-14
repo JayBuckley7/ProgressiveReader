@@ -65,22 +65,22 @@ export default function ClipboardReader() {
     const displayEntries = sortAscending ? [...entries].reverse() : entries;
     return displayEntries.map(entry => (
       <div key={entry.id} className="mb-6 last:mb-0">
-        <div className="flex items-center justify-between mb-2 text-xs text-gray-500 dark:text-gray-400">
-          <span>Entry</span>
+        <div className="flex items-center justify-between gap-2 mb-2 text-xs text-gray-500 dark:text-gray-400">
+          <span>{t('clipboard.entry')}</span>
           <button
-            className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+            className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
             onClick={() => handleRemoveEntry(entry.id)}
-            title="Remove this entry"
+            title={t('clipboard.removeEntry')}
           >
-            Remove
+            {t('clipboard.remove')}
           </button>
         </div>
-        <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
+        <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed break-words">
           {parseHtmlToJsx(entry.html)}
         </div>
       </div>
     ));
-  }, [appendMode, entries, sortAscending]);
+  }, [appendMode, entries, sortAscending, t]);
 
   const hasAnyContent = appendMode ? entries.length > 0 : !!html;
 
@@ -276,115 +276,153 @@ export default function ClipboardReader() {
     }
   };
 
+  const buttonBase = "min-h-9 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+  const secondaryButtonClass = `${buttonBase} bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600`;
+  const primaryButtonClass = `${buttonBase} bg-blue-600 text-white hover:bg-blue-700`;
+  const saveButtonClass = `${buttonBase} bg-green-600 text-white hover:bg-green-700`;
+  const controlClass = "flex min-h-10 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-2 text-sm leading-tight text-gray-700 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300";
+  const checkboxClass = "h-4 w-4 shrink-0 accent-gray-700 dark:accent-gray-300";
+  const selectClass = "ml-auto h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-800 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
+
+  const renderOptionControls = () => (
+    <>
+      <label className={controlClass} title={!canAutoRefresh ? t('clipboard.grantTip') : ''}>
+        <input
+          type="checkbox"
+          className={checkboxClass}
+          checked={enabled && canAutoRefresh}
+          onChange={(e) => setEnabled(e.target.checked)}
+          disabled={!canAutoRefresh}
+        />
+        <span className="min-w-0">{t('clipboard.autoRefresh')}</span>
+      </label>
+
+      <label className={controlClass}>
+        <span className="min-w-0">{t('clipboard.interval')}</span>
+        <select
+          value={pollMs}
+          onChange={(e) => setPollMs(Number(e.target.value))}
+          disabled={!canAutoRefresh}
+          className={selectClass}
+        >
+          <option value={1000}>1s</option>
+          <option value={2000}>2s</option>
+          <option value={5000}>5s</option>
+        </select>
+      </label>
+
+      <label className={controlClass} title={t('clipboard.stack')}>
+        <input
+          type="checkbox"
+          className={checkboxClass}
+          checked={appendMode}
+          onChange={(e) => handleToggleAppend(e.target.checked)}
+        />
+        <span className="min-w-0">{t('clipboard.stack')}</span>
+      </label>
+
+      <label className={controlClass} title={t('clipboard.oldestFirst')}>
+        <input
+          type="checkbox"
+          className={checkboxClass}
+          checked={sortAscending}
+          onChange={(e) => setSortAscending(e.target.checked)}
+          disabled={!appendMode}
+        />
+        <span className="min-w-0">{t('clipboard.oldestFirst')}</span>
+      </label>
+
+      <button
+        onClick={handleClearContent}
+        className={secondaryButtonClass}
+      >
+        {t('clipboard.clear')}
+      </button>
+
+      <label className={controlClass}>
+        <input
+          type="checkbox"
+          className={checkboxClass}
+          checked={jpdbHighlighted}
+          onChange={(e) => setJpdbHighlighted(e.target.checked)}
+        />
+        <span className="min-w-0">{t('clipboard.highlight')}</span>
+      </label>
+    </>
+  );
+
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          <h1 className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
-            {t('clipboard.title')}
-          </h1>
-          <span className="text-xs text-gray-500 ml-2 truncate">
-            {rawText ? t('clipboard.chars', { count: rawText.length }) : t('clipboard.noText')}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-3 flex-shrink-0">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="font-semibold text-gray-900 dark:text-white truncate text-sm sm:text-base">
+              {t('clipboard.title')}
+            </h1>
+            <div className="mt-0.5 text-xs text-gray-500 truncate">
+              {rawText ? t('clipboard.chars', { count: rawText.length }) : t('clipboard.noText')}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
           {!isSecure && (
-            <span className="text-xs text-red-600 dark:text-red-400" title={t('clipboard.insecureTitle')}>
+            <span className="col-span-2 text-xs text-red-600 dark:text-red-400 sm:col-span-1" title={t('clipboard.insecureTitle')}>
               {t('clipboard.insecure')}
             </span>
           )}
           {(permissionState === 'denied' || permissionState === 'unknown') && isSecure && (
             <button
               onClick={enableClipboardSync}
-              className="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
+              className={primaryButtonClass}
             >
               {t('clipboard.enable')}
             </button>
           )}
           <button
             onClick={handlePasteClick}
-            className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+            className={secondaryButtonClass}
           >
             {t('clipboard.pasteNow')}
           </button>
           <button
             onClick={saveToLibrary}
-            className="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700"
+            className={saveButtonClass}
             title={t('clipboard.saveTitle')}
           >
             {t('clipboard.save')}
           </button>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={!canAutoRefresh ? t('clipboard.grantTip') : ''}>
-            <input
-              type="checkbox"
-              checked={enabled && canAutoRefresh}
-              onChange={(e) => setEnabled(e.target.checked)}
-              disabled={!canAutoRefresh}
-            />
-            {t('clipboard.autoRefresh')}
-          </label>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
-            {t('clipboard.interval')}
-            <select
-              value={pollMs}
-              onChange={(e) => setPollMs(Number(e.target.value))}
-              disabled={!canAutoRefresh}
-              className="text-xs bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 disabled:opacity-60"
-            >
-              <option value={1000}>1s</option>
-              <option value={2000}>2s</option>
-              <option value={5000}>5s</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={t('clipboard.stack')}>
-            <input
-              type="checkbox"
-              checked={appendMode}
-              onChange={(e) => handleToggleAppend(e.target.checked)}
-            />
-            {t('clipboard.stack')}
-          </label>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title={t('clipboard.oldestFirst')}>
-            <input
-              type="checkbox"
-              checked={sortAscending}
-              onChange={(e) => setSortAscending(e.target.checked)}
-              disabled={!appendMode}
-            />
-            {t('clipboard.oldestFirst')}
-          </label>
-          <button
-            onClick={handleClearContent}
-            className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
-            {t('clipboard.clear')}
-          </button>
-          <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
-            <input
-              type="checkbox"
-              checked={jpdbHighlighted}
-              onChange={(e) => setJpdbHighlighted(e.target.checked)}
-            />
-            {t('clipboard.highlight')}
-          </label>
+          </div>
+        </div>
+
+        <details className="mt-3 sm:hidden">
+          <summary className="cursor-pointer rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            {t('clipboard.options', { defaultValue: 'Options' })}
+          </summary>
+          <div className="mt-2 grid grid-cols-1 gap-2">
+            {renderOptionControls()}
+          </div>
+        </details>
+
+        <div className="mt-3 hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+          {renderOptionControls()}
         </div>
       </div>
       <div
         ref={contentRef}
-        className="flex-1 overflow-y-auto pb-24 px-3 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
+        className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-24 px-4 sm:px-4 md:px-8 lg:px-16 touch-pan-y"
         style={{
           fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
           fontFamily: settings?.fontFamily || 'Inter',
         }}
       >
-        <div className="max-w-4xl mx-auto py-4 sm:py-6 md:py-8">
+        <div className="w-full max-w-4xl mx-auto py-4 sm:py-6 md:py-8 break-words">
           {hasAnyContent ? (
             appendMode ? (
-              <div>
+              <div className="min-w-0">
                 {renderedEntries}
               </div>
             ) : (
-              <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed">
+              <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none leading-relaxed break-words">
                 {jsx}
               </div>
             )
