@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { initialize as initializeJpdb, highlightContent, removeJpdbHighlighting } from "@features/reader/services/jpdbInitializer";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { useAppData } from "@shared/contexts/AppDataContext";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
 import { useTranslation } from "react-i18next";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
@@ -46,6 +47,7 @@ export default function ClipboardReader() {
   const [pollMs, setPollMs] = useState<number>(2000);
   const [jpdbHighlighted, setJpdbHighlighted] = useState<boolean>(false);
   const [permissionState, setPermissionState] = useState<"unknown" | "granted" | "denied" | "prompt">("unknown");
+  const [clipboardReadUnlocked, setClipboardReadUnlocked] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const jpdbInitRef = useRef(false);
   const lastClipboardRef = useRef<string>("");
@@ -54,6 +56,7 @@ export default function ClipboardReader() {
   const pasteAreaRef = useRef<HTMLTextAreaElement>(null);
   const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
   const { uploadBook, isAuthenticated, signIn } = useAppData();
+  const deps = useAppDeps();
 
   const jsx = useMemo(() => {
     if (!html) return null;
@@ -129,7 +132,9 @@ export default function ClipboardReader() {
     return () => { mounted = false; };
   }, []);
 
-  const canAutoRefresh = isSecure && permissionState === 'granted';
+  const hasClipboardReadApi = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText;
+  const canAutoRefresh = isSecure && hasClipboardReadApi && (permissionState === 'granted' || clipboardReadUnlocked);
+  const shouldShowEnableButton = isSecure && hasClipboardReadApi && !canAutoRefresh;
 
   useEffect(() => {
     if (!enabled || !canAutoRefresh) return;
@@ -161,7 +166,7 @@ export default function ClipboardReader() {
       if (!contentRef.current || !hasAnyContent) return;
       const el = contentRef.current;
       const frame = requestAnimationFrame(() => {
-        highlightContent(el).catch((e) => appLog.error("[ClipboardReader] highlightContent error", e));
+        highlightContent(deps.backend.vocabulary, el).catch((e) => appLog.error("[ClipboardReader] highlightContent error", e));
       });
       return () => cancelAnimationFrame(frame);
     } else if (contentRef.current) {
@@ -169,7 +174,7 @@ export default function ClipboardReader() {
       const el = contentRef.current;
       removeJpdbHighlighting(el);
     }
-  }, [jpdbHighlighted, hasAnyContent, contentRevision]);
+  }, [jpdbHighlighted, hasAnyContent, contentRevision, deps.backend.vocabulary]);
 
   // Support Ctrl+V paste events as a fallback when readText is blocked
   useEffect(() => {
@@ -190,6 +195,9 @@ export default function ClipboardReader() {
 	    // Trigger a permission prompt (when possible) by reading in direct response to a user gesture
 	    try {
 	      const text = await navigator.clipboard.readText();
+        setClipboardReadUnlocked(true);
+        setPermissionState(prev => prev === 'denied' ? prev : 'granted');
+        setEnabled(true);
 	      const changed = ingestText(text);
 	      toast.success(changed ? t('clipboard.toasts.permissionGranted') : t('clipboard.toasts.permissionUpToDate'));
 	    } catch (e: any) {
@@ -202,6 +210,8 @@ export default function ClipboardReader() {
 	  const handlePasteClick = async () => {
 	    try {
 	      const text = await navigator.clipboard.readText();
+        setClipboardReadUnlocked(true);
+        setPermissionState(prev => prev === 'denied' ? prev : 'granted');
 	      const changed = ingestText(text);
 	      if (changed) {
 	        toast.success(t('clipboard.toasts.pasted'));
@@ -276,13 +286,13 @@ export default function ClipboardReader() {
     }
   };
 
-  const buttonBase = "min-h-9 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
-  const secondaryButtonClass = `${buttonBase} bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600`;
-  const primaryButtonClass = `${buttonBase} bg-blue-600 text-white hover:bg-blue-700`;
-  const saveButtonClass = `${buttonBase} bg-green-600 text-white hover:bg-green-700`;
-  const controlClass = "flex min-h-10 items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-2 text-sm leading-tight text-gray-700 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-300";
-  const checkboxClass = "h-4 w-4 shrink-0 accent-gray-700 dark:accent-gray-300";
-  const selectClass = "ml-auto h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-800 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
+  const buttonBase = "inline-flex h-10 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+  const secondaryButtonClass = `${buttonBase} border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700`;
+  const primaryButtonClass = `${buttonBase} border-transparent bg-blue-600 text-white hover:bg-blue-700`;
+  const saveButtonClass = `${buttonBase} border-transparent bg-green-600 text-white hover:bg-green-700`;
+  const controlClass = "inline-flex h-10 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-sm font-medium leading-none text-gray-800 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100";
+  const checkboxClass = "h-4 w-4 shrink-0 rounded border-gray-300 accent-gray-700 dark:border-gray-600 dark:accent-gray-300";
+  const selectClass = "ml-1 h-8 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-800 outline-none disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100";
 
   const renderOptionControls = () => (
     <>
@@ -370,7 +380,7 @@ export default function ClipboardReader() {
               {t('clipboard.insecure')}
             </span>
           )}
-          {(permissionState === 'denied' || permissionState === 'unknown') && isSecure && (
+          {shouldShowEnableButton && (
             <button
               onClick={enableClipboardSync}
               className={primaryButtonClass}

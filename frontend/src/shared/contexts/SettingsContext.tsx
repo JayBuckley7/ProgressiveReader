@@ -115,6 +115,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
   const { isAuthenticated, loadSettings, saveSettings, books } = useAppData();
   const loadedFromCloudRef = useRef(false);
+  const cloudLoadInFlightRef = useRef(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cloudLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -160,7 +161,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Listen for authentication state changes through auth manager
     const unsubscribe = deps.driveAuth.onAuthStateChange(async (isAuthenticated) => {
-      if (isAuthenticated && !loadedFromCloudRef.current && !isLoadingFromCloud) {
+      if (isAuthenticated && !loadedFromCloudRef.current && !isLoadingFromCloud && !cloudLoadInFlightRef.current) {
+        cloudLoadInFlightRef.current = true;
         setIsLoadingFromCloud(true);
         try {
           appLog.debug('[Settings] Auto-loading settings from Google Drive after authentication');
@@ -225,11 +227,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
 
               // Also set JPDB API key cookies if present in cloud settings
+              let syncedJpdbKeyFromCloud = false;
               try {
                 const cloudJpdbKey = (data as any).jpdb_api_key;
                 if (typeof cloudJpdbKey === 'string' && cloudJpdbKey.length > 0) {
-                  document.cookie = `jpdbApiKey=${cloudJpdbKey}; path=/;`;
-                  document.cookie = `jpdb_api_key=${cloudJpdbKey}; path=/;`;
+                  const encoded = encodeURIComponent(cloudJpdbKey);
+                  document.cookie = `jpdbApiKey=${encoded}; path=/;`;
+                  document.cookie = `jpdb_api_key=${encoded}; path=/;`;
+                  syncedJpdbKeyFromCloud = true;
                   appLog.debug('[Settings] JPDB API key synced from cloud into cookies');
                 }
               } catch (e) {
@@ -253,6 +258,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem(k, String(v));
                   }
                 }
+                if (syncedJpdbKeyFromCloud) {
+                  window.dispatchEvent(new CustomEvent("pr:jpdb-settings-updated"));
+                }
               } catch {
                 // ignore (private mode / disabled storage)
               }
@@ -267,10 +275,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           appLog.error('[Settings] Failed to auto-load settings from Google Drive', err);
           loadedFromCloudRef.current = true; // Mark as attempted to avoid infinite retries
         } finally {
+          cloudLoadInFlightRef.current = false;
           setIsLoadingFromCloud(false);
         }
       } else if (!isAuthenticated) {
         loadedFromCloudRef.current = false;
+        cloudLoadInFlightRef.current = false;
         setIsLoadingFromCloud(false);
         clearSettingsCookie();
         clearSettingsStorage();
@@ -279,6 +289,33 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     return unsubscribe;
   }, [deps.driveAuth, isLoadingFromCloud]);
+
+  // Settings are needed before the reader decides whether JPDB highlighting can
+  // use the real JPDB API. Do not depend on the library sync path to initialize
+  // Drive auth; routes like clipboard or direct book loads can otherwise start
+  // with only local defaults and stay on fallback highlighting.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (loadedFromCloudRef.current || isLoadingFromCloud || cloudLoadInFlightRef.current) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const authed = await deps.driveAuth.ensureAuthenticated();
+        if (!cancelled && !authed) {
+          appLog.debug('[Settings] Google Drive auth unavailable for automatic settings load');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          appLog.warn('[Settings] Failed to initialize Drive auth for settings load', error);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deps.driveAuth, isAuthenticated, isLoadingFromCloud]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {

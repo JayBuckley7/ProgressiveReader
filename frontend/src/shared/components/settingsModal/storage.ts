@@ -40,9 +40,15 @@ export function readLocalSettingsState(): LocalSettingsState {
 }
 
 export function readJpdbApiKeyFromCookies(): string {
-  const m1 = document.cookie.match(/(?:^|;\\s*)jpdbApiKey=([^;]+)/);
-  const m2 = document.cookie.match(/(?:^|;\\s*)jpdb_api_key=([^;]+)/);
-  return m1?.[1] || m2?.[1] || "";
+  const m1 = document.cookie.match(/(?:^|;\s*)jpdbApiKey=([^;]+)/);
+  const m2 = document.cookie.match(/(?:^|;\s*)jpdb_api_key=([^;]+)/);
+  const raw = m1?.[1] || m2?.[1] || "";
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 }
 
 export function syncLocalSettingsToStorage(localState: LocalSettingsState): void {
@@ -60,14 +66,17 @@ export function syncLocalSettingsToStorage(localState: LocalSettingsState): void
 
 export function syncJpdbApiKeyToCookies(jpdbApiKey: string): void {
   if (jpdbApiKey) {
-    document.cookie = `jpdbApiKey=${jpdbApiKey}; path=/;`;
-    document.cookie = `jpdb_api_key=${jpdbApiKey}; path=/;`;
+    const encoded = encodeURIComponent(jpdbApiKey);
+    document.cookie = `jpdbApiKey=${encoded}; path=/;`;
+    document.cookie = `jpdb_api_key=${encoded}; path=/;`;
+    window.dispatchEvent(new CustomEvent("pr:jpdb-settings-updated"));
     return;
   }
 
   // Clear cookies when key is removed to avoid stale values.
   document.cookie = `jpdbApiKey=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
   document.cookie = `jpdb_api_key=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+  window.dispatchEvent(new CustomEvent("pr:jpdb-settings-updated"));
 }
 
 export function syncSettingsToStorage(params: {

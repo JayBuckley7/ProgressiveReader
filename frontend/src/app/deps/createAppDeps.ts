@@ -58,8 +58,23 @@ class DriveAuthManager implements DriveAuthPort {
   private async performAuthentication(): Promise<boolean> {
     try {
       await this.drive.safeInitialize();
-      return this.drive.isSignedIn();
+      const isSignedIn = this.drive.isSignedIn();
+      this.listeners.forEach((cb) => {
+        try {
+          cb(isSignedIn);
+        } catch {
+          // ignore
+        }
+      });
+      return isSignedIn;
     } catch {
+      this.listeners.forEach((cb) => {
+        try {
+          cb(false);
+        } catch {
+          // ignore
+        }
+      });
       return false;
     }
   }

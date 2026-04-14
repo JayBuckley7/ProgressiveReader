@@ -32,6 +32,7 @@ export function useJpdbHighlighting(params: {
 
   const jpdbInitRef = useRef(false);
   const [jpdbHighlighted, setJpdbHighlighted] = useState(false);
+  const [jpdbSettingsVersion, setJpdbSettingsVersion] = useState(0);
 
   // Initialize JPDB highlighter once on mount.
   useEffect(() => {
@@ -41,6 +42,19 @@ export function useJpdbHighlighting(params: {
       initializeJpdb(contentRef.current);
     }
   }, [contentRef]);
+
+  // Cloud settings can hydrate the JPDB key after the reader has already
+  // auto-enabled highlighting. Retry an enabled highlight pass when that
+  // happens so we do not stay on the local fallback parser until a manual toggle.
+  useEffect(() => {
+    const handleJpdbSettingsUpdated = () => {
+      loadJpdbConfig();
+      setJpdbSettingsVersion((version) => version + 1);
+    };
+
+    window.addEventListener("pr:jpdb-settings-updated", handleJpdbSettingsUpdated);
+    return () => window.removeEventListener("pr:jpdb-settings-updated", handleJpdbSettingsUpdated);
+  }, []);
 
   // Apply JPDB highlighting when enabled or when content changes while enabled.
   // Use useLayoutEffect to coordinate with React's rendering cycle and avoid DOM conflicts.
@@ -71,6 +85,7 @@ export function useJpdbHighlighting(params: {
     isTranslated,
     isTranslating,
     jpdbHighlighted,
+    jpdbSettingsVersion,
     translatedContent,
   ]);
 

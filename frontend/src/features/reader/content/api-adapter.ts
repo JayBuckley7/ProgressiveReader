@@ -105,7 +105,13 @@ export function loadConfig(): JpHighlighterConfig {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) {
-            return parts.pop()?.split(';').shift();
+            const raw = parts.pop()?.split(';').shift();
+            if (!raw) return undefined;
+            try {
+                return decodeURIComponent(raw);
+            } catch {
+                return raw;
+            }
         }
         return undefined;
     };
