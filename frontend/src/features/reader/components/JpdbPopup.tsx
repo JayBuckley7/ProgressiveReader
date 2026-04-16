@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { mineWord, updateWordState, reviewCard, getCurrentConfig, parseDeckId } from "@features/reader/content/api-adapter";
 import { Token } from "~/types";
-import { getMeaning, getKunReading, getOnReading, getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
+import { getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
@@ -449,6 +449,9 @@ export function JpdbPopupController() {
   const posText = token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0
     ? Array.from(new Set(token.card.meanings.flatMap((m) => m.partOfSpeech || []))).join(', ')
     : "";
+  const localKanjiInfo = isOfflineMode ? getWordKanjiInfo(surfaceWord) : [];
+  const localJlptLevel = isOfflineMode ? getJlptLevel(surfaceWord) : null;
+  const hasLocalKanjiInfo = localKanjiInfo.length > 0;
 
   const rubySegments = (() => {
     const rubies = token?.rubies || [];
@@ -648,9 +651,7 @@ export function JpdbPopupController() {
                 )}
               </div>
             ) : (
-              <div className="text-sm text-neutral-300">
-                {isOfflineMode ? 'Enter your JPDB key to enable actions.' : 'Please set your JPDB API key in settings.'}
-              </div>
+              <div />
             )}
           </div>
 
@@ -777,39 +778,73 @@ export function JpdbPopupController() {
               </ol>
             )}
 
-            {/* Offline mode meanings */}
-            {token && isOfflineMode && (() => {
-              const jlptMeaning = getMeaning(popup.word);
-              if (jlptMeaning) {
-                return (
-                  <div className="mt-3 text-base text-neutral-200">
-                    {jlptMeaning}
-                  </div>
-                );
-              }
-              return (
-                <div className="mt-3 text-sm text-neutral-400">
-                  No dictionary information available
+            {token && isOfflineMode && (
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {localJlptLevel && (
+                    <span className="rounded-md border border-amber-700 bg-amber-950/30 px-2 py-1 text-amber-200">
+                      JLPT {localJlptLevel}
+                    </span>
+                  )}
+                  {card?.frequencyRank && (
+                    <span className="rounded-md border border-neutral-700 bg-neutral-950/30 px-2 py-1 text-neutral-300">
+                      Top {card.frequencyRank.toLocaleString()}
+                    </span>
+                  )}
                 </div>
-              );
-            })()}
 
-            {/* Offline mode: JLPT info compact */}
-            {token && isOfflineMode && (() => {
-              const jlptLevel = getJlptLevel(popup.word);
-              const kunReading = getKunReading(popup.word);
-              const onReading = getOnReading(popup.word);
-              if (jlptLevel || kunReading || onReading) {
-                return (
-                  <div className="mt-4 text-sm text-neutral-300">
-                    {jlptLevel && <>JLPT {jlptLevel}</>}
-                    {kunReading && <>, Kun: {kunReading}</>}
-                    {onReading && <>, On: {onReading}</>}
+                {hasLocalKanjiInfo ? (
+                  <div className="grid gap-2">
+                    {localKanjiInfo.map((entry) => (
+                      <div
+                        key={entry.kanji}
+                        className="rounded-lg border border-neutral-700 bg-neutral-950/25 p-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="shrink-0 text-3xl font-semibold leading-none text-blue-300">
+                            {entry.kanji}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400">
+                              {entry.level && <span>JLPT {entry.level}</span>}
+                              <span>{entry.stroke_count} strokes</span>
+                              {entry.grade && <span>grade {entry.grade}</span>}
+                              {entry.freq_mainichi_shinbun && (
+                                <span>Top {entry.freq_mainichi_shinbun.toLocaleString()}</span>
+                              )}
+                            </div>
+                            <div className="mt-1 text-sm font-medium leading-snug text-neutral-100">
+                              {entry.meanings.slice(0, 5).join(', ') || 'Definition not found'}
+                            </div>
+                            <div className="mt-2 space-y-1 text-xs leading-snug text-neutral-400">
+                              {reading && reading !== surfaceWord && (
+                                <div>
+                                  <span className="text-neutral-300">Reading:</span> {reading}
+                                </div>
+                              )}
+                              {entry.kun_readings.length > 0 && (
+                                <div>
+                                  <span className="text-neutral-300">Kun:</span> {entry.kun_readings.slice(0, 6).join(', ')}
+                                </div>
+                              )}
+                              {entry.on_readings.length > 0 && (
+                                <div>
+                                  <span className="text-neutral-300">On:</span> {entry.on_readings.slice(0, 6).join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                );
-              }
-              return null;
-            })()}
+                ) : (
+                  <div className="rounded-lg border border-neutral-700 bg-neutral-950/25 p-3 text-sm text-neutral-400">
+                    Definition not found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="w-28 shrink-0 text-right">
@@ -828,18 +863,20 @@ export function JpdbPopupController() {
         </div>
       </div>
 
-      <div className="px-3 pb-3 pt-2 shrink-0 border-t border-neutral-700/50 bg-neutral-900/40">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handlePopupClick();
-          }}
-          className="text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-4"
-          title="Open on jpdb.io"
-        >
-          Open on JPDB
-        </button>
-      </div>
+      {!isOfflineMode && (
+        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-neutral-700/50 bg-neutral-900/40">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePopupClick();
+            }}
+            className="text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-4"
+            title="Open on jpdb.io"
+          >
+            Open on JPDB
+          </button>
+        </div>
+      )}
     </div>
   );
 }

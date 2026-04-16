@@ -13,18 +13,19 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f9fafb;
+            color: #111827;
             min-height: 100vh;
             padding: 20px;
         }
         
         .container {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 24px;
         }
         
         h1 {
@@ -49,7 +50,7 @@
         .stat-value {
             font-size: 24px;
             font-weight: bold;
-            color: #667eea;
+            color: #111827;
         }
         
         .stat-label {
@@ -61,9 +62,9 @@
         .question-container {
             margin: 30px 0;
             padding: 25px;
-            background: #fafafa;
+            background: #fff;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border: 1px solid #e5e7eb;
         }
         
         .question-header {
@@ -75,12 +76,12 @@
         
         .question-number {
             font-weight: bold;
-            color: #667eea;
+            color: #111827;
             font-size: 18px;
         }
         
         .part-badge {
-            background: #667eea;
+            background: #111827;
             color: white;
             padding: 4px 12px;
             border-radius: 12px;
@@ -90,8 +91,8 @@
         .parent-content {
             margin: 20px 0;
             padding: 20px;
-            background: #e8f4f8;
-            border-left: 4px solid #2196f3;
+            background: #f3f4f6;
+            border-left: 4px solid #9ca3af;
             border-radius: 8px;
             font-size: 16px;
             line-height: 1.8;
@@ -110,7 +111,7 @@
         .parent-content-title {
             font-weight: bold;
             margin-bottom: 10px;
-            color: #1976d2;
+            color: #374151;
             font-size: 14px;
             text-transform: uppercase;
         }
@@ -158,13 +159,13 @@
         }
         
         .choice:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
+            border-color: #6b7280;
+            background: #f9fafb;
         }
         
         .choice.selected {
-            border-color: #667eea;
-            background: #e8edff;
+            border-color: #111827;
+            background: #f3f4f6;
         }
         
         .choice.correct {
@@ -203,9 +204,9 @@
         .audio-controls {
             margin: 20px 0;
             padding: 15px;
-            background: #f0f4ff;
+            background: #f3f4f6;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #6b7280;
         }
         
         .audio-player {
@@ -215,7 +216,7 @@
         
         .transcript-button {
             padding: 10px 20px;
-            background: #667eea;
+            background: #111827;
             color: white;
             border: none;
             border-radius: 6px;
@@ -226,7 +227,7 @@
         }
         
         .transcript-button:hover {
-            background: #5568d3;
+            background: #374151;
         }
         
         .transcript-button:disabled {
@@ -273,12 +274,12 @@
         }
         
         .btn-primary {
-            background: #667eea;
+            background: #111827;
             color: white;
         }
         
         .btn-primary:hover:not(:disabled) {
-            background: #5568d3;
+            background: #374151;
         }
         
         .btn-secondary {
@@ -324,7 +325,7 @@
             text-align: center;
             font-size: 32px;
             font-weight: bold;
-            color: #667eea;
+            color: #111827;
             margin: 20px 0;
         }
         
@@ -338,8 +339,9 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            padding: 15px;
-            background: #f5f5f5;
+            padding: 0 0 16px;
+            border-bottom: 1px solid #e5e7eb;
+            background: transparent;
             border-radius: 8px;
             justify-content: center;
             flex-wrap: wrap;
@@ -347,9 +349,9 @@
         
         .section-btn {
             padding: 10px 20px;
-            border: 2px solid #667eea;
+            border: 1px solid #d1d5db;
             background: white;
-            color: #667eea;
+            color: #374151;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
@@ -358,11 +360,13 @@
         }
         
         .section-btn:hover {
-            background: #f0f4ff;
+            border-color: #6b7280;
+            background: #f9fafb;
         }
         
         .section-btn.active {
-            background: #667eea;
+            background: #111827;
+            border-color: #111827;
             color: white;
         }
         
@@ -371,8 +375,8 @@
             align-items: center;
             gap: 10px;
             margin: 15px 0;
-            padding: 10px;
-            background: #f9f9f9;
+            padding: 10px 0;
+            background: transparent;
             border-radius: 8px;
             justify-content: center;
         }
@@ -385,7 +389,7 @@
         
         .question-selector {
             padding: 8px 12px;
-            border: 2px solid #667eea;
+            border: 1px solid #d1d5db;
             border-radius: 6px;
             font-size: 14px;
             background: white;
@@ -395,13 +399,74 @@
         }
         
         .question-selector:hover {
-            border-color: #5568d3;
+            border-color: #6b7280;
         }
         
         .question-selector:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #111827;
+            box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1);
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 24px;
+                line-height: 1.25;
+                margin-bottom: 16px;
+            }
+
+            .section-selector {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                margin: 16px 0 10px;
+                padding: 12px;
+            }
+
+            .question-selector-container {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .question-selector {
+                width: 100%;
+            }
+
+            .question-container {
+                margin: 20px 0;
+                padding: 16px;
+            }
+
+            .parent-content {
+                padding: 16px;
+            }
+
+            .controls,
+            .controls-left,
+            .controls-right {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -468,9 +533,9 @@
         let speechSynthesis = null;  // For text-to-speech
         let currentUtterance = null;  // Current speech utterance
 
-        // Get test file name from URL query parameter, default to n5_1
+        // Get test file name from URL query parameter, default to a bundled test.
         const urlParams = new URLSearchParams(window.location.search);
-        testFileName = urlParams.get('test') || 'n5_1';
+        testFileName = urlParams.get('test') || 'JLPTN5_Test1';
         
         // Ensure it ends with .json
         if (!testFileName.endsWith('.json')) {
@@ -517,7 +582,7 @@
             .catch(error => {
                 document.getElementById('question-area').innerHTML = 
                     `<div class="loading">Error loading questions. Make sure ${testFileName} exists.<br><br>
-                    Usage: test_runner.html?test=n5_1</div>`;
+                    Usage: test_runner.html?test=JLPTN5_Test1</div>`;
                 console.error('Error:', error);
             });
         
@@ -762,7 +827,7 @@
                 const savedPos = audioPositions[getQuestionKey(currentSection, currentIndex)];
                 html += `
                     <div class="audio-controls">
-                        <div style="font-weight: bold; margin-bottom: 10px; color: #667eea;">Audio Question</div>
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #374151;">Audio Question</div>
                         <audio class="audio-player" controls preload="metadata">
                             <source src="${question.audio_url}" type="audio/mpeg">
                             Your browser does not support the audio element.

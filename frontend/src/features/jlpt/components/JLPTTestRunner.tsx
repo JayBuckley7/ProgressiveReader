@@ -1,20 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { appLog } from '@shared/appLog'
-import { notifyError } from '@shared/utils/notify'
 
-const furiganaPattern = /((?:[\p{sc=Han}々〆ヶ]+)|\(\)|（）)\(([^)]+)\)/gu;
+import { notifyError } from '@shared/utils/notify';
+import type { JlptAttemptSummary, JlptResultSectionBreakdown, JlptTestRef } from '@features/jlpt/types';
+import { extractJlptLevel as extractCatalogLevel } from '@features/jlpt/services/jlptConfig';
+
+const furiganaPattern = /([\p{Script=Han}\u3005\u30F6]+)[(\uFF08]([^()\uFF08\uFF09]+)[)\uFF09]/gu;
+
+const escapeHtml = (content: string) =>
+  content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 const addFuriganaMarkup = (content: string | null | undefined) => {
   if (!content) {
     return '';
   }
 
-  return content.replace(furiganaPattern, (_match, kanji: string, reading: string) => {
-    // Handle empty parentheses case - if kanji is empty parentheses, use empty string
-    const kanjiText = kanji === '()' || kanji === '（）' ? '' : kanji;
-    return `<ruby>${kanjiText}<rt>${reading}</rt></ruby>`;
-  });
+  return escapeHtml(content)
+    .replace(furiganaPattern, (_match, kanji: string, reading: string) => `<ruby>${kanji}<rt>${reading}</rt></ruby>`)
+    .replace(/\n/g, '<br />');
 };
 
 interface Question {
@@ -57,6 +65,9 @@ interface JLPTTestRunnerProps {
   testData: Question[];
   testMeta?: TestMeta | null;
   testName: string;
+  testRef?: JlptTestRef | null;
+  mode?: 'exam' | 'practice';
+  onComplete?: (result: JlptAttemptSummary) => void;
 }
 
 const parseNumericValue = (value: unknown): number | undefined => {
@@ -70,9 +81,7 @@ const parseNumericValue = (value: unknown): number | undefined => {
   return undefined;
 };
 
-const getQuestionPoints = (question: Question): number => {
-  return parseNumericValue(question.points_per_question) ?? 1;
-};
+const getQuestionPoints = (question: Question): number => parseNumericValue(question.points_per_question) ?? 1;
 
 const getSectionMaxScore = (questionList: Question[]): number | undefined => {
   if (!questionList.length) {
@@ -99,141 +108,211 @@ const formatPoints = (value: number) => {
   return Number(value.toFixed(2));
 };
 
-export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerProps) {
+const sortSections = (sections: string[]) =>
+  sections.sort((a, b) => {
+    if (a === 'none') return 1;
+    if (b === 'none') return -1;
+    return Number(a) - Number(b);
+  });
+
+const extractLevel = (name: string, meta?: TestMeta | null) => {
+  return extractCatalogLevel(name, meta) || 'N5';
+};
+
+const buildSectionLabel = (sectionId: string, questions: Question[], meta?: TestMeta | null) => {
+  const numericSection = Number(sectionId);
+  const metaPart = Number.isFinite(numericSection) ? meta?.parts?.[numericSection - 1] : null;
+  if (metaPart) {
+    return metaPart.jp_name ? `${metaPart.jp_name} - ${metaPart.name}` : metaPart.name;
+  }
+
+  const firstNamedQuestion = questions.find((question) => question.part_name)?.part_name;
+  if (firstNamedQuestion) {
+    return firstNamedQuestion;
+  }
+
+  return sectionId === 'none' ? 'Practice' : `Part ${sectionId}`;
+};
+
+const buildSectionSummary = (
+  sectionId: string,
+  questions: Question[],
+  answers: Record<string, number>,
+  skipped: Record<string, boolean>,
+  meta?: TestMeta | null
+): JlptResultSectionBreakdown => {
+  let correct = 0;
+  let answered = 0;
+  let skippedCount = 0;
+  let rawTotalPoints = 0;
+  let rawEarnedPoints = 0;
+
+  questions.forEach((item, index) => {
+    const key = `${sectionId}-${index}`;
+    const points = getQuestionPoints(item);
+    rawTotalPoints += points;
+
+    if (answers[key] !== undefined && answers[key] !== null) {
+      answered += 1;
+      if (answers[key] === item.correct_choice_index) {
+        correct += 1;
+        rawEarnedPoints += points;
+      }
+    } else if (skipped[key]) {
+      skippedCount += 1;
+    }
+  });
+
+  const scaled = scalePointsToSectionMax(rawEarnedPoints, rawTotalPoints, getSectionMaxScore(questions));
+  return {
+    sectionId,
+    sectionLabel: buildSectionLabel(sectionId, questions, meta),
+    correct,
+    answered,
+    total: questions.length,
+    skipped: skippedCount,
+    percent: questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0,
+    pointsEarned: scaled.earned,
+    pointsTotal: scaled.total,
+  };
+};
+
+export function JLPTTestRunner({ testData, testMeta, testName, testRef = null, mode = 'practice', onComplete }: JLPTTestRunnerProps) {
   const { t } = useTranslation();
-  // Ensure testData is always an array
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const completedRef = useRef(false);
   const questionsArray = Array.isArray(testData) ? testData : [];
-  const [allQuestions] = useState<Question[]>(questionsArray);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const sections = useMemo(() => {
+    const grouped: Record<string, Question[]> = {};
+    questionsArray.forEach((question) => {
+      const part = question.part !== null && question.part !== undefined ? String(question.part) : 'none';
+      grouped[part] = grouped[part] || [];
+      grouped[part].push(question);
+    });
+    return grouped;
+  }, [questionsArray]);
+  const sortedSections = useMemo(() => sortSections(Object.keys(sections)), [sections]);
   const [currentSection, setCurrentSection] = useState<string | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [skipped, setSkipped] = useState<Record<string, boolean>>({});
   const [audioPositions, setAudioPositions] = useState<Record<string, number>>({});
-  const [showAnswers, setShowAnswers] = useState(false);
-  const [sections, setSections] = useState<Record<string, Question[]>>({});
-  const [currentUtterance, setCurrentUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  const [revealedSections, setRevealedSections] = useState<Record<string, boolean>>({});
+  const [isSpeechActive, setIsSpeechActive] = useState(false);
+  const [showOverallResults, setShowOverallResults] = useState(false);
 
   useEffect(() => {
-    if (allQuestions.length === 0) return;
-
-    // Group questions by part/section
-    const grouped: Record<string, Question[]> = {};
-    allQuestions.forEach(q => {
-      const part = q.part !== null && q.part !== undefined ? String(q.part) : 'none';
-      if (!grouped[part]) {
-        grouped[part] = [];
-      }
-      grouped[part].push(q);
-    });
-    setSections(grouped);
-
-    // Default to first section - set state directly to avoid race condition
-    const firstSection = Object.keys(grouped).sort((a, b) => {
-      if (a === 'none') return 1;
-      if (b === 'none') return -1;
-      return parseInt(a) - parseInt(b);
-    })[0];
-
-    if (firstSection && grouped[firstSection] && grouped[firstSection].length > 0) {
-      setCurrentSection(firstSection);
-      setQuestions(grouped[firstSection]);
-      setCurrentIndex(0);
-      setShowAnswers(false);
+    if (!currentSection && sortedSections.length > 0) {
+      setCurrentSection(sortedSections[0]);
     }
-  }, [allQuestions]);
+  }, [currentSection, sortedSections]);
+
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    completedRef.current = false;
+  }, [mode, testName]);
+
+  const questions = currentSection ? sections[currentSection] || [] : [];
+  const question = questions[currentIndex];
+  const questionKey = currentSection ? `${currentSection}-${currentIndex}` : '';
+  const selectedAnswer = answers[questionKey];
+  const sectionRevealed = currentSection ? revealedSections[currentSection] === true : false;
+  const isSkipped = skipped[questionKey] === true;
+
+  const saveAudioPosition = () => {
+    if (audioRef.current && currentSection) {
+      setAudioPositions((current) => ({
+        ...current,
+        [`${currentSection}-${currentIndex}`]: audioRef.current?.currentTime || 0,
+      }));
+    }
+  };
+
+  const stopSpeech = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeechActive(false);
+    }
+  };
+
+  const moveToQuestion = (index: number) => {
+    if (index < 0 || index >= questions.length) return;
+    saveAudioPosition();
+    stopSpeech();
+    setCurrentIndex(index);
+  };
 
   const selectSection = (part: string) => {
     saveAudioPosition();
     stopSpeech();
     setCurrentSection(part);
-    setQuestions(sections[part] || []);
     setCurrentIndex(0);
-    setShowAnswers(false);
   };
 
-  const getQuestionKey = (part: string, index: number) => `${part}-${index}`;
-
   const selectAnswer = (index: number) => {
-    if (showAnswers) return;
-    const questionKey = getQuestionKey(currentSection!, currentIndex);
-    const newSkipped = { ...skipped };
-    delete newSkipped[questionKey];
-    setSkipped(newSkipped);
-    setAnswers({ ...answers, [questionKey]: index });
+    if (sectionRevealed || !currentSection) return;
+    setSkipped((current) => {
+      const next = { ...current };
+      delete next[questionKey];
+      return next;
+    });
+    setAnswers((current) => ({ ...current, [questionKey]: index }));
   };
 
   const skipQuestion = () => {
-    if (showAnswers) return;
-    const questionKey = getQuestionKey(currentSection!, currentIndex);
-    setSkipped({ ...skipped, [questionKey]: true });
-    const newAnswers = { ...answers };
-    delete newAnswers[questionKey];
-    setAnswers(newAnswers);
+    if (sectionRevealed || !currentSection) return;
+    setSkipped((current) => ({ ...current, [questionKey]: true }));
+    setAnswers((current) => {
+      const next = { ...current };
+      delete next[questionKey];
+      return next;
+    });
   };
 
-  const nextQuestion = () => {
-    if (currentIndex < questions.length - 1) {
-      saveAudioPosition();
-      stopSpeech();
-      setCurrentIndex(currentIndex + 1);
-    }
+  const revealCurrentSection = () => {
+    if (!currentSection) return;
+    stopSpeech();
+    setRevealedSections((current) => ({ ...current, [currentSection]: true }));
+    setCurrentIndex(0);
   };
 
-  const previousQuestion = () => {
-    if (currentIndex > 0) {
-      saveAudioPosition();
-      stopSpeech();
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
-  const jumpToQuestion = (index: number) => {
-    if (index >= 0 && index < questions.length) {
-      saveAudioPosition();
-      stopSpeech();
-      setCurrentIndex(index);
-    }
-  };
-
-  const saveAudioPosition = () => {
-    const audioPlayer = document.querySelector('.audio-player') as HTMLAudioElement;
-    if (audioPlayer && currentSection) {
-      const questionKey = getQuestionKey(currentSection, currentIndex);
-      setAudioPositions({ ...audioPositions, [questionKey]: audioPlayer.currentTime });
-    }
-  };
-
-  const restoreAudioPosition = (audioPlayer: HTMLAudioElement, questionKey: string) => {
+  const restoreAudioPosition = (audioPlayer: HTMLAudioElement) => {
     const savedPosition = audioPositions[questionKey];
-    if (savedPosition !== undefined && savedPosition !== null && savedPosition > 0) {
-      const restorePosition = () => {
-        if (audioPlayer.readyState >= 2) {
-          audioPlayer.currentTime = savedPosition;
-        }
-      };
+    if (!savedPosition || savedPosition <= 0) return;
 
+    const restorePosition = () => {
       if (audioPlayer.readyState >= 2) {
-        restorePosition();
-      } else {
-        audioPlayer.addEventListener('canplaythrough', restorePosition, { once: true });
-        audioPlayer.addEventListener('canplay', () => {
-          setTimeout(restorePosition, 100);
-        }, { once: true });
+        audioPlayer.currentTime = savedPosition;
       }
+    };
 
-      audioPlayer.addEventListener('timeupdate', () => {
-        if (audioPlayer.currentTime > 0) {
-          setAudioPositions({ ...audioPositions, [questionKey]: audioPlayer.currentTime });
-        }
-      });
+    if (audioPlayer.readyState >= 2) {
+      restorePosition();
+    } else {
+      audioPlayer.addEventListener('canplay', restorePosition, { once: true });
     }
   };
 
-  const stopSpeech = () => {
-    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      setCurrentUtterance(null);
+  const finishTest = () => {
+    if (!canFinishTest) return;
+    setShowOverallResults(true);
+    if (!completedRef.current) {
+      completedRef.current = true;
+      onComplete?.({
+        testRef,
+        testName: overallSummary.testName,
+        level: overallSummary.level,
+        mode,
+        sections: sectionSummaries,
+        overall: overallSummary,
+      });
     }
   };
 
@@ -243,8 +322,7 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
       return;
     }
 
-    const question = questions[currentIndex];
-    if (!question.explanation) return;
+    if (!question?.explanation) return;
 
     stopSpeech();
 
@@ -253,411 +331,445 @@ export function JLPTTestRunner({ testData, testMeta, testName }: JLPTTestRunnerP
     utterance.rate = 0.9;
     utterance.pitch = 1;
     utterance.volume = 1;
+    utterance.onend = () => setIsSpeechActive(false);
+    utterance.onerror = () => setIsSpeechActive(false);
 
-    utterance.onend = () => setCurrentUtterance(null);
-    utterance.onerror = () => setCurrentUtterance(null);
-
-    setCurrentUtterance(utterance);
+    setIsSpeechActive(true);
     window.speechSynthesis.speak(utterance);
   };
 
   const pauseTranscript = () => {
     if (!('speechSynthesis' in window)) return;
 
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.pause();
-    } else if (window.speechSynthesis.paused) {
+    if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
+    } else if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
     }
   };
 
-  const showResults = () => {
-    setShowAnswers(true);
-    setCurrentIndex(0);
+  const sectionSummaries = useMemo(
+    () => sortedSections.map((sectionId) => buildSectionSummary(sectionId, sections[sectionId] || [], answers, skipped, testMeta)),
+    [answers, sections, skipped, sortedSections, testMeta]
+  );
+
+  const currentSectionSummary = currentSection
+    ? sectionSummaries.find((summary) => summary.sectionId === currentSection) || null
+    : null;
+
+  const overallSummary = useMemo(() => {
+    const correct = sectionSummaries.reduce((sum, section) => sum + section.correct, 0);
+    const answered = sectionSummaries.reduce((sum, section) => sum + section.answered, 0);
+    const total = sectionSummaries.reduce((sum, section) => sum + section.total, 0);
+    const skippedCount = sectionSummaries.reduce((sum, section) => sum + section.skipped, 0);
+    const pointsEarned = sectionSummaries.reduce((sum, section) => sum + section.pointsEarned, 0);
+    const pointsTotal = sectionSummaries.reduce((sum, section) => sum + section.pointsTotal, 0);
+
+    return {
+      level: extractLevel(testName, testMeta),
+      testRef,
+      testName: testName.replace('.json', ''),
+      mode,
+      correct,
+      answered,
+      total,
+      skipped: skippedCount,
+      percent: total > 0 ? Math.round((correct / total) * 100) : 0,
+      pointsEarned,
+      pointsTotal,
+    };
+  }, [mode, sectionSummaries, testMeta, testName, testRef]);
+
+  const answeredCount = Object.keys(answers).length;
+  const progressPercent = overallSummary.total > 0 ? Math.round((answeredCount / overallSummary.total) * 100) : 0;
+  const revealedCount = Object.values(revealedSections).filter(Boolean).length;
+  const canFinishTest = sortedSections.length > 0 && sortedSections.every((sectionId) => revealedSections[sectionId]);
+  const timeLabel = testMeta?.time ? `${testMeta.time} min` : null;
+  const levelLabel = testMeta?.level || testMeta?.type || null;
+
+  const choiceStateClass = (index: number) => {
+    const base = 'border-gray-200 bg-white hover:border-gray-400 hover:bg-gray-50';
+    if (!sectionRevealed) {
+      return selectedAnswer === index ? 'border-gray-900 bg-gray-50 ring-2 ring-gray-900/10' : base;
+    }
+    if (index === question?.correct_choice_index) {
+      return 'border-green-500 bg-green-50 text-green-950';
+    }
+    if (selectedAnswer === index) {
+      return 'border-red-500 bg-red-50 text-red-950';
+    }
+    return 'border-gray-200 bg-white opacity-75';
   };
 
-  const updateScore = () => {
-    let correct = 0;
-    let answered = 0;
-    let rawTotalPoints = 0;
-    let rawEarnedPoints = 0;
-    
-    questions.forEach((q, index) => {
-      const questionKey = getQuestionKey(currentSection!, index);
-      const points = getQuestionPoints(q);
-      rawTotalPoints += points;
-      
-      if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
-        answered++;
-        if (answers[questionKey] === q.correct_choice_index) {
-          correct++;
-          rawEarnedPoints += points;
-        }
-      }
-    });
-
-    const sectionMaxScore = getSectionMaxScore(questions);
-    const { earned, total } = scalePointsToSectionMax(rawEarnedPoints, rawTotalPoints, sectionMaxScore);
-    return { correct, answered, totalPoints: total, earnedPoints: earned };
-  };
-
-  const getQuestionStatus = (index: number) => {
-    const questionKey = getQuestionKey(currentSection!, index);
-    if (answers[questionKey] !== undefined && answers[questionKey] !== null) {
-      const q = questions[index];
-      const isCorrect = answers[questionKey] === q.correct_choice_index;
-      return isCorrect ? ` ${t('jlptTest.runner.correct')}` : ` ${t('jlptTest.runner.incorrect')}`;
-    } else if (skipped[questionKey]) {
-      return ` ${t('jlptTest.runner.skippedLabel')}`;
-    }
-    return '';
-  };
-
-  const { correct, answered, totalPoints, earnedPoints } = updateScore();
-  const pointsPercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-  const question = questions[currentIndex];
-  const questionKey = currentSection ? getQuestionKey(currentSection, currentIndex) : '';
-  const selectedAnswer = answers[questionKey];
-  const isAnswered = selectedAnswer !== undefined && selectedAnswer !== null;
-  const isSkipped = skipped[questionKey] === true;
-
-  // Debug logging
-  useEffect(() => {
-    if (question) {
-      appLog.debug('Current question:', question);
-      appLog.debug('Choices:', question.choices);
-    }
-  }, [question]);
-
-  const sortedSections = Object.keys(sections).sort((a, b) => {
-    if (a === 'none') return 1;
-    if (b === 'none') return -1;
-    return parseInt(a) - parseInt(b);
-  });
-
-  // Calculate final results with per-question scoring
-  let finalCorrect = 0;
-  let finalAnswered = 0;
-  let skippedCount = 0;
-  let finalTotalPoints = 0;
-  let finalEarnedPoints = 0;
-  let rawTotalPoints = 0;
-  let rawEarnedPoints = 0;
-  
-  questions.forEach((q, index) => {
-    const qKey = getQuestionKey(currentSection!, index);
-    const points = getQuestionPoints(q);
-    rawTotalPoints += points;
-    
-    if (answers[qKey] !== undefined && answers[qKey] !== null) {
-      finalAnswered++;
-      if (answers[qKey] === q.correct_choice_index) {
-        finalCorrect++;
-        rawEarnedPoints += points;
-      }
-    } else if (skipped[qKey]) {
-      skippedCount++;
-    }
-  });
-
-  const sectionMaxScore = getSectionMaxScore(questions);
-  const scaledFinalPoints = scalePointsToSectionMax(rawEarnedPoints, rawTotalPoints, sectionMaxScore);
-  finalEarnedPoints = scaledFinalPoints.earned;
-  finalTotalPoints = scaledFinalPoints.total;
-  
-  const percentage = finalAnswered > 0 ? Math.round((finalCorrect / finalAnswered) * 100) : 0;
-  const finalPointsPercentage = finalTotalPoints > 0 ? Math.round((finalEarnedPoints / finalTotalPoints) * 100) : 0;
+  if (!questionsArray.length) {
+    return (
+      <div className="rounded-md border border-gray-200 bg-white p-8 text-center text-gray-600">
+        {t('jlptTest.runner.loadingQuestions')}
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-8">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-        {t('jlptTest.runner.title', { testName })}
-      </h1>
-
-        {/* Section Selector */}
-        <div className="flex flex-wrap gap-2 justify-center mb-6 p-4 bg-gray-100 rounded-lg">
-          {sortedSections.map(part => (
-            <button
-              key={part}
-              onClick={() => selectSection(part)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                currentSection === part
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white text-purple-600 border-2 border-purple-600 hover:bg-purple-50'
-              }`}
-            >
-              {t('jlptTest.runner.part', { part })} ({t('jlptTest.runner.questions', { count: sections[part]?.length || 0 })})
-            </button>
-          ))}
+    <div className="mx-auto max-w-6xl">
+      <div className="mb-4 flex flex-col gap-3 border-b border-gray-200 pb-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="mb-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-normal text-gray-500">
+            {levelLabel && <span>{levelLabel}</span>}
+            {timeLabel && <span>{timeLabel}</span>}
+          </div>
+          <h1 className="text-2xl font-semibold text-gray-950 md:text-3xl">
+            {testName.replace('.json', '')}
+          </h1>
+          <div className="mt-2 text-sm text-gray-500">
+            {mode === 'exam' ? 'Exam simulation' : 'Practice run'}
+          </div>
         </div>
+        <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[360px]">
+          <div className="border-l border-gray-200 pl-3">
+            <div className="text-xl font-semibold text-gray-950">{answeredCount}/{overallSummary.total}</div>
+            <div className="text-xs text-gray-500">{t('jlptTest.runner.answered', { defaultValue: 'Answered' })}</div>
+          </div>
+          <div className="border-l border-gray-200 pl-3">
+            <div className="text-xl font-semibold text-gray-950">{revealedCount}/{sortedSections.length}</div>
+            <div className="text-xs text-gray-500">Sections reviewed</div>
+          </div>
+          <div className="border-l border-gray-200 pl-3">
+            <div className="text-xl font-semibold text-gray-950">{progressPercent}%</div>
+            <div className="text-xs text-gray-500">{t('jlptTest.runner.progress', { defaultValue: 'Progress' })}</div>
+          </div>
+        </div>
+      </div>
 
-        {/* Stats */}
-        <div className="flex justify-around mb-6 p-4 bg-gray-100 rounded-lg">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{currentIndex + 1}</div>
-            <div className="text-xs text-gray-600">{t('jlptTest.runner.currentQuestion')}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{questions.length}</div>
-            <div className="text-xs text-gray-600">{t('jlptTest.runner.totalQuestions')}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {answered > 0 ? `${correct}/${answered}` : '0/0'}
+      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="order-2 space-y-4 lg:order-1 lg:sticky lg:top-4 lg:self-start">
+          <div className="rounded-md border border-gray-200 bg-white p-4">
+            <div className="mb-3 text-sm font-semibold text-gray-950">
+              {t('jlptTest.runner.sections', { defaultValue: 'Sections' })}
             </div>
-            <div className="text-xs text-gray-600">{t('jlptTest.runner.score')}</div>
-            {totalPoints > 0 && (
-              <>
-                <div className="text-lg font-semibold text-purple-500 mt-1">
-                  {formatPoints(earnedPoints)}/{formatPoints(totalPoints)} {t('jlptTest.runner.points', { defaultValue: 'points' })}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {pointsPercentage}%
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Question Selector */}
-        <div className="flex items-center gap-2 justify-center mb-4 p-2 bg-gray-50 rounded-lg">
-          <label htmlFor="question-selector" className="font-semibold text-gray-700 text-sm">
-            {t('jlptTest.runner.jumpToQuestion')}
-          </label>
-          <select
-            id="question-selector"
-            value={currentIndex}
-            onChange={(e) => jumpToQuestion(parseInt(e.target.value))}
-            className="px-3 py-2 border-2 border-purple-600 rounded-lg text-sm bg-white text-gray-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[150px]"
-          >
-            {questions.map((q, index) => {
-              const qNum = q.question_number || `${index + 1}`;
-              const status = getQuestionStatus(index);
-              return (
-                <option key={index} value={index}>
-                  {t('jlptTest.runner.question', { number: index + 1 })}{qNum !== String(index + 1) ? ` (${qNum})` : ''}{status}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-
-        {/* Question Area */}
-        {question && questions.length > 0 ? (
-          <div className="mb-6 p-6 bg-gray-50 rounded-lg border-l-4 border-purple-600">
-            <div className="flex justify-between items-center mb-4">
-              <span className="font-bold text-purple-600 text-lg">
-                {t('jlptTest.runner.question', { number: currentIndex + 1 })} {question.question_number ? `(${question.question_number})` : ''}
-              </span>
-              <div className="flex gap-2">
-                {question.part !== null && (
-                  <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs">
-                    {t('jlptTest.runner.part', { part: question.part })}
-                  </span>
-                )}
-                {isSkipped && (
-                  <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs">
-                    {t('jlptTest.runner.skipped')}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Parent Content */}
-            {question.parent_content && question.parent_content.trim() && (
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                <div className="font-bold text-blue-700 text-xs uppercase mb-2">
-                  {question.parent_question_number
-                    ? t('jlptTest.runner.readingPassageWithNumber', { number: question.parent_question_number })
-                    : t('jlptTest.runner.readingPassage')}
-                </div>
-                <div
-                  className="text-base leading-relaxed text-gray-800"
-                  dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.parent_content) }}
-                />
-              </div>
-            )}
-
-            {/* Prompt */}
-            <div
-              className="mb-4 text-lg leading-relaxed text-gray-800"
-              dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.prompt || t('jlptTest.runner.noPrompt')) }}
-            />
-
-            {/* Audio Player */}
-            {question.is_audio && question.audio_url && (
-              <div className="mb-4 p-4 bg-purple-50 rounded-lg border-l-4 border-purple-600">
-                <div className="font-bold mb-2 text-purple-600">{t('jlptTest.runner.audioQuestion')}</div>
-                <audio
-                  className="audio-player w-full"
-                  controls
-                  preload="metadata"
-                  onLoadedMetadata={(e) => {
-                    const audio = e.currentTarget;
-                    if (currentSection) {
-                      restoreAudioPosition(audio, getQuestionKey(currentSection, currentIndex));
-                    }
-                  }}
+            <div className="space-y-2">
+              {sortedSections.map((part) => (
+                <button
+                  key={part}
+                  onClick={() => selectSection(part)}
+                  className={`flex h-10 w-full items-center justify-between rounded-md border px-3 text-sm font-medium transition-colors ${
+                    currentSection === part
+                      ? 'border-gray-950 bg-gray-950 text-white'
+                      : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-50'
+                  }`}
                 >
-                  <source src={question.audio_url} type="audio/mpeg" />
-                  {t('jlptTest.runner.audioNotSupported')}
-                </audio>
-              </div>
-            )}
+                  <div className="min-w-0 text-left">
+                    <div>{sectionSummaries.find((summary) => summary.sectionId === part)?.sectionLabel || t('jlptTest.runner.part', { part })}</div>
+                    <div className={`text-xs ${currentSection === part ? 'text-gray-200' : 'text-gray-500'}`}>
+                      {sectionSummaries.find((summary) => summary.sectionId === part)?.answered || 0}/{sections[part]?.length || 0} answered
+                    </div>
+                  </div>
+                  <span className="rounded-md border border-current/20 px-2 py-1 text-xs font-semibold">
+                    {revealedSections[part] ? 'Ready' : 'Open'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {/* Choices */}
-            {question.choices && question.choices.length > 0 ? (
-              <ul className="list-none space-y-2 my-4">
-                {question.choices.map((choice, index) => {
-                  let classes = 'p-4 bg-white border-2 rounded-lg cursor-pointer transition-all';
-                  if (selectedAnswer === index) {
-                    classes += ' border-purple-600 bg-purple-50';
-                  }
-                  if (isAnswered || showAnswers) {
-                    if (index === question.correct_choice_index) {
-                      classes += ' border-green-500 bg-green-50';
-                    } else if (selectedAnswer === index && index !== question.correct_choice_index) {
-                      classes += ' border-red-500 bg-red-50';
-                    }
-                  } else {
-                    classes += ' border-gray-300 hover:border-purple-600 hover:bg-purple-50';
-                  }
+          <div className="rounded-md border border-gray-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <label htmlFor="question-selector" className="text-sm font-semibold text-gray-950">
+                {t('jlptTest.runner.jumpToQuestion')}
+              </label>
+              <span className="text-xs text-gray-500">{currentIndex + 1}/{questions.length}</span>
+            </div>
+            <select
+              id="question-selector"
+              value={currentIndex}
+              onChange={(event) => moveToQuestion(Number(event.target.value))}
+              className="mb-3 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-gray-950"
+            >
+              {questions.map((item, index) => {
+                const qNum = item.question_number || `${index + 1}`;
+                return (
+                  <option key={`${qNum}-${index}`} value={index}>
+                    {t('jlptTest.runner.question', { number: index + 1 })}
+                    {qNum !== String(index + 1) ? ` (${qNum})` : ''}
+                  </option>
+                );
+              })}
+            </select>
+            <div className="grid grid-cols-6 gap-1">
+              {questions.map((item, index) => {
+                const key = `${currentSection}-${index}`;
+                const answered = answers[key] !== undefined;
+                const skippedQuestion = skipped[key];
+                const correct = sectionRevealed && answers[key] === item.correct_choice_index;
+                const wrong = sectionRevealed && answered && !correct;
+                const className = [
+                  'flex aspect-square items-center justify-center rounded-md border text-xs font-semibold transition-colors',
+                  index === currentIndex ? 'border-gray-950 bg-gray-950 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400',
+                  answered && !sectionRevealed ? 'bg-gray-100' : '',
+                  skippedQuestion && !sectionRevealed ? 'border-amber-300 bg-amber-50 text-amber-800' : '',
+                  correct ? 'border-green-500 bg-green-50 text-green-800' : '',
+                  wrong ? 'border-red-500 bg-red-50 text-red-800' : '',
+                ].join(' ');
+                return (
+                  <button key={key} onClick={() => moveToQuestion(index)} className={className}>
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                  // Check if choice contains HTML tags
-                  const formattedChoice = addFuriganaMarkup(choice);
-                  const hasHTML = /<[a-z][\s\S]*>/i.test(formattedChoice);
+          <div className="rounded-md border border-gray-200 bg-white p-4">
+            <div className="mb-3 text-sm font-semibold text-gray-950">Full test</div>
+            <div className="mb-3 text-sm text-gray-500">Reveal each section, then finish the test to save one result entry.</div>
+            <button
+              type="button"
+              onClick={finishTest}
+              disabled={!canFinishTest}
+              className="h-10 w-full rounded-md border border-gray-950 bg-gray-950 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Finish test
+            </button>
+          </div>
+        </aside>
 
-                  return (
-                    <li
-                      key={index}
-                      className={classes}
-                      onClick={() => selectAnswer(index)}
-                    >
-                      <label className="cursor-pointer flex items-center w-full">
-                        <input
-                          type="radio"
-                          name="answer"
-                          value={index}
-                          checked={selectedAnswer === index}
-                          disabled={isAnswered || showAnswers}
-                          onChange={() => selectAnswer(index)}
-                          className="mr-2 flex-shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        {hasHTML ? (
-                          <span className="flex-1 text-gray-800" dangerouslySetInnerHTML={{ __html: formattedChoice }} />
-                        ) : (
-                          <span className="flex-1 text-gray-800">{formattedChoice || t('jlptTest.runner.choice', { number: index + 1 })}</span>
-                        )}
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <div className="my-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
-                <p className="text-yellow-700">{t('jlptTest.runner.noChoices')}</p>
-              </div>
-            )}
-
-            {/* Explanation */}
-            {(isAnswered && question.explanation) || (showAnswers && question.explanation) ? (
-              <div className="mt-4 p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
-                <div className="font-bold mb-2 text-yellow-700">
-                  {question.is_audio ? t('jlptTest.runner.transcript') : t('jlptTest.runner.explanation')}
+        <main className="order-1 min-w-0 lg:order-2">
+          {question ? (
+            <section className="rounded-md border border-gray-200 bg-white">
+              <div className="flex flex-col gap-3 border-b border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-500">
+                    {t('jlptTest.runner.question', { number: currentIndex + 1 })}
+                    {question.question_number ? ` (${question.question_number})` : ''}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {question.part !== null && (
+                      <span className="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                        {t('jlptTest.runner.part', { part: question.part })}
+                      </span>
+                    )}
+                    {isSkipped && (
+                      <span className="rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                        {t('jlptTest.runner.skipped')}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-gray-800" dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.explanation) }} />
-                {question.is_audio && (
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={readTranscript}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      disabled={window.speechSynthesis?.speaking}
+                {sectionRevealed && currentSectionSummary && currentSectionSummary.pointsTotal > 0 && (
+                  <div className="text-sm font-semibold text-gray-700">
+                    {formatPoints(currentSectionSummary.pointsEarned)}/{formatPoints(currentSectionSummary.pointsTotal)} {t('jlptTest.runner.points', { defaultValue: 'points' })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-5 p-5">
+                {question.parent_content?.trim() && (
+                  <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-normal text-gray-500">
+                      {question.parent_question_number
+                        ? t('jlptTest.runner.readingPassageWithNumber', { number: question.parent_question_number })
+                        : t('jlptTest.runner.readingPassage')}
+                    </div>
+                    <div
+                      className="max-w-none text-base leading-7 text-gray-900"
+                      dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.parent_content) }}
+                    />
+                  </div>
+                )}
+
+                <div
+                  className="max-w-none text-xl leading-9 text-gray-950"
+                  dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.prompt || t('jlptTest.runner.noPrompt')) }}
+                />
+
+                {question.is_audio && question.audio_url && (
+                  <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-2 text-sm font-semibold text-gray-800">{t('jlptTest.runner.audioQuestion')}</div>
+                    <audio
+                      ref={audioRef}
+                      className="w-full"
+                      controls
+                      preload="metadata"
+                      onLoadedMetadata={(event) => restoreAudioPosition(event.currentTarget)}
+                      onTimeUpdate={(event) => {
+                        if (!currentSection) return;
+                        const currentTime = event.currentTarget.currentTime;
+                        setAudioPositions((current) => ({ ...current, [questionKey]: currentTime }));
+                      }}
                     >
-                      {t('jlptTest.runner.readTranscript')}
-                    </button>
-                    {window.speechSynthesis?.speaking && (
+                      <source src={question.audio_url} type="audio/mpeg" />
+                      {t('jlptTest.runner.audioNotSupported')}
+                    </audio>
+                  </div>
+                )}
+
+                {question.choices?.length ? (
+                  <div className="space-y-3">
+                    {question.choices.map((choice, index) => (
                       <button
-                        onClick={pauseTranscript}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600 transition-colors"
+                        key={`${choice}-${index}`}
+                        type="button"
+                        disabled={sectionRevealed}
+                        onClick={() => selectAnswer(index)}
+                        className={`flex w-full items-start gap-3 rounded-md border p-4 text-left transition-colors disabled:cursor-default ${choiceStateClass(index)}`}
                       >
-                        {window.speechSynthesis.paused ? t('jlptTest.runner.resume') : t('jlptTest.runner.pause')}
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-current text-sm font-semibold">
+                          {index + 1}
+                        </span>
+                        <span
+                          className="min-w-0 flex-1 text-base leading-7"
+                          dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(choice || t('jlptTest.runner.choice', { number: index + 1 })) }}
+                        />
                       </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-800">
+                    {t('jlptTest.runner.noChoices')}
+                  </div>
+                )}
+
+                {sectionRevealed && question.explanation && (
+                  <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                    <div className="mb-2 text-sm font-semibold text-gray-900">
+                      {question.is_audio ? t('jlptTest.runner.transcript') : t('jlptTest.runner.explanation')}
+                    </div>
+                    <div
+                      className="text-base leading-7 text-gray-800"
+                      dangerouslySetInnerHTML={{ __html: addFuriganaMarkup(question.explanation) }}
+                    />
+                    {question.is_audio && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={readTranscript}
+                          className="h-10 rounded-md border border-gray-950 bg-gray-950 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={isSpeechActive}
+                        >
+                          {t('jlptTest.runner.readTranscript')}
+                        </button>
+                        {isSpeechActive && (
+                          <button
+                            onClick={pauseTranscript}
+                            className="h-10 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50"
+                          >
+                            {window.speechSynthesis?.paused ? t('jlptTest.runner.resume') : t('jlptTest.runner.pause')}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
               </div>
-            ) : null}
-          </div>
-        ) : questions.length === 0 ? (
-          <div className="mb-6 p-6 bg-gray-50 rounded-lg border-l-4 border-purple-600">
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">{t('jlptTest.runner.loadingQuestions')}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="mb-6 p-6 bg-gray-50 rounded-lg border-l-4 border-purple-600">
-            <div className="text-center py-8">
-              <p className="text-gray-600">{t('jlptTest.runner.noQuestionAvailable')}</p>
-            </div>
-          </div>
-        )}
 
-        {/* Controls */}
-        {question && questions.length > 0 && (
-          <div className="flex justify-between gap-2 mb-6">
-            <div className="flex gap-2">
-              <button
-                onClick={previousQuestion}
-                disabled={currentIndex === 0}
-                className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
-              >
-                {t('jlptTest.runner.previous')}
-              </button>
-              <button
-                onClick={skipQuestion}
-                disabled={showAnswers}
-                className="px-6 py-3 bg-orange-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600"
-              >
-                {t('jlptTest.runner.skip')}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              {currentIndex < questions.length - 1 ? (
-                <button
-                  onClick={nextQuestion}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium transition-all hover:bg-purple-700"
-                >
-                  {t('jlptTest.runner.next')}
-                </button>
-              ) : (
-                <button
-                  onClick={showResults}
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium transition-all hover:bg-green-600"
-                >
-                  {t('jlptTest.runner.showResults')}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Results */}
-        {showAnswers && (
-          <div className="mt-6 p-6 bg-gray-100 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4">{t('jlptTest.runner.testResults')}</h2>
-            <div className="text-center text-4xl font-bold text-purple-600 my-6">
-              {t('jlptTest.runner.partResults', { part: currentSection, correct: finalCorrect, answered: finalAnswered, percentage })}
-              {skippedCount > 0 ? ` | ${t('jlptTest.runner.skippedCount', { count: skippedCount })}` : ''}
-            </div>
-            {finalTotalPoints > 0 && (
-              <div className="text-center text-2xl font-semibold text-purple-500 my-4">
-                {formatPoints(finalEarnedPoints)}/{formatPoints(finalTotalPoints)} {t('jlptTest.runner.points', { defaultValue: 'points' })} ({finalPointsPercentage}%)
+              <div className="flex flex-col gap-3 border-t border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => moveToQuestion(currentIndex - 1)}
+                    disabled={currentIndex === 0}
+                    className="h-10 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t('jlptTest.runner.previous')}
+                  </button>
+                  <button
+                    onClick={skipQuestion}
+                    disabled={sectionRevealed}
+                    className="h-10 rounded-md border border-amber-300 bg-amber-50 px-4 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t('jlptTest.runner.skip')}
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  {!sectionRevealed && currentIndex < questions.length - 1 ? (
+                    <button
+                      onClick={() => moveToQuestion(currentIndex + 1)}
+                      className="h-10 rounded-md border border-gray-950 bg-gray-950 px-5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                    >
+                      {t('jlptTest.runner.next')}
+                    </button>
+                  ) : !sectionRevealed ? (
+                    <button
+                      onClick={revealCurrentSection}
+                      className="h-10 rounded-md border border-green-700 bg-green-700 px-5 text-sm font-medium text-white transition-colors hover:bg-green-800"
+                    >
+                      Reveal section results
+                    </button>
+                  ) : canFinishTest ? (
+                    <button
+                      onClick={finishTest}
+                      className="h-10 rounded-md border border-green-700 bg-green-700 px-5 text-sm font-medium text-white transition-colors hover:bg-green-800"
+                    >
+                      Finish test
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        const nextSection = sortedSections.find((sectionId) => !revealedSections[sectionId]);
+                        if (nextSection) {
+                          selectSection(nextSection);
+                        }
+                      }}
+                      className="h-10 rounded-md border border-gray-950 bg-gray-950 px-5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                    >
+                      Next section
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            </section>
+          ) : (
+            <div className="rounded-md border border-gray-200 bg-white p-8 text-center text-gray-600">
+              {t('jlptTest.runner.noQuestionAvailable')}
+            </div>
+          )}
+
+          {sectionRevealed && currentSectionSummary && (
+            <div className="mt-6 rounded-md border border-gray-200 bg-white p-5">
+              <div className="mb-3 text-lg font-semibold text-gray-950">{currentSectionSummary.sectionLabel}</div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">{currentSectionSummary.correct}/{currentSectionSummary.total}</div>
+                  <div className="text-sm text-gray-500">{currentSectionSummary.percent}% correct</div>
+                </div>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">{currentSectionSummary.skipped}</div>
+                  <div className="text-sm text-gray-500">{t('jlptTest.runner.skipped')}</div>
+                </div>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">
+                    {formatPoints(currentSectionSummary.pointsEarned)}/{formatPoints(currentSectionSummary.pointsTotal)}
+                  </div>
+                  <div className="text-sm text-gray-500">Points</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showOverallResults && (
+            <div className="mt-6 rounded-md border border-gray-200 bg-white p-5">
+              <div className="mb-3 text-lg font-semibold text-gray-950">Full test results</div>
+              <div className="grid gap-3 md:grid-cols-4">
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">{overallSummary.percent}%</div>
+                  <div className="text-sm text-gray-500">Overall percentage</div>
+                </div>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">{overallSummary.correct}/{overallSummary.total}</div>
+                  <div className="text-sm text-gray-500">Correct / total</div>
+                </div>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">{overallSummary.answered}</div>
+                  <div className="text-sm text-gray-500">Answered</div>
+                </div>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <div className="text-2xl font-semibold text-gray-950">
+                    {formatPoints(overallSummary.pointsEarned)}/{formatPoints(overallSummary.pointsTotal)}
+                  </div>
+                  <div className="text-sm text-gray-500">Points</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
+    </div>
   );
 }

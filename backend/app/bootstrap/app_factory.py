@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
@@ -31,8 +32,9 @@ def create_app(config_class=None) -> Flask:
     log_level = configure_logging()
 
     # Load additional configuration from a mounted secret if available.
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    backend_dir = os.path.dirname(os.path.dirname(__file__))
+    app_factory_path = Path(__file__).resolve()
+    backend_dir = str(app_factory_path.parents[2])
+    root_dir = str(next((p for p in app_factory_path.parents if (p / "env_dev.json").exists() or (p / ".git").exists()), app_factory_path.parents[2]))
     secret_path = find_secrets_path(env=os.environ, root_dir=root_dir, backend_dir=backend_dir, is_dev=is_dev_env())
     require_secrets_for_production(env=os.environ, secret_path=secret_path)
     if secret_path:

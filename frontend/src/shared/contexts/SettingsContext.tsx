@@ -259,7 +259,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   }
                 }
                 if (syncedJpdbKeyFromCloud) {
-                  window.dispatchEvent(new CustomEvent("pr:jpdb-settings-updated"));
+                  window.setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("pr:jpdb-settings-updated"));
+                  }, 0);
                 }
               } catch {
                 // ignore (private mode / disabled storage)

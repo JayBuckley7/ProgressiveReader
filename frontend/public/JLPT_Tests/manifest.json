@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "id": "JLPTN3_Test1.json",
+      "name": "JLPTN3_Test1.json",
+      "level": "N3",
+      "path": "/JLPT_Tests/JLPTN3_Test1.json"
+    },
+    {
+      "id": "JLPTN3_Test2.json",
+      "name": "JLPTN3_Test2.json",
+      "level": "N3",
+      "path": "/JLPT_Tests/JLPTN3_Test2.json"
+    },
+    {
+      "id": "JLPTN3_Test3.json",
+      "name": "JLPTN3_Test3.json",
+      "level": "N3",
+      "path": "/JLPT_Tests/JLPTN3_Test3.json"
+    },
+    {
+      "id": "JLPTN5_Test1.json",
+      "name": "JLPTN5_Test1.json",
+      "level": "N5",
+      "path": "/JLPT_Tests/JLPTN5_Test1.json"
+    }
+  ]
+}

@@ -1,132 +1,133 @@
-import { appLog } from '@shared/appLog';
-import type { DrivePort } from '@core/drive/ports';
+import { appLog } from "@shared/appLog";
+import type { DrivePort } from "@core/drive/ports";
+import type { JlptCatalogTest, JlptTestData, LocalJlptManifest } from "@features/jlpt/types";
+import { JLPT_LEVELS, extractJlptLevel } from "@features/jlpt/services/jlptConfig";
 
-export interface TestFile {
-  name: string;
-  id: string;
-  source: 'library' | 'local';
-  path?: string;
+export type TestFile = JlptCatalogTest;
+
+const LEGACY_LOCAL_TEST_NAMES = ["JLPTN3_Test1.json", "JLPTN3_Test2.json", "JLPTN3_Test3.json", "JLPTN5_Test1.json"];
+
+function compareTests(a: JlptCatalogTest, b: JlptCatalogTest): number {
+  const levelOrder = JLPT_LEVELS.indexOf(a.level) - JLPT_LEVELS.indexOf(b.level);
+  if (levelOrder !== 0) return levelOrder;
+  return a.name.localeCompare(b.name);
 }
 
-/**
- * Service to find JLPT test JSON files from library or local folder
- */
+function normalizeManifestTest(value: LocalJlptManifest["tests"][number]): JlptCatalogTest | null {
+  const level = extractJlptLevel(value.level, { level: value.level });
+  if (!level) return null;
+  return {
+    id: value.id,
+    name: value.name,
+    level,
+    source: "local",
+    path: value.path,
+  };
+}
+
 class JLPTTestService {
-  /**
-   * Scan for JSON test files in the library (Google Drive)
-   */
-  async scanLibraryForTests(drive: DrivePort): Promise<TestFile[]> {
+  async scanLibraryForTests(drive: DrivePort): Promise<JlptCatalogTest[]> {
     try {
-      if (!drive.isSignedIn()) {
-        return [];
-      }
+      if (!drive.isSignedIn()) return [];
 
-      // List all files in Google Drive
       const files = await drive.listFiles();
-      
-      // Filter for JSON files that match JLPT test naming pattern
-      const testFiles: TestFile[] = files
-        .filter(file => {
-          const name = file.name.toLowerCase();
-          return name.endsWith('.json') && 
-                 (name.includes('jlpt') || name.includes('test'));
+      return files
+        .filter((file) => {
+          const name = String(file?.name || "").toLowerCase();
+          return name.endsWith(".json") && (name.includes("jlpt") || name.includes("test"));
         })
-        .map(file => ({
-          name: file.name,
-          id: file.id,
-          source: 'library' as const,
-        }));
-
-      return testFiles;
+        .map((file) => {
+          const name = String(file.name || "");
+          const level = extractJlptLevel(name);
+          if (!level) {
+            appLog.warn("[jlptTestService] Skipping Drive test without JLPT level", { name });
+            return null;
+          }
+          return {
+            id: String(file.id),
+            name,
+            level,
+            source: "library" as const,
+          };
+        })
+        .filter((file): file is JlptCatalogTest => Boolean(file))
+        .sort(compareTests);
     } catch (error) {
-      appLog.error('[jlptTestService] Error scanning library for tests', error);
+      appLog.error("[jlptTestService] Error scanning library for tests", error);
       return [];
     }
   }
 
-  /**
-   * Scan local JLPT_Tests folder for JSON files
-   */
-  async scanLocalTests(): Promise<TestFile[]> {
+  private async loadLocalManifest(): Promise<JlptCatalogTest[]> {
     try {
-      // Try to fetch from the JLPT_Tests folder
-      const testFiles: TestFile[] = [];
-      
-      // Common test file names
-      const commonNames = [
-        'JLPTN3_Test1.json',
-        'JLPTN3_Test2.json',
-        'JLPTN3_Test3.json',
-        'JLPTN5_Test1.json',
-      ];
+      const response = await fetch("/JLPT_Tests/manifest.json", { cache: "no-store" });
+      if (!response.ok) return [];
+      const manifest = (await response.json()) as LocalJlptManifest;
+      if (!Array.isArray(manifest?.tests)) return [];
+      return manifest.tests.map(normalizeManifestTest).filter((test): test is JlptCatalogTest => Boolean(test)).sort(compareTests);
+    } catch (error) {
+      appLog.warn("[jlptTestService] Failed to load JLPT manifest, falling back to legacy discovery", error);
+      return [];
+    }
+  }
 
-      // Check if files exist by trying to fetch them
-      for (const name of commonNames) {
+  async scanLocalTests(): Promise<JlptCatalogTest[]> {
+    try {
+      const manifestTests = await this.loadLocalManifest();
+      if (manifestTests.length > 0) return manifestTests;
+
+      const testFiles: JlptCatalogTest[] = [];
+      for (const name of LEGACY_LOCAL_TEST_NAMES) {
         try {
-          const response = await fetch(`/JLPT_Tests/${name}`);
-          if (response.ok) {
-            testFiles.push({
-              name,
-              id: name,
-              source: 'local',
-              path: `/JLPT_Tests/${name}`,
-            });
-          }
-        } catch (e) {
-          // File doesn't exist, skip
+          const response = await fetch(`/JLPT_Tests/${name}`, { method: "HEAD" });
+          if (!response.ok) continue;
+          const level = extractJlptLevel(name);
+          if (!level) continue;
+          testFiles.push({
+            id: name,
+            name,
+            level,
+            source: "local",
+            path: `/JLPT_Tests/${name}`,
+          });
+        } catch {
+          // ignore per-file fetch failures
         }
       }
 
-      return testFiles;
+      return testFiles.sort(compareTests);
     } catch (error) {
-      appLog.error('[jlptTestService] Error scanning local tests', error);
+      appLog.error("[jlptTestService] Error scanning local tests", error);
       return [];
     }
   }
 
-  /**
-   * Get all available tests from both library and local sources
-   */
-  async getAllTests(drive: DrivePort): Promise<TestFile[]> {
-    const [libraryTests, localTests] = await Promise.all([
-      this.scanLibraryForTests(drive),
-      this.scanLocalTests(),
-    ]);
-
-    return [...libraryTests, ...localTests];
+  async getAllTests(drive: DrivePort): Promise<JlptCatalogTest[]> {
+    const [libraryTests, localTests] = await Promise.all([this.scanLibraryForTests(drive), this.scanLocalTests()]);
+    return [...libraryTests, ...localTests].sort(compareTests);
   }
 
-  /**
-   * Load test data from a test file
-   * Handles both old format (array of questions) and new format (object with meta and questions)
-   */
-  async loadTestData(drive: DrivePort, testFile: TestFile): Promise<{ questions: any[]; meta?: any }> {
+  async loadTestData(drive: DrivePort, testFile: JlptCatalogTest): Promise<JlptTestData> {
     try {
       let data: any;
-      if (testFile.source === 'library') {
-        // Download from Google Drive
+      if (testFile.source === "library") {
         const blob = await drive.downloadFile(testFile.id);
-        if (!blob) throw new Error('Drive returned empty file');
+        if (!blob) throw new Error("Drive returned empty file");
         const text = await blob.text();
         data = JSON.parse(text);
       } else {
-        // Load from local path
         const response = await fetch(testFile.path!);
-        if (!response.ok) {
-          throw new Error(`Failed to load test file: ${testFile.name}`);
-        }
+        if (!response.ok) throw new Error(`Failed to load test file: ${testFile.name}`);
         data = await response.json();
       }
 
-      // Handle new format (object with meta and questions)
-      if (data && typeof data === 'object' && !Array.isArray(data) && data.questions) {
+      if (data && typeof data === "object" && !Array.isArray(data) && data.questions) {
         return {
           questions: Array.isArray(data.questions) ? data.questions : [],
           meta: data.meta || null,
         };
       }
 
-      // Handle old format (array of questions directly)
       if (Array.isArray(data)) {
         return {
           questions: data,
@@ -134,10 +135,10 @@ class JLPTTestService {
         };
       }
 
-      throw new Error('Invalid test file format');
+      throw new Error("Invalid test file format");
     } catch (error) {
-      appLog.error('[jlptTestService] Error loading test data', error);
-      throw new Error(`Failed to load test: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      appLog.error("[jlptTestService] Error loading test data", error);
+      throw new Error(`Failed to load test: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 }

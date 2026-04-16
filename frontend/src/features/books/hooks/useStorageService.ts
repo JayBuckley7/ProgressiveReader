@@ -123,6 +123,7 @@ function useStorageService() {
       const isAuthenticated = await deps.driveAuth.ensureAuthenticated();
       if (!isAuthenticated) {
         notifyError("Failed to connect to Google Drive");
+        lastUserIdRef.current = null;
         return false;
       }
 
@@ -152,6 +153,7 @@ function useStorageService() {
       toast.success("Google Drive connected and library loaded!");
       return true;
     } catch (error) {
+      lastUserIdRef.current = null;
       notifyError(error, {
         title: "Failed to connect to Google Drive",
         description: "Showing offline books instead.",
@@ -182,8 +184,6 @@ function useStorageService() {
       const currentUserId = clerkUser.id;
       if (lastUserIdRef.current === currentUserId) return;
 
-      lastUserIdRef.current = currentUserId;
-
       const wasGoogleClerkLogin = clerkUser.externalAccounts?.some((acc) => acc.provider.startsWith("google"));
       if (!wasGoogleClerkLogin) return;
 
@@ -191,6 +191,8 @@ function useStorageService() {
       const needsBooks =
         currentPath === "/" || currentPath.startsWith("/vocabulary") || currentPath.startsWith("/book/");
       if (!needsBooks) return;
+
+      lastUserIdRef.current = currentUserId;
 
       // Delay slightly to avoid Clerk session-finalization races that can cause auth state churn.
       setTimeout(() => {

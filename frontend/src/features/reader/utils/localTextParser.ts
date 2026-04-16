@@ -3,6 +3,7 @@
 import TinySegmenter from 'tiny-segmenter';
 import { Token, Card } from '~/types';
 import { appLog } from '@shared/appLog'
+import { getJlptLevel, getWordKanjiInfo } from '@shared/services/jlptService';
 
 const segmenter = new TinySegmenter();
 
@@ -146,6 +147,72 @@ function shouldMergeCompound(current: string, next: string): boolean {
   return commonPairs.some(([first, second]) => current === first && next === second);
 }
 
+function buildLocalCard(word: string): Card {
+  const kanjiInfo = getWordKanjiInfo(word);
+  const level = getJlptLevel(word);
+  const reading = buildBestEffortReading(word);
+  const rankedKanji = kanjiInfo
+    .map((entry) => entry.freq_mainichi_shinbun)
+    .filter((rank): rank is number => typeof rank === 'number' && Number.isFinite(rank));
+
+  return {
+    vid: 0,
+    sid: 0,
+    rid: 0,
+    state: ['not-in-deck'],
+    spelling: word,
+    reading,
+    frequencyRank: rankedKanji.length > 0 ? Math.min(...rankedKanji) : null,
+    pitchAccent: [],
+    meanings: kanjiInfo.length > 0
+      ? kanjiInfo.map((entry) => ({
+          glosses: [
+            `${entry.kanji}: ${entry.meanings.slice(0, 4).join(', ') || 'Definition not found'}`,
+          ],
+          partOfSpeech: [
+            level ? `JLPT ${level}` : 'Local kanji',
+            `${entry.stroke_count} strokes`,
+          ],
+        }))
+      : [{
+          glosses: ['Definition not found'],
+          partOfSpeech: ['local lookup'],
+        }],
+  };
+}
+
+function normalizeReading(reading: string): string {
+  return reading
+    .replace(/[.-].*$/u, '')
+    .replace(/[()]/gu, '')
+    .trim();
+}
+
+function buildBestEffortReading(word: string): string {
+  const kanjiByChar = new Map(getWordKanjiInfo(word).map((entry) => [entry.kanji, entry]));
+  let reading = '';
+  let changed = false;
+
+  for (const char of Array.from(word)) {
+    const entry = kanjiByChar.get(char);
+    if (!entry) {
+      reading += char;
+      continue;
+    }
+
+    const bestReading = entry.kun_readings[0] || entry.on_readings[0] || '';
+    const normalized = normalizeReading(bestReading);
+    if (normalized) {
+      reading += normalized;
+      changed = true;
+    } else {
+      reading += char;
+    }
+  }
+
+  return changed ? reading : word;
+}
+
 export async function parseWithLocalLookup(text: string): Promise<Token[]> {
   appLog.debug('[localTextParser] Parsing text with TinySegmenter (local lookup)');
   
@@ -184,21 +251,7 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
         continue;
       }
       
-      // Create basic token - the real JLPT data lookup happens later in getColorClass()
-      const card: Card = {
-        vid: 0,
-        sid: 0,
-        rid: 0,
-        state: ['not-in-deck'],
-        spelling: trimmedWord,
-        reading: trimmedWord,
-        frequencyRank: null,
-        pitchAccent: [],
-        meanings: [{
-          glosses: ['Local lookup pending'],
-          partOfSpeech: ['unknown']
-        }],
-      };
+      const card = buildLocalCard(trimmedWord);
       
       const token: Token = {
         start,
@@ -231,20 +284,7 @@ export async function parseWithLocalLookup(text: string): Promise<Token[]> {
       const end = start + word.length;
       offset = end + 1;
       
-      const card: Card = {
-        vid: 0,
-        sid: 0,
-        rid: 0,
-        state: ['not-in-deck'],
-        spelling: word,
-        reading: word,
-        frequencyRank: null,
-        pitchAccent: [],
-        meanings: [{
-          glosses: ['Translation unavailable'],
-          partOfSpeech: ['unknown']
-        }],
-      };
+      const card = buildLocalCard(word);
       
       const token: Token = {
         start,

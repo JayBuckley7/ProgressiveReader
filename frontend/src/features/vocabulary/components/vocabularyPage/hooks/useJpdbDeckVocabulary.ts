@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { loadCachedDueEntries, loadSelectedJpdbDeck, saveCachedDueEntries, saveSelectedJpdbDeck } from "@features/vocabulary/services/vocabularyDashboard";
 
 import { groupDeckVocabularyByDueAt, isDueEntry, normalizeEpochMs } from "../due";
 import type { DeckVocabCache, DueVocabProgress, JpdbLookupVocabularyEntry, JpdbVocabPair } from "../types";
@@ -10,47 +11,17 @@ import type { DeckVocabCache, DueVocabProgress, JpdbLookupVocabularyEntry, JpdbV
 const LOOKUP_BATCH_SIZE = 200;
 const DECK_LOOKUP_FIELDS = ["spelling", "reading", "frequency_rank", "meanings", "card_state", "due_at"];
 
-const DUE_CACHE_VALID_MS = 15 * 60 * 1000;
-const dueCacheKey = (deckId: string) => `jpdb_due_cards_v2:${deckId}`;
-const dueCacheTsKey = (deckId: string) => `jpdb_due_cards_v2_ts:${deckId}`;
-
 const DUE_SCAN_FIELDS = ["due_at", "card_state"];
 const DUE_DETAIL_FIELDS = ["spelling", "reading", "meanings", "card_state", "due_at"];
 const DUE_BATCH_SIZE = 400;
 
-function loadCachedDue(deckId: string): JpdbLookupVocabularyEntry[] | null {
-  if (!deckId) return null;
-  try {
-    const timestamp = localStorage.getItem(dueCacheTsKey(deckId));
-    if (!timestamp) return null;
-    if (Date.now() - Number(timestamp) > DUE_CACHE_VALID_MS) {
-      localStorage.removeItem(dueCacheKey(deckId));
-      localStorage.removeItem(dueCacheTsKey(deckId));
-      return null;
-    }
-    const payload = localStorage.getItem(dueCacheKey(deckId));
-    return payload ? (JSON.parse(payload) as JpdbLookupVocabularyEntry[]) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedDue(deckId: string, entries: JpdbLookupVocabularyEntry[]) {
-  if (!deckId) return;
-  try {
-    localStorage.setItem(dueCacheKey(deckId), JSON.stringify(entries));
-    localStorage.setItem(dueCacheTsKey(deckId), Date.now().toString());
-  } catch {
-    // ignore storage errors
-  }
-}
-
 export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm: string }) {
   const { isSignedIn, searchTerm } = params;
   const deps = useAppDeps();
+  const initialDeck = loadSelectedJpdbDeck();
 
-  const [selectedDeckId, setSelectedDeckId] = useState<string>("");
-  const [selectedDeckName, setSelectedDeckName] = useState<string>("");
+  const [selectedDeckId, setSelectedDeckId] = useState<string>(initialDeck?.id || "");
+  const [selectedDeckName, setSelectedDeckName] = useState<string>(initialDeck?.name || "");
 
   const [deckVocabById, setDeckVocabById] = useState<Record<string, DeckVocabCache>>({});
   const [deckVocabError, setDeckVocabError] = useState<string | null>(null);
@@ -69,7 +40,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
     setDueVocabProgress(null);
 
     if (selectedDeckId) {
-      const cached = loadCachedDue(selectedDeckId);
+      const cached = loadCachedDueEntries(selectedDeckId);
       if (cached) setDueVocabEntries(cached);
     } else {
       setSelectedDeckName("");
@@ -83,6 +54,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
   const selectDeck = useCallback((deck: { id: string; name: string }) => {
     setSelectedDeckId(deck.id);
     setSelectedDeckName(deck.name);
+    saveSelectedJpdbDeck(deck);
   }, []);
 
   const openSelectedDeck = useCallback(async () => {
@@ -223,7 +195,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
 
       if (pairs.length === 0) {
         setDueVocabEntries([]);
-        saveCachedDue(deckId, []);
+        saveCachedDueEntries(deckId, []);
         toast.info("Deck is empty");
         return;
       }
@@ -247,7 +219,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
 
       if (duePairs.length === 0) {
         setDueVocabEntries([]);
-        saveCachedDue(selectedDeckId, []);
+        saveCachedDueEntries(selectedDeckId, []);
         toast.success("No due cards found");
         return;
       }
@@ -272,7 +244,7 @@ export function useJpdbDeckVocabulary(params: { isSignedIn: boolean; searchTerm:
       });
 
       setDueVocabEntries(dueEntries);
-      saveCachedDue(selectedDeckId, dueEntries);
+      saveCachedDueEntries(selectedDeckId, dueEntries);
       toast.success(`Found ${dueEntries.length} due cards`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch due cards";
