@@ -323,10 +323,17 @@ export function cancelHideDefinitionPopup() {
   clearHideTimeout();
 }
 
+function getInitialCompactPopup(): boolean {
+  if (typeof window === "undefined") return false;
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  return window.innerWidth < 640 || coarsePointer;
+}
+
 export function JpdbPopupController() {
   const deps = useAppDeps();
   const [popup, _setPopup] = useState<PopupState>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCompactPopup, setIsCompactPopup] = useState(getInitialCompactPopup);
   setPopup = _setPopup;
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
@@ -423,6 +430,17 @@ export function JpdbPopupController() {
       cancelPopupSpeech();
     }
   }, [popup]);
+
+  useEffect(() => {
+    const updateCompactMode = () => {
+      const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+      setIsCompactPopup(window.innerWidth < 640 || coarsePointer);
+    };
+
+    updateCompactMode();
+    window.addEventListener("resize", updateCompactMode);
+    return () => window.removeEventListener("resize", updateCompactMode);
+  }, []);
 
   if (!popup) return null;
 
@@ -543,8 +561,9 @@ export function JpdbPopupController() {
   };
 
   // Flatter JPDB-style buttons (no neon "glow" shadows).
-  const flatBtnBase =
-    "px-3 py-1.5 rounded-full border bg-neutral-900/60 hover:bg-neutral-800/70 active:bg-neutral-800 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap transition-colors";
+  const flatBtnBase = isCompactPopup
+    ? "rounded-full border bg-neutral-900/60 px-2 py-0.5 text-[10px] hover:bg-neutral-800/70 active:bg-neutral-800 disabled:opacity-50 whitespace-nowrap transition-colors"
+    : "rounded-full border bg-neutral-900/60 px-2.5 py-1 text-[11px] hover:bg-neutral-800/70 active:bg-neutral-800 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-sm whitespace-nowrap transition-colors";
   const flatBlue = `${flatBtnBase} border-sky-700 text-sky-300`;
   const flatGreen = `${flatBtnBase} border-emerald-700 text-emerald-300`;
   const flatLime = `${flatBtnBase} border-lime-700 text-lime-300`;
@@ -553,26 +572,37 @@ export function JpdbPopupController() {
   const flatRose = `${flatBtnBase} border-rose-700 text-rose-200`;
   const flatOrange = `${flatBtnBase} border-orange-700 text-orange-200`;
   const addButtonTitle = canMine ? "Add word to mining deck" : "Set a mining deck ID in settings to add words.";
+  const popupStyle: React.CSSProperties = isCompactPopup
+    ? {
+        left: "0.5rem",
+        right: "0.5rem",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)",
+        top: "auto",
+        width: "auto",
+        maxWidth: "none",
+        maxHeight: "min(18rem, 38dvh)",
+      }
+    : {
+        top: popup.y,
+        left: popup.x,
+        width: "min(28rem, 92vw)",
+        maxHeight: "min(30rem, 55vh)",
+      };
 
   return (
     <div
       data-jpdb-popup
-      className="fixed z-50 rounded-2xl shadow-lg overflow-hidden cursor-default border border-neutral-700 bg-neutral-900 text-neutral-100 flex flex-col"
-      style={{
-        top: popup.y,
-        left: popup.x,
-        width: 'min(28rem, 92vw)',
-        maxHeight: 'min(30rem, 55vh)',
-      }}
+      className="fixed z-50 flex cursor-default flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 text-neutral-100 shadow-lg sm:rounded-2xl"
+      style={popupStyle}
       onMouseEnter={handlePopupMouseEnter}
       onMouseLeave={handlePopupMouseLeave}
     >
-      <div className="px-3 pt-3 pb-2 shrink-0 border-b border-neutral-700 bg-neutral-950/30">
-        <div className="flex items-start justify-between gap-3">
+      <div className="shrink-0 border-b border-neutral-700 bg-neutral-950/30 px-2 py-1.5 sm:px-3 sm:pt-3 sm:pb-2">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
             {!isOfflineMode && card && config.apiKey ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-1 sm:gap-2">
+                <div className="grid grid-cols-3 gap-1 sm:flex sm:flex-wrap sm:gap-2">
                   <button
                     onClick={handleMineWord}
                     disabled={isLoading || !canMine}
@@ -584,7 +614,7 @@ export function JpdbPopupController() {
                   <button
                     onClick={() => handleUpdateWordState('never-forget', hasNeverForget)}
                     disabled={isLoading}
-                    className={flatLime}
+                    className={`${flatLime} col-span-2`}
                     title={hasNeverForget ? 'Remove never-forget' : 'Mark never-forget'}
                   >
                     Never forget
@@ -603,7 +633,7 @@ export function JpdbPopupController() {
                   <div className="text-xs text-neutral-400">{addButtonTitle}</div>
                 )}
 
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-5 gap-1 sm:flex sm:flex-wrap sm:gap-2">
                   <button
                     onClick={() => handleReviewCard('nothing')}
                     disabled={isLoading}
@@ -658,7 +688,7 @@ export function JpdbPopupController() {
           <button
             onPointerDown={handleCloseButtonPointerDown}
             onClick={handleCloseButtonClick}
-            className="shrink-0 w-9 h-9 rounded-xl border border-neutral-700 bg-neutral-900/60 text-red-400 hover:text-red-300 hover:bg-neutral-800/70 transition-colors"
+            className="h-8 w-8 shrink-0 rounded-lg border border-neutral-700 bg-neutral-900/60 text-red-400 transition-colors hover:bg-neutral-800/70 hover:text-red-300 sm:h-9 sm:w-9 sm:rounded-xl"
             aria-label="Close popup"
             title="Close"
           >
@@ -667,9 +697,9 @@ export function JpdbPopupController() {
         </div>
       </div>
 
-      <div className="p-3 overflow-y-auto min-h-0">
+      <div className="min-h-0 overflow-y-auto p-2 sm:p-3">
 
-        <div className="mt-3 flex gap-4">
+        <div className="flex gap-3 sm:mt-3 sm:gap-4">
           <div className="flex-1 min-w-0">
             {learningGrammarPoints.length > 0 ? (
               <div className="mb-4 p-3 rounded-xl border border-neutral-700 bg-neutral-950/25">
@@ -701,7 +731,7 @@ export function JpdbPopupController() {
               <div className="text-blue-300 text-sm leading-tight">{fallbackReading}</div>
             )}
             <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <div className="max-w-full overflow-x-auto pb-1 text-blue-400 text-3xl font-semibold leading-[1.35] tracking-wide">
+              <div className="max-w-full overflow-x-auto pb-1 text-2xl font-semibold leading-[1.3] tracking-wide text-blue-400 sm:text-3xl sm:leading-[1.35]">
                 <span className="inline-block whitespace-nowrap">
                   {popupRubyParts.map((part, idx) => part.ruby ? (
                     <ruby key={`${part.base}-${idx}`} className="whitespace-nowrap">
@@ -847,7 +877,7 @@ export function JpdbPopupController() {
             )}
           </div>
 
-          <div className="w-28 shrink-0 text-right">
+          <div className="hidden w-28 shrink-0 text-right sm:block">
             <div className="space-y-2 text-sm">
               {hasNeverForget && (
                 <div className="text-lime-300 underline underline-offset-4">never-forget</div>
@@ -856,7 +886,7 @@ export function JpdbPopupController() {
                 <div className="text-red-300 underline underline-offset-4">blacklisted</div>
               )}
               {token?.card?.frequencyRank && (
-                <div className="text-neutral-200 text-base font-medium">Top {token.card.frequencyRank.toLocaleString()}</div>
+                <div className="text-base font-medium text-neutral-200">Top {token.card.frequencyRank.toLocaleString()}</div>
               )}
             </div>
           </div>
@@ -864,7 +894,7 @@ export function JpdbPopupController() {
       </div>
 
       {!isOfflineMode && (
-        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-neutral-700/50 bg-neutral-900/40">
+        <div className="shrink-0 border-t border-neutral-700/50 bg-neutral-900/40 px-2 py-1.5 sm:px-3 sm:pb-3 sm:pt-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
