@@ -6,7 +6,27 @@ if gcloud run services describe $_SERVICE_NAME --platform managed --region us-ce
   SERVICE_URL=$(gcloud run services describe $_SERVICE_NAME --platform managed --region us-central1 --project="$PROJECT_ID" --format 'value(status.url)')
   HEALTH_CHECK_URL="$SERVICE_URL/health"
   echo "Pre-deployment BVT: GET $HEALTH_CHECK_URL"
-  STATUS_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "$HEALTH_CHECK_URL")
+  STATUS_CODE=""
+  CURL_EXIT=1
+  for attempt in 1 2 3; do
+    echo "Pre-deployment BVT attempt $attempt/3"
+    set +e
+    STATUS_CODE=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 "$HEALTH_CHECK_URL")
+    CURL_EXIT=$?
+    set -e
+    if [ "$CURL_EXIT" -eq 0 ] && [ -n "$STATUS_CODE" ] && [ "$STATUS_CODE" != "000" ]; then
+      break
+    fi
+    echo "Pre-deployment health check transport failed (curl exit $CURL_EXIT, status ${STATUS_CODE:-none})"
+    if [ "$attempt" -lt 3 ]; then
+      sleep 5
+    fi
+  done
+
+  if [ "$CURL_EXIT" -ne 0 ] || [ -z "$STATUS_CODE" ] || [ "$STATUS_CODE" = "000" ]; then
+    echo "Pre-deployment BVT failed after retries for $HEALTH_CHECK_URL - no HTTP response"
+    exit 1
+  fi
   
   # Allow deployment if service is unhealthy (500) - we may be deploying a fix
   # Only fail on connection errors or other critical issues
@@ -23,4 +43,3 @@ if gcloud run services describe $_SERVICE_NAME --platform managed --region us-ce
 else
   echo "邃ｹ・・Service $_SERVICE_NAME not found yet; skipping pre-deployment health check."
 fi
-
