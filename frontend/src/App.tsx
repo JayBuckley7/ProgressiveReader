@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 import { JpdbPopupController } from "./features/reader/components/JpdbPopup";
 import BookLibrary from "./features/books/components/BookLibrary";
 import { BookReader } from "./features/reader/components/BookReader";
+import { TestReaderRoute } from "@features/reader/testing/TestReaderRoute";
 import { SettingsProvider } from "@shared/contexts/SettingsContext";
 import { TopActions } from "@shared/components/TopActions";
 import { DangerZone } from "@shared/components/DangerZone";
@@ -116,6 +117,9 @@ function AppContent() {
             <Route path="sign-in/*" element={<SignedOutLayout />} />
             <Route path="sign-up/*" element={<SignedOutLayout />} />
 
+            <Route path="pdf" element={<TestReaderRoute kind="pdf" />} />
+            <Route path="pdfs" element={<TestReaderRoute kind="pdfs" />} />
+            <Route path="epub" element={<TestReaderRoute kind="epub" />} />
             <Route path="book/:bookId" element={<BookReaderRoute />} />
           </Routes>
           <Footer />

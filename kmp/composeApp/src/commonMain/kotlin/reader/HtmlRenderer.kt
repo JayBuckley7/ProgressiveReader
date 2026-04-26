@@ -7,12 +7,23 @@ enum class SwipeDirection {
     RIGHT,
 }
 
+data class HtmlDocumentSpec(
+    val bodyHtml: String,
+    val headHtml: String = "",
+    val baseUrl: String? = null,
+    val chapterKey: String,
+    val contentKey: String,
+)
+
+data class HtmlPresentationSpec(
+    val darkMode: Boolean,
+    val fontSizeSp: Float,
+)
+
 @Composable
 expect fun HtmlContent(
-    html: String,
-    baseUrl: String?,
-    darkMode: Boolean,
-    fontSizeSp: Float,
+    document: HtmlDocumentSpec,
+    presentation: HtmlPresentationSpec,
     onUrlClick: (String) -> Boolean,
     onSwipe: ((SwipeDirection) -> Unit)?,
 )

@@ -15,6 +15,7 @@ export const JLPT_SNAPSHOT_LIMIT_PER_BINDING = 16;
 export const JLPT_GRAMMAR_SNAPSHOT_LIMIT = 16;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MONTH_NAME_PATTERN = "January|February|March|April|May|June|July|August|September|October|November|December";
 
 export function createJlptId(prefix = "jlpt"): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -31,6 +32,23 @@ export function extractJlptLevel(value: string, meta?: { level?: string | null }
   if (metaLevel) return metaLevel;
   const match = value.toUpperCase().match(/N[1-5]/)?.[0];
   return toJlptLevel(match ?? null);
+}
+
+export function formatJlptTestTitle(value: string): string {
+  const withoutExtension = value.replace(/\.json$/i, "").trim();
+  let title = withoutExtension.replace(/[_-]+/g, " ");
+
+  title = title.replace(/\bJLPT([Nn][1-5])\b/g, (_match, level: string) => `JLPT ${level.toUpperCase()}`);
+  title = title.replace(/\bJLPT\s+([Nn][1-5])\b/g, (_match, level: string) => `JLPT ${level.toUpperCase()}`);
+  title = title.replace(new RegExp(`\\b(${MONTH_NAME_PATTERN})(\\d{4})\\b`, "gi"), "$1 $2");
+  title = title.replace(new RegExp(`\\b(\\d{4})(${MONTH_NAME_PATTERN})\\b`, "gi"), "$1 $2");
+  title = title.replace(/\b(Test|Exam|Mock|Practice|Part)(\d+)\b/gi, "$1 $2");
+  title = title.replace(/\bPartial\b/gi, "(Partial)");
+  title = title.replace(/\s+\(Partial\)\s+\(Partial\)\b/gi, " (Partial)");
+  title = title.replace(/\s+(Nihonez)(\s+\(Partial\))?$/i, " - $1$2");
+  title = title.replace(/\s+/g, " ").trim();
+
+  return title;
 }
 
 export function createJlptTestRef(test: Pick<JlptCatalogTest, "id" | "source" | "name" | "path">): JlptTestRef {
@@ -137,7 +155,7 @@ export function getNextConfiguredJlptExam(referenceDate: Date = new Date()): Dat
 
 export function getGoalTitle(level: JlptLevel, testRef: JlptTestRef | null): string {
   if (!testRef) return `${level} readiness`;
-  return testRef.name.replace(/\.json$/i, "");
+  return formatJlptTestTitle(testRef.name);
 }
 
 export function getDaysUntilDate(target: Date | string, referenceDate: Date = new Date()): number {

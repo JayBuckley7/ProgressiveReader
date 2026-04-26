@@ -55,8 +55,65 @@ export type OcrProgress = {
 
 export type OcrProgressCallback = (progress: OcrProgress) => void;
 
+export type OcrLayoutPoint = {
+  x: number;
+  y: number;
+};
+
+export type OcrLayoutBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type OcrLayoutAtom = {
+  id: string;
+  text: string;
+  lineId: string;
+  order: number;
+  direction: "horizontal" | "vertical";
+  confidence: number;
+  bboxNorm: OcrLayoutBox;
+  polygonNorm: OcrLayoutPoint[];
+};
+
+export type OcrLayoutLine = {
+  id: string;
+  text: string;
+  order: number;
+  direction: "horizontal" | "vertical";
+  confidence: number;
+  bboxNorm: OcrLayoutBox;
+  polygonNorm: OcrLayoutPoint[];
+  atomIds: string[];
+};
+
+export type OcrPageLayoutResponse = {
+  status: "ready";
+  cacheHit: boolean;
+  contentHash: string;
+  ocrProfile: string;
+  pageIndex: number;
+  image: {
+    width: number;
+    height: number;
+  };
+  lines: OcrLayoutLine[];
+  atoms: OcrLayoutAtom[];
+};
+
 export interface OcrBackendPort {
   processPdf(file: File, onProgress?: OcrProgressCallback, opts?: { signal?: AbortSignal }): Promise<File>;
+  processPageLayout(args: {
+    image: Blob;
+    pageIndex: number;
+    contentHash?: string;
+    documentId?: string;
+    documentVersion?: string;
+    ocrProfile?: string;
+    signal?: AbortSignal;
+  }): Promise<OcrPageLayoutResponse>;
 }
 
 export interface AdminBackendPort {

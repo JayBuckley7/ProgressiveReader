@@ -212,8 +212,13 @@ export function loadConfig(): JpHighlighterConfig {
 }
 
 // Parse text using JPDB API
-export async function parseText(api: JpdbApiPort, textSegments: string[]): Promise<Token[]> {
+export async function parseText(
+    api: JpdbApiPort,
+    textSegments: string[],
+    options: { notifyOnError?: boolean } = {}
+): Promise<Token[]> {
     const currentConfig = getCurrentConfig(); // Get current config
+    const notifyOnError = options.notifyOnError ?? true;
     try {
         if (!currentConfig.apiKey) {
             // Keep segment concatenation aligned with how we compute global offsets for highlighting (no separator).
@@ -247,7 +252,9 @@ export async function parseText(api: JpdbApiPort, textSegments: string[]): Promi
 
         return tokens;
     } catch (error) {
-        notifyError(error, { title: 'JPDB parsing error' });
+        if (notifyOnError) {
+            notifyError(error, { title: 'JPDB parsing error' });
+        }
         throw new Canceled('Parsing canceled due to error');
     }
 }

@@ -1,7 +1,7 @@
 """SQLAlchemy infrastructure (ORM + session)."""
 
 from .db import db
-from .models import Bookmark, Vocabulary
+from .models import Bookmark, OcrPageLayoutCache, Vocabulary
 
-__all__ = ["db", "Bookmark", "Vocabulary"]
+__all__ = ["db", "Bookmark", "Vocabulary", "OcrPageLayoutCache"]
 

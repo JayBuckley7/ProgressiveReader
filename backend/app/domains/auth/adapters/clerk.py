@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, List
 from ..ports import AuthProviderPort
 from ..schemas import SessionInfo, UserInfo
 from ....utils.runtime_env import is_dev_env
+from ....utils.timeout import call_with_timeout, TimeoutExceededError
 
 try:
     from clerk_backend_api import Clerk  # type: ignore
@@ -23,6 +24,9 @@ except Exception:  # pragma: no cover - optional at test time
     verify_token = None  # type: ignore
 
 logger = logging.getLogger(__name__)
+
+CLERK_VERIFY_TIMEOUT_SECONDS = 10.0
+CLERK_USER_LOOKUP_TIMEOUT_SECONDS = 6.0
 
 
 class ClerkAuthProvider(AuthProviderPort):
@@ -53,7 +57,11 @@ class ClerkAuthProvider(AuthProviderPort):
                 logger.warning("[auth] Clerk JWKS helpers not available; cannot verify token")
                 return None
 
-            claims = verify_token(token, VerifyTokenOptions(secret_key=self._secret_key))  # type: ignore[misc]
+            claims = call_with_timeout(
+                label="Clerk token verification",
+                timeout_seconds=CLERK_VERIFY_TIMEOUT_SECONDS,
+                fn=lambda: verify_token(token, VerifyTokenOptions(secret_key=self._secret_key)),  # type: ignore[misc]
+            )
             session_id = claims.get("sid")
             user_id = claims.get("sub")
             logger.debug("[auth] Token verified user_id=%s session_id=%s", user_id, session_id)
@@ -61,6 +69,9 @@ class ClerkAuthProvider(AuthProviderPort):
                 logger.warning("[auth] Token missing required claims (sid or sub)")
                 return None
             return SessionInfo(user_id=user_id, session_id=session_id, status="verified")
+        except TimeoutExceededError:
+            logger.warning("[auth] Clerk token verification timed out after %ss", CLERK_VERIFY_TIMEOUT_SECONDS)
+            return None
         except Exception as exc:
             # TokenVerificationError is an optional import; detect by name safely.
             if TokenVerificationError and isinstance(exc, TokenVerificationError):  # type: ignore[arg-type]
@@ -68,6 +79,53 @@ class ClerkAuthProvider(AuthProviderPort):
                 return None
             logger.error("Error verifying Clerk session token: %s", exc, exc_info=True)
             return None
+
+    @staticmethod
+    def _maybe_str(v: object) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s or None
+
+    @classmethod
+    def _minimal_user(cls, user_id: str) -> UserInfo:
+        return UserInfo(id=user_id)
+
+    @classmethod
+    def _build_user_info(cls, raw_user: object, fallback_user_id: str) -> UserInfo:
+        email = None
+        email_addresses = getattr(raw_user, "email_addresses", None)
+        if isinstance(email_addresses, list) and email_addresses:
+            first = email_addresses[0]
+            email = cls._maybe_str(getattr(first, "email_address", None)) or cls._maybe_str(getattr(first, "email", None))
+
+        created_at_val = getattr(raw_user, "created_at", None)
+        created_at = None
+        if created_at_val is not None:
+            iso = getattr(created_at_val, "isoformat", None)
+            if callable(iso):
+                created_at = cls._maybe_str(iso())
+            else:
+                created_at = cls._maybe_str(created_at_val)
+
+        return UserInfo(
+            id=cls._maybe_str(getattr(raw_user, "id", None)) or fallback_user_id,
+            email=email,
+            first_name=cls._maybe_str(getattr(raw_user, "first_name", None)),
+            last_name=cls._maybe_str(getattr(raw_user, "last_name", None)),
+            username=cls._maybe_str(getattr(raw_user, "username", None)),
+            image_url=cls._maybe_str(getattr(raw_user, "image_url", None)),
+            created_at=created_at,
+        )
+
+    def _get_clerk_user(self, user_id: str) -> Any:
+        if not self.client:
+            raise ValueError("Clerk client not configured")
+        return call_with_timeout(
+            label="Clerk user lookup",
+            timeout_seconds=CLERK_USER_LOOKUP_TIMEOUT_SECONDS,
+            fn=lambda: self.client.users.get(user_id=user_id),
+        )
 
     def _extract_bearer(self, headers: Dict[str, str]) -> Optional[str]:
         auth_header = headers.get("Authorization") or headers.get("authorization")
@@ -95,45 +153,24 @@ class ClerkAuthProvider(AuthProviderPort):
             return None
         logger.debug("[auth] Token verified; session user_id=%s", session.user_id)
         try:
-            raw_user = self.client.users.get(user_id=session.user_id)
-
-            def _maybe_str(v: object) -> Optional[str]:
-                if v is None:
-                    return None
-                s = str(v).strip()
-                return s or None
-
-            # Best-effort primary email extraction.
-            email = None
-            email_addresses = getattr(raw_user, "email_addresses", None)
-            if isinstance(email_addresses, list) and email_addresses:
-                first = email_addresses[0]
-                email = _maybe_str(getattr(first, "email_address", None)) or _maybe_str(getattr(first, "email", None))
-
-            created_at_val = getattr(raw_user, "created_at", None)
-            created_at = None
-            if created_at_val is not None:
-                iso = getattr(created_at_val, "isoformat", None)
-                if callable(iso):
-                    created_at = _maybe_str(iso())
-                else:
-                    created_at = _maybe_str(created_at_val)
-
-            user = UserInfo(
-                id=_maybe_str(getattr(raw_user, "id", None)) or session.user_id,
-                email=email,
-                first_name=_maybe_str(getattr(raw_user, "first_name", None)),
-                last_name=_maybe_str(getattr(raw_user, "last_name", None)),
-                username=_maybe_str(getattr(raw_user, "username", None)),
-                image_url=_maybe_str(getattr(raw_user, "image_url", None)),
-                created_at=created_at,
-            )
-
+            raw_user = self._get_clerk_user(session.user_id)
+            user = self._build_user_info(raw_user, fallback_user_id=session.user_id)
             logger.debug("[auth] User retrieved successfully: %s", user.id)
             return user
+        except TimeoutExceededError:
+            logger.warning(
+                "[auth] Clerk user lookup timed out after %ss for user_id=%s; using session identity only",
+                CLERK_USER_LOOKUP_TIMEOUT_SECONDS,
+                session.user_id,
+            )
+            return self._minimal_user(session.user_id)
         except Exception as exc:
-            logger.error("Error retrieving Clerk user: %s", exc, exc_info=True)
-            return None
+            logger.warning(
+                "[auth] Clerk user lookup failed for user_id=%s: %s; using session identity only",
+                session.user_id,
+                exc,
+            )
+            return self._minimal_user(session.user_id)
 
     def is_admin(self, user_id: str) -> bool:
         if not self.client:
@@ -164,7 +201,7 @@ class ClerkAuthProvider(AuthProviderPort):
         if not self.client:
             raise ValueError("Clerk client not configured")
         try:
-            user = self.client.users.get(user_id=user_id)
+            user = self._get_clerk_user(user_id)
             if not user:
                 raise ValueError("User not found")
             settings = (user.private_metadata or {}).get("settings", {}) or {}
@@ -178,7 +215,7 @@ class ClerkAuthProvider(AuthProviderPort):
         if not self.client:
             raise ValueError("Clerk client not configured")
         try:
-            user = self.client.users.get(user_id=user_id)
+            user = self._get_clerk_user(user_id)
             if not user:
                 raise ValueError("User not found")
 

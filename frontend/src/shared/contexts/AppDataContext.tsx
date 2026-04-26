@@ -55,7 +55,7 @@ function useDriveStatus(): {
 }
 
 // Combined context for all app data
-type AppDataContextType = {
+export type AppDataContextType = {
   // Storage service data
   books: BookMetadata[];
   folders: Folder[];
@@ -148,6 +148,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AppDataContext.Provider>
   );
+}
+
+export function AppDataOverrideProvider({
+  children,
+  value,
+}: {
+  children: React.ReactNode;
+  value: AppDataContextType;
+}) {
+  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }
 
 export function useAppData(): AppDataContextType {

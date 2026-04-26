@@ -1,4 +1,5 @@
 import { appLog } from '@shared/appLog';
+import { getPdfJs } from '@shared/lib/pdfjs';
 
 export interface ChapterTitle {
   index: number;
@@ -116,12 +117,6 @@ class TextProcessor {
   }
 
   async _ensurePdfJs(): Promise<boolean> {
-    if (window.pdfjsLib) return true;
-    const pdfjsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    await loadScript(pdfjsUrl);
-    if (!window.pdfjsLib) throw new Error('pdf.js failed to load');
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
     return true;
   }
 
@@ -218,7 +213,7 @@ class TextProcessor {
 
   async _extractPdfParagraphs(): Promise<{ text: string, style?: any, pageBreak?: boolean }[]> {
     await this._ensurePdfJs();
-    const loadingTask = window.pdfjsLib.getDocument({ data: this.arrayBuffer });
+    const loadingTask = getPdfJs().getDocument({ data: this.arrayBuffer.slice(0) });
     const pdf = await loadingTask.promise;
     const paragraphs: { text: string, style?: any, pageBreak?: boolean }[] = [];
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {

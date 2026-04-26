@@ -1,4 +1,7 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+
+import { PdfPageCanvas } from "@features/reader/pdfOverlay/PdfPageCanvas";
+import { getPdfJs } from "@shared/lib/pdfjs";
 
 export interface PdfViewerHandle {
   goToPage: (page: number) => void;
@@ -6,12 +9,12 @@ export interface PdfViewerHandle {
 
 interface PdfViewerProps {
   data: ArrayBuffer;
+  currentPage: number;
+  onCurrentPageChange?: (page: number) => void;
   onPageCount?: (count: number) => void;
+  documentId?: string;
+  documentVersion?: string;
 }
-
-const pdfJsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-const pdfViewerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.js';
-const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 type PdfViewportLike = {
   width: number;
@@ -21,7 +24,6 @@ type PdfViewportLike = {
 type PdfPageLike = {
   getViewport: (opts: { scale: number }) => PdfViewportLike;
   render: (opts: { canvasContext: CanvasRenderingContext2D | null; viewport: PdfViewportLike }) => { promise: Promise<unknown> };
-  getTextContent: () => Promise<unknown>;
 };
 
 type PdfDocumentLike = {
@@ -34,100 +36,79 @@ type PdfLoadingTaskLike = {
 };
 
 type PdfJsLibLike = {
-  GlobalWorkerOptions: { workerSrc: string };
   getDocument: (opts: { data: ArrayBuffer }) => PdfLoadingTaskLike;
-  renderTextLayer: (opts: { textContent: unknown; container: HTMLElement; viewport: PdfViewportLike; textDivs: unknown[] }) => unknown;
 };
 
-function getPdfJsLib(): PdfJsLibLike | null {
-  const w = window as unknown as { pdfjsLib?: PdfJsLibLike };
-  return w.pdfjsLib ?? null;
-}
+export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(({
+  data,
+  currentPage,
+  onCurrentPageChange,
+  onPageCount,
+  documentId,
+  documentVersion,
+}, ref) => {
+  const [pdf, setPdf] = useState<PdfDocumentLike | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-function hasPdfJsViewer(): boolean {
-  const w = window as unknown as { pdfjsViewer?: unknown };
-  return Boolean(w.pdfjsViewer);
-}
+  useImperativeHandle(ref, () => ({
+    goToPage(page: number) {
+      if (!pdf) return;
+      const boundedPage = Math.min(Math.max(1, page), pdf.numPages);
+      onCurrentPageChange?.(boundedPage);
+    },
+  }), [onCurrentPageChange, pdf]);
 
-function loadScript(url: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${url}"]`)) {
-      resolve();
-      return;
-    }
-    const s = document.createElement('script');
-    s.src = url;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`Failed to load script: ${url}`));
-    document.head.appendChild(s);
-  });
-}
+  useEffect(() => {
+    let cancelled = false;
 
-export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
-  ({ data, onPageCount }, ref) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const pageRefs = useRef<HTMLDivElement[]>([]);
+    const loadPdf = async () => {
+      try {
+        const pdfjsLib = getPdfJs() as unknown as PdfJsLibLike;
+        const nextPdf = await pdfjsLib.getDocument({ data: data.slice(0) }).promise;
+        if (cancelled) return;
+        setPdf(nextPdf);
+        onPageCount?.(nextPdf.numPages);
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(loadError instanceof Error ? loadError.message : "Failed to load PDF");
+      }
+    };
 
-    useImperativeHandle(ref, () => ({
-      goToPage(page: number) {
-        const el = pageRefs.current[page - 1];
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      },
-    }));
+    setPdf(null);
+    setError(null);
+    void loadPdf();
 
-	    useEffect(() => {
-	      const renderPdf = async () => {
-	        if (!containerRef.current) return;
-	        containerRef.current.innerHTML = '';
-	        pageRefs.current = [];
-	        if (!getPdfJsLib()) {
-	          await loadScript(pdfJsUrl);
-	        }
-	        if (!hasPdfJsViewer()) {
-	          await loadScript(pdfViewerUrl);
-	        }
-	        const pdfjsLib = getPdfJsLib();
-	        if (!pdfjsLib) return;
-	        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-	        const loadingTask = pdfjsLib.getDocument({ data });
-	        const pdf = await loadingTask.promise;
-	        onPageCount?.(pdf.numPages);
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 });
+    return () => {
+      cancelled = true;
+    };
+  }, [data, onPageCount]);
 
-        const pageContainer = document.createElement('div');
-        pageContainer.className = 'pdf-page relative mb-4';
-        pageContainer.style.position = 'relative';
-        pageContainer.style.width = `${viewport.width}px`;
-        pageContainer.style.height = `${viewport.height}px`;
+  useEffect(() => {
+    if (!pdf || currentPage <= pdf.numPages) return;
+    onCurrentPageChange?.(pdf.numPages);
+  }, [currentPage, onCurrentPageChange, pdf]);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        pageContainer.appendChild(canvas);
-
-        const context = canvas.getContext('2d');
-        await page.render({ canvasContext: context, viewport }).promise;
-
-        const textLayerDiv = document.createElement('div');
-        textLayerDiv.className = 'textLayer absolute top-0 left-0';
-        textLayerDiv.style.width = `${viewport.width}px`;
-        textLayerDiv.style.height = `${viewport.height}px`;
-        textLayerDiv.style.zIndex = '2';
-        pageContainer.appendChild(textLayerDiv);
-
-        const textContent = await page.getTextContent();
-        pdfjsLib.renderTextLayer({ textContent, container: textLayerDiv, viewport, textDivs: [] });
-
-          containerRef.current!.appendChild(pageContainer);
-          pageRefs.current.push(pageContainer);
-        }
-      };
-      renderPdf();
-    }, [data]);
-
-    return <div ref={containerRef} className="pdf-viewer space-y-4"></div>;
+  if (error) {
+    return <div className="py-8 text-center text-red-600 dark:text-red-400">{error}</div>;
   }
-);
+
+  if (!pdf) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="pdf-viewer">
+      <PdfPageCanvas
+        key={Math.min(Math.max(1, currentPage), pdf.numPages)}
+        pdf={pdf}
+        pageNumber={Math.min(Math.max(1, currentPage), pdf.numPages)}
+        documentId={documentId}
+        documentVersion={documentVersion}
+      />
+    </div>
+  );
+});

@@ -4,7 +4,11 @@ import type { DrivePort } from "@core/drive/ports";
 import type { DriveAuthPort } from "@core/drive/authPort";
 import type { JlptCatalogTest, JlptDashboardStateV2 } from "@features/jlpt/types";
 import { touchJlptDashboardState } from "@features/jlpt/services/jlptMigrations";
-import { loadJlptDashboardStateFromLocalStorage, saveJlptDashboardStateToLocalStorage } from "@features/jlpt/services/jlptStorage";
+import {
+  hasPersistedJlptDashboardStateInLocalStorage,
+  loadJlptDashboardStateFromLocalStorage,
+  saveJlptDashboardStateToLocalStorage,
+} from "@features/jlpt/services/jlptStorage";
 import { loadJlptDashboardStateFromDrive, mergeJlptDashboardStates, saveJlptDashboardStateToDrive } from "@features/jlpt/services/jlptSync";
 
 export function useJlptDashboardState(params: {
@@ -56,26 +60,43 @@ export function useJlptDashboardState(params: {
   }, [state, userId]);
 
   useEffect(() => {
-    if (!allowDriveSync || !userId || !driveAuthenticated) return;
+    if (!allowDriveSync || !userId) {
+      setCloudLoadAttempted(true);
+      return;
+    }
 
     let cancelled = false;
     void (async () => {
+      setCloudLoadAttempted(false);
+
+      const localState = loadJlptDashboardStateFromLocalStorage({ userId, tests });
+      const hasLocalState = hasPersistedJlptDashboardStateInLocalStorage(userId);
+
       const cloudState = await loadJlptDashboardStateFromDrive({
         drive,
         ensureAuthenticated: () => driveAuth.ensureAuthenticated(),
         tests,
       });
       if (cancelled) return;
+
+      const isAuthenticated = drive.isSignedIn();
+      setDriveAuthenticated(isAuthenticated);
+
       if (cloudState) {
         setState((current) => mergeJlptDashboardStates(current, cloudState));
+      } else if (!isAuthenticated) {
+        setState(localState);
+      } else if (hasLocalState) {
+        setState((current) => mergeJlptDashboardStates(current, localState));
       }
+
       setCloudLoadAttempted(true);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [allowDriveSync, drive, driveAuth, driveAuthenticated, tests, userId]);
+  }, [allowDriveSync, drive, driveAuth, tests, userId]);
 
   useEffect(() => {
     if (!allowDriveSync || !userId || !driveAuthenticated || !cloudLoadAttempted) return;

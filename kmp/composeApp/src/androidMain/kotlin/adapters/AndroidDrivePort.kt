@@ -20,7 +20,7 @@ import kotlinx.serialization.json.JsonObject
 
 class AndroidDrivePort(
     private val http: HttpClient,
-    private val getSessionJwt: () -> String?,
+    private val getSessionJwt: suspend () -> String?,
     private val driveService: DriveService,
     private val driveJsonFileService: DriveJsonFileService,
 ) : DrivePort {

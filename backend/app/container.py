@@ -40,6 +40,7 @@ from .domains.vocabulary.adapters.jpdb_http import JpdbHttpProvider
 from .domains.kanji.service import KanjiService
 from .domains.kanji.adapters.json_file_repository import JsonFileKanjiRepository
 from .domains.ocr.service import OCRService
+from .domains.ocr.layout_service import OcrLayoutService
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class Container:
     vocabulary_service: VocabularyService
     make_kanji_service: Callable[[], KanjiService]
     ocr_service: OCRService | None
+    ocr_layout_service: OcrLayoutService | None
     ocr_init_error: str | None
 
 
@@ -101,13 +103,31 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
 
     # Optional: OCR dependencies may not be installed in all environments.
     ocr_service = None
+    ocr_layout_service = None
     ocr_init_error = None
     try:
         from .domains.ocr.adapters.google_vision import GoogleVisionOcrProcessor
+        from .domains.ocr.adapters.google_vision_layout import GoogleVisionOcrLayoutExtractor
+        from .domains.ocr.adapters.hybrid_layout import HybridOcrLayoutExtractor
+        from .domains.ocr.adapters.sqlalchemy_layout_cache import SqlAlchemyOcrLayoutCacheRepository
 
         ocr_service = OCRService(GoogleVisionOcrProcessor(credentials_json=settings.ocr_credentials_json))
+        base_layout_extractor = GoogleVisionOcrLayoutExtractor(credentials_json=settings.ocr_credentials_json)
+        layout_refiner = None
+        if settings.ocr_gemini_api_key:
+            from .domains.ocr.adapters.gemini_layout_refiner import GeminiOcrLayoutRefiner
+
+            layout_refiner = GeminiOcrLayoutRefiner(
+                api_key=settings.ocr_gemini_api_key,
+                model=settings.ocr_gemini_model,
+            )
+        ocr_layout_service = OcrLayoutService(
+            extractor=HybridOcrLayoutExtractor(base=base_layout_extractor, refiner=layout_refiner),
+            cache_repo=SqlAlchemyOcrLayoutCacheRepository(db_session),
+        )
     except Exception as e:  # pragma: no cover - depends on optional vendor deps
         ocr_service = None
+        ocr_layout_service = None
         ocr_init_error = str(e)
 
     return Container(
@@ -123,6 +143,7 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
         vocabulary_service=vocabulary_service,
         make_kanji_service=make_kanji_service,
         ocr_service=ocr_service,
+        ocr_layout_service=ocr_layout_service,
         ocr_init_error=ocr_init_error,
     )
 

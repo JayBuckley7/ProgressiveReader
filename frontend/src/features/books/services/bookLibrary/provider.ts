@@ -6,21 +6,28 @@ export type ClerkUserLike = {
   externalAccounts?: Array<{ provider?: string | null }>;
 } | null | undefined;
 
+export function isGoogleLinkedClerkUser(clerkUser: ClerkUserLike): boolean {
+  if (!clerkUser?.externalAccounts?.length) {
+    return false;
+  }
+
+  return clerkUser.externalAccounts.some((account) =>
+    String(account?.provider || "")
+      .toLowerCase()
+      .includes("google")
+  );
+}
+
 export function detectProviderFromClerkUser(clerkUser: ClerkUserLike): Provider {
   if (!clerkUser?.externalAccounts?.length) {
     appLog.debug("[BookLibrary] No external accounts found, defaulting to email provider");
     return "email";
   }
 
-  const provider = clerkUser.externalAccounts[0]?.provider || null;
-  appLog.debug("[BookLibrary] Detected Clerk provider:", provider);
+  const providers = clerkUser.externalAccounts.map((account) => String(account?.provider || ""));
+  appLog.debug("[BookLibrary] Detected Clerk providers:", providers);
 
-  switch (provider) {
-    case "google":
-      return "google";
-    default:
-      return "email";
-  }
+  return isGoogleLinkedClerkUser(clerkUser) ? "google" : "email";
 }
 
 export function assertGoogleProvider(provider: Provider): asserts provider is "google" {

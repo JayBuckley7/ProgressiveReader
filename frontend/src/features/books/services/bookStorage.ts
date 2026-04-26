@@ -1,15 +1,12 @@
 import { BookMetadata, ReadingProgress } from '~/types';
 import { addOfflineBook } from '@features/books/utils/offlineLibrary';
-import * as pdfjsLib from 'pdfjs-dist';
 import { appLog } from '@shared/appLog'
 import type { DriveCachePort } from '@core/drive/cachePort';
 import type { DrivePort } from '@core/drive/ports';
+import { getPdfJs } from '@shared/lib/pdfjs';
 
 // Request deduplication cache to prevent multiple simultaneous requests for the same resource
 const activeDownloads = new Map<string, Promise<Blob>>();
-
-// Configure PDF.js worker once - use CDN URL with explicit HTTPS protocol
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '5.4.54'}/pdf.worker.min.js`;
 
 // Declare global types for epub.js and pdf.js
 declare global {
@@ -176,7 +173,8 @@ export class BookStorageService {
     async extractCoverFromPdf(file: File): Promise<Blob | null> {
         try {
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pdfjsLib = getPdfJs();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
 
             if (pdf.numPages < 1) {
                 return null;

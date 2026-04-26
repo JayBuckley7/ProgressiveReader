@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.ui.viewmodels.LibraryEvent
 import com.progressivereader.kmp.ui.viewmodels.LibraryViewModel
@@ -47,7 +48,10 @@ fun LibraryRoute(
     LaunchedEffect(Unit) {
         vm.events.collect { ev ->
             when (ev) {
-                is LibraryEvent.Snackbar -> snackbarHostState.showSnackbar(ev.message)
+                is LibraryEvent.Snackbar -> {
+                    AppLog.i("Library", "Snackbar: ${ev.message}")
+                    snackbarHostState.showSnackbar(ev.message)
+                }
                 is LibraryEvent.OpenReader -> onOpenReader(ev.bookId)
             }
         }

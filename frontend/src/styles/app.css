@@ -235,3 +235,33 @@
   background: var(--ui-accent);
 }
 
+.jlpt-runner ruby,
+.jlpt-runner rt {
+  color: inherit;
+}
+
+.jlpt-runner rt {
+  font-size: 0.62em;
+  font-weight: 500;
+}
+
+.jlpt-runner strong,
+.jlpt-runner b {
+  font-weight: 800;
+  color: var(--ui-text);
+  text-decoration-line: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: var(--ui-accent);
+}
+
+.jlpt-runner u {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.22em;
+  text-decoration-skip-ink: none;
+  text-decoration-color: var(--ui-accent);
+  font-weight: 700;
+}
+

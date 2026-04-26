@@ -1,18 +1,15 @@
 package com.progressivereader.kmp.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentPaste
-import androidx.compose.material.icons.outlined.AutoFixHigh
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.clerk.api.Clerk
 import com.progressivereader.kmp.navigation.Navigator
 import com.progressivereader.kmp.navigation.Screen
@@ -28,6 +25,7 @@ fun AppRoot(
     navigator: Navigator,
     settings: AppSettings,
     sessionJwt: String?,
+    requestSessionJwt: suspend () -> String?,
     libraryViewModelFactory: LibraryViewModelFactory,
     readerViewModelFactory: ReaderViewModelFactory,
     bookCache: BookCache,
@@ -48,6 +46,7 @@ fun AppRoot(
     onUpdateReaderMixAggression: suspend (Float) -> Unit,
     onUpdateReaderMixAutoEnableHighlight: suspend (Boolean) -> Unit,
     onUpdateReaderMixBackupMirrorToDrive: suspend (Boolean) -> Unit,
+    onUpdateDebugMode: suspend (Boolean) -> Unit,
     onResetDriveOverrides: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -64,7 +63,7 @@ fun AppRoot(
                 onOpenReader = { bookId -> navigator.push(Screen.Reader(bookId)) },
                 onOpenSettings = { navigator.reset(Screen.Settings(showBack = false)) },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
-                bottomBar = { AppBottomBar(current = Screen.Library, onSelect = { navigator.reset(it) }) },
+                bottomBar = { ShellBottomBar(current = Screen.Library, onSelect = { navigator.reset(it) }) },
             )
 
         Screen.Vocabulary ->
@@ -72,7 +71,7 @@ fun AppRoot(
                 settings = settings,
                 sessionJwt = sessionJwt,
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
-                bottomBar = { AppBottomBar(current = Screen.Vocabulary, onSelect = { navigator.reset(it) }) },
+                bottomBar = { ShellBottomBar(current = Screen.Vocabulary, onSelect = { navigator.reset(it) }) },
             )
 
         Screen.Clipboard ->
@@ -80,7 +79,7 @@ fun AppRoot(
                 settings = settings,
                 sessionJwt = sessionJwt,
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
-                bottomBar = { AppBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) },
+                bottomBar = { ShellBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) },
             )
 
         Screen.Grammar ->
@@ -91,7 +90,7 @@ fun AppRoot(
                 epubRepository = epubRepository,
                 showBack = false,
                 onBack = { navigator.pop() },
-                bottomBar = { AppBottomBar(current = Screen.Grammar, onSelect = { navigator.reset(it) }) },
+                bottomBar = { ShellBottomBar(current = Screen.Grammar, onSelect = { navigator.reset(it) }) },
             )
 
         is Screen.Login ->
@@ -133,6 +132,7 @@ fun AppRoot(
             SettingsScreen(
                 settings = settings,
                 sessionJwt = sessionJwt,
+                requestSessionJwt = requestSessionJwt,
                 showBack = s.showBack,
                 onBack = { navigator.pop() },
                 onUpdateReaderTheme = { theme -> scope.launch { onUpdateReaderTheme(theme) } },
@@ -150,6 +150,7 @@ fun AppRoot(
                 onUpdateReaderMixAggression = { value -> scope.launch { onUpdateReaderMixAggression(value) } },
                 onUpdateReaderMixAutoEnableHighlight = { enabled -> scope.launch { onUpdateReaderMixAutoEnableHighlight(enabled) } },
                 onUpdateReaderMixBackupMirrorToDrive = { enabled -> scope.launch { onUpdateReaderMixBackupMirrorToDrive(enabled) } },
+                onUpdateDebugMode = { enabled -> scope.launch { onUpdateDebugMode(enabled) } },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 onSignOut = {
                     scope.launch {
@@ -163,52 +164,38 @@ fun AppRoot(
                     if (s.showBack) {
                         null
                     } else {
-                        { AppBottomBar(current = Screen.Settings(showBack = false), onSelect = { navigator.reset(it) }) }
+                        { ShellBottomBar(current = Screen.Settings(showBack = false), onSelect = { navigator.reset(it) }) }
                     },
             )
     }
 }
 
 @Composable
-private fun AppBottomBar(
+internal fun ShellBottomBar(
     current: Screen,
     onSelect: (Screen) -> Unit,
 ) {
+    val chrome = shellChromeFor(current)
+
     fun select(screen: Screen) {
         if (screen == current) return
         onSelect(screen)
     }
 
-    NavigationBar {
-        NavigationBarItem(
-            selected = current is Screen.Library,
-            onClick = { select(Screen.Library) },
-            icon = { Icon(Icons.Outlined.MenuBook, contentDescription = "Library") },
-            label = { Text("Library") },
-        )
-        NavigationBarItem(
-            selected = current is Screen.Vocabulary,
-            onClick = { select(Screen.Vocabulary) },
-            icon = { Icon(Icons.Outlined.Style, contentDescription = "Vocabulary") },
-            label = { Text("Vocab") },
-        )
-        NavigationBarItem(
-            selected = current is Screen.Grammar,
-            onClick = { select(Screen.Grammar) },
-            icon = { Icon(Icons.Outlined.AutoFixHigh, contentDescription = "Grammar") },
-            label = { Text("Grammar") },
-        )
-        NavigationBarItem(
-            selected = current is Screen.Clipboard,
-            onClick = { select(Screen.Clipboard) },
-            icon = { Icon(Icons.Outlined.ContentPaste, contentDescription = "Clipboard") },
-            label = { Text("Clipboard") },
-        )
-        NavigationBarItem(
-            selected = current is Screen.Settings && (current as Screen.Settings).showBack.not(),
-            onClick = { select(Screen.Settings(showBack = false)) },
-            icon = { Icon(Icons.Outlined.Settings, contentDescription = "Settings") },
-            label = { Text("Settings") },
-        )
+    NavigationBar(
+        modifier = Modifier.testTag(UiTestTags.shellBottomBar),
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
+        tonalElevation = 0.dp,
+    ) {
+        shellDestinations.forEach { destination ->
+            NavigationBarItem(
+                modifier = Modifier.testTag(UiTestTags.shellDestination(destination.label)),
+                selected = chrome.selectedDestination == destination,
+                onClick = { select(destination.target) },
+                colors = AppShellBarColors(),
+                icon = { Icon(destination.icon, contentDescription = destination.label) },
+                label = { Text(destination.shortLabel) },
+            )
+        }
     }
 }

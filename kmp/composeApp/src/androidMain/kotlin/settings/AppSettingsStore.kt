@@ -16,6 +16,7 @@ class AppSettingsStore(private val context: Context) {
     private object Keys {
         val backendBaseUrl = stringPreferencesKey("backend_base_url")
         val driveFolderId = stringPreferencesKey("drive_folder_id")
+        val debugMode = booleanPreferencesKey("debug_mode")
         // Legacy (debug-era) key; keep for migration.
         val darkMode = booleanPreferencesKey("reader_dark_mode")
         val theme = stringPreferencesKey("reader_theme")
@@ -46,6 +47,10 @@ class AppSettingsStore(private val context: Context) {
         context.dataStore.edit {
             if (folderId.isNullOrBlank()) it.remove(Keys.driveFolderId) else it[Keys.driveFolderId] = folderId
         }
+    }
+
+    suspend fun setDebugMode(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.debugMode] = enabled }
     }
 
     suspend fun setReaderTheme(theme: String) {
@@ -130,7 +135,8 @@ class AppSettingsStore(private val context: Context) {
     }
 
     private fun Preferences.toAppSettings(): AppSettings {
-        val backend = this[Keys.backendBaseUrl] ?: "https://progressivereader.net"
+        val debugMode = this[Keys.debugMode] ?: false
+        val backend = normalizeBackendBaseUrl(this[Keys.backendBaseUrl], debugMode)
         val folderId = this[Keys.driveFolderId]
         val theme =
             this[Keys.theme]
@@ -163,7 +169,25 @@ class AppSettingsStore(private val context: Context) {
         return AppSettings(
             backendBaseUrl = backend,
             driveFolderId = folderId,
+            debugMode = debugMode,
             reader = reader,
         )
+    }
+
+    internal companion object {
+        const val HostedBackendBaseUrl = "https://progressivereader.net"
+        const val LegacyLocalBackendBaseUrl = "http://10.0.2.2:5000"
+
+        internal fun normalizeBackendBaseUrl(
+            storedValue: String?,
+            debugMode: Boolean,
+        ): String {
+            val normalized = storedValue?.trim()?.takeIf { it.isNotBlank() }
+            return when {
+                normalized.isNullOrBlank() -> HostedBackendBaseUrl
+                normalized.equals(LegacyLocalBackendBaseUrl, ignoreCase = true) && !debugMode -> HostedBackendBaseUrl
+                else -> normalized
+            }
+        }
     }
 }

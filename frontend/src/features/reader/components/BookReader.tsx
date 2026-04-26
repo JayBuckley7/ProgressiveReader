@@ -42,6 +42,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       <ReaderHeader
         bookContent={c.bookContent}
         chapter={c.chapter}
+        progressLabel={c.isPdf ? `Page ${c.pdf.currentPage} / ${Math.max(1, c.pdf.pageCount)}` : undefined}
         bookId={bookId}
         isTranslated={c.translation.isTranslated}
         isAutoloaded={c.translation.isAutoloaded}
@@ -61,6 +62,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         isLoading={c.isLoading}
         pdfData={c.pdf.data}
         pdfViewerRef={c.pdf.viewerRef}
+        pdfCurrentPage={c.pdf.currentPage}
+        setPdfCurrentPage={c.pdf.setCurrentPage}
         setPdfPageCount={c.pdf.setPageCount}
         settings={c.settings || undefined}
       />
@@ -81,9 +84,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onSelectChapter={
           c.isPdf
             ? (idx) => {
-                c.pdf.setCurrentPage(idx + 1);
-                c.pdf.viewerRef.current?.goToPage(idx + 1);
-              }
+              c.pdf.setCurrentPage(idx + 1);
+            }
             : c.nav.updateChapter
         }
         onToggleTts={c.tts.toggleTts}

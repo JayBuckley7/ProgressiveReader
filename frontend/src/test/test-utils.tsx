@@ -181,6 +181,12 @@ function createTestDrivePort(): DrivePort {
     async loadGrammarStateV2() {
       return null;
     },
+    async saveJlptDashboardState() {
+      return true;
+    },
+    async loadJlptDashboardState() {
+      return null;
+    },
     async loadJpdbMirror() {
       return null;
     },

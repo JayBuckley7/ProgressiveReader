@@ -20,7 +20,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -307,13 +306,12 @@ fun VocabularyScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Vocabulary") },
+            AppShellTopBar(
+                title = "Vocabulary",
+                subtitle = "Due cards, deck lookups, and saved study items.",
                 actions = {
                     if (sessionJwt.isNullOrBlank()) {
-                        IconButton(onClick = onOpenLogin) {
-                            Icon(Icons.Outlined.Login, contentDescription = "Sign in")
-                        }
+                        AppShellAction(icon = Icons.Outlined.Login, contentDescription = "Sign in", onClick = onOpenLogin)
                     }
                 },
             )

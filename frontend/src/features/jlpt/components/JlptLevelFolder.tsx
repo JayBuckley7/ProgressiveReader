@@ -1,5 +1,12 @@
 import type { JlptCatalogTest, JlptLevel, LevelReadinessState } from "@features/jlpt/types";
+import { formatJlptTestTitle } from "@features/jlpt/services/jlptConfig";
 import { getLevelReadinessSummary } from "@features/jlpt/services/jlptSelectors";
+
+const cardClass = "app-card rounded-md";
+const buttonMutedClass = "app-button-muted h-9 rounded-md px-3 text-sm font-medium transition-colors";
+const buttonPrimaryClass =
+  "app-button-primary h-9 rounded-md px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const mutedTextClass = "text-[color:var(--ui-muted)]";
 
 export function JlptLevelFolder(props: {
   level: JlptLevel;
@@ -16,14 +23,14 @@ export function JlptLevelFolder(props: {
   const readiness = getLevelReadinessSummary(levelState);
 
   return (
-    <section className="rounded-md border border-gray-200 bg-white p-4">
+    <section className={`${cardClass} p-4`}>
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-gray-950">{level}</h3>
-            {isActiveGoal && <span className="rounded-md bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">Active goal</span>}
+            <h3 className="text-base font-semibold text-[color:var(--ui-text)]">{level}</h3>
+            {isActiveGoal && <span className="rounded-md border border-[color:var(--ui-accent)]/35 bg-[color:var(--ui-surface-alt)] px-2 py-1 text-xs font-semibold text-[color:var(--ui-accent)]">Active goal</span>}
           </div>
-          <div className="mt-1 text-sm text-gray-500">
+          <div className={`mt-1 text-sm ${mutedTextClass}`}>
             {tests.length} tests
             {levelState.bindings.length > 0 && (
               <span> · JPDB {readiness.total > 0 ? `${readiness.known}/${readiness.total} (${readiness.percent}%)` : `${levelState.bindings.length} deck${levelState.bindings.length === 1 ? "" : "s"}`}</span>
@@ -34,14 +41,14 @@ export function JlptLevelFolder(props: {
           <button
             type="button"
             onClick={() => onOpenReadiness(level)}
-            className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className={buttonMutedClass}
           >
             JPDB readiness
           </button>
           <button
             type="button"
             onClick={() => onToggleCollapsed(level)}
-            className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className={buttonMutedClass}
           >
             {collapsed ? "Expand" : "Collapse"}
           </button>
@@ -53,18 +60,18 @@ export function JlptLevelFolder(props: {
           {tests.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {tests.map((test) => (
-                <div key={`${test.source}-${test.id}`} className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div key={`${test.source}-${test.id}`} className="rounded-md border border-[color:var(--ui-border)] bg-[color:var(--ui-surface-alt)] p-4">
                   <div className="mb-2 flex items-start justify-between gap-3">
-                    <h4 className="font-semibold text-gray-800">{test.name.replace(/\.json$/i, "")}</h4>
+                    <h4 className="font-semibold text-[color:var(--ui-text)]">{formatJlptTestTitle(test.name)}</h4>
                     <span
                       className={`rounded-md px-2 py-1 text-xs font-medium ${
-                        test.source === "library" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"
+                        test.source === "library" ? "border border-sky-500/30 bg-sky-500/10 text-sky-300" : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
                       }`}
                     >
                       {test.source === "library" ? "Library" : "Local"}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className={`text-sm ${mutedTextClass}`}>
                     {test.source === "library" ? "From Google Drive library" : "From local test folder"}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -72,7 +79,7 @@ export function JlptLevelFolder(props: {
                       type="button"
                       onClick={() => onSelectTest(test)}
                       disabled={loadingTest}
-                      className="h-9 rounded-md border border-gray-950 bg-gray-950 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={buttonPrimaryClass}
                     >
                       Open test
                     </button>
@@ -81,7 +88,7 @@ export function JlptLevelFolder(props: {
               ))}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+            <div className={`rounded-md border border-dashed border-[color:var(--ui-border)] bg-[color:var(--ui-surface-alt)] p-4 text-sm ${mutedTextClass}`}>
               No test JSON in this folder yet. Readiness tracking can still stay active here.
             </div>
           )}

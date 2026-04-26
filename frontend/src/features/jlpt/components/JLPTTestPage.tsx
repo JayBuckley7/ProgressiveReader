@@ -8,10 +8,32 @@ import { JlptDashboardSummary } from "@features/jlpt/components/JlptDashboardSum
 import { JlptLevelFolder } from "@features/jlpt/components/JlptLevelFolder";
 import { JlptStudyWorkbenchCards } from "@features/jlpt/components/JlptStudyWorkbenchCards";
 import { JpdbReadinessDrawer } from "@features/jlpt/components/JpdbReadinessDrawer";
+import { buildJlptSections, hasJlptAnswerKey, splitSectionLabel } from "@features/jlpt/components/jlptRunnerUtils";
 import { useJlptDashboardState } from "@features/jlpt/hooks/useJlptDashboardState";
 import { useJlptWorkbenchSummary } from "@features/jlpt/hooks/useJlptWorkbenchSummary";
-import { capChronologicalSnapshots, createJlptId, createJlptTestRef, createJpdbDeckBinding, getDaysUntilDate, getGoalTitle, getLocalDateKey, getNextConfiguredJlptExam, JLPT_GRAMMAR_SNAPSHOT_LIMIT, JLPT_RESULT_LIMIT } from "@features/jlpt/services/jlptConfig";
-import { getAppliedDailyTarget, getCurrentStreak, getDerivedDailyTarget, getLastCheckInDate, getLatestGrammarSnapshot, getTodaySnapshotProgress, getVisibleLevels, groupTestsByLevel, hasTodayCheckIn } from "@features/jlpt/services/jlptSelectors";
+import {
+  capChronologicalSnapshots,
+  createJlptId,
+  createJlptTestRef,
+  createJpdbDeckBinding,
+  formatJlptTestTitle,
+  getDaysUntilDate,
+  getGoalTitle,
+  getLocalDateKey,
+  getNextConfiguredJlptExam,
+  JLPT_GRAMMAR_SNAPSHOT_LIMIT,
+  JLPT_RESULT_LIMIT,
+} from "@features/jlpt/services/jlptConfig";
+import {
+  getAppliedDailyTarget,
+  getCurrentStreak,
+  getDerivedDailyTarget,
+  getLastCheckInDate,
+  getLatestGrammarSnapshot,
+  getVisibleLevels,
+  groupTestsByLevel,
+  hasTodayCheckIn,
+} from "@features/jlpt/services/jlptSelectors";
 import { jlptTestService } from "@features/jlpt/services/jlptTestService";
 import type { JlptAttemptSummary, JlptCatalogTest, JlptLevel, JlptTestData, JpdbDeckBinding, PracticeMode } from "@features/jlpt/types";
 
@@ -28,29 +50,15 @@ const readJpdbApiKeyFromCookies = () => {
   }
 };
 
-const buildSections = (questions: any[], meta?: any) => {
-  if (Array.isArray(meta?.parts) && meta.parts.length > 0) {
-    return meta.parts.map((part: any, index: number) => ({
-      name: part.name || part.jp_name || `Part ${index + 1}`,
-      jpName: part.jp_name,
-      total: Number(part.total) || 0,
-      time: part.time,
-    }));
-  }
-
-  const sections = questions.reduce<Record<string, number>>((groups, question) => {
-    const part = question?.part !== null && question?.part !== undefined ? String(question.part) : "Practice";
-    groups[part] = (groups[part] || 0) + 1;
-    return groups;
-  }, {});
-
-  return Object.entries(sections).map(([part, total]) => ({
-    name: part === "Practice" ? "Practice" : `Part ${part}`,
-    jpName: "",
-    total,
-    time: undefined,
-  }));
-};
+const pageShellClass = "app-shell min-h-screen px-4 py-8 text-[color:var(--ui-text)] sm:px-6";
+const pageShellCompactClass = "app-shell min-h-screen px-4 py-6 text-[color:var(--ui-text)] sm:px-6";
+const mutedTextClass = "text-[color:var(--ui-muted)]";
+const cardClass = "app-card rounded-md";
+const buttonMutedClass =
+  "app-button-muted h-10 rounded-md px-4 text-sm font-medium transition-colors";
+const buttonPrimaryClass =
+  "app-button-primary h-11 w-full rounded-md px-4 text-sm font-semibold transition-colors";
+const subtleSurfaceClass = "border border-[color:var(--ui-border)] bg-[color:var(--ui-surface-alt)]";
 
 function TestPreview(props: {
   selectedTest: JlptCatalogTest;
@@ -62,32 +70,57 @@ function TestPreview(props: {
 }) {
   const { t } = useTranslation();
   const { onBack, onModeChange, onStart, practiceMode, selectedTest, testData } = props;
-  const sections = buildSections(testData.questions, testData.meta);
+  const sections = useMemo(() => buildJlptSections(testData.questions, testData.meta), [testData.meta, testData.questions]);
   const questionCount = testData.questions.length;
-  const totalTime = Number(testData.meta?.time) || sections.reduce((sum, section) => sum + (Number(section.time) || 0), 0);
+  const totalTime =
+    Number(testData.meta?.time) || sections.reduce((sum, section) => sum + (Number(section.timeLimitMinutes) || 0), 0);
   const level = selectedTest.level;
+  const hasAnswerKey = hasJlptAnswerKey(testData.questions, testData.meta);
+  const sourceSummary =
+    selectedTest.source === "library" ? "Loaded from your Google Drive library" : "Loaded from the local JLPT test folder";
+  const modeSummary =
+    practiceMode === "exam"
+      ? "Answer everything blind, keep moving, and review the full scored breakdown at the end."
+      : "Get immediate feedback after each answer, finish each section with a recap, and retry only what you miss.";
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6">
+    <div className={pageShellClass}>
       <div className="mx-auto max-w-6xl">
         <button
           onClick={onBack}
-          className="mb-5 h-10 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50"
+          className={`mb-5 ${buttonMutedClass}`}
         >
           {t("jlptTest.page.backToSelection")}
         </button>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="border-b border-[color:var(--ui-border)] pb-6">
+          <div className={`mb-3 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>
+            <span>{level}</span>
+            {totalTime > 0 ? <span>{totalTime} minutes</span> : null}
+            <span>{hasAnswerKey ? "Scored review available" : "Answer key missing"}</span>
+          </div>
+          <h1 className="text-3xl font-semibold text-[color:var(--ui-text)]">{formatJlptTestTitle(selectedTest.name)}</h1>
+          <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedTextClass}`}>{sourceSummary}</p>
+        </div>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_360px]">
           <main className="space-y-8">
             <section>
-              <h1 className="mb-5 text-2xl font-semibold text-gray-950">Choose your practice mode</h1>
+              <div className="mb-4">
+                <h2 className="text-2xl font-semibold text-[color:var(--ui-text)]">Choose how this run behaves</h2>
+                <p className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
+                  The runner either coaches each answer immediately or keeps the whole attempt blind until the review pass.
+                </p>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {(["exam", "practice"] as PracticeMode[]).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => onModeChange(mode)}
                     className={`h-12 rounded-md border px-4 text-sm font-semibold transition-colors ${
-                      practiceMode === mode ? "border-green-600 bg-green-50 text-green-800" : "border-gray-200 bg-white text-gray-800 hover:border-gray-400"
+                      practiceMode === mode
+                        ? "border-[color:var(--ui-accent)] bg-[color:var(--ui-accent)] text-[color:var(--ui-accent-contrast)]"
+                        : "border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] text-[color:var(--ui-text)] hover:bg-[color:var(--ui-surface-alt)]"
                     }`}
                   >
                     {mode === "exam" ? "Exam Mode" : "Practice Mode"}
@@ -95,52 +128,76 @@ function TestPreview(props: {
                 ))}
               </div>
 
-              <div className="mt-6 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-7 text-gray-700">
-                {practiceMode === "exam"
-                  ? "Exam Mode: take the complete test under stricter conditions. Review each section, then save one full-test result at the end."
-                  : "Practice Mode: work section by section, skip freely, and use the question map before revealing each section."}
+              <div className={`mt-5 rounded-md p-4 text-sm leading-7 text-[color:var(--ui-text)] ${subtleSurfaceClass}`}>
+                {modeSummary}
               </div>
             </section>
 
             <section>
-              <h2 className="mb-4 text-lg font-semibold text-gray-950">Test structure</h2>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold text-[color:var(--ui-text)]">Section outline</h2>
+                <div className={`text-sm ${mutedTextClass}`}>{sections.length} sections</div>
+              </div>
               <div className="space-y-3">
-                {sections.map((section, index) => (
-                  <div key={`${section.name}-${index}`} className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-white p-4">
-                    <div className="min-w-0">
-                      <div className="font-semibold text-gray-950">
-                        {section.jpName ? `${section.jpName} - ${section.name}` : section.name}
+                {sections.map((section, index) => {
+                  const label = splitSectionLabel(section.label);
+                  return (
+                    <div key={`${section.sectionId}-${index}`} className={`flex items-start justify-between gap-4 rounded-md p-4 ${subtleSurfaceClass}`}>
+                      <div className="min-w-0">
+                        <div className={`mb-1 text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>
+                          Section {index + 1}
+                        </div>
+                        <div className="font-semibold text-[color:var(--ui-text)]">{label.primary}</div>
+                        {label.secondary ? <div className={`mt-1 text-sm ${mutedTextClass}`}>{label.secondary}</div> : null}
+                      </div>
+                      <div className={`shrink-0 text-right text-sm ${mutedTextClass}`}>
+                        <div>{section.questionCount} questions</div>
+                        {section.timeLimitMinutes ? <div>{section.timeLimitMinutes} min</div> : null}
                       </div>
                     </div>
-                    <div className="shrink-0 text-sm text-gray-500">
-                      {section.total} questions
-                      {section.time ? ` - ${section.time} min` : ""}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           </main>
 
           <aside className="lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-md border border-gray-200 bg-white p-6">
-              <div className="rounded-md border border-green-200 bg-green-50 p-4 text-center">
-                <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">You will take</div>
-                <div className="mt-2 font-semibold text-gray-950">{practiceMode === "exam" ? "Complete exam simulation" : "Guided practice run"}</div>
-                <div className="mt-1 text-sm text-gray-600">
+            <div className={`${cardClass} p-6`}>
+              <div className={`rounded-md p-4 ${subtleSurfaceClass}`}>
+                <div className={`text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>Ready to launch</div>
+                <div className="mt-2 text-lg font-semibold text-[color:var(--ui-text)]">
+                  {practiceMode === "exam" ? "Strict exam review flow" : "Coached section practice"}
+                </div>
+                <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
                   {questionCount} questions
-                  {totalTime ? ` - ${totalTime} minutes` : ""}
+                  {totalTime ? ` across ${totalTime} minutes` : ""}
+                </div>
+                <div className={`mt-3 text-sm leading-6 ${mutedTextClass}`}>
+                  {hasAnswerKey
+                    ? "This file can enter the redesigned scored runner."
+                    : "This file stays visible in the catalog, but the redesigned runner is blocked until the answer key exists."}
                 </div>
               </div>
-              <button
-                onClick={onStart}
-                className="mt-4 h-11 w-full rounded-md border border-green-600 bg-green-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700"
-              >
-                {practiceMode === "exam" ? "Start exam" : "Start practice"}
-              </button>
-              <div className="mt-5 border-t border-gray-200 pt-5 text-sm text-gray-600">
-                <div className="font-semibold text-gray-950">{level}</div>
-                <div>{selectedTest.source === "library" ? "From Google Drive library" : "From local folder"}</div>
+
+              {hasAnswerKey ? (
+                <button
+                  onClick={onStart}
+                  className={`mt-4 ${buttonPrimaryClass}`}
+                >
+                  {practiceMode === "exam" ? "Start exam review flow" : "Start coached practice"}
+                </button>
+              ) : (
+                <div className="mt-4 rounded-md border border-amber-500/35 bg-amber-500/10 p-4">
+                  <div className="text-sm font-semibold text-[color:var(--ui-text)]">Start blocked</div>
+                  <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
+                    Pick another test file with answer data to use this redesigned flow.
+                  </div>
+                </div>
+              )}
+
+              <div className={`mt-5 border-t border-[color:var(--ui-border)] pt-5 text-sm ${mutedTextClass}`}>
+                <div className="font-semibold text-[color:var(--ui-text)]">{level}</div>
+                <div>{sourceSummary}</div>
               </div>
             </div>
           </aside>
@@ -519,18 +576,18 @@ export function JLPTTestPage() {
 
   if (selectedTest && testData && startedTest) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6">
+      <div className={pageShellCompactClass}>
         <div className="mx-auto max-w-6xl">
           <button
             onClick={handleBack}
-            className="mb-5 h-10 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50"
+            className={`mb-5 ${buttonMutedClass}`}
           >
             {t("jlptTest.page.backToSelection")}
           </button>
           <JLPTTestRunner
             testData={testData.questions}
             testMeta={testData.meta}
-            testName={selectedTest.name.replace(/\.json$/i, "")}
+            testName={formatJlptTestTitle(selectedTest.name)}
             testRef={createJlptTestRef(selectedTest)}
             mode={practiceMode}
             onComplete={handleTestComplete}
@@ -554,11 +611,11 @@ export function JLPTTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6">
+    <div className={pageShellClass}>
       <div className="mx-auto max-w-5xl">
-        <div className="mb-8 border-b border-gray-200 pb-5">
-          <h1 className="text-3xl font-semibold text-gray-950">{t("jlptTest.page.title")}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">{t("jlptTest.page.noTestsHint")}</p>
+        <div className="mb-8 border-b border-[color:var(--ui-border)] pb-5">
+          <h1 className="text-3xl font-semibold text-[color:var(--ui-text)]">{t("jlptTest.page.title")}</h1>
+          <p className={`mt-2 max-w-2xl text-sm leading-6 ${mutedTextClass}`}>{t("jlptTest.page.noTestsHint")}</p>
         </div>
 
         <JlptDashboardSummary
@@ -595,9 +652,9 @@ export function JLPTTestPage() {
         />
 
         {loading ? (
-          <div className="rounded-md border border-gray-200 bg-white py-12 text-center">
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-gray-950"></div>
-            <p className="text-gray-600">{t("jlptTest.page.loadingTests")}</p>
+          <div className={`${cardClass} py-12 text-center`}>
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-[color:var(--ui-text)]"></div>
+            <p className={mutedTextClass}>{t("jlptTest.page.loadingTests")}</p>
           </div>
         ) : error ? (
           <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4">
@@ -612,13 +669,13 @@ export function JLPTTestPage() {
         ) : (
           <div id="jlpt-goal-catalog">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">{t("jlptTest.page.selectTest")}</h2>
-              <label className="inline-flex items-center gap-2 text-sm text-gray-600">
+              <h2 className="text-xl font-semibold text-[color:var(--ui-text)]">{t("jlptTest.page.selectTest")}</h2>
+              <label className={`inline-flex items-center gap-2 text-sm ${mutedTextClass}`}>
                 <input
                   type="checkbox"
                   checked={state.ui.hideEmptyFolders}
                   onChange={(event) => toggleHideEmptyFolders(event.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="app-checkbox rounded"
                 />
                 Hide empty folders
               </label>
@@ -641,12 +698,12 @@ export function JLPTTestPage() {
               ))}
             </div>
 
-            {loadingTest && (
-              <div className="mt-4 rounded-md border border-gray-200 bg-white py-8 text-center">
-                <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-950"></div>
-                <p className="text-gray-600">{t("jlptTest.page.loadingTest")}</p>
+            {loadingTest ? (
+              <div className={`${cardClass} mt-4 py-8 text-center`}>
+                <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-[color:var(--ui-text)]"></div>
+                <p className={mutedTextClass}>{t("jlptTest.page.loadingTest")}</p>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

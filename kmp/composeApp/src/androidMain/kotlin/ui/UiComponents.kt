@@ -15,12 +15,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,8 +49,8 @@ fun AppCard(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        shadowElevation = 1.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
+        shadowElevation = 0.dp,
     ) {
         content()
     }
@@ -62,17 +61,19 @@ fun AppChip(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    AssistChip(
+    Surface(
         modifier = modifier,
-        onClick = {},
-        label = { Text(text, style = MaterialTheme.typography.labelSmall) },
-        colors =
-            AssistChipDefaults.assistChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    )
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        )
+    }
 }
 
 @Composable
@@ -91,8 +92,10 @@ fun AppPrimaryButton(
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
         shape = MaterialTheme.shapes.medium,
     ) {
         if (icon != null) {
@@ -116,10 +119,10 @@ fun AppTonalButton(
         enabled = enabled,
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.34f)),
         colors =
             ButtonDefaults.outlinedButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
     ) {
@@ -144,9 +147,10 @@ fun AppOutlineButton(
         enabled = enabled,
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)),
         colors =
             ButtonDefaults.outlinedButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
     ) {
@@ -194,6 +198,30 @@ fun AppSectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun AppSectionSurface(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun AppShellBarColors(): NavigationBarItemColors =
+    androidx.compose.material3.NavigationBarItemDefaults.colors(
+        selectedIconColor = MaterialTheme.colorScheme.primary,
+        selectedTextColor = MaterialTheme.colorScheme.onSurface,
+        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+@Composable
 fun AppIconTile(
     icon: ImageVector,
     contentDescription: String?,
@@ -202,8 +230,8 @@ fun AppIconTile(
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
     ) {
         Box(
             modifier = Modifier.size(44.dp),
@@ -253,12 +281,13 @@ fun CoverPlaceholder(
     modifier: Modifier = Modifier,
 ) {
     val shape = MaterialTheme.shapes.medium
-    val border = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+    val border = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
     val gradient =
         Brush.linearGradient(
             listOf(
                 MaterialTheme.colorScheme.surfaceVariant,
                 MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
             ),
         )
     Box(

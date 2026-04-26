@@ -45,7 +45,7 @@ class JpdbService {
         if (jpdbApiKey.isBlank()) return null
 
         val res =
-            http.post("${Config.baseUrl}/api/get_jpdb_data") {
+            http.post("${Config.baseUrl}/api/get-jpdb-data") {
                 contentType(ContentType.Application.Json)
                 setBody(GetJpdbDataRequest(textSegments = textSegments, jpdbApiKey = jpdbApiKey))
             }

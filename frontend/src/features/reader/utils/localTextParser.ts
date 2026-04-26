@@ -1,11 +1,53 @@
 // Local Text Parser - combines TinySegmenter with local JLPT JSON lookup for offline parsing
 // @ts-expect-error - tiny-segmenter doesn't have TypeScript definitions
 import TinySegmenter from 'tiny-segmenter';
+// @ts-expect-error - kuromoji doesn't have bundled TypeScript definitions
+import kuromoji from 'kuromoji';
 import { Token, Card } from '~/types';
 import { appLog } from '@shared/appLog'
 import { getJlptLevel, getWordKanjiInfo } from '@shared/services/jlptService';
 
 const segmenter = new TinySegmenter();
+const KUROMOJI_DICT_PATH = import.meta.env.MODE === 'test' || typeof window === 'undefined'
+  ? 'node_modules/kuromoji/dict/'
+  : '/node_modules/kuromoji/dict/';
+
+type KuromojiToken = {
+  surface_form: string;
+  word_position?: number;
+  reading?: string;
+};
+
+type KuromojiTokenizer = {
+  tokenize: (text: string) => KuromojiToken[];
+};
+
+let kuromojiTokenizerPromise: Promise<KuromojiTokenizer | null> | null = null;
+
+function getKuromojiTokenizer(): Promise<KuromojiTokenizer | null> {
+  if (kuromojiTokenizerPromise) return kuromojiTokenizerPromise;
+
+  kuromojiTokenizerPromise = new Promise((resolve) => {
+    kuromoji.builder({ dicPath: KUROMOJI_DICT_PATH }).build((error: unknown, tokenizer: KuromojiTokenizer) => {
+      if (error) {
+        appLog.warn('[localTextParser] Kuromoji unavailable; falling back to TinySegmenter', error);
+        resolve(null);
+        return;
+      }
+      resolve(tokenizer);
+    });
+  });
+
+  return kuromojiTokenizerPromise;
+}
+
+function katakanaToHiragana(value: string): string {
+  return value.replace(/[\u30a1-\u30f6]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
+}
+
+function isSkippableToken(value: string): boolean {
+  return value.trim() === '' || /^[\s\u3000、。！？!?…・「」『』（）()[\]{}.,:;"'~-]+$/u.test(value);
+}
 
 //--------------------------------------------------------------------------
 // splitByScript – guarantees each chunk is single‑script
@@ -147,10 +189,47 @@ function shouldMergeCompound(current: string, next: string): boolean {
   return commonPairs.some(([first, second]) => current === first && next === second);
 }
 
-function buildLocalCard(word: string): Card {
+function normalizeReading(reading: string): string {
+  return reading
+    .replace(/[.-].*$/u, '')
+    .replace(/[()]/gu, '')
+    .trim();
+}
+
+function buildBestEffortReading(word: string): string {
+  const kanjiCount = Array.from(word).filter((char) => getWordKanjiInfo(char).length > 0).length;
+  if (kanjiCount > 1) {
+    return word;
+  }
+
+  const kanjiByChar = new Map(getWordKanjiInfo(word).map((entry) => [entry.kanji, entry]));
+  let reading = '';
+  let changed = false;
+
+  for (const char of Array.from(word)) {
+    const entry = kanjiByChar.get(char);
+    if (!entry) {
+      reading += char;
+      continue;
+    }
+
+    const bestReading = entry.kun_readings[0] || entry.on_readings[0] || '';
+    const normalized = normalizeReading(bestReading);
+    if (normalized) {
+      reading += normalized;
+      changed = true;
+    } else {
+      reading += char;
+    }
+  }
+
+  return changed ? reading : word;
+}
+
+function buildLocalCard(word: string, readingOverride?: string): Card {
   const kanjiInfo = getWordKanjiInfo(word);
   const level = getJlptLevel(word);
-  const reading = buildBestEffortReading(word);
+  const reading = readingOverride && readingOverride !== word ? readingOverride : buildBestEffortReading(word);
   const rankedKanji = kanjiInfo
     .map((entry) => entry.freq_mainichi_shinbun)
     .filter((rank): rank is number => typeof rank === 'number' && Number.isFinite(rank));
@@ -181,44 +260,57 @@ function buildLocalCard(word: string): Card {
   };
 }
 
-function normalizeReading(reading: string): string {
-  return reading
-    .replace(/[.-].*$/u, '')
-    .replace(/[()]/gu, '')
-    .trim();
-}
+async function parseWithKuromoji(text: string): Promise<Token[] | null> {
+  const tokenizer = await getKuromojiTokenizer();
+  if (!tokenizer) return null;
 
-function buildBestEffortReading(word: string): string {
-  const kanjiByChar = new Map(getWordKanjiInfo(word).map((entry) => [entry.kanji, entry]));
-  let reading = '';
-  let changed = false;
+  const kuromojiTokens = tokenizer.tokenize(text);
+  const tokens: Token[] = [];
+  let searchFrom = 0;
 
-  for (const char of Array.from(word)) {
-    const entry = kanjiByChar.get(char);
-    if (!entry) {
-      reading += char;
-      continue;
-    }
+  for (const item of kuromojiTokens) {
+    const word = item.surface_form;
+    if (!word || isSkippableToken(word)) continue;
 
-    const bestReading = entry.kun_readings[0] || entry.on_readings[0] || '';
-    const normalized = normalizeReading(bestReading);
-    if (normalized) {
-      reading += normalized;
-      changed = true;
-    } else {
-      reading += char;
-    }
+    const explicitStart = typeof item.word_position === 'number' ? item.word_position - 1 : -1;
+    const foundStart = explicitStart >= searchFrom && text.slice(explicitStart, explicitStart + word.length) === word
+      ? explicitStart
+      : text.indexOf(word, searchFrom);
+    if (foundStart < 0) continue;
+
+    const start = foundStart;
+    const end = start + word.length;
+    searchFrom = end;
+
+    const reading = item.reading ? katakanaToHiragana(item.reading) : undefined;
+    tokens.push({
+      start,
+      end,
+      length: word.length,
+      card: buildLocalCard(word, reading),
+      rubies: reading && reading !== word
+        ? [{ text: reading, start: 0, end: word.length, length: word.length }]
+        : [],
+    });
   }
 
-  return changed ? reading : word;
+  return tokens;
 }
 
 export async function parseWithLocalLookup(text: string): Promise<Token[]> {
-  appLog.debug('[localTextParser] Parsing text with TinySegmenter (local lookup)');
+  appLog.debug('[localTextParser] Parsing text with local lookup');
   
   const startTime = performance.now();
   
   try {
+    const kuromojiTokens = await parseWithKuromoji(text);
+    if (kuromojiTokens) {
+      appLog.debug(
+        `[localTextParser] Tokens=${kuromojiTokens.length} (${(performance.now() - startTime).toFixed(1)}ms, kuromoji lookup)`
+      );
+      return kuromojiTokens;
+    }
+
     // Initial segmentation with TinySegmenter
     const segmentationStart = performance.now();
     const rawSegments = segmenter.segment(text);

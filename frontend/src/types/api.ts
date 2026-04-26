@@ -62,10 +62,6 @@ export interface Deck {
   words?: number | null;
 }
 
-export interface DeleteCachedTranslationRequest {
-  itemIndex: number;
-}
-
 export interface DriveFile {
   id: string;
   name: string;
@@ -74,6 +70,8 @@ export interface DriveFile {
   size?: string | null;
   webViewLink?: string | null;
   iconLink?: string | null;
+  thumbnailLink?: string | null;
+  hasThumbnail?: boolean | null;
 }
 
 export interface DueCard {
@@ -95,12 +93,33 @@ export interface GetJpdbDataRequest {
   jpdbApiKey: string;
 }
 
+export interface GrammarInfo {
+  id: string;
+  title: string;
+  meaning: string;
+  level: string;
+}
+
+export interface GrammarValidateCandidate {
+  id: string;
+  sentence: string;
+  before?: any;
+  after?: any;
+  hintSpan?: any;
+}
+
+export interface GrammarValidateMatch {
+  candidateId: string;
+  isMatch: boolean;
+  confidence?: any;
+  matchSpan?: any;
+  explanation?: any;
+}
+
 export interface HealthResponse {
   clerkSecretKeyConfigured: boolean;
   clerkClientInitialized: boolean;
   service: string;
-  clerkSecretKeyLength?: number | null;
-  clerkSecretKeyPrefix?: string | null;
 }
 
 export interface KanjiSearchRequest {
@@ -132,6 +151,34 @@ export interface MineWordRequest {
   sid: number;
   jpdbApiKey: string;
   miningDeckId?: number | null;
+  forq?: boolean | null;
+  forqDeckId?: number | null;
+  sentence?: string | null;
+}
+
+export interface MixRefineCandidate {
+  id: string;
+  spelling: string;
+  reading?: any;
+  meaning?: any;
+}
+
+export interface MixRefineRequest {
+  textSample: string;
+  ambiguousKeys?: any;
+  candidatesByKey?: any;
+  model?: any;
+  apiKey?: any;
+}
+
+export interface MixRefineResponse {
+  choices?: any;
+  modelUsed?: any;
+}
+
+export interface OCRProcessResponse {
+  success: boolean;
+  message: string;
 }
 
 export interface OpenAIKeyListResponse {
@@ -192,6 +239,39 @@ export interface SettingsResponse {
   settings: any;
 }
 
+export interface Span {
+  start: number;
+  end: number;
+  text?: any;
+}
+
+export interface TeachExampleIn {
+  exampleId: string;
+  sentence: string;
+  before?: any;
+  after?: any;
+  matchSpan?: any;
+}
+
+export interface TeachExampleOut {
+  exampleId: string;
+  translation?: any;
+  breakdown?: any;
+  usageNote?: any;
+  contrast?: any;
+}
+
+export interface TeachExamplesRequest {
+  grammar: any;
+  examples: any;
+  model?: string;
+  apiKey?: any;
+}
+
+export interface TeachExamplesResponse {
+  teachings: any;
+}
+
 export interface ToggleJlptRequest {
   enabled: boolean;
 }
@@ -245,6 +325,9 @@ export interface UpdateWordStateRequest {
   flag: 'blacklist' | 'never-forget' | 'forq';
   state: any;
   jpdbApiKey: string;
+  blacklistDeckId?: number | null;
+  neverForgetDeckId?: number | null;
+  forqDeckId?: number | null;
 }
 
 export interface UploadFileRequest {
@@ -260,6 +343,19 @@ export interface UserInfo {
   lastName?: any;
   username?: any;
   imageUrl?: any;
+  createdAt?: any;
+}
+
+export interface ValidateExamplesRequest {
+  grammar: any;
+  candidates: any;
+  maxResults?: number;
+  model?: string;
+  apiKey?: any;
+}
+
+export interface ValidateExamplesResponse {
+  matches: any;
 }
 
 export interface Vocabulary {

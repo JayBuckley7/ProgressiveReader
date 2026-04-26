@@ -223,6 +223,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
     bookMetadata?.fileType,
     bookMetadata?.driveFileId,
     downloadBook,
+    isAppLoading,
   ]);
 
   // Reset loaded book reference when bookId changes

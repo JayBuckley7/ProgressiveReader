@@ -44,6 +44,8 @@ export interface DrivePort {
   loadGrammarProgress(): Promise<string[] | null>;
   saveGrammarStateV2(payload: any): Promise<void>;
   loadGrammarStateV2(): Promise<any | null>;
+  saveJlptDashboardState(payload: any): Promise<boolean>;
+  loadJlptDashboardState(): Promise<any | null>;
   loadJpdbMirror(): Promise<any | null>;
   saveJpdbMirror(snapshot: any): Promise<void>;
 
