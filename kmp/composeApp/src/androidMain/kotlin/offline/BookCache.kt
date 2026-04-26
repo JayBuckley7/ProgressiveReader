@@ -2,8 +2,8 @@ package com.progressivereader.kmp.offline
 
 import android.content.Context
 import android.util.AtomicFile
-import android.util.Log
 import com.progressivereader.kmp.domain.reader.BookState
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.settings.ReaderSettings
 import java.io.File
 import java.io.FileOutputStream
@@ -109,10 +109,10 @@ class BookCache(private val context: Context) {
             // library doesn't "disappear" and get overwritten by an empty index.
             val recovered = recoverIndexFromDisk()
             if (recovered.books.isNotEmpty()) {
-                Log.w("BookCache", "Recovered index.json from disk scan (${recovered.books.size} books).")
+                AppLog.w("BookCache", "Recovered index.json from disk scan (${recovered.books.size} books).")
                 runCatching { saveIndex(recovered) }
             } else if (f.exists()) {
-                Log.w("BookCache", "Failed to parse index.json and no cached books found on disk.")
+                AppLog.w("BookCache", "Failed to parse index.json and no cached books found on disk.")
             }
             recovered
         }

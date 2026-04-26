@@ -2,6 +2,10 @@ import type { JlptCatalogTest, JlptDashboardStateV2 } from "@features/jlpt/types
 import { getJlptStorageKey } from "@features/jlpt/services/jlptConfig";
 import { migrateLegacyJlptDashboardState, normalizeJlptDashboardState } from "@features/jlpt/services/jlptMigrations";
 
+const LEGACY_RESULTS_KEY = "prJlptResults";
+const LEGACY_BINDINGS_KEY = "prJlptJpdbDeckBindings";
+const LEGACY_PROGRESS_KEY = "prJlptJpdbDeckProgress";
+
 export function loadJlptDashboardStateFromLocalStorage(params: {
   userId: string | null | undefined;
   tests: JlptCatalogTest[];
@@ -21,6 +25,22 @@ export function loadJlptDashboardStateFromLocalStorage(params: {
   }
 
   return migrateLegacyJlptDashboardState(params.tests);
+}
+
+export function hasPersistedJlptDashboardStateInLocalStorage(userId: string | null | undefined): boolean {
+  if (typeof window === "undefined") return false;
+
+  try {
+    const key = getJlptStorageKey(userId);
+    if (window.localStorage.getItem(key)) return true;
+    if (window.localStorage.getItem(LEGACY_RESULTS_KEY)) return true;
+    if (window.localStorage.getItem(LEGACY_BINDINGS_KEY)) return true;
+    if (window.localStorage.getItem(LEGACY_PROGRESS_KEY)) return true;
+  } catch {
+    // ignore storage failures
+  }
+
+  return false;
 }
 
 export function saveJlptDashboardStateToLocalStorage(params: {

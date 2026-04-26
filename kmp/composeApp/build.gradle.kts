@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.io.File
 
 plugins {
@@ -27,6 +28,16 @@ private fun readDotEnvValue(dotEnvFile: File, key: String): String? {
         if (value.isNotBlank()) return value
     }
     return null
+}
+
+private fun readJsonConfigValue(jsonFile: File, key: String): String? {
+    if (!jsonFile.exists()) return null
+
+    val parsed = JsonSlurper().parseText(jsonFile.readText(Charsets.UTF_8).removePrefix("\uFEFF"))
+    return (parsed as? Map<*, *>)
+        ?.get(key)
+        ?.toString()
+        ?.takeIf { it.isNotBlank() }
 }
 
 kotlin {
@@ -82,6 +93,15 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
             }
         }
+
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("androidx.test.ext:junit:1.2.1")
+                implementation("androidx.test:runner:1.6.2")
+                implementation("androidx.test.espresso:espresso-core:3.6.1")
+            }
+        }
     }
 }
 
@@ -101,12 +121,17 @@ android {
                 ?: (project.findProperty("VITE_CLERK_PUBLISHABLE_KEY") as String?)
                 ?: System.getenv("CLERK_PUBLISHABLE_KEY")
                 ?: System.getenv("VITE_CLERK_PUBLISHABLE_KEY")
+                ?: readJsonConfigValue(rootProject.file("../env.json"), "CLERK_PUBLISHABLE_KEY")
+                ?: readJsonConfigValue(rootProject.file("../env.json"), "VITE_CLERK_PUBLISHABLE_KEY")
+                ?: readJsonConfigValue(rootProject.file("../env_dev.json"), "CLERK_PUBLISHABLE_KEY")
+                ?: readJsonConfigValue(rootProject.file("../env_dev.json"), "VITE_CLERK_PUBLISHABLE_KEY")
                 ?: readDotEnvValue(rootProject.file("../.env"), "CLERK_PUBLISHABLE_KEY")
                 ?: readDotEnvValue(rootProject.file("../.env"), "VITE_CLERK_PUBLISHABLE_KEY")
                 ?: ""
 
         val escaped = clerkKey.replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "CLERK_PUBLISHABLE_KEY", "\"$escaped\"")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -125,6 +150,11 @@ android {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
+}
+
+dependencies {
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4-android:1.9.4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.9.4")
 }
 
 configurations.all {

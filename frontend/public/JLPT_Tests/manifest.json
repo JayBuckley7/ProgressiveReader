@@ -1,6 +1,12 @@
 {
   "tests": [
     {
+      "id": "JLPTN2_July2025_Nihonez.json",
+      "name": "JLPTN2_July2025_Nihonez.json",
+      "level": "N2",
+      "path": "/JLPT_Tests/JLPTN2_July2025_Nihonez.json"
+    },
+    {
       "id": "JLPTN3_Test1.json",
       "name": "JLPTN3_Test1.json",
       "level": "N3",

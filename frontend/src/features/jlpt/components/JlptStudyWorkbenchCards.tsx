@@ -2,6 +2,12 @@ import { Link } from "react-router-dom";
 
 import type { JlptGrammarWorkbenchSummary, JlptVocabularyWorkbenchSummary } from "@features/jlpt/hooks/useJlptWorkbenchSummary";
 
+const cardClass = "app-card rounded-md";
+const mutedTextClass = "text-[color:var(--ui-muted)]";
+const buttonPrimaryClass = "app-button-primary inline-flex h-9 items-center rounded-md px-3 text-sm font-medium transition-colors";
+const buttonMutedClass =
+  "app-button-muted h-9 rounded-md px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+
 export function JlptStudyWorkbenchCards(props: {
   vocabulary: JlptVocabularyWorkbenchSummary;
   grammar: JlptGrammarWorkbenchSummary;
@@ -25,36 +31,36 @@ export function JlptStudyWorkbenchCards(props: {
     <section className="mb-8">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-gray-950">Vocab and grammar</h2>
-          <div className="text-sm text-gray-500">Keep your supporting study work aligned with the current JLPT goal.</div>
+          <h2 className="text-xl font-semibold text-[color:var(--ui-text)]">Vocab and grammar</h2>
+          <div className={`text-sm ${mutedTextClass}`}>Keep your supporting study work aligned with the current JLPT goal.</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-md border border-gray-200 bg-white p-4">
+        <div className={`${cardClass} p-4`}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-medium text-gray-500">Vocabulary</div>
-              <div className="mt-1 text-lg font-semibold text-gray-950">
+              <div className={`text-sm font-medium ${mutedTextClass}`}>Vocabulary</div>
+              <div className="mt-1 text-lg font-semibold text-[color:var(--ui-text)]">
                 {vocabulary.levelLabel ? `${vocabulary.levelLabel} focus` : "Study overview"}
               </div>
             </div>
-            <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+            <span className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-semibold text-sky-300">
               {vocabulary.linkedDeckCount} linked deck{vocabulary.linkedDeckCount === 1 ? "" : "s"}
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 border-t border-gray-200 pt-4">
+          <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 border-t border-[color:var(--ui-border)] pt-4">
             <div>
               <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-medium text-gray-500">Known</div>
+                <div className={`text-xs font-medium ${mutedTextClass}`}>Known</div>
                 <button
                   type="button"
                   onClick={onRefreshVocabularyProgress}
                   disabled={!canRefreshVocabularyProgress || isRefreshingVocabularyProgress}
                   aria-label={isRefreshingVocabularyProgress ? "Refreshing vocabulary snapshot" : "Refresh vocabulary snapshot"}
                   title={isRefreshingVocabularyProgress ? "Refreshing vocabulary snapshot" : "Refresh vocabulary snapshot"}
-                  className="inline-flex h-7 w-7 -translate-y-0.5 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="app-button-muted inline-flex h-7 w-7 -translate-y-0.5 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <svg
                     className={`h-3.5 w-3.5 ${isRefreshingVocabularyProgress ? "animate-spin" : ""}`}
@@ -67,35 +73,35 @@ export function JlptStudyWorkbenchCards(props: {
                   </svg>
                 </button>
               </div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">
                 {vocabulary.total > 0 ? `${vocabulary.known}/${vocabulary.total}` : "No data"}
               </div>
             </div>
             <div>
-              <div className="text-xs font-medium text-gray-500">Remaining</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{vocabulary.total > 0 ? vocabulary.remaining : 0}</div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Remaining</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{vocabulary.total > 0 ? vocabulary.remaining : 0}</div>
             </div>
             <div>
-              <div className="text-xs font-medium text-gray-500">Known today</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{vocabulary.todayKnownGain}</div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Known today</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{vocabulary.todayKnownGain}</div>
             </div>
           </div>
 
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-gray-700">JPDB progress</span>
-              <span className="text-gray-500">{vocabulary.percent}%</span>
+              <span className="font-medium text-[color:var(--ui-text)]">JPDB progress</span>
+              <span className={mutedTextClass}>{vocabulary.percent}%</span>
             </div>
-            <div className="h-3 overflow-hidden rounded-sm bg-gray-200">
-              <div className="h-full bg-green-500" style={{ width: `${vocabulary.percent}%` }} />
+            <div className="h-3 overflow-hidden rounded-sm bg-[color:var(--ui-border)]">
+              <div className="app-progress-bar h-full" style={{ width: `${vocabulary.percent}%` }} />
             </div>
           </div>
 
-          <div className="mt-4 space-y-1 text-sm text-gray-600">
+          <div className={`mt-4 space-y-1 text-sm ${mutedTextClass}`}>
             {vocabulary.selectedDeckName ? (
               <div>
-                Cached due cards for <span className="font-medium text-gray-900">{vocabulary.selectedDeckName}</span>:{" "}
-                <span className="font-medium text-gray-900">{vocabulary.cachedDueCount ?? "Not loaded"}</span>
+                Cached due cards for <span className="font-medium text-[color:var(--ui-text)]">{vocabulary.selectedDeckName}</span>:{" "}
+                <span className="font-medium text-[color:var(--ui-text)]">{vocabulary.cachedDueCount ?? "Not loaded"}</span>
               </div>
             ) : (
               <div>Pick a JPDB deck in Vocabulary to track cached due cards here.</div>
@@ -111,7 +117,7 @@ export function JlptStudyWorkbenchCards(props: {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               to="/vocabulary"
-              className="inline-flex h-9 items-center rounded-md border border-gray-950 bg-gray-950 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+              className={buttonPrimaryClass}
             >
               Open vocabulary
             </Link>
@@ -119,73 +125,73 @@ export function JlptStudyWorkbenchCards(props: {
               type="button"
               onClick={onOpenActiveReadiness}
               disabled={!canOpenActiveReadiness}
-              className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className={buttonMutedClass}
             >
               Open readiness
             </button>
           </div>
         </div>
 
-        <div className="rounded-md border border-gray-200 bg-white p-4">
+        <div className={`${cardClass} p-4`}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-medium text-gray-500">Grammar</div>
-              <div className="mt-1 text-lg font-semibold text-gray-950">
+              <div className={`text-sm font-medium ${mutedTextClass}`}>Grammar</div>
+              <div className="mt-1 text-lg font-semibold text-[color:var(--ui-text)]">
                 {grammar.levelLabel ? `${grammar.levelLabel} focus` : "Study overview"}
               </div>
             </div>
-            <span className={`rounded-md px-2 py-1 text-xs font-semibold ${grammar.miningEnabled ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+            <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${grammar.miningEnabled ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-[color:var(--ui-border)] bg-[color:var(--ui-surface-alt)] text-[color:var(--ui-muted)]"}`}>
               {grammar.miningEnabled ? "Mining on" : "Mining off"}
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 border-t border-gray-200 pt-4">
+          <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 border-t border-[color:var(--ui-border)] pt-4">
             <div>
-              <div className="text-xs font-medium text-gray-500">Known</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Known</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">
                 {grammar.totalCount > 0 ? `${grammar.knownCount}/${grammar.totalCount}` : "No data"}
               </div>
             </div>
             <div>
-              <div className="text-xs font-medium text-gray-500">Remaining</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{grammar.totalCount > 0 ? grammar.remainingCount : 0}</div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Remaining</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{grammar.totalCount > 0 ? grammar.remainingCount : 0}</div>
             </div>
             <div>
-              <div className="text-xs font-medium text-gray-500">Known today</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{grammar.todayKnownGain}</div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Known today</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{grammar.todayKnownGain}</div>
             </div>
           </div>
 
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-gray-700">Grammar progress</span>
-              <span className="text-gray-500">{grammar.percent}%</span>
+              <span className="font-medium text-[color:var(--ui-text)]">Grammar progress</span>
+              <span className={mutedTextClass}>{grammar.percent}%</span>
             </div>
-            <div className="h-3 overflow-hidden rounded-sm bg-gray-200">
-              <div className="h-full bg-green-500" style={{ width: `${grammar.percent}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 border-t border-gray-200 pt-4">
-            <div>
-              <div className="text-xs font-medium text-gray-500">Learning</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{grammar.learningCount}</div>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-gray-500">With examples</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{grammar.exampleBackedCount}</div>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-gray-500">Queued</div>
-              <div className="mt-1 text-2xl font-semibold text-gray-950">{grammar.queuedCount + grammar.scanningCount}</div>
+            <div className="h-3 overflow-hidden rounded-sm bg-[color:var(--ui-border)]">
+              <div className="app-progress-bar h-full" style={{ width: `${grammar.percent}%` }} />
             </div>
           </div>
 
-          <div className="mt-4 space-y-1 text-sm text-gray-600">
+          <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 border-t border-[color:var(--ui-border)] pt-4">
+            <div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Learning</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{grammar.learningCount}</div>
+            </div>
+            <div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>With examples</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{grammar.exampleBackedCount}</div>
+            </div>
+            <div>
+              <div className={`text-xs font-medium ${mutedTextClass}`}>Queued</div>
+              <div className="mt-1 text-2xl font-semibold text-[color:var(--ui-text)]">{grammar.queuedCount + grammar.scanningCount}</div>
+            </div>
+          </div>
+
+          <div className={`mt-4 space-y-1 text-sm ${mutedTextClass}`}>
             <div>
               {grammar.activeMiningLabel ? (
                 <>
-                  Active mining: <span className="font-medium text-gray-900">{grammar.activeMiningLabel}</span>
+                  Active mining: <span className="font-medium text-[color:var(--ui-text)]">{grammar.activeMiningLabel}</span>
                 </>
               ) : (
                 "No active grammar mining task."
@@ -206,7 +212,7 @@ export function JlptStudyWorkbenchCards(props: {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               to="/grammar"
-              className="inline-flex h-9 items-center rounded-md border border-gray-950 bg-gray-950 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+              className={buttonPrimaryClass}
             >
               Open grammar
             </Link>

@@ -153,12 +153,6 @@ export function useBookReaderController({
     void load();
   }, [bookMetadata, bookId, downloadBook, progressLoaded]);
 
-  useEffect(() => {
-    if (pdfLoaded && pdfViewerRef.current && pdfCurrentPage != null) {
-      pdfViewerRef.current.goToPage(pdfCurrentPage);
-    }
-  }, [pdfLoaded, pdfCurrentPage]);
-
   const updateChapter = progress.navigateToChapter;
 
   useInternalEpubLinks({
@@ -188,7 +182,6 @@ export function useBookReaderController({
     if (pdfPageCount && pdfCurrentPage < pdfPageCount) {
       const newPage = pdfCurrentPage + 1;
       setPdfCurrentPage(newPage);
-      pdfViewerRef.current?.goToPage(newPage);
 
       // Save progress when PDF page changes.
       if (bookMetadata && progressLoaded) {
@@ -208,7 +201,6 @@ export function useBookReaderController({
     if (pdfCurrentPage > 1) {
       const newPage = pdfCurrentPage - 1;
       setPdfCurrentPage(newPage);
-      pdfViewerRef.current?.goToPage(newPage);
 
       // Save progress when PDF page changes.
       if (bookMetadata && progressLoaded) {

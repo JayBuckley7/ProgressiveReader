@@ -6,6 +6,7 @@ import { isTranslationCacheValid } from "@core/translation/cache";
 interface ReaderHeaderProps {
   bookContent: { title?: string; chapterTitles?: Array<{ title: string }>; totalChapters?: number } | null;
   chapter: number;
+  progressLabel?: string;
   bookId: string;
   isTranslated: boolean;
   isAutoloaded: boolean;
@@ -20,6 +21,7 @@ interface ReaderHeaderProps {
 export function ReaderHeader({
   bookContent,
   chapter,
+  progressLabel,
   bookId,
   isTranslated,
   isAutoloaded,
@@ -33,6 +35,8 @@ export function ReaderHeader({
   const { t } = useTranslation();
   const { settings } = useSettings();
   const deps = useAppDeps();
+  const chapterProgressLabel =
+    progressLabel || `${bookContent?.chapterTitles?.[chapter]?.title || t('reader.chapterNumber', { number: chapter + 1 })} / ${bookContent?.totalChapters}`;
 
   return (
     <div className="bg-white dark:bg-gray-800 border-b px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
@@ -54,7 +58,7 @@ export function ReaderHeader({
             {bookContent?.title}
           </h1>
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            {bookContent?.chapterTitles?.[chapter]?.title || t('reader.chapterNumber', { number: chapter + 1 })} / {bookContent?.totalChapters}
+            {chapterProgressLabel}
             <span className="ml-2 space-x-2">
               {isTranslated && (
                 <>

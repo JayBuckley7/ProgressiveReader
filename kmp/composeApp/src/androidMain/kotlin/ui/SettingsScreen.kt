@@ -32,10 +32,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +55,7 @@ import com.progressivereader.kmp.jpdbMirror.JpdbMirrorSyncProgress
 import com.progressivereader.kmp.jpdbMirror.backupMirrorSnapshotToDrive
 import com.progressivereader.kmp.jpdbMirror.restoreMirrorSnapshotFromDrive
 import com.progressivereader.kmp.jpdbMirror.syncJpdbKnownMirror
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.reader.TranslationCache
 import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.vocabulary.VocabularyService
@@ -74,6 +75,7 @@ private enum class SettingsTab(val label: String) {
     Highlight("Highlight"),
     Mix("Mix"),
     Sync("Sync"),
+    Loggin("Loggin"),
 }
 
 @Serializable
@@ -122,6 +124,7 @@ private data class CloudSettingsJsonOut(
 fun SettingsScreen(
     settings: AppSettings,
     sessionJwt: String?,
+    requestSessionJwt: suspend () -> String? = { sessionJwt },
     showBack: Boolean,
     onBack: () -> Unit,
     onUpdateReaderTheme: (String) -> Unit,
@@ -139,6 +142,7 @@ fun SettingsScreen(
     onUpdateReaderMixAggression: (Float) -> Unit,
     onUpdateReaderMixAutoEnableHighlight: (Boolean) -> Unit,
     onUpdateReaderMixBackupMirrorToDrive: (Boolean) -> Unit,
+    onUpdateDebugMode: (Boolean) -> Unit,
     onOpenLogin: () -> Unit,
     onSignOut: () -> Unit,
     onResetDriveOverrides: () -> Unit,
@@ -156,10 +160,11 @@ fun SettingsScreen(
             }
         }
 
-    val driveService = remember(sessionJwt) { DriveService(getSessionToken = { sessionJwt }) }
+    val driveService = remember(requestSessionJwt) { DriveService(getSessionToken = requestSessionJwt) }
     val signedIn = !sessionJwt.isNullOrBlank()
     val isOnline = rememberIsOnline()
     val appContext = LocalContext.current.applicationContext
+    val logEntries by AppLog.entries.collectAsState()
 
     val driveJsonService =
         remember(sessionJwt, settings.driveFolderId) {
@@ -172,6 +177,7 @@ fun SettingsScreen(
     val mirrorStore = remember { JpdbMirrorStore(appContext) }
 
     var activeTab by remember { mutableStateOf(SettingsTab.General) }
+    var debugMode by remember { mutableStateOf(settings.debugMode) }
 
     var theme by remember { mutableStateOf(settings.reader.theme) }
     var fontSizeSp by remember { mutableStateOf(settings.reader.fontSizeSp) }
@@ -197,7 +203,7 @@ fun SettingsScreen(
     var cloudStatus by remember { mutableStateOf<String?>(null) }
     var cloudBusy by remember { mutableStateOf(false) }
     var cloudLastSync by remember { mutableStateOf<String?>(null) }
-    var autoLoadedFromCloud by remember { mutableStateOf(false) }
+    var autoLoadedFromCloud by remember(sessionJwt, settings.driveFolderId) { mutableStateOf(false) }
 
     var openAiSaveJob by remember { mutableStateOf<Job?>(null) }
     var jpdbSaveJob by remember { mutableStateOf<Job?>(null) }
@@ -206,10 +212,13 @@ fun SettingsScreen(
     var mirrorBusy by remember { mutableStateOf(false) }
     var mirrorProgress by remember { mutableStateOf<JpdbMirrorSyncProgress?>(null) }
     var mirrorError by remember { mutableStateOf<String?>(null) }
-    var mirrorRestoreAttempted by remember { mutableStateOf(false) }
 
     suspend fun reloadMirrorSnapshot() {
         mirrorSnapshot = mirrorStore.loadSnapshot()
+    }
+
+    LaunchedEffect(Unit) {
+        AppLog.i("Settings", "Opened settings screen.")
     }
 
     LaunchedEffect(Unit) {
@@ -217,45 +226,12 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(activeTab) {
-        if (activeTab != SettingsTab.Mix) {
-            mirrorRestoreAttempted = false
-            return@LaunchedEffect
-        }
+        if (activeTab != SettingsTab.Mix) return@LaunchedEffect
         runCatching { reloadMirrorSnapshot() }
     }
 
-    // Best-effort: auto-restore from Drive if enabled and we have no local mirror (web parity).
-    LaunchedEffect(activeTab, signedIn, isOnline, mirrorSnapshot, mixBackupMirrorToDrive, mirrorBusy) {
-        if (activeTab != SettingsTab.Mix) return@LaunchedEffect
-        if (mirrorBusy) return@LaunchedEffect
-        if (mirrorRestoreAttempted) return@LaunchedEffect
-        if (mirrorSnapshot != null) return@LaunchedEffect
-        if (!mixBackupMirrorToDrive) return@LaunchedEffect
-        if (!signedIn || !isOnline) return@LaunchedEffect
-
-        mirrorRestoreAttempted = true
-        mirrorBusy = true
-        mirrorError = null
-        mirrorProgress = null
-
-        val restored =
-            runCatching {
-                restoreMirrorSnapshotFromDrive(
-                    driveJson = driveJsonService,
-                    onProgress = { p -> mirrorProgress = p },
-                )
-            }.getOrNull()
-        if (restored != null) {
-            runCatching { mirrorStore.saveSnapshot(restored) }
-            mirrorSnapshot = restored
-            snackbarHostState.showSnackbar("Restored JPDB mirror from Google Drive.")
-        }
-
-        mirrorBusy = false
-        mirrorProgress = null
-    }
-
     LaunchedEffect(settings) {
+        debugMode = settings.debugMode
         theme = settings.reader.theme
         fontSizeSp = settings.reader.fontSizeSp
         ttsRate = settings.reader.ttsRate
@@ -273,15 +249,23 @@ fun SettingsScreen(
         mixBackupMirrorToDrive = settings.reader.mixBackupMirrorToDrive
     }
 
+    LaunchedEffect(debugMode, activeTab) {
+        if (!debugMode && activeTab == SettingsTab.Loggin) {
+            activeTab = SettingsTab.General
+        }
+    }
+
+    val visibleTabs =
+        SettingsTab.entries.filter { tab ->
+            tab != SettingsTab.Loggin || debugMode
+        }
+
     fun DriveService.DriveFile.isFolder(): Boolean =
         mimeType?.equals("application/vnd.google-apps.folder", ignoreCase = true) == true
 
     suspend fun resolveAppFolder(): DriveService.DriveFile? {
         if (!signedIn) return null
-        val root = driveService.listFiles(folderId = null)
-        val folders = root.filter { it.isFolder() }
-        return folders.firstOrNull { it.name.equals("ProgReader", ignoreCase = true) }
-            ?: folders.firstOrNull { it.name.equals("ProgressiveReader", ignoreCase = true) }
+        return driveService.ensureAppFolder()
     }
 
     suspend fun findSettingsJsonFileId(folderId: String?): String? {
@@ -289,17 +273,18 @@ fun SettingsScreen(
         return list.firstOrNull { it.name.equals("settings.json", ignoreCase = true) }?.id
     }
 
-    suspend fun ensureCloudFolderInfo() {
-        if (!signedIn) return
+    suspend fun ensureCloudFolderInfo(): Boolean {
+        if (!signedIn) return false
         val overrideId = settings.driveFolderId?.takeIf { it.isNotBlank() }
         if (overrideId != null) {
             cloudFolderName = "App folder"
             cloudFolderId = overrideId
-            return
+            return true
         }
         val folder = resolveAppFolder()
-        cloudFolderName = folder?.name ?: "Drive root"
+        cloudFolderName = folder?.name ?: "Unavailable"
         cloudFolderId = folder?.id
+        return folder != null
     }
 
     fun normalizeTheme(themeRaw: String?): String? {
@@ -316,11 +301,23 @@ fun SettingsScreen(
 
     suspend fun loadFromCloudAndApply(manual: Boolean) {
         if (!signedIn) return
+        if (!isOnline) {
+            cloudStatus = "Internet required to load settings from Drive."
+            if (manual) snackbarHostState.showSnackbar("Connect to the internet to load Drive settings.")
+            return
+        }
         cloudBusy = true
+        AppLog.i("Settings", "Loading settings from Drive.")
         try {
-            ensureCloudFolderInfo()
+            if (!ensureCloudFolderInfo()) {
+                AppLog.w("Settings", "Drive app folder unavailable while loading settings.")
+                cloudStatus = "Drive folder unavailable."
+                if (manual) snackbarHostState.showSnackbar("Drive folder is unavailable.")
+                return
+            }
             val settingsFileId = findSettingsJsonFileId(folderId = cloudFolderId)
             if (settingsFileId.isNullOrBlank()) {
+                AppLog.w("Settings", "No Drive settings.json found.")
                 cloudStatus = "No settings.json found in Drive."
                 if (manual) snackbarHostState.showSnackbar("No settings found in Google Drive.")
                 return
@@ -328,6 +325,7 @@ fun SettingsScreen(
             val bytes = driveService.download(settingsFileId)
             val text = bytes?.toString(Charsets.UTF_8)
             if (text.isNullOrBlank()) {
+                AppLog.w("Settings", "Drive settings.json download returned blank content.")
                 cloudStatus = "Failed to download settings.json."
                 if (manual) snackbarHostState.showSnackbar("Failed to download settings from Drive.")
                 return
@@ -335,6 +333,7 @@ fun SettingsScreen(
 
             val payload = runCatching { json.decodeFromString(CloudSettingsJson.serializer(), text) }.getOrNull()
             if (payload == null) {
+                AppLog.w("Settings", "Drive settings.json could not be decoded.")
                 cloudStatus = "Invalid settings.json."
                 if (manual) snackbarHostState.showSnackbar("Invalid settings.json in Drive.")
                 return
@@ -406,6 +405,7 @@ fun SettingsScreen(
 
             cloudLastSync = "Loaded from Drive"
             cloudStatus = "Synced settings from Drive."
+            AppLog.i("Settings", "Loaded settings from Drive.")
             if (manual) snackbarHostState.showSnackbar("Settings loaded from Google Drive.")
         } finally {
             cloudBusy = false
@@ -414,9 +414,20 @@ fun SettingsScreen(
 
     suspend fun saveToCloud(manual: Boolean) {
         if (!signedIn) return
+        if (!isOnline) {
+            cloudStatus = "Internet required to save settings to Drive."
+            if (manual) snackbarHostState.showSnackbar("Connect to the internet to save Drive settings.")
+            return
+        }
         cloudBusy = true
+        AppLog.i("Settings", "Saving settings to Drive.")
         try {
-            ensureCloudFolderInfo()
+            if (!ensureCloudFolderInfo()) {
+                AppLog.w("Settings", "Drive app folder unavailable while saving settings.")
+                cloudStatus = "Drive folder unavailable."
+                if (manual) snackbarHostState.showSnackbar("Drive folder is unavailable.")
+                return
+            }
             val folderId = cloudFolderId
             val existingId = findSettingsJsonFileId(folderId = folderId)
             if (!existingId.isNullOrBlank()) {
@@ -445,8 +456,10 @@ fun SettingsScreen(
             if (res != null) {
                 cloudLastSync = "Saved to Drive"
                 cloudStatus = "Saved settings to Drive."
+                AppLog.i("Settings", "Saved settings to Drive.")
                 if (manual) snackbarHostState.showSnackbar("Settings saved to Google Drive.")
             } else {
+                AppLog.w("Settings", "Failed to save settings to Drive.")
                 cloudStatus = "Failed to save settings to Drive."
                 if (manual) snackbarHostState.showSnackbar("Failed to save settings to Drive.")
             }
@@ -455,7 +468,7 @@ fun SettingsScreen(
         }
     }
 
-    LaunchedEffect(signedIn) {
+    LaunchedEffect(signedIn, isOnline, sessionJwt, settings.driveFolderId) {
         if (!signedIn) {
             cloudFolderName = null
             cloudFolderId = null
@@ -464,6 +477,7 @@ fun SettingsScreen(
             autoLoadedFromCloud = false
             return@LaunchedEffect
         }
+        if (!isOnline) return@LaunchedEffect
         ensureCloudFolderInfo()
         if (!autoLoadedFromCloud) {
             autoLoadedFromCloud = true
@@ -473,28 +487,27 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                title = { Text("Settings") },
-                navigationIcon = {
+            AppShellTopBar(
+                title = "Settings",
+                subtitle = "Reader controls, study tools, and sync behavior.",
+                navigationIcon =
                     if (showBack) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                        {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                            }
                         }
-                    }
-                },
+                    } else {
+                        null
+                    },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { bottomBar?.invoke() },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = activeTab.ordinal) {
-                SettingsTab.entries.forEach { tab ->
+            TabRow(selectedTabIndex = visibleTabs.indexOf(activeTab).coerceAtLeast(0)) {
+                visibleTabs.forEach { tab ->
                     Tab(
                         selected = tab == activeTab,
                         onClick = { activeTab = tab },
@@ -624,6 +637,25 @@ fun SettingsScreen(
                                         visualTransformation = PasswordVisualTransformation(),
                                         modifier = Modifier.fillMaxWidth(),
                                     )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        Text("Debug mode", style = MaterialTheme.typography.bodyMedium)
+                                        Spacer(Modifier.weight(1f))
+                                        Switch(
+                                            checked = debugMode,
+                                            onCheckedChange = {
+                                                debugMode = it
+                                                onUpdateDebugMode(it)
+                                                AppLog.i("Settings", "Debug mode ${if (it) "enabled" else "disabled"}.")
+                                            },
+                                        )
+                                    }
+
+                                    AppMutedText("Shows the Loggin tab and keeps an in-app app log buffer.")
 
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -1075,6 +1107,49 @@ fun SettingsScreen(
                                             scope.launch { snackbarHostState.showSnackbar("Reset connection settings.") }
                                         },
                                     )
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsTab.Loggin -> {
+                        item {
+                            AppCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Text("Loggin", style = MaterialTheme.typography.titleMedium)
+                                        Spacer(Modifier.weight(1f))
+                                        AppOutlineButton(
+                                            text = "Clear",
+                                            onClick = {
+                                                AppLog.clear()
+                                                AppLog.i("Settings", "Cleared in-app logs.")
+                                            },
+                                        )
+                                    }
+
+                                    AppMutedText("App logs captured inside the app process. Older lines are trimmed.")
+
+                                    if (logEntries.isEmpty()) {
+                                        AppMutedText("No logs yet.")
+                                    } else {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            logEntries.takeLast(250).reversed().forEach { line ->
+                                                Text(
+                                                    text = line,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontFamily = FontFamily.Monospace,
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

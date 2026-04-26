@@ -5,7 +5,7 @@
  */
 
 import type { BackendFetchPort } from "@core/backend/fetchPort";
-import type { OcrBackendPort, OcrProgress, OcrProgressCallback } from "@core/backend/ports";
+import type { OcrBackendPort, OcrPageLayoutResponse, OcrProgress, OcrProgressCallback } from "@core/backend/ports";
 import { appLog } from "@shared/appLog";
 
 export function createOcrBackendPort(fetchPort: BackendFetchPort): OcrBackendPort {
@@ -176,6 +176,36 @@ export function createOcrBackendPort(fetchPort: BackendFetchPort): OcrBackendPor
 
       const ocrBlob = new Blob([combined], { type: "application/pdf" });
       return new File([ocrBlob], filename, { type: "application/pdf" });
+    },
+
+    async processPageLayout(args): Promise<OcrPageLayoutResponse> {
+      const formData = new FormData();
+      formData.append("image", args.image, `page-${args.pageIndex + 1}.png`);
+      formData.append("page_index", String(args.pageIndex));
+      formData.append("ocr_profile", args.ocrProfile || "ja-pdf-overlay-hybrid-v1");
+      if (args.contentHash) {
+        formData.append("content_hash", args.contentHash);
+      }
+      if (args.documentId) {
+        formData.append("document_id", args.documentId);
+      }
+      if (args.documentVersion) {
+        formData.append("document_version", args.documentVersion);
+      }
+
+      const response = await fetchPort.request({
+        path: "/api/ocr/layout/page",
+        method: "POST",
+        body: formData,
+        signal: args.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch OCR page layout");
+      }
+
+      return (await response.json()) as OcrPageLayoutResponse;
     },
   };
 }

@@ -1,6 +1,5 @@
 import type { DrivePort } from "@core/drive/ports";
 import type { JlptCatalogTest, JlptDashboardStateV2 } from "@features/jlpt/types";
-import { JLPT_METADATA_KEY } from "@features/jlpt/services/jlptConfig";
 import { normalizeJlptDashboardState } from "@features/jlpt/services/jlptMigrations";
 
 export async function loadJlptDashboardStateFromDrive(params: {
@@ -12,10 +11,8 @@ export async function loadJlptDashboardStateFromDrive(params: {
   const authenticated = await ensureAuthenticated();
   if (!authenticated) return null;
 
-  const metadataInfo = await drive.getMetadataFile();
-  const cloudState = metadataInfo?.data?.[JLPT_METADATA_KEY];
-  if (!cloudState) return null;
-  return normalizeJlptDashboardState(cloudState, tests);
+  const cloudState = await drive.loadJlptDashboardState();
+  return cloudState ? normalizeJlptDashboardState(cloudState, tests) : null;
 }
 
 export async function saveJlptDashboardStateToDrive(params: {
@@ -24,17 +21,7 @@ export async function saveJlptDashboardStateToDrive(params: {
 }): Promise<boolean> {
   const { drive, state } = params;
   if (!drive.isSignedIn()) return false;
-
-  const metadataInfo = await drive.getMetadataFile();
-  if (!metadataInfo) return false;
-
-  const nextData = {
-    ...(metadataInfo.data || {}),
-    [JLPT_METADATA_KEY]: state,
-    lastUpdated: new Date().toISOString(),
-  };
-
-  return drive.updateMetadataFile(metadataInfo.fileId, nextData);
+  return drive.saveJlptDashboardState(state);
 }
 
 export function mergeJlptDashboardStates(

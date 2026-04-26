@@ -9,6 +9,7 @@ import { useUser } from "@clerk/clerk-react";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { vocabBank } from "@features/vocabulary/services/vocabBank";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { isGoogleLinkedClerkUser } from "@features/books/services/bookLibrary/provider";
 
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -51,9 +52,7 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   // Helper function to render the appropriate state when not connected to Drive
   const renderNotConnectedState = () => {
     // Check if user signed in with Google
-    const wasGoogleClerkLogin = clerkUser?.externalAccounts?.some(
-      (acc) => acc.provider.startsWith("google")
-    );
+    const wasGoogleClerkLogin = isGoogleLinkedClerkUser(clerkUser);
 
     if (wasGoogleClerkLogin) {
       // User signed in with Google - show auto-connecting message with manual option

@@ -53,6 +53,12 @@ class GDriveService {
     files: this.files,
     onSigninStatusChanged: this.onSigninStatusChanged,
   });
+  private readonly jlptStore = new DriveJsonFile<any>("jlpt_dashboard_v2.json", {
+    auth: this.auth,
+    appFolder: this.appFolder,
+    files: this.files,
+    onSigninStatusChanged: this.onSigninStatusChanged,
+  });
 
   /**
    * Initialize Google Drive client (loads gapi + fetches an initial token).
@@ -352,6 +358,25 @@ class GDriveService {
   public async loadGrammarProgress(): Promise<string[] | null> {
     const existing = await this.loadGrammarStateV2();
     return existing ? existing.knownIds : null;
+  }
+
+  public async saveJlptDashboardState(payload: any): Promise<boolean> {
+    if (!this.auth.isClerkUserAuthenticated()) return false;
+
+    const data =
+      payload && typeof payload === "object"
+        ? {
+            ...payload,
+            updatedAt: typeof payload.updatedAt === "string" ? payload.updatedAt : new Date().toISOString(),
+          }
+        : payload;
+
+    return this.jlptStore.save(data);
+  }
+
+  public async loadJlptDashboardState(): Promise<any | null> {
+    if (!this.auth.isClerkUserAuthenticated()) return null;
+    return this.jlptStore.load();
   }
 
   // Virtual folder management (metadata-only; no Drive folders are created).

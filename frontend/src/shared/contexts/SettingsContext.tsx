@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import i18n from "~/i18n";
 import { appLog } from '@shared/appLog'
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { useLocation } from "react-router-dom";
 
 type Theme = "light" | "dark" | "wood" | "space" | "system";
 
@@ -65,6 +66,86 @@ const defaultSettings: Settings = {
 const SETTINGS_COOKIE = "prSettings";
 const SETTINGS_STORAGE = "prSettings";
 
+function mapExternalSettings(data: Record<string, any>, prev: Settings): Settings {
+  const updates: Partial<Settings> = {};
+
+  if (data.userTheme !== undefined) updates.theme = data.userTheme;
+  if (data.theme !== undefined) updates.theme = data.theme;
+  if (data.fontSize !== undefined) updates.fontSize = parseInt(String(data.fontSize), 10) || prev.fontSize;
+  if (data.target_language !== undefined) updates.targetLanguage = data.target_language;
+  if (data.targetLanguage !== undefined) updates.targetLanguage = data.targetLanguage;
+  if (data.uiLanguage !== undefined) updates.uiLanguage = data.uiLanguage;
+  if (data.showPopupOnHover !== undefined) updates.showPopupOnHover = data.showPopupOnHover;
+  if (data.touchscreenSupport !== undefined) updates.touchscreenSupport = data.touchscreenSupport;
+  if (data.disableFadeAnimation !== undefined) updates.disableFadeAnimation = data.disableFadeAnimation;
+  if (data.hideFurigana !== undefined) updates.hideFurigana = data.hideFurigana;
+  if (data.cacheTranslations !== undefined) updates.cacheTranslations = data.cacheTranslations;
+
+  const mixEnabledRaw = data.mix_enabled ?? data.mixEnabled;
+  if (mixEnabledRaw !== undefined) updates.mixEnabled = Boolean(mixEnabledRaw);
+
+  const mixAggressionRaw = data.mix_aggression ?? data.mixAggression;
+  if (mixAggressionRaw !== undefined) {
+    const parsed = typeof mixAggressionRaw === 'number' ? mixAggressionRaw : parseFloat(String(mixAggressionRaw));
+    if (Number.isFinite(parsed)) {
+      updates.mixAggression = Math.max(0, Math.min(1, parsed));
+    }
+  }
+
+  const mixAutoHighlightRaw = data.mix_auto_enable_highlight ?? data.mixAutoEnableHighlight;
+  if (mixAutoHighlightRaw !== undefined) updates.mixAutoEnableHighlight = Boolean(mixAutoHighlightRaw);
+
+  const mixBackupRaw = data.mix_backup_mirror_to_drive ?? data.mixBackupMirrorToDrive;
+  if (mixBackupRaw !== undefined) updates.mixBackupMirrorToDrive = Boolean(mixBackupRaw);
+
+  const mixStaleRaw = data.mix_mirror_stale_after_hours ?? data.mixMirrorStaleAfterHours;
+  if (mixStaleRaw !== undefined) {
+    const parsed = typeof mixStaleRaw === 'number' ? mixStaleRaw : parseInt(String(mixStaleRaw), 10);
+    if (Number.isFinite(parsed) && parsed > 0) updates.mixMirrorStaleAfterHours = parsed;
+  }
+
+  return { ...prev, ...updates };
+}
+
+function syncReaderSettingsToStorage(settings: Settings): void {
+  localStorage.setItem('showPopupOnHover', String(settings.showPopupOnHover));
+  localStorage.setItem('touchscreenSupport', String(settings.touchscreenSupport));
+  localStorage.setItem('disableFadeAnimation', String(settings.disableFadeAnimation));
+  localStorage.setItem('cacheTranslations', String(settings.cacheTranslations));
+  localStorage.setItem('hideFurigana', String(settings.hideFurigana ?? false));
+  setSettingsStorage(settings);
+  setSettingsCookie(settings);
+}
+
+function syncJpdbTestSettings(data: Record<string, any>): void {
+  const key = (import.meta.env.VITE_TEST_READER_JPDB_API_KEY || data.jpdb_api_key || data.jpdbApiKey || "").trim();
+  if (key) {
+    const encoded = encodeURIComponent(key);
+    document.cookie = `jpdbApiKey=${encoded}; path=/;`;
+    document.cookie = `jpdb_api_key=${encoded}; path=/;`;
+  }
+
+  const pairs: Array<[string, any]> = [
+    ['jpdbMiningDeckId', data.jpdbMiningDeckId],
+    ['forqDeckId', data.forqDeckId],
+    ['blacklistDeckId', data.blacklistDeckId],
+    ['neverForgetDeckId', data.neverForgetDeckId],
+    ['contextWidth', data.contextWidth],
+    ['forqOnMine', data.forqOnMine],
+    ['customWordCSS', data.customWordCSS],
+    ['customPopupCSS', data.customPopupCSS],
+  ];
+  for (const [storageKey, value] of pairs) {
+    if (value !== undefined && value !== null) {
+      localStorage.setItem(storageKey, String(value));
+    }
+  }
+
+  window.setTimeout(() => {
+    window.dispatchEvent(new CustomEvent("pr:jpdb-settings-updated"));
+  }, 0);
+}
+
 function getSettingsStorage(): Partial<Settings> | null {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE);
@@ -110,6 +191,8 @@ function clearSettingsCookie(): void {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const deps = useAppDeps();
+  const location = useLocation();
+  const testReaderMode = location.pathname === "/pdf" || location.pathname === "/epub";
   // Settings are stored locally and optionally synced to Google Drive (browser-only).
   const [currentSettings, setCurrentSettings] = useState<Settings>(defaultSettings);
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
@@ -121,6 +204,40 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   // Load settings from localStorage or cookie on initial mount
   useEffect(() => {
+    if (testReaderMode) {
+      const settingsUrl = import.meta.env.VITE_TEST_READER_SETTINGS_URL;
+      let cancelled = false;
+
+      const loadTestSettings = async () => {
+        try {
+          const data = settingsUrl
+            ? await fetch(settingsUrl).then((response) => {
+                if (!response.ok) throw new Error(`Failed to load test settings: ${response.status}`);
+                return response.json();
+              })
+            : {};
+          if (cancelled) return;
+
+          setCurrentSettings((prev) => {
+            const updated = mapExternalSettings(data, prev);
+            syncReaderSettingsToStorage(updated);
+            syncJpdbTestSettings(data);
+            return updated;
+          });
+        } catch (error) {
+          appLog.error("[Settings] Failed to load test reader settings", error);
+          if (!cancelled) {
+            syncJpdbTestSettings({});
+          }
+        }
+      };
+
+      void loadTestSettings();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const stored = getSettingsStorage() || getSettingsCookie();
     if (stored) {
       setCurrentSettings(prev => {
@@ -155,10 +272,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setSettingsStorage(defaultSettings);
       i18n.changeLanguage(defaultSettings.uiLanguage);
     }
-  }, []);
+  }, [testReaderMode]);
 
   // Listen to centralized auth manager for settings loading
   useEffect(() => {
+    if (testReaderMode) return;
     // Listen for authentication state changes through auth manager
     const unsubscribe = deps.driveAuth.onAuthStateChange(async (isAuthenticated) => {
       if (isAuthenticated && !loadedFromCloudRef.current && !isLoadingFromCloud && !cloudLoadInFlightRef.current) {
@@ -290,13 +408,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
 
     return unsubscribe;
-  }, [deps.driveAuth, isLoadingFromCloud]);
+  }, [deps.driveAuth, isLoadingFromCloud, testReaderMode]);
 
   // Settings are needed before the reader decides whether JPDB highlighting can
   // use the real JPDB API. Do not depend on the library sync path to initialize
   // Drive auth; routes like clipboard or direct book loads can otherwise start
   // with only local defaults and stay on fallback highlighting.
   useEffect(() => {
+    if (testReaderMode) return;
     if (!isAuthenticated) return;
     if (loadedFromCloudRef.current || isLoadingFromCloud || cloudLoadInFlightRef.current) return;
 
@@ -317,7 +436,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [deps.driveAuth, isAuthenticated, isLoadingFromCloud]);
+  }, [deps.driveAuth, isAuthenticated, isLoadingFromCloud, testReaderMode]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -375,7 +494,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
 
       // Auto-save to cloud with debouncing
-      if (isAuthenticated && loadedFromCloudRef.current) {
+      if (!testReaderMode && isAuthenticated && loadedFromCloudRef.current) {
         // Clear any existing timeout
         if (autoSaveTimeoutRef.current) {
           clearTimeout(autoSaveTimeoutRef.current);

@@ -17,6 +17,7 @@ import {
   updateBookMetadataOnDrive,
 } from "@features/books/services/bookLibrary/manage";
 import { uploadBookToDrive } from "@features/books/services/bookLibrary/upload";
+import { isGoogleLinkedClerkUser } from "@features/books/services/bookLibrary/provider";
 
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
@@ -184,13 +185,7 @@ function useStorageService() {
       const currentUserId = clerkUser.id;
       if (lastUserIdRef.current === currentUserId) return;
 
-      const wasGoogleClerkLogin = clerkUser.externalAccounts?.some((acc) => acc.provider.startsWith("google"));
-      if (!wasGoogleClerkLogin) return;
-
-      const currentPath = window.location.pathname;
-      const needsBooks =
-        currentPath === "/" || currentPath.startsWith("/vocabulary") || currentPath.startsWith("/book/");
-      if (!needsBooks) return;
+      if (!isGoogleLinkedClerkUser(clerkUser)) return;
 
       lastUserIdRef.current = currentUserId;
 
@@ -225,9 +220,18 @@ function useStorageService() {
     if (!clerkUser) return;
     const unsubscribe = deps.driveAuth.onAuthStateChange((isAuthenticated) => {
       if (import.meta.env.DEV) appLog.debug(`[useStorageService] Auth state changed: ${isAuthenticated}`);
+
+      if (
+        isAuthenticated &&
+        booksRef.current.length === 0 &&
+        !isRefreshingRef.current &&
+        !isDriveSyncingRef.current
+      ) {
+        void silentRefreshBooks();
+      }
     });
     return unsubscribe;
-  }, [clerkUser, deps.driveAuth]);
+  }, [clerkUser, deps.driveAuth, silentRefreshBooks]);
 
   // Cleanup blob URLs when component unmounts.
   useEffect(() => {

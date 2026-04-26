@@ -49,6 +49,7 @@ import com.clerk.api.session.fetchToken
 import com.clerk.api.signin.SignIn
 import com.clerk.api.sso.OAuthProvider
 import com.progressivereader.kmp.BuildConfig
+import com.progressivereader.kmp.logging.AppLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -75,6 +76,7 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
         if (publishableKey.isBlank()) {
+            AppLog.w("Auth", "Login screen opened without a Clerk publishable key.")
             restoreChecked = true
             return@LaunchedEffect
         }
@@ -85,11 +87,13 @@ fun LoginScreen(
                     context = context.applicationContext,
                     publishableKey = publishableKey,
                 )
+                AppLog.i("Auth", "Clerk initialized from login screen.")
             }
         }
 
         val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
         if (tokenRes is ClerkResult.Success) {
+            AppLog.i("Auth", "Login screen restored an existing Clerk session.")
             onSignedIn(tokenRes.value.jwt)
             return@LaunchedEffect
         }
@@ -98,11 +102,13 @@ fun LoginScreen(
 
     fun beginSignIn() {
         signInJob?.cancel()
+        AppLog.i("Auth", "Starting Clerk sign-in flow.")
         signInJob =
             scope.launch {
                 error = null
                 val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
                 if (publishableKey.isBlank()) {
+                    AppLog.w("Auth", "Blocked sign-in because Clerk publishable key is blank.")
                     error = "Missing Clerk publishable key (CLERK_PUBLISHABLE_KEY)."
                     return@launch
                 }
@@ -118,6 +124,7 @@ fun LoginScreen(
 
                     val existingToken = runCatching { Clerk.session?.fetchToken() }.getOrNull()
                     if (existingToken is ClerkResult.Success) {
+                        AppLog.i("Auth", "Using existing Clerk session token instead of redirecting.")
                         onSignedIn(existingToken.value.jwt)
                         return@launch
                     }
@@ -136,8 +143,10 @@ fun LoginScreen(
                             val msg =
                                 result.error?.errors?.firstOrNull()?.message
                                     ?: "Sign in failed"
+                            AppLog.w("Auth", "Clerk redirect sign-in failed: $msg")
                             val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
                             if (tokenRes is ClerkResult.Success) {
+                                AppLog.i("Auth", "Recovered Clerk token after redirect failure.")
                                 onSignedIn(tokenRes.value.jwt)
                                 return@launch
                             }
@@ -151,18 +160,22 @@ fun LoginScreen(
                             if (sessionId.isNullOrBlank()) {
                                 val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
                                 if (tokenRes is ClerkResult.Success) {
+                                    AppLog.i("Auth", "Recovered Clerk token without a createdSessionId.")
                                     onSignedIn(tokenRes.value.jwt)
                                     return@launch
                                 }
 
+                                AppLog.w("Auth", "Sign-in completed but Clerk returned no session ID.")
                                 error = "Sign in completed, but no session ID was returned."
                                 return@launch
                             }
 
                             val activeResult = Clerk.setActive(sessionId)
                             if (activeResult is ClerkResult.Failure) {
+                                AppLog.w("Auth", "Failed to activate Clerk session $sessionId.")
                                 val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
                                 if (tokenRes is ClerkResult.Success) {
+                                    AppLog.i("Auth", "Recovered Clerk token after setActive failure.")
                                     onSignedIn(tokenRes.value.jwt)
                                     return@launch
                                 }
@@ -175,19 +188,27 @@ fun LoginScreen(
 
                             val tokenRes = Clerk.session?.fetchToken()
                             when (tokenRes) {
-                                is ClerkResult.Success -> onSignedIn(tokenRes.value.jwt)
+                                is ClerkResult.Success -> {
+                                    AppLog.i("Auth", "Clerk sign-in completed successfully.")
+                                    onSignedIn(tokenRes.value.jwt)
+                                }
                                 is ClerkResult.Failure -> {
+                                    AppLog.w("Auth", "Failed to fetch Clerk session token after sign-in.")
                                     error =
                                         tokenRes.error?.errors?.firstOrNull()?.message
                                             ?: "Failed to fetch session token"
                                 }
 
-                                null -> error = "No active session token available"
+                                null -> {
+                                    AppLog.w("Auth", "Clerk sign-in completed with no active session token.")
+                                    error = "No active session token available"
+                                }
                             }
                         }
                     }
                 } catch (t: Throwable) {
                     if (t !is CancellationException) {
+                        AppLog.e("Auth", "Unexpected error during Clerk sign-in.", t)
                         error = t.message ?: "Sign in failed"
                     }
                 } finally {

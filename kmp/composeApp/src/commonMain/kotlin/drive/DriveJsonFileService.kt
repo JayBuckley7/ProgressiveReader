@@ -62,14 +62,7 @@ class DriveJsonFileService(
     suspend fun resolveAppFolderId(): String? {
         val override = getDriveFolderOverride()?.trim()?.takeIf { it.isNotBlank() }
         if (override != null) return override
-
-        val root = runCatching { driveService.listFiles(folderId = null) }.getOrDefault(emptyList())
-        val folder =
-            root.firstOrNull { f ->
-                f.mimeType?.equals("application/vnd.google-apps.folder", ignoreCase = true) == true &&
-                    (f.name.equals("ProgReader", ignoreCase = true) || f.name.equals("ProgressiveReader", ignoreCase = true))
-            }
-        return folder?.id
+        return runCatching { driveService.ensureAppFolderId() }.getOrNull()
     }
 
     private suspend fun listFilesInAppFolder(folderId: String?): List<DriveService.DriveFile> =

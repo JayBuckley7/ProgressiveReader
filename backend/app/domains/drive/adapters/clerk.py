@@ -18,6 +18,7 @@ from ....utils.timeout import call_with_timeout, TimeoutExceededError
 logger = logging.getLogger(__name__)
 
 CLERK_TIMEOUT_SECONDS = 15.0
+GOOGLE_PROVIDER_CANDIDATES = ("oauth_google", "google")
 
 
 class ClerkDriveProvider(DriveProvider):
@@ -56,21 +57,44 @@ class ClerkDriveProvider(DriveProvider):
                 exp_ts = exp_ts / 1000.0
             return exp_ts
 
-        try:
-            logger.debug("[clerk-token] Fetching google oauth token from Clerk for user_id=%s", user_id)
-            tokens = call_with_timeout(
-                label="Clerk oauth token fetch",
-                timeout_seconds=CLERK_TIMEOUT_SECONDS,
-                fn=lambda: self.client.users.get_o_auth_access_token(user_id=user_id, provider="oauth_google"),
-            )
-        except TimeoutExceededError:
-            logger.warning("[clerk-token] Timeout fetching token from Clerk after %ss", CLERK_TIMEOUT_SECONDS)
-            return None
-        except Exception as e:
-            logger.error("[clerk-token] Failed to retrieve Google token from Clerk: %s", e, exc_info=True)
-            return None
+        tokens = None
+        for provider in GOOGLE_PROVIDER_CANDIDATES:
+            try:
+                logger.debug(
+                    "[clerk-token] Fetching google oauth token from Clerk for user_id=%s provider=%s",
+                    user_id,
+                    provider,
+                )
+                candidate_tokens = call_with_timeout(
+                    label=f"Clerk oauth token fetch ({provider})",
+                    timeout_seconds=CLERK_TIMEOUT_SECONDS,
+                    fn=lambda provider=provider: self.client.users.get_o_auth_access_token(user_id=user_id, provider=provider),
+                )
+            except TimeoutExceededError:
+                logger.warning(
+                    "[clerk-token] Timeout fetching token from Clerk after %ss for provider=%s",
+                    CLERK_TIMEOUT_SECONDS,
+                    provider,
+                )
+                continue
+            except Exception as e:
+                logger.warning(
+                    "[clerk-token] Failed to retrieve Google token from Clerk for provider=%s: %s",
+                    provider,
+                    e,
+                )
+                continue
+
+            if candidate_tokens:
+                logger.debug("[clerk-token] Received Google token response from provider=%s", provider)
+                tokens = candidate_tokens
+                break
 
         # The Clerk SDK typically returns a list of token objects; normalize defensively.
+        if tokens is None:
+            logger.warning("[clerk-token] No Google oauth tokens returned from Clerk for providers=%s", GOOGLE_PROVIDER_CANDIDATES)
+            return None
+
         if not isinstance(tokens, list):
             try:
                 tokens = list(tokens)  # type: ignore[arg-type]

@@ -27,6 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.progressivereader.kmp.offline.BookCache
 import com.progressivereader.kmp.reader.HtmlContent
+import com.progressivereader.kmp.reader.HtmlDocumentSpec
+import com.progressivereader.kmp.reader.HtmlPresentationSpec
 import com.progressivereader.kmp.settings.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -130,10 +132,17 @@ fun TextReaderScreen(
 
                 else -> {
                     HtmlContent(
-                        html = html!!,
-                        baseUrl = null,
-                        darkMode = isDarkThemeMode(settings.reader.theme),
-                        fontSizeSp = settings.reader.fontSizeSp,
+                        document =
+                            HtmlDocumentSpec(
+                                bodyHtml = html!!,
+                                chapterKey = "txt:$bookId",
+                                contentKey = "txt:$bookId",
+                            ),
+                        presentation =
+                            HtmlPresentationSpec(
+                                darkMode = isDarkThemeMode(settings.reader.theme),
+                                fontSizeSp = settings.reader.fontSizeSp,
+                            ),
                         onUrlClick = { true },
                         onSwipe = null,
                     )

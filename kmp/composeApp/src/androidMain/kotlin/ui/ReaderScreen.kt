@@ -18,16 +18,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,9 +47,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -65,9 +62,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -75,20 +71,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.progressivereader.kmp.domain.reader.Bookmark
 import com.progressivereader.kmp.reader.EpubBook
+import com.progressivereader.kmp.reader.HtmlDocumentSpec
+import com.progressivereader.kmp.reader.HtmlPresentationSpec
 import com.progressivereader.kmp.reader.HtmlContent
 import com.progressivereader.kmp.reader.SwipeDirection
 import com.progressivereader.kmp.tts.TtsController
 import com.progressivereader.kmp.ui.viewmodels.JpdbTokenUi
 import com.progressivereader.kmp.ui.viewmodels.ReaderUiState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
 
-private enum class JpdbReviewGrade(val label: String, val rating: String, val accent: Color) {
-    NOTHING("nothing", "nothing", Color(0xFFEF4444)),
-    SOMETHING("something", "something", Color(0xFFFB7185)),
-    HARD("hard", "hard", Color(0xFFF97316)),
-    OKAY("okay", "good", Color(0xFF34D399)), // JPDB calls this "okay"; backend accepts "good" and maps to grade=okay.
-    EASY("easy", "easy", Color(0xFF38BDF8)),
+private enum class JpdbReviewGrade(val label: String, val rating: String) {
+    NOTHING("nothing", "nothing"),
+    SOMETHING("something", "something"),
+    HARD("hard", "hard"),
+    OKAY("okay", "good"),
+    EASY("easy", "easy"),
 }
 
 @Composable
@@ -98,17 +97,26 @@ private fun ReviewGradeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val accent =
+        when (grade) {
+            JpdbReviewGrade.NOTHING -> androidx.compose.ui.graphics.Color(0xFFEF4444)
+            JpdbReviewGrade.SOMETHING -> androidx.compose.ui.graphics.Color(0xFFFB7185)
+            JpdbReviewGrade.HARD -> androidx.compose.ui.graphics.Color(0xFFF97316)
+            JpdbReviewGrade.OKAY -> androidx.compose.ui.graphics.Color(0xFF34D399)
+            JpdbReviewGrade.EASY -> androidx.compose.ui.graphics.Color(0xFF38BDF8)
+        }
+
     OutlinedButton(
         modifier = modifier,
         enabled = enabled,
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, grade.accent.copy(alpha = if (enabled) 0.9f else 0.35f)),
+        border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.85f else 0.35f)),
         colors =
             ButtonDefaults.outlinedButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-                contentColor = grade.accent,
-                disabledContentColor = grade.accent.copy(alpha = 0.4f),
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
+                contentColor = accent,
+                disabledContentColor = accent.copy(alpha = 0.4f),
             ),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     ) {
@@ -146,7 +154,6 @@ fun ReaderScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
-    val isCompactTopBar = LocalConfiguration.current.screenWidthDp < 420
 
     val ttsController = remember { TtsController(context) }
     DisposableEffect(ttsController) { onDispose { ttsController.shutdown() } }
@@ -155,7 +162,7 @@ fun ReaderScreen(
     val isSpeaking by ttsController.isSpeaking.collectAsState(initial = false)
     val isPaused by ttsController.isPaused.collectAsState(initial = false)
 
-    var showTtsSheet by remember { mutableStateOf(false) }
+    var showQuickSettingsSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember(state.bookId) { mutableStateOf(false) }
     var selectedTokenId by remember { mutableStateOf<String?>(null) }
 
@@ -166,7 +173,6 @@ fun ReaderScreen(
     }
 
     val darkModeEffective = isDarkThemeMode(state.theme)
-
     val totalChapters = state.epubBook?.chapters?.size ?: 0
     val isBookmarkedForCurrentChapter = state.bookState.bookmarks.any { it.chapterIndex == state.chapterIndex }
 
@@ -213,16 +219,6 @@ fun ReaderScreen(
         onSetTheme(next)
     }
 
-    fun toggleTts() {
-        selectedTokenId = null
-        showTtsSheet = true
-        when {
-            isSpeaking -> ttsController.pause()
-            isPaused -> ttsController.resume()
-            else -> ttsController.speak(speakText)
-        }
-    }
-
     val untranslatedBody =
         if (state.mixActive) {
             state.mixedBodyHtml ?: state.chapterBodyHtml
@@ -262,9 +258,10 @@ fun ReaderScreen(
         when {
             highlightedForDisplay != null -> highlightedForDisplay
             else -> baseBody
-        } ?: "<p>Loading…</p>"
+        } ?: "<p>Loading...</p>"
 
-    val html = state.chapterHeadHtml + effectiveBody
+    val chapterKey = "${state.bookId}:${state.chapterIndex}"
+    val contentKey = "$chapterKey:${state.chapterHeadHtml.hashCode()}:${effectiveBody.hashCode()}"
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -286,260 +283,56 @@ fun ReaderScreen(
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        ),
-                    title = {
-                        Column {
-                            Text(
-                                text = state.epubBook?.title ?: state.title,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                ReaderTopBar(
+                    title = state.epubBook?.title ?: state.title,
+                    subtitle = if (totalChapters > 0) "Chapter ${state.chapterIndex + 1} of $totalChapters" else null,
+                    isBusy = state.isTranslating || state.isApplyingHighlights || state.isApplyingMix || state.isRefiningMix,
+                    onBack = onBack,
+                    canOpenContents = totalChapters > 0,
+                    onOpenContents = { scope.launch { drawerState.open() } },
+                    onOpenQuickSettings = {
+                        selectedTokenId = null
+                        showQuickSettingsSheet = true
+                    },
+                    onOpenOverflow = { showOverflowMenu = true },
+                    overflowMenu = {
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Advanced settings") },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onOpenSettings()
+                                },
                             )
-                            if (totalChapters > 0) {
-                                Text(
-                                    text = "Chapter ${state.chapterIndex + 1} / $totalChapters",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        if (isCompactTopBar) {
-                            IconButton(
-                                enabled = totalChapters > 0,
-                                onClick = { scope.launch { drawerState.open() } },
-                            ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
-
-                            IconButton(onClick = { showOverflowMenu = true }) {
-                                Icon(Icons.Outlined.MoreVert, contentDescription = "More")
-                            }
-
-                            DropdownMenu(
-                                expanded = showOverflowMenu,
-                                onDismissRequest = { showOverflowMenu = false },
-                            ) {
+                            if (state.mixEnabled) {
                                 DropdownMenuItem(
-                                    text = { Text("A-") },
-                                    enabled = state.fontSizeSp > 12f,
+                                    text = { Text("Refine mix swaps") },
+                                    enabled =
+                                        state.mixActive &&
+                                            state.isOnline &&
+                                            state.hasOpenAiApiKey &&
+                                            !state.isApplyingMix &&
+                                            !state.isRefiningMix &&
+                                            !state.isApplyingHighlights &&
+                                            !state.isTranslating,
                                     onClick = {
                                         showOverflowMenu = false
-                                        decreaseFontSize()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("A+") },
-                                    enabled = state.fontSizeSp < 32f,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        increaseFontSize()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (darkModeEffective) "Light theme" else "Dark theme") },
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        toggleTheme()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (state.highlightEnabled) "Disable highlights" else "Enable highlights") },
-                                    enabled = state.chapterBodyHtml != null && !state.isTranslating && !state.isApplyingMix && !state.isRefiningMix,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        onToggleHighlights()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (state.isTranslated) "Show original" else "Translate") },
-                                    enabled = state.chapterBodyHtml != null && !state.isApplyingHighlights && !state.isTranslating,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        onToggleTranslate()
-                                    },
-                                )
-                                if (state.mixEnabled) {
-                                    DropdownMenuItem(
-                                        text = { Text("Refine mix swaps") },
-                                        enabled =
-                                            state.mixActive &&
-                                                state.isOnline &&
-                                                state.hasOpenAiApiKey &&
-                                                !state.isApplyingMix &&
-                                                !state.isRefiningMix &&
-                                                !state.isApplyingHighlights &&
-                                                !state.isTranslating,
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            onRefineMix()
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Clear refined swaps") },
-                                        enabled = state.refinedChoices.isNotEmpty() && !state.isApplyingMix && !state.isRefiningMix,
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            onClearRefineMix()
-                                        },
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            when {
-                                                isSpeaking -> "Pause TTS"
-                                                isPaused -> "Resume TTS"
-                                                else -> "Start TTS"
-                                            }
-                                        )
-                                    },
-                                    enabled = speakText.isNotBlank() && ttsReady,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        toggleTts()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (isBookmarkedForCurrentChapter) "Remove bookmark" else "Add bookmark") },
-                                    enabled = totalChapters > 0,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        onToggleBookmark()
+                                        onRefineMix()
                                     },
                                 )
                             }
-                        } else {
-                            IconButton(
-                                enabled = totalChapters > 0,
-                                onClick = { scope.launch { drawerState.open() } },
-                            ) { Icon(Icons.Outlined.MenuBook, contentDescription = "TOC") }
-
-                            AppTextButton(text = "A-", enabled = state.fontSizeSp > 12f, onClick = { decreaseFontSize() })
-                            AppTextButton(text = "A+", enabled = state.fontSizeSp < 32f, onClick = { increaseFontSize() })
-
-                            IconButton(onClick = { toggleTheme() }) {
-                                Icon(
-                                    if (darkModeEffective) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                                    contentDescription = "Theme",
-                                )
-                            }
-
-                            IconButton(
-                                enabled = state.chapterBodyHtml != null && !state.isTranslating && !state.isApplyingMix && !state.isRefiningMix,
-                                onClick = { onToggleHighlights() },
-                            ) {
-                                if (state.isApplyingHighlights) {
-                                    CircularProgressIndicator(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.padding(6.dp),
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Outlined.AutoFixHigh,
-                                        contentDescription = "Highlights",
-                                        tint = if (state.highlightEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                            }
-
-                            IconButton(
-                                enabled = state.chapterBodyHtml != null && !state.isApplyingHighlights && !state.isTranslating,
-                                onClick = { onToggleTranslate() },
-                            ) {
-                                if (state.isTranslating) {
-                                    CircularProgressIndicator(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.padding(6.dp),
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Outlined.Language,
-                                        contentDescription = "Translate",
-                                        tint = if (state.isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                            }
-
-                            IconButton(
-                                enabled = speakText.isNotBlank() && ttsReady,
-                                onClick = { toggleTts() },
-                            ) {
-                                Icon(
-                                    when {
-                                        isSpeaking -> Icons.Outlined.PauseCircle
-                                        isPaused -> Icons.Outlined.PlayCircle
-                                        else -> Icons.Outlined.VolumeUp
+                            if (state.refinedChoices.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("Clear refined swaps") },
+                                    enabled = !state.isApplyingMix && !state.isRefiningMix,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        onClearRefineMix()
                                     },
-                                    contentDescription = "Text to speech",
-                                    tint = if (isSpeaking || isPaused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                 )
-                            }
-
-                            IconButton(
-                                enabled = totalChapters > 0,
-                                onClick = { onToggleBookmark() },
-                            ) {
-                                Icon(
-                                    if (isBookmarkedForCurrentChapter) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkAdd,
-                                    contentDescription = "Bookmark",
-                                )
-                            }
-
-                            val showMixMenu = state.mixEnabled || state.refinedChoices.isNotEmpty()
-                            if (showMixMenu) {
-                                IconButton(onClick = { showOverflowMenu = true }) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "More")
-                                }
-
-                                DropdownMenu(
-                                    expanded = showOverflowMenu,
-                                    onDismissRequest = { showOverflowMenu = false },
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Mix settings") },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            onOpenSettings()
-                                        },
-                                    )
-
-                                    if (state.mixEnabled) {
-                                        DropdownMenuItem(
-                                            text = { Text("Refine mix swaps") },
-                                            enabled =
-                                                state.mixActive &&
-                                                    state.isOnline &&
-                                                    state.hasOpenAiApiKey &&
-                                                    !state.isApplyingMix &&
-                                                    !state.isRefiningMix &&
-                                                    !state.isApplyingHighlights &&
-                                                    !state.isTranslating,
-                                            onClick = {
-                                                showOverflowMenu = false
-                                                onRefineMix()
-                                            },
-                                        )
-                                    }
-
-                                    DropdownMenuItem(
-                                        text = { Text("Clear refined swaps") },
-                                        enabled = state.refinedChoices.isNotEmpty() && !state.isApplyingMix && !state.isRefiningMix,
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            onClearRefineMix()
-                                        },
-                                    )
-                                }
                             }
                         }
                     },
@@ -551,302 +344,581 @@ fun ReaderScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (state.chapterBodyHtml == null) {
-                    CircularProgressIndicator()
-                } else {
-                    Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                        HtmlContent(
-                            html = html,
-                            baseUrl = state.chapterBaseUrl,
-                            darkMode = darkModeEffective,
-                            fontSizeSp = state.fontSizeSp,
-                            onUrlClick = { url ->
-                                val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return@HtmlContent false
-                                if (uri.scheme != "pr" || uri.host != "jpdb") return@HtmlContent false
-                                val tid = uri.getQueryParameter("tid")?.takeIf { it.isNotBlank() } ?: return@HtmlContent true
-                                if (canShowHighlights && state.tokenUiById.containsKey(tid)) {
-                                    showTtsSheet = false
-                                    selectedTokenId = tid
-                                } else {
-                                    scope.launch { snackbarHostState.showSnackbar("No token data for that word.") }
-                                }
-                                true
-                            },
-                            onSwipe = { direction ->
-                                when (direction) {
-                                    SwipeDirection.LEFT -> onNextChapter()
-                                    SwipeDirection.RIGHT -> onPrevChapter()
-                                }
-                            },
-                        )
+                ReaderBusyIndicator(
+                    isTranslated = state.isTranslated,
+                    highlightsVisible = canShowHighlights,
+                    mixActive = state.mixActive,
+                    isBusy = state.isTranslating || state.isApplyingHighlights || state.isApplyingMix || state.isRefiningMix,
+                    busyLabel =
+                        when {
+                            state.isRefiningMix -> "Refining mix..."
+                            state.isTranslating -> "Translating..."
+                            state.isApplyingHighlights -> "Refreshing highlights..."
+                            state.isApplyingMix -> "Applying mix..."
+                            else -> null
+                        },
+                )
 
-                        val showBusyOverlay = state.isTranslating || state.isApplyingHighlights || state.isApplyingMix || state.isRefiningMix
-                        if (showBusyOverlay) {
-                            val label =
-                                when {
-                                    state.isRefiningMix -> "Refining mix…"
-                                    state.isTranslating -> "Translating…"
-                                    state.isApplyingHighlights -> "Applying highlights…"
-                                    else -> "Applying mix…"
-                                }
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.TopCenter,
-                            ) {
-                                Surface(
-                                    shape = MaterialTheme.shapes.large,
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
-                                    tonalElevation = 2.dp,
-                                    modifier = Modifier.padding(top = 10.dp),
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                if (state.chapterBodyHtml == null) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
                     }
+                } else {
+                    ReaderBody(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        document =
+                            HtmlDocumentSpec(
+                                bodyHtml = effectiveBody,
+                                headHtml = state.chapterHeadHtml,
+                                baseUrl = state.chapterBaseUrl,
+                                chapterKey = chapterKey,
+                                contentKey = contentKey,
+                            ),
+                        presentation =
+                            HtmlPresentationSpec(
+                                darkMode = darkModeEffective,
+                                fontSizeSp = state.fontSizeSp,
+                            ),
+                        onUrlClick = { url ->
+                            val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return@ReaderBody false
+                            if (uri.scheme != "pr" || uri.host != "jpdb") return@ReaderBody false
+                            val tid = uri.getQueryParameter("tid")?.takeIf { it.isNotBlank() } ?: return@ReaderBody true
+                            if (canShowHighlights && state.tokenUiById.containsKey(tid)) {
+                                showQuickSettingsSheet = false
+                                selectedTokenId = tid
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("No token data for that word.") }
+                            }
+                            true
+                        },
+                        onSwipe = { direction ->
+                            when (direction) {
+                                SwipeDirection.LEFT -> onNextChapter()
+                                SwipeDirection.RIGHT -> onPrevChapter()
+                            }
+                        },
+                    )
                 }
             }
         }
     }
 
-    if (showTtsSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showTtsSheet = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Text(
-                    text = "Text to speech",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-
-                AppMutedText("Speed: ${"%.2f".format(ttsRate)}x")
-                Slider(
-                    value = ttsRate.coerceIn(0.75f, 1.5f),
-                    onValueChange = { next ->
-                        val clamped = next.coerceIn(0.75f, 1.5f)
-                        ttsRate = clamped
-                        ttsController.setRate(clamped)
-                    },
-                    valueRange = 0.75f..1.5f,
-                    onValueChangeFinished = { onSetTtsRate(ttsRate) },
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AppTonalButton(
-                        text =
-                            when {
-                                isSpeaking -> "Pause"
-                                isPaused -> "Resume"
-                                else -> "Speak"
-                            },
-                        enabled = ttsReady && speakText.isNotBlank(),
-                        onClick = {
-                            when {
-                                isSpeaking -> ttsController.pause()
-                                isPaused -> ttsController.resume()
-                                else -> ttsController.speak(speakText)
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                when {
-                                    isSpeaking -> Icons.Outlined.PauseCircle
-                                    isPaused -> Icons.Outlined.PlayCircle
-                                    else -> Icons.Outlined.VolumeUp
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-
-                    AppOutlineButton(
-                        text = "Stop",
-                        enabled = isSpeaking || isPaused,
-                        onClick = { ttsController.stop() },
-                    )
+    if (showQuickSettingsSheet) {
+        ReaderQuickSettingsSheet(
+            state = state,
+            darkModeEffective = darkModeEffective,
+            totalChapters = totalChapters,
+            isBookmarkedForCurrentChapter = isBookmarkedForCurrentChapter,
+            ttsRate = ttsRate,
+            ttsReady = ttsReady,
+            isSpeaking = isSpeaking,
+            isPaused = isPaused,
+            speakText = speakText,
+            onDismiss = { showQuickSettingsSheet = false },
+            onAdvancedSettings = {
+                showQuickSettingsSheet = false
+                onOpenSettings()
+            },
+            onDecreaseFontSize = { decreaseFontSize() },
+            onIncreaseFontSize = { increaseFontSize() },
+            onToggleTheme = { toggleTheme() },
+            onToggleTranslate = onToggleTranslate,
+            onToggleHighlights = onToggleHighlights,
+            onToggleBookmark = onToggleBookmark,
+            onTtsRateChange = { next ->
+                val clamped = next.coerceIn(0.75f, 1.5f)
+                ttsRate = clamped
+                ttsController.setRate(clamped)
+            },
+            onTtsRateCommit = { onSetTtsRate(ttsRate) },
+            onToggleTts = {
+                when {
+                    isSpeaking -> ttsController.pause()
+                    isPaused -> ttsController.resume()
+                    else -> ttsController.speak(speakText)
                 }
-
-                AppOutlineButton(
-                    text = "Close",
-                    onClick = { showTtsSheet = false },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(Modifier.height(6.dp))
-            }
-        }
+            },
+            onStopTts = { ttsController.stop() },
+        )
     }
 
     if (selectedTokenId != null) {
-        val token: JpdbTokenUi? = selectedTokenId?.let { state.tokenUiById[it] }
-        ModalBottomSheet(
-            onDismissRequest = { selectedTokenId = null },
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (token == null) {
-                    Text("No token data available.", style = MaterialTheme.typography.bodyMedium)
-                    return@ModalBottomSheet
-                }
+        ReaderTokenSheet(
+            token = selectedTokenId?.let { state.tokenUiById[it] },
+            state = state,
+            clipboard = clipboard,
+            snackbarHostState = snackbarHostState,
+            onDismiss = { selectedTokenId = null },
+            onJpdbMineWord = onJpdbMineWord,
+            onJpdbSetFlag = onJpdbSetFlag,
+            onJpdbReviewCard = onJpdbReviewCard,
+            scope = scope,
+        )
+    }
+}
 
-                val card = token.card
-                Text(
-                    text = card.spelling ?: "(unknown)",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReaderTopBar(
+    title: String,
+    subtitle: String?,
+    isBusy: Boolean,
+    onBack: () -> Unit,
+    canOpenContents: Boolean,
+    onOpenContents: () -> Unit,
+    onOpenQuickSettings: () -> Unit,
+    onOpenOverflow: () -> Unit,
+    overflowMenu: @Composable () -> Unit,
+) {
+    AppShellTopBar(
+        title = title,
+        subtitle = subtitle,
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+            }
+        },
+        actions = {
+            if (isBusy) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(18.dp).padding(end = 2.dp),
                 )
-                if (!card.reading.isNullOrBlank()) {
-                    AppMutedText(card.reading!!)
+            }
+            IconButton(enabled = canOpenContents, onClick = onOpenContents) {
+                Icon(Icons.Outlined.MenuBook, contentDescription = "Contents")
+            }
+            IconButton(onClick = onOpenQuickSettings) {
+                Icon(Icons.Outlined.Tune, contentDescription = "Quick settings")
+            }
+            Box {
+                IconButton(onClick = onOpenOverflow) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = "More")
                 }
+                overflowMenu()
+            }
+        },
+    )
+}
 
-                if (card.meanings.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+@Composable
+private fun ReaderBusyIndicator(
+    isTranslated: Boolean,
+    highlightsVisible: Boolean,
+    mixActive: Boolean,
+    isBusy: Boolean,
+    busyLabel: String?,
+) {
+    val chips =
+        buildList {
+            if (mixActive) add("Mix")
+            if (highlightsVisible) add("Highlights")
+            if (isTranslated) add("Translated")
+        }
+    if (!isBusy && chips.isEmpty()) return
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (isBusy && !busyLabel.isNullOrBlank()) {
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                Text(busyLabel, style = MaterialTheme.typography.bodySmall)
+            } else {
+                AppMutedText("Reader ready")
+            }
+            Spacer(Modifier.weight(1f))
+            chips.forEach { label -> AppChip(text = label) }
+        }
+    }
+}
+
+@Composable
+private fun ReaderBody(
+    modifier: Modifier = Modifier,
+    document: HtmlDocumentSpec,
+    presentation: HtmlPresentationSpec,
+    onUrlClick: (String) -> Boolean,
+    onSwipe: ((SwipeDirection) -> Unit)?,
+) {
+    Box(modifier = modifier) {
+        HtmlContent(
+            document = document,
+            presentation = presentation,
+            onUrlClick = onUrlClick,
+            onSwipe = onSwipe,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReaderQuickSettingsSheet(
+    state: ReaderUiState,
+    darkModeEffective: Boolean,
+    totalChapters: Int,
+    isBookmarkedForCurrentChapter: Boolean,
+    ttsRate: Float,
+    ttsReady: Boolean,
+    isSpeaking: Boolean,
+    isPaused: Boolean,
+    speakText: String,
+    onDismiss: () -> Unit,
+    onAdvancedSettings: () -> Unit,
+    onDecreaseFontSize: () -> Unit,
+    onIncreaseFontSize: () -> Unit,
+    onToggleTheme: () -> Unit,
+    onToggleTranslate: () -> Unit,
+    onToggleHighlights: () -> Unit,
+    onToggleBookmark: () -> Unit,
+    onTtsRateChange: (Float) -> Unit,
+    onTtsRateCommit: () -> Unit,
+    onToggleTts: () -> Unit,
+    onStopTts: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            AppSectionHeader(
+                title = "Reader controls",
+                subtitle = if (totalChapters > 0) "Keep the page clear and bring controls in only when needed." else null,
+            )
+
+            AppSectionSurface(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppSectionHeader(title = "Appearance")
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AppOutlineButton(
+                            text = "A-",
+                            enabled = state.fontSizeSp > 12f,
+                            onClick = onDecreaseFontSize,
+                            modifier = Modifier.weight(1f),
+                        )
+                        AppOutlineButton(
+                            text = "A+",
+                            enabled = state.fontSizeSp < 32f,
+                            onClick = onIncreaseFontSize,
+                            modifier = Modifier.weight(1f),
+                        )
+                        AppTonalButton(
+                            text = if (darkModeEffective) "Light" else "Dark",
+                            onClick = onToggleTheme,
+                            modifier = Modifier.weight(1f),
+                            icon = {
+                                Icon(
+                                    if (darkModeEffective) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
+                        )
+                    }
+                    AppMutedText("Font size ${state.fontSizeSp.toInt()}sp")
+                }
+            }
+
+            AppSectionSurface(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppSectionHeader(title = "Reading")
+                    ReaderToggleRow(
+                        title = if (state.isTranslated) "Show original" else "Translate",
+                        checked = state.isTranslated,
+                        enabled = state.chapterBodyHtml != null && !state.isApplyingHighlights && !state.isTranslating,
+                        onToggle = onToggleTranslate,
+                    )
+                    ReaderToggleRow(
+                        title = "Highlights",
+                        checked = state.highlightEnabled,
+                        enabled = state.chapterBodyHtml != null && !state.isTranslating && !state.isApplyingMix && !state.isRefiningMix,
+                        onToggle = onToggleHighlights,
+                    )
+                    ReaderToggleRow(
+                        title = if (isBookmarkedForCurrentChapter) "Bookmarked" else "Bookmark chapter",
+                        checked = isBookmarkedForCurrentChapter,
+                        enabled = totalChapters > 0,
+                        onToggle = onToggleBookmark,
+                    )
+                }
+            }
+
+            AppSectionSurface(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppSectionHeader(title = "Text to speech")
+                    AppMutedText("Speed ${"%.2f".format(ttsRate)}x")
+                    Slider(
+                        value = ttsRate.coerceIn(0.75f, 1.5f),
+                        onValueChange = onTtsRateChange,
+                        valueRange = 0.75f..1.5f,
+                        onValueChangeFinished = onTtsRateCommit,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AppTonalButton(
+                            text =
+                                when {
+                                    isSpeaking -> "Pause"
+                                    isPaused -> "Resume"
+                                    else -> "Speak"
+                                },
+                            enabled = ttsReady && speakText.isNotBlank(),
+                            onClick = onToggleTts,
+                            modifier = Modifier.weight(1f),
+                            icon = {
+                                Icon(
+                                    when {
+                                        isSpeaking -> Icons.Outlined.PauseCircle
+                                        isPaused -> Icons.Outlined.PlayCircle
+                                        else -> Icons.Outlined.VolumeUp
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
+                        )
+                        AppOutlineButton(
+                            text = "Stop",
+                            enabled = isSpeaking || isPaused,
+                            onClick = onStopTts,
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppOutlineButton(
+                    text = "Advanced settings",
+                    onClick = onAdvancedSettings,
+                    modifier = Modifier.weight(1f),
+                )
+                AppTonalButton(
+                    text = "Close",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Spacer(Modifier.height(6.dp))
+        }
+    }
+}
+
+@Composable
+private fun ReaderToggleRow(
+    title: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = { onToggle() },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReaderTokenSheet(
+    token: JpdbTokenUi?,
+    state: ReaderUiState,
+    clipboard: ClipboardManager,
+    snackbarHostState: SnackbarHostState,
+    onDismiss: () -> Unit,
+    onJpdbMineWord: (tokenId: String, vid: Int, sid: Int) -> Unit,
+    onJpdbSetFlag: (tokenId: String, vid: Int, sid: Int, flag: String, enabled: Boolean) -> Unit,
+    onJpdbReviewCard: (tokenId: String, vid: Int, sid: Int, rating: String, label: String) -> Unit,
+    scope: CoroutineScope,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            if (token == null) {
+                Text("No token data available.", style = MaterialTheme.typography.bodyMedium)
+                return@ModalBottomSheet
+            }
+
+            val card = token.card
+            Text(
+                text = card.spelling ?: "(unknown)",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (!card.reading.isNullOrBlank()) {
+                AppMutedText(card.reading!!)
+            }
+
+            AppSectionSurface(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    AppSectionHeader(title = "Meaning")
+                    if (card.meanings.isNotEmpty()) {
                         card.meanings.forEach { meaning ->
                             if (!meaning.partOfSpeech.isNullOrBlank()) {
                                 AppChip(text = meaning.partOfSpeech!!)
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 meaning.glosses.forEach { gloss ->
-                                    Text("• $gloss", style = MaterialTheme.typography.bodyMedium)
+                                    Text("- $gloss", style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                         }
-                    }
-                } else {
-                    AppMutedText("No meanings available.")
-                }
-
-                val vid = token.vid
-                val sid = token.sid
-
-                fun Set<String>.hasNeverForget(): Boolean =
-                    contains("never-forget") || contains("never_forget") || contains("neverforget")
-
-                val hasNeverForget = token.state.hasNeverForget()
-                val hasBlacklisted = token.state.contains("blacklisted")
-
-                val canUseJpdbActions = state.isOnline && state.hasJpdbApiKey && vid != null && sid != null
-
-                AppSectionTitle("JPDB")
-                if (!canUseJpdbActions) {
-                    AppMutedText("Online + JPDB API key required.")
-                } else {
-                    val tid = token.id
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        AppTonalButton(
-                            text = "Add",
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbMineWord(tid, vid!!, sid!!) },
-                            modifier = Modifier.weight(1f),
-                        )
-
-                        AppTonalButton(
-                            text = if (hasNeverForget) "Unset never-forget" else "Never forget",
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbSetFlag(tid, vid!!, sid!!, "never-forget", !hasNeverForget) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
-                    AppTonalButton(
-                        text = if (hasBlacklisted) "Unblacklist" else "Blacklist",
-                        enabled = !state.isJpdbActionBusy,
-                        onClick = { onJpdbSetFlag(tid, vid!!, sid!!, "blacklist", !hasBlacklisted) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    AppMutedText("Review")
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ReviewGradeButton(
-                            grade = JpdbReviewGrade.NOTHING,
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.NOTHING.rating, JpdbReviewGrade.NOTHING.label) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        ReviewGradeButton(
-                            grade = JpdbReviewGrade.SOMETHING,
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.SOMETHING.rating, JpdbReviewGrade.SOMETHING.label) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        ReviewGradeButton(
-                            grade = JpdbReviewGrade.HARD,
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.HARD.rating, JpdbReviewGrade.HARD.label) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ReviewGradeButton(
-                            grade = JpdbReviewGrade.OKAY,
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.OKAY.rating, JpdbReviewGrade.OKAY.label) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        ReviewGradeButton(
-                            grade = JpdbReviewGrade.EASY,
-                            enabled = !state.isJpdbActionBusy,
-                            onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.EASY.rating, JpdbReviewGrade.EASY.label) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
-                    if (state.isJpdbActionBusy) {
-                        AppMutedText("Processing…")
+                    } else {
+                        AppMutedText("No meanings available.")
                     }
                 }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AppTonalButton(
-                        text = "Copy word",
-                        enabled = !card.spelling.isNullOrBlank(),
-                        onClick = {
-                            card.spelling?.let { clipboard.setText(AnnotatedString(it)) }
-                            scope.launch { snackbarHostState.showSnackbar("Copied word") }
-                        },
-                    )
-                    AppTonalButton(
-                        text = "Copy reading",
-                        enabled = !card.reading.isNullOrBlank(),
-                        onClick = {
-                            card.reading?.let { clipboard.setText(AnnotatedString(it)) }
-                            scope.launch { snackbarHostState.showSnackbar("Copied reading") }
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(6.dp))
             }
+
+            val vid = token.vid
+            val sid = token.sid
+
+            fun Set<String>.hasNeverForget(): Boolean =
+                contains("never-forget") || contains("never_forget") || contains("neverforget")
+
+            val hasNeverForget = token.state.hasNeverForget()
+            val hasBlacklisted = token.state.contains("blacklisted")
+            val canUseJpdbActions = state.isOnline && state.hasJpdbApiKey && vid != null && sid != null
+
+            AppSectionSurface(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppSectionHeader(title = "JPDB")
+                    if (!canUseJpdbActions) {
+                        AppMutedText("Online + JPDB API key required.")
+                    } else {
+                        val tid = token.id
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            AppTonalButton(
+                                text = "Add",
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbMineWord(tid, vid!!, sid!!) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            AppTonalButton(
+                                text = if (hasNeverForget) "Unset never-forget" else "Never forget",
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbSetFlag(tid, vid!!, sid!!, "never-forget", !hasNeverForget) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+
+                        AppTonalButton(
+                            text = if (hasBlacklisted) "Unblacklist" else "Blacklist",
+                            enabled = !state.isJpdbActionBusy,
+                            onClick = { onJpdbSetFlag(tid, vid!!, sid!!, "blacklist", !hasBlacklisted) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        AppMutedText("Review")
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ReviewGradeButton(
+                                grade = JpdbReviewGrade.NOTHING,
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.NOTHING.rating, JpdbReviewGrade.NOTHING.label) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            ReviewGradeButton(
+                                grade = JpdbReviewGrade.SOMETHING,
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.SOMETHING.rating, JpdbReviewGrade.SOMETHING.label) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            ReviewGradeButton(
+                                grade = JpdbReviewGrade.HARD,
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.HARD.rating, JpdbReviewGrade.HARD.label) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ReviewGradeButton(
+                                grade = JpdbReviewGrade.OKAY,
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.OKAY.rating, JpdbReviewGrade.OKAY.label) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            ReviewGradeButton(
+                                grade = JpdbReviewGrade.EASY,
+                                enabled = !state.isJpdbActionBusy,
+                                onClick = { onJpdbReviewCard(tid, vid!!, sid!!, JpdbReviewGrade.EASY.rating, JpdbReviewGrade.EASY.label) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+
+                        if (state.isJpdbActionBusy) {
+                            AppMutedText("Processing...")
+                        }
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AppTonalButton(
+                    text = "Copy word",
+                    enabled = !card.spelling.isNullOrBlank(),
+                    onClick = {
+                        card.spelling?.let { clipboard.setText(AnnotatedString(it)) }
+                        scope.launch { snackbarHostState.showSnackbar("Copied word") }
+                    },
+                )
+                AppTonalButton(
+                    text = "Copy reading",
+                    enabled = !card.reading.isNullOrBlank(),
+                    onClick = {
+                        card.reading?.let { clipboard.setText(AnnotatedString(it)) }
+                        scope.launch { snackbarHostState.showSnackbar("Copied reading") }
+                    },
+                )
+            }
+
+            Spacer(Modifier.height(6.dp))
         }
     }
 }
@@ -863,46 +935,41 @@ private fun DrawerContents(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(vertical = 12.dp, horizontal = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(
-            "Contents",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
+        AppSectionHeader(
+            title = "Contents",
+            subtitle = epubBook?.chapters?.size?.let { "$it chapters" } ?: "Loading",
         )
 
         if (epubBook == null) {
-            Text("Loading…", modifier = Modifier.padding(horizontal = 16.dp))
+            Text("Loading...", modifier = Modifier.padding(horizontal = 4.dp))
             return
         }
 
-        epubBook.chapters.forEachIndexed { idx, ch ->
-            NavigationDrawerItem(
-                label = {
-                    Text(
-                        text = ch.title.ifBlank { "Chapter ${idx + 1}" },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                selected = idx == chapterIndex,
-                onClick = { onSelectChapter(idx) },
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            epubBook.chapters.forEachIndexed { idx, ch ->
+                NavigationDrawerItem(
+                    label = {
+                        Text(
+                            text = ch.title.ifBlank { "Chapter ${idx + 1}" },
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    selected = idx == chapterIndex,
+                    onClick = { onSelectChapter(idx) },
+                )
+            }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-        Text(
-            "Bookmarks",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleMedium,
-        )
+        HorizontalDivider()
+        AppSectionHeader(title = "Bookmarks", subtitle = "${bookmarks.distinctBy { it.chapterIndex }.size} saved")
 
         val unique = bookmarks.distinctBy { it.chapterIndex }.sortedBy { it.chapterIndex }
         if (unique.isEmpty()) {
-            Text("No bookmarks yet.", modifier = Modifier.padding(horizontal = 16.dp))
+            AppMutedText("No bookmarks yet.")
         } else {
             unique.forEach { bm ->
                 val idx = bm.chapterIndex
@@ -914,7 +981,7 @@ private fun DrawerContents(
                         Modifier
                             .fillMaxWidth()
                             .clickable { onSelectChapter(idx) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

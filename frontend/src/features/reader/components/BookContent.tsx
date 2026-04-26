@@ -10,6 +10,8 @@ interface BookContentProps {
   isLoading: boolean;
   pdfData: ArrayBuffer | null;
   pdfViewerRef: React.RefObject<PdfViewerHandle>;
+  pdfCurrentPage: number;
+  setPdfCurrentPage: (page: number) => void;
   setPdfPageCount: (count: number) => void;
   settings?: { fontSize?: number; fontFamily?: string };
 }
@@ -22,6 +24,8 @@ export function BookContent({
   isLoading,
   pdfData,
   pdfViewerRef,
+  pdfCurrentPage,
+  setPdfCurrentPage,
   setPdfPageCount,
   settings,
 }: BookContentProps) {
@@ -41,7 +45,11 @@ export function BookContent({
           <PdfViewer
             ref={pdfViewerRef}
             data={pdfData}
+            currentPage={pdfCurrentPage}
+            onCurrentPageChange={setPdfCurrentPage}
             onPageCount={setPdfPageCount}
+            documentId={bookMetadata?.id}
+            documentVersion={bookMetadata?.modifiedTime}
           />
         ) : (
           <div className="py-8 text-center">{t('reader.pdf.loading')}</div>

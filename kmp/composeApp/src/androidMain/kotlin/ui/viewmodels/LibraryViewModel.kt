@@ -3,6 +3,7 @@ package com.progressivereader.kmp.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.domain.library.CachedBook
 import com.progressivereader.kmp.domain.library.DriveFile
 import com.progressivereader.kmp.domain.library.LibraryIndex
@@ -98,7 +99,9 @@ class LibraryViewModel(
 
         val prior = _state.value
         val priorOverride = prior.driveFolderIdOverride?.trim()?.takeIf { it.isNotBlank() }
-        val jwtChanged = (prior.sessionJwt?.trim()?.takeIf { it.isNotBlank() } != normalizedJwt)
+        val hadSession = !prior.sessionJwt.isNullOrBlank()
+        val hasSession = !normalizedJwt.isNullOrBlank()
+        val sessionAvailabilityChanged = hadSession != hasSession
 
         _state.update {
             it.copy(
@@ -108,8 +111,9 @@ class LibraryViewModel(
             )
         }
 
-        if (jwtChanged) {
-            // Clear Drive-derived state when the session changes so we don't render stale remote data.
+        if (sessionAvailabilityChanged) {
+            // Clear Drive-derived state only when Drive availability changes between signed-in and signed-out.
+            // Clerk rotates JWTs in the background; that should not blank the synced library.
             lastDriveRootFolderIdFetched = null
             lastMetadataFileIdLoaded = null
             _state.update {
@@ -163,6 +167,10 @@ class LibraryViewModel(
 
             val canUseDrive = canUseDrive(s0.copy(driveFetchFailed = false))
             if (!canUseDrive) {
+                AppLog.i(
+                    "Library",
+                    "Skipping Drive refresh: online=${s0.isOnline}, hasSession=${!s0.sessionJwt.isNullOrBlank()}",
+                )
                 _state.update { it.copy(remoteFiles = null) }
                 return@launch
             }
@@ -175,10 +183,17 @@ class LibraryViewModel(
 
             val effectiveRootFolderId = explicitRootFolderId ?: s0.inferredRootFolderId
             if (!force && effectiveRootFolderId == lastDriveRootFolderIdFetched && s0.remoteFiles != null && !s0.driveFetchFailed) {
+                AppLog.i(
+                    "Library",
+                    "Skipping Drive refresh: cached listing reused for folder=${effectiveRootFolderId ?: "<root>"}",
+                )
                 return@launch
             }
 
-            _state.update { it.copy(remoteFiles = null) }
+            AppLog.i(
+                "Library",
+                "Refreshing Drive library: force=$force, override=${explicitRootFolderId ?: "<none>"}, inferred=${s0.inferredRootFolderId ?: "<none>"}",
+            )
 
             val driveRes =
                 runCatching {
@@ -189,11 +204,29 @@ class LibraryViewModel(
                 }
             if (driveRes.isFailure) {
                 val msg = driveRes.exceptionOrNull()?.message ?: "Failed to load Drive library"
-                _state.update { it.copy(error = msg, driveFetchFailed = true) }
+                AppLog.e("Library", "Drive refresh failed: $msg", driveRes.exceptionOrNull())
+                _state.update {
+                    it.copy(
+                        error = if (it.remoteFiles.isNullOrEmpty()) msg else null,
+                        driveFetchFailed = true,
+                    )
+                }
                 return@launch
             }
 
             val listing = driveRes.getOrThrow()
+            if (!force && listing.files.isEmpty() && !s0.remoteFiles.isNullOrEmpty()) {
+                AppLog.w(
+                    "Library",
+                    "Drive refresh returned an empty listing during auto-refresh; keeping the previous synced library.",
+                )
+                _state.update { it.copy(error = null, driveFetchFailed = true) }
+                return@launch
+            }
+            AppLog.i(
+                "Library",
+                "Drive refresh loaded ${listing.files.size} files from folder=${listing.effectiveRootFolderId ?: "<root>"} (inferred=${listing.inferredRootFolderId ?: "<none>"})",
+            )
             lastDriveRootFolderIdFetched = listing.effectiveRootFolderId
             _state.update {
                 it.copy(

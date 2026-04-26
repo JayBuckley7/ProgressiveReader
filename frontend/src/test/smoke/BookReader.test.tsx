@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils';
 import { BookReader } from '@features/reader/components/BookReader';
 
@@ -32,10 +32,13 @@ vi.mock('@features/reader/utils/htmlToJsx', () => ({
 }));
 
 describe('BookReader (smoke)', () => {
-  it('renders translate control', () => {
+  it('renders translate control', async () => {
     renderWithProviders(
       <BookReader bookId="demo-1" currentChapter={0} setCurrentChapter={() => {}} onBack={() => {}} />
     );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reader controls' }));
+    });
     // The button has aria-label from i18n key reader.controls.translate
     const translateBtn = screen.getAllByLabelText(/Translate current chapter|この章を翻訳/i)[0];
     expect(translateBtn).toBeInTheDocument();

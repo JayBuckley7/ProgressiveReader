@@ -136,6 +136,8 @@ function createDrivePort(): DrivePort {
     loadGrammarProgress: () => gDriveService.loadGrammarProgress(),
     saveGrammarStateV2: (payload: any) => gDriveService.saveGrammarStateV2(payload),
     loadGrammarStateV2: () => gDriveService.loadGrammarStateV2(),
+    saveJlptDashboardState: (payload: any) => gDriveService.saveJlptDashboardState(payload),
+    loadJlptDashboardState: () => gDriveService.loadJlptDashboardState(),
     loadJpdbMirror: () => gDriveService.loadJpdbMirror(),
     saveJpdbMirror: (snapshot: any) => gDriveService.saveJpdbMirror(snapshot),
 

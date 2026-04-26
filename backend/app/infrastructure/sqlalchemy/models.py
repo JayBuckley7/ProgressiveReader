@@ -34,5 +34,25 @@ class Vocabulary(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 
-__all__ = ["Bookmark", "Vocabulary"]
+class OcrPageLayoutCache(db.Model):
+    """Persistent OCR layout cache keyed by page-image content hash."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    content_hash = db.Column(db.String(64), nullable=False)
+    ocr_profile = db.Column(db.String(64), nullable=False, default="ja-pdf-overlay-v1")
+    document_id = db.Column(db.String(255), nullable=True)
+    document_version = db.Column(db.String(255), nullable=True)
+    page_index = db.Column(db.Integer, nullable=False, default=0)
+    image_width = db.Column(db.Integer, nullable=False)
+    image_height = db.Column(db.Integer, nullable=False)
+    layout_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    last_accessed_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    __table_args__ = (
+        db.UniqueConstraint("content_hash", "ocr_profile", name="uq_ocr_page_layout_cache_hash_profile"),
+    )
+
+
+__all__ = ["Bookmark", "Vocabulary", "OcrPageLayoutCache"]
 

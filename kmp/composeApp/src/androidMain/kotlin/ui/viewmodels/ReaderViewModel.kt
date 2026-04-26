@@ -14,6 +14,7 @@ import com.progressivereader.kmp.jpdbMirror.JpdbKnownVocabRecord
 import com.progressivereader.kmp.jpdbMirror.JpdbMirrorSnapshot
 import com.progressivereader.kmp.jpdbMirror.JpdbVocabId
 import com.progressivereader.kmp.jpdbMirror.normalizeCardState
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.mix.MixRefineCandidate
 import com.progressivereader.kmp.reader.EpubBook
 import com.progressivereader.kmp.settings.ReaderSettings
@@ -971,6 +972,10 @@ class ReaderViewModel(
                             !s0.isOnline -> "offline"
                             else -> "unknown"
                         }
+                    AppLog.w(
+                        "Reader",
+                        "Highlight refresh returned no result for ${input.bookId} chapter=${input.chapterIndex} reason=$reason translated=${input.isTranslated}",
+                    )
                     val onceKey = highlightErrorKey(input, reason)
                     if (!highlightErrorShownKeys.contains(onceKey)) {
                         highlightErrorShownKeys.add(onceKey)
@@ -992,6 +997,10 @@ class ReaderViewModel(
                 }
 
                 tokenById = result.tokenById
+                AppLog.i(
+                    "Reader",
+                    "Highlight refresh applied ${result.tokenById.size} JPDB tokens for ${input.bookId} chapter=${input.chapterIndex} translated=${input.isTranslated}",
+                )
                 _state.update {
                     it.copy(
                         highlightedBodyHtml = result.html,

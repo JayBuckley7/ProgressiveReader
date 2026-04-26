@@ -7,6 +7,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.offline.BookCache
 import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.ui.viewmodels.ReaderEvent
@@ -54,6 +55,7 @@ fun ReaderRoute(
             when (ev) {
                 is ReaderEvent.PersistHighlightEnabled -> onSetJpdbHighlightEnabled(ev.enabled)
                 is ReaderEvent.Snackbar -> {
+                    AppLog.i("Reader", "Snackbar: ${ev.message}")
                     val res =
                         if (ev.actionLabel.isNullOrBlank()) {
                             snackbarHostState.showSnackbar(ev.message)

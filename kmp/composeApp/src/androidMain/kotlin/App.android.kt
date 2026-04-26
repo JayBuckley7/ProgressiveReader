@@ -40,6 +40,7 @@ import com.progressivereader.kmp.reader.EpubRepository
 import com.progressivereader.kmp.session.SessionStore
 import com.progressivereader.kmp.settings.AppSettings
 import com.progressivereader.kmp.settings.AppSettingsStore
+import com.progressivereader.kmp.logging.AppLog
 import com.progressivereader.kmp.ui.AppRoot
 import com.progressivereader.kmp.ui.ProgressiveReaderTheme
 import com.progressivereader.kmp.ui.viewmodels.LibraryViewModelFactory
@@ -78,10 +79,19 @@ import com.progressivereader.kmp.usecases.reader.TranslateChapterUseCase
 import com.progressivereader.kmp.usecases.reader.UnderlineGrammarUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateCachedTokenStateUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateWordStateUseCase
+import java.util.Base64
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
 actual fun App() {
     val appContext = LocalContext.current.applicationContext
+    LaunchedEffect(Unit) {
+        AppLog.install(appContext)
+        AppLog.i("App", "Compose app started.")
+    }
 
     val settingsStore = remember { AppSettingsStore(appContext) }
     val sessionStore = remember { SessionStore(appContext) }
@@ -94,7 +104,12 @@ actual fun App() {
 
     var hasJwtOverride by remember { mutableStateOf(false) }
     var jwtOverride by remember { mutableStateOf<String?>(null) }
-    val sessionJwt = if (hasJwtOverride) jwtOverride else storedJwt
+    val sessionJwt =
+        (if (hasJwtOverride) jwtOverride else storedJwt)
+            ?.takeIf { isSessionJwtUsable(it) }
+    val sessionJwtState = rememberUpdatedState(sessionJwt)
+    val storedJwtState = rememberUpdatedState(storedJwt)
+    val autoSignInEnabledState = rememberUpdatedState(autoSignInEnabled)
 
     LaunchedEffect(hasJwtOverride, jwtOverride, storedJwt) {
         if (hasJwtOverride && jwtOverride == storedJwt) {
@@ -103,22 +118,23 @@ actual fun App() {
         }
     }
 
-    LaunchedEffect(settings.backendBaseUrl) { Config.baseUrl = settings.backendBaseUrl }
+    LaunchedEffect(settings.backendBaseUrl) {
+        Config.baseUrl = settings.backendBaseUrl
+        AppLog.i("App", "Using backend base URL: ${Config.baseUrl}")
+    }
 
     suspend fun setSessionJwt(jwt: String?) {
         hasJwtOverride = true
         jwtOverride = jwt
+        AppLog.i("Auth", if (jwt.isNullOrBlank()) "Clearing session JWT." else "Persisting session JWT.")
 
         if (jwt.isNullOrBlank()) sessionStore.setAutoSignInEnabled(false) else sessionStore.setAutoSignInEnabled(true)
         sessionStore.setJwt(jwt)
     }
 
-    LaunchedEffect(sessionJwt, autoSignInEnabled) {
-        if (!sessionJwt.isNullOrBlank()) return@LaunchedEffect
-        if (!autoSignInEnabled) return@LaunchedEffect
-
+    suspend fun refreshSessionJwtFromClerk(reason: String): String? {
         val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
-        if (publishableKey.isBlank()) return@LaunchedEffect
+        if (publishableKey.isBlank()) return null
 
         runCatching {
             if (Clerk.isInitialized.value != true) {
@@ -126,20 +142,60 @@ actual fun App() {
                     context = appContext,
                     publishableKey = publishableKey,
                 )
+                AppLog.i("Auth", "Clerk initialized from compose app.")
             }
+        }.onFailure {
+            AppLog.e("Auth", "Failed to initialize Clerk while refreshing session token for $reason.", it)
+            return null
         }
 
         val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-        if (tokenRes is ClerkResult.Success) {
-            runCatching { setSessionJwt(tokenRes.value.jwt) }
+        val freshJwt = (tokenRes as? ClerkResult.Success)?.value?.jwt?.takeIf { isSessionJwtUsable(it) }
+        if (freshJwt.isNullOrBlank()) {
+            AppLog.w("Auth", "No usable Clerk session token available for $reason.")
+            return null
+        }
+
+        val currentStored = storedJwtState.value
+        if (freshJwt != currentStored) {
+            AppLog.i("Auth", "Refreshed Clerk session token from active session for $reason.")
+            runCatching { setSessionJwt(freshJwt) }
+        }
+        return freshJwt
+    }
+
+    suspend fun currentBackendSessionJwt(reason: String, forceRefresh: Boolean = false): String? {
+        val current =
+            sessionJwtState.value
+                ?.takeIf { !forceRefresh }
+                ?.takeIf { isSessionJwtUsable(it) }
+        if (!current.isNullOrBlank()) return current
+        if (!autoSignInEnabledState.value) return null
+        return refreshSessionJwtFromClerk(reason)
+    }
+
+    LaunchedEffect(sessionJwt, autoSignInEnabled) {
+        if (!autoSignInEnabled) return@LaunchedEffect
+
+        if (BuildConfig.CLERK_PUBLISHABLE_KEY.isBlank()) return@LaunchedEffect
+
+        while (true) {
+            refreshSessionJwtFromClerk(reason = "background refresh")
+            delay(30_000)
         }
     }
 
     ProgressiveReaderTheme(theme = settings.reader.theme) {
-        val navigator = rememberNavigator(start = Screen.Library)
+        val debugLaunch = DebugLaunchBridge.pendingRequest
+        val navigator = rememberNavigator(start = debugLaunch?.startScreen ?: Screen.Library)
+
+        LaunchedEffect(debugLaunch?.id) {
+            val request = debugLaunch ?: return@LaunchedEffect
+            navigator.reset(request.startScreen)
+            DebugLaunchBridge.consume(request.id)
+        }
 
         // Library composition root: ports -> use-cases -> viewmodel factory.
-        val sessionJwtState = rememberUpdatedState(sessionJwt)
         val driveFolderIdState = rememberUpdatedState(settings.driveFolderId)
 
         val timePort = remember { AndroidTimePort() }
@@ -147,7 +203,12 @@ actual fun App() {
         val coverCachePort = remember { AndroidCoverCachePort(appContext) }
         val http = remember { createHttpClient() }
 
-        val driveService = remember { DriveService { sessionJwtState.value } }
+        val driveService =
+            remember {
+                DriveService {
+                    currentBackendSessionJwt(reason = "Drive request")
+                }
+            }
         val driveJsonFileService =
             remember {
                 DriveJsonFileService(
@@ -155,6 +216,23 @@ actual fun App() {
                     getDriveFolderOverride = { driveFolderIdState.value },
                 )
             }
+        LaunchedEffect(sessionJwt, settings.driveFolderId) {
+            if (sessionJwt.isNullOrBlank()) return@LaunchedEffect
+
+            val tokenInfo = runCatching { driveService.requestGoogleAccessToken() }.getOrNull()
+            if (tokenInfo == null) {
+                AppLog.w("Drive", "Failed to acquire Google Drive access token from Clerk bridge.")
+            } else {
+                AppLog.i("Drive", "Acquired Google Drive access token from Clerk bridge (expiresIn=${tokenInfo.expires_in}s).")
+            }
+
+            val appFolder = runCatching { driveService.ensureAppFolder() }.getOrNull()
+            if (appFolder == null) {
+                AppLog.w("Drive", "Failed to resolve Progressive Reader Drive folder.")
+            } else {
+                AppLog.i("Drive", "Resolved Drive folder '${appFolder.name}' (${appFolder.id}).")
+            }
+        }
         val drivePort =
             remember {
                 AndroidDrivePort(
@@ -267,6 +345,7 @@ actual fun App() {
             navigator = navigator,
             settings = settings,
             sessionJwt = sessionJwt,
+            requestSessionJwt = { currentBackendSessionJwt(reason = "Settings request") },
             libraryViewModelFactory = libraryViewModelFactory,
             readerViewModelFactory = readerViewModelFactory,
             bookCache = bookCache,
@@ -287,10 +366,37 @@ actual fun App() {
             onUpdateReaderMixAggression = { value -> settingsStore.setReaderMixAggression(value) },
             onUpdateReaderMixAutoEnableHighlight = { enabled -> settingsStore.setReaderMixAutoEnableHighlight(enabled) },
             onUpdateReaderMixBackupMirrorToDrive = { enabled -> settingsStore.setReaderMixBackupMirrorToDrive(enabled) },
+            onUpdateDebugMode = { enabled -> settingsStore.setDebugMode(enabled) },
             onResetDriveOverrides = {
                 settingsStore.setDriveFolderId(null)
                 settingsStore.setBackendBaseUrl("https://progressivereader.net")
             },
         )
     }
+}
+
+private fun isSessionJwtUsable(jwt: String): Boolean {
+    val expSeconds = decodeJwtExpSeconds(jwt) ?: return false
+    val nowSeconds = System.currentTimeMillis() / 1000L
+    return expSeconds > nowSeconds + 15L
+}
+
+private fun decodeJwtExpSeconds(jwt: String): Long? {
+    val payload =
+        jwt.split('.')
+            .getOrNull(1)
+            ?.let { segment ->
+                runCatching {
+                    val normalized =
+                        segment
+                            .replace('-', '+')
+                            .replace('_', '/')
+                            .let { s -> s + "=".repeat((4 - (s.length % 4)) % 4) }
+                    String(Base64.getDecoder().decode(normalized), Charsets.UTF_8)
+                }.getOrNull()
+            } ?: return null
+
+    return runCatching {
+        Json.parseToJsonElement(payload).jsonObject["exp"]?.jsonPrimitive?.content?.toLong()
+    }.getOrNull()
 }

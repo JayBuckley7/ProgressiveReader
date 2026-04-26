@@ -41,6 +41,8 @@ class AppSettings:
 
     # OCR (Vision)
     ocr_credentials_json: str | None
+    ocr_gemini_api_key: str | None
+    ocr_gemini_model: str
 
 
 def _get_str(flask_config: Mapping[str, Any] | None, env: Mapping[str, str], key: str) -> str | None:
@@ -149,6 +151,8 @@ def load_settings(*, env: Mapping[str, str], flask_config: Mapping[str, Any] | N
     kanji_data_path = _get_str(flask_config, env, "KANJI_DATA_PATH") or str(default_kanji_path)
 
     ocr_credentials_json = _get_str(flask_config, env, "GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    ocr_gemini_api_key = _get_str(flask_config, env, "OCR_GEMINI_API_KEY") or _get_str(flask_config, env, "GEMINI_API_KEY")
+    ocr_gemini_model = _get_str(flask_config, env, "OCR_GEMINI_MODEL") or "gemini-2.5-flash"
 
     return AppSettings(
         openai_fallback_key=openai_fallback_key,
@@ -159,6 +163,8 @@ def load_settings(*, env: Mapping[str, str], flask_config: Mapping[str, Any] | N
         jpdb_config=jpdb_config,
         kanji_data_path=kanji_data_path,
         ocr_credentials_json=ocr_credentials_json,
+        ocr_gemini_api_key=ocr_gemini_api_key,
+        ocr_gemini_model=ocr_gemini_model,
     )
 
 
