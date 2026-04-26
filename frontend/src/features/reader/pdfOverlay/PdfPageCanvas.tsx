@@ -220,25 +220,20 @@ export function PdfPageCanvas({
     );
   };
 
+  const hasLookupReady = !isPreparingLookup && !ocrError && overlayTokens.length > 0;
+  const statusMaxWidth = viewport ? { maxWidth: `${viewport.width}px` } : undefined;
+
   return (
-    <div className="pdf-page mb-4 flex justify-center">
-      <div
-        ref={containerRef}
-        className="relative w-full"
-        style={viewport ? { maxWidth: `${viewport.width}px`, aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
-      >
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-sm shadow-sm" />
-        {overlayTokens.length > 0 ? (
-          <PdfTokenOverlay tokens={overlayTokens} debug={debug} onTokenClick={handleTokenClick} />
-        ) : null}
+    <div className="pdf-page mb-4">
+      <div className="sticky top-3 z-20 mx-auto mb-2 flex w-full justify-end px-1 pointer-events-none" style={statusMaxWidth}>
         {isPreparingLookup ? (
-          <div className="absolute left-3 top-3 z-[4] rounded-full bg-black/65 px-3 py-1 text-xs text-white">
+          <div className="rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white shadow-sm" aria-live="polite">
             Preparing lookup...
           </div>
         ) : null}
-        {!isPreparingLookup && !ocrError && overlayTokens.length > 0 ? (
+        {hasLookupReady ? (
           <div
-            className="pointer-events-none absolute bottom-3 right-3 z-[4] flex h-7 w-7 items-center justify-center rounded-full bg-emerald-950/70 text-emerald-50 shadow-sm"
+            className="flex items-center gap-1.5 rounded-full bg-emerald-950/80 px-3 py-1 text-xs font-medium text-emerald-50 shadow-sm"
             aria-label="Lookup ready"
             title="Lookup ready"
           >
@@ -246,10 +241,11 @@ export function PdfPageCanvas({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z" />
             </svg>
+            <span>Tap words to look up</span>
           </div>
         ) : null}
         {ocrError ? (
-          <div className="absolute bottom-3 left-3 z-[4] rounded-full bg-black/65 px-3 py-1 text-xs text-white">
+          <div className="pointer-events-auto rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white shadow-sm" aria-live="polite">
             <span>{ocrError}</span>
             <button
               type="button"
@@ -263,11 +259,23 @@ export function PdfPageCanvas({
             </button>
           </div>
         ) : null}
-        {debug && ocrLayout ? (
-          <div className="absolute right-3 top-3 z-[4] rounded bg-black/70 px-2 py-1 text-[10px] text-white">
-            {ocrLayout.cacheHit ? "cache" : "fresh"} | {ocrLayout.atoms.length} atoms | {ocrLayout.lines.length} lines
-          </div>
-        ) : null}
+      </div>
+      <div className="flex justify-center">
+        <div
+          ref={containerRef}
+          className="relative w-full"
+          style={viewport ? { maxWidth: `${viewport.width}px`, aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
+        >
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-sm shadow-sm" />
+          {overlayTokens.length > 0 ? (
+            <PdfTokenOverlay tokens={overlayTokens} debug={debug} onTokenClick={handleTokenClick} />
+          ) : null}
+          {debug && ocrLayout ? (
+            <div className="absolute right-3 top-3 z-[4] rounded bg-black/70 px-2 py-1 text-[10px] text-white">
+              {ocrLayout.cacheHit ? "cache" : "fresh"} | {ocrLayout.atoms.length} atoms | {ocrLayout.lines.length} lines
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

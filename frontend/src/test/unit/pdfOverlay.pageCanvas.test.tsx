@@ -108,6 +108,7 @@ describe("PdfPageCanvas", () => {
     );
 
     const lookupButton = await screen.findByRole("button", { name: "Lookup test" });
+    expect(await screen.findByText("Tap words to look up")).toBeInTheDocument();
     expect(processPageLayout).toHaveBeenCalledWith(
       expect.objectContaining({
         pageIndex: 0,
