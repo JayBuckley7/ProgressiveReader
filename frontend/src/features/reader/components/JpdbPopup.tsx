@@ -63,6 +63,14 @@ type PopupRubyPart = {
   ruby?: string;
 };
 
+type VisualViewportMetrics = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  scale: number;
+};
+
 let setPopup: React.Dispatch<React.SetStateAction<PopupState>> | null = null;
 let hideTimeout: number | null = null;
 let isPopupHovered = false;
@@ -253,27 +261,43 @@ function scheduleHide() {
     }
 }
 
+function getVisualViewportMetrics(): VisualViewportMetrics {
+  if (typeof window === "undefined") {
+    return { left: 0, top: 0, width: 1024, height: 768, scale: 1 };
+  }
+
+  const visualViewport = window.visualViewport;
+  return {
+    left: visualViewport?.offsetLeft ?? 0,
+    top: visualViewport?.offsetTop ?? 0,
+    width: visualViewport?.width ?? window.innerWidth,
+    height: visualViewport?.height ?? window.innerHeight,
+    scale: visualViewport?.scale ?? 1,
+  };
+}
+
 function calculatePopupPosition(x: number, y: number) {
   const margin = 10;
+  const viewport = getVisualViewportMetrics();
 
   // Approximate popup bounds for collision detection. The actual popup is responsive.
-  const popupWidth = Math.min(448, window.innerWidth - margin * 2);
-  const popupHeight = Math.min(480, window.innerHeight - margin * 2);
+  const popupWidth = Math.min(448, viewport.width - margin * 2);
+  const popupHeight = Math.min(480, viewport.height - margin * 2);
 
   let adjustedX = x;
   let adjustedY = y + 8; // small offset from word
 
-  if (adjustedX + popupWidth > window.innerWidth - margin) {
-    adjustedX = window.innerWidth - popupWidth - margin;
+  if (adjustedX + popupWidth > viewport.left + viewport.width - margin) {
+    adjustedX = viewport.left + viewport.width - popupWidth - margin;
   }
-  if (adjustedX < margin) {
-    adjustedX = margin;
+  if (adjustedX < viewport.left + margin) {
+    adjustedX = viewport.left + margin;
   }
-  if (adjustedY + popupHeight > window.innerHeight - margin) {
+  if (adjustedY + popupHeight > viewport.top + viewport.height - margin) {
     adjustedY = y - popupHeight - 5; // position above the word instead
   }
-  if (adjustedY < margin) {
-    adjustedY = margin;
+  if (adjustedY < viewport.top + margin) {
+    adjustedY = viewport.top + margin;
   }
 
   return { x: adjustedX, y: adjustedY };
@@ -326,7 +350,8 @@ export function cancelHideDefinitionPopup() {
 function getInitialCompactPopup(): boolean {
   if (typeof window === "undefined") return false;
   const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-  return window.innerWidth < 640 || coarsePointer;
+  const viewport = getVisualViewportMetrics();
+  return viewport.width < 640 || coarsePointer;
 }
 
 export function JpdbPopupController() {
@@ -334,6 +359,7 @@ export function JpdbPopupController() {
   const [popup, _setPopup] = useState<PopupState>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompactPopup, setIsCompactPopup] = useState(getInitialCompactPopup);
+  const [visualViewportMetrics, setVisualViewportMetrics] = useState(getVisualViewportMetrics);
   setPopup = _setPopup;
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
@@ -434,12 +460,20 @@ export function JpdbPopupController() {
   useEffect(() => {
     const updateCompactMode = () => {
       const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-      setIsCompactPopup(window.innerWidth < 640 || coarsePointer);
+      const viewport = getVisualViewportMetrics();
+      setVisualViewportMetrics(viewport);
+      setIsCompactPopup(viewport.width < 640 || coarsePointer);
     };
 
     updateCompactMode();
     window.addEventListener("resize", updateCompactMode);
-    return () => window.removeEventListener("resize", updateCompactMode);
+    window.visualViewport?.addEventListener("resize", updateCompactMode);
+    window.visualViewport?.addEventListener("scroll", updateCompactMode);
+    return () => {
+      window.removeEventListener("resize", updateCompactMode);
+      window.visualViewport?.removeEventListener("resize", updateCompactMode);
+      window.visualViewport?.removeEventListener("scroll", updateCompactMode);
+    };
   }, []);
 
   if (!popup) return null;
@@ -572,15 +606,21 @@ export function JpdbPopupController() {
   const flatRose = `${flatBtnBase} border-rose-700 text-rose-200`;
   const flatOrange = `${flatBtnBase} border-orange-700 text-orange-200`;
   const addButtonTitle = canMine ? "Add word to mining deck" : "Set a mining deck ID in settings to add words.";
+  const compactMargin = 8;
+  const compactScale = isCompactPopup ? Math.min(1, 1 / Math.max(1, visualViewportMetrics.scale)) : 1;
+  const compactWidth = Math.max(240, visualViewportMetrics.width / compactScale - compactMargin * 2);
+  const compactMaxHeight = Math.max(144, Math.min(288, (visualViewportMetrics.height * 0.42) / compactScale));
   const popupStyle: React.CSSProperties = isCompactPopup
     ? {
-        left: "0.5rem",
-        right: "0.5rem",
-        bottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)",
-        top: "auto",
-        width: "auto",
+        left: visualViewportMetrics.left + compactMargin,
+        top: visualViewportMetrics.top + visualViewportMetrics.height - compactMaxHeight * compactScale - compactMargin,
+        right: "auto",
+        bottom: "auto",
+        width: compactWidth,
         maxWidth: "none",
-        maxHeight: "min(18rem, 38dvh)",
+        maxHeight: compactMaxHeight,
+        transform: compactScale < 1 ? `scale(${compactScale})` : undefined,
+        transformOrigin: "bottom left",
       }
     : {
         top: popup.y,

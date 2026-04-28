@@ -136,4 +136,134 @@ describe("PdfPageCanvas", () => {
       );
     });
   });
+
+  it("renders visible token annotations when PDF highlighting is enabled", async () => {
+    const processPageLayout = vi.fn(async () => ({
+      status: "ready" as const,
+      cacheHit: false,
+      contentHash: "01020304",
+      ocrProfile: "google-vision-document-v1",
+      pageIndex: 0,
+      image: { width: 200, height: 100 },
+      lines: [
+        {
+          id: "line-1",
+          text: "test",
+          order: 0,
+          direction: "horizontal" as const,
+          confidence: 0.99,
+          bboxNorm: { x: 0.1, y: 0.2, width: 0.3, height: 0.1 },
+          polygonNorm: [],
+          atomIds: ["atom-1"],
+        },
+      ],
+      atoms: [
+        {
+          id: "atom-1",
+          text: "test",
+          lineId: "line-1",
+          order: 0,
+          direction: "horizontal" as const,
+          confidence: 0.99,
+          bboxNorm: { x: 0.1, y: 0.2, width: 0.3, height: 0.1 },
+          polygonNorm: [],
+        },
+      ],
+    }));
+
+    const pdf = {
+      getPage: vi.fn(async () => ({
+        getViewport: vi.fn(() => ({ width: 200, height: 100 })),
+        render: vi.fn(() => ({ promise: Promise.resolve() })),
+      })),
+    };
+
+    renderWithProviders(
+      <PdfPageCanvas
+        pdf={pdf}
+        pageNumber={1}
+        documentId="book-1"
+        documentVersion="v1"
+        showTokenHighlights
+      />,
+      {
+        depsOverride: {
+          backend: {
+            ocr: {
+              processPdf: vi.fn(),
+              processPageLayout,
+            },
+          } as any,
+        },
+      }
+    );
+
+    const lookupButton = await screen.findByRole("button", { name: "Lookup test" });
+    expect(lookupButton).toHaveClass("bg-yellow-300/25");
+  });
+
+  it("still prepares lookup when Web Crypto is unavailable", async () => {
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      value: {},
+    });
+
+    const processPageLayout = vi.fn(async () => ({
+      status: "ready" as const,
+      cacheHit: false,
+      contentHash: "server-hash",
+      ocrProfile: "google-vision-document-v1",
+      pageIndex: 0,
+      image: { width: 200, height: 100 },
+      lines: [
+        {
+          id: "line-1",
+          text: "test",
+          order: 0,
+          direction: "horizontal" as const,
+          confidence: 0.99,
+          bboxNorm: { x: 0.1, y: 0.2, width: 0.3, height: 0.1 },
+          polygonNorm: [],
+          atomIds: ["atom-1"],
+        },
+      ],
+      atoms: [
+        {
+          id: "atom-1",
+          text: "test",
+          lineId: "line-1",
+          order: 0,
+          direction: "horizontal" as const,
+          confidence: 0.99,
+          bboxNorm: { x: 0.1, y: 0.2, width: 0.3, height: 0.1 },
+          polygonNorm: [],
+        },
+      ],
+    }));
+
+    const pdf = {
+      getPage: vi.fn(async () => ({
+        getViewport: vi.fn(() => ({ width: 200, height: 100 })),
+        render: vi.fn(() => ({ promise: Promise.resolve() })),
+      })),
+    };
+
+    renderWithProviders(<PdfPageCanvas pdf={pdf} pageNumber={1} />, {
+      depsOverride: {
+        backend: {
+          ocr: {
+            processPdf: vi.fn(),
+            processPageLayout,
+          },
+        } as any,
+      },
+    });
+
+    expect(await screen.findByRole("button", { name: "Lookup test" })).toBeInTheDocument();
+    expect(processPageLayout).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        contentHash: expect.any(String),
+      })
+    );
+  });
 });

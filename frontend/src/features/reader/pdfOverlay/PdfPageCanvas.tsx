@@ -3,7 +3,7 @@ import { showDefinitionPopup } from "@features/reader/components/JpdbPopup";
 import { loadConfig as loadJpdbConfig, parseText } from "@features/reader/content/api-adapter";
 import { parseWithLocalLookup } from "@features/reader/utils/localTextParser";
 import { appLog } from "@shared/appLog";
-import { startTransition, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 
 import { PdfTokenOverlay } from "./PdfTokenOverlay";
 import { alignTokensToOverlayByLine } from "./tokenAlignment";
@@ -28,9 +28,36 @@ interface PdfPageCanvasProps {
   pageNumber: number;
   documentId?: string;
   documentVersion?: string;
+  showTokenHighlights?: boolean;
 }
 
 const LOOKUP_SCALE = 2;
+const MIN_CONTENT_ZOOM = 1;
+const MAX_CONTENT_ZOOM = 4;
+
+type PdfContentZoom = {
+  scale: number;
+  x: number;
+  y: number;
+};
+
+type ActivePointer = {
+  x: number;
+  y: number;
+};
+
+type PinchGesture = {
+  distance: number;
+  centerX: number;
+  centerY: number;
+  zoom: PdfContentZoom;
+};
+
+type PanGesture = {
+  x: number;
+  y: number;
+  zoom: PdfContentZoom;
+};
 
 function getDebugEnabled(): boolean {
   try {
@@ -38,6 +65,21 @@ function getDebugEnabled(): boolean {
   } catch {
     return false;
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function distanceBetween(a: ActivePointer, b: ActivePointer): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function centerBetween(a: ActivePointer, b: ActivePointer): ActivePointer {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  };
 }
 
 async function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -48,9 +90,13 @@ async function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return blob;
 }
 
-async function computeSha256Hex(blob: Blob): Promise<string> {
+async function computeSha256Hex(blob: Blob): Promise<string | undefined> {
+  if (!globalThis.crypto?.subtle) {
+    return undefined;
+  }
+
   const buffer = await blob.arrayBuffer();
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", buffer);
   return Array.from(new Uint8Array(digest))
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("");
@@ -61,13 +107,19 @@ export function PdfPageCanvas({
   pageNumber,
   documentId,
   documentVersion,
+  showTokenHighlights = false,
 }: PdfPageCanvasProps) {
   const deps = useAppDeps();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const zoomSurfaceRef = useRef<HTMLDivElement>(null);
+  const activePointersRef = useRef(new Map<number, ActivePointer>());
+  const pinchGestureRef = useRef<PinchGesture | null>(null);
+  const panGestureRef = useRef<PanGesture | null>(null);
   const [page, setPage] = useState<PdfPageLike | null>(null);
   const [viewport, setViewport] = useState<PdfViewportLike | null>(null);
   const [renderVersion, setRenderVersion] = useState(0);
+  const [contentZoom, setContentZoom] = useState<PdfContentZoom>({ scale: 1, x: 0, y: 0 });
   const [ocrLayout, setOcrLayout] = useState<PdfOverlayLayout | null>(null);
   const [overlayTokens, setOverlayTokens] = useState<PdfOverlayToken[]>([]);
   const [isPreparingLookup, setIsPreparingLookup] = useState(false);
@@ -99,12 +151,16 @@ export function PdfPageCanvas({
     setPage(null);
     setViewport(null);
     setRenderVersion(0);
+    setContentZoom({ scale: 1, x: 0, y: 0 });
     setOcrLayout(null);
     setOverlayTokens([]);
     setOcrError(null);
     setOcrRetryNonce(0);
     renderedPageRef.current = null;
     preparedRenderVersionRef.current = 0;
+    activePointersRef.current.clear();
+    pinchGestureRef.current = null;
+    panGestureRef.current = null;
     void loadPage();
     return () => {
       cancelled = true;
@@ -163,7 +219,7 @@ export function PdfPageCanvas({
         const layout = await deps.backend.ocr.processPageLayout({
           image: blob,
           pageIndex: pageNumber - 1,
-          contentHash,
+          ...(contentHash ? { contentHash } : {}),
           documentId,
           documentVersion,
           signal: controller.signal,
@@ -220,6 +276,83 @@ export function PdfPageCanvas({
     );
   };
 
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") return;
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (activePointersRef.current.size === 1 && contentZoom.scale > 1) {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      panGestureRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        zoom: contentZoom,
+      };
+    }
+
+    if (activePointersRef.current.size === 2) {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      const [first, second] = Array.from(activePointersRef.current.values());
+      const center = centerBetween(first, second);
+      pinchGestureRef.current = {
+        distance: Math.max(1, distanceBetween(first, second)),
+        centerX: center.x,
+        centerY: center.y,
+        zoom: contentZoom,
+      };
+      panGestureRef.current = null;
+    }
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch" || !activePointersRef.current.has(event.pointerId)) return;
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (activePointersRef.current.size === 1 && panGestureRef.current && contentZoom.scale > 1) {
+      event.preventDefault();
+      const pan = panGestureRef.current;
+      setContentZoom({
+        scale: pan.zoom.scale,
+        x: pan.zoom.x + event.clientX - pan.x,
+        y: pan.zoom.y + event.clientY - pan.y,
+      });
+      return;
+    }
+
+    if (activePointersRef.current.size !== 2 || !pinchGestureRef.current) return;
+
+    event.preventDefault();
+    const [first, second] = Array.from(activePointersRef.current.values());
+    const start = pinchGestureRef.current;
+    const center = centerBetween(first, second);
+    const nextScale = clamp(
+      start.zoom.scale * (distanceBetween(first, second) / start.distance),
+      MIN_CONTENT_ZOOM,
+      MAX_CONTENT_ZOOM
+    );
+    const scaleRatio = nextScale / start.zoom.scale;
+    const surfaceRect = zoomSurfaceRef.current?.getBoundingClientRect();
+    const originX = start.centerX - (surfaceRect?.left ?? 0);
+    const originY = start.centerY - (surfaceRect?.top ?? 0);
+
+    setContentZoom({
+      scale: nextScale,
+      x: center.x - start.centerX + originX - (originX - start.zoom.x) * scaleRatio,
+      y: center.y - start.centerY + originY - (originY - start.zoom.y) * scaleRatio,
+    });
+  };
+
+  const clearPointer = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") return;
+    activePointersRef.current.delete(event.pointerId);
+    if (activePointersRef.current.size < 2) {
+      pinchGestureRef.current = null;
+      panGestureRef.current = null;
+      setContentZoom((zoom) => (zoom.scale <= 1.02 ? { scale: 1, x: 0, y: 0 } : zoom));
+    }
+  };
+
   const hasLookupReady = !isPreparingLookup && !ocrError && overlayTokens.length > 0;
   const statusMaxWidth = viewport ? { maxWidth: `${viewport.width}px` } : undefined;
 
@@ -260,21 +393,45 @@ export function PdfPageCanvas({
           </div>
         ) : null}
       </div>
-      <div className="flex justify-center">
-        <div
-          ref={containerRef}
-          className="relative w-full"
-          style={viewport ? { maxWidth: `${viewport.width}px`, aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
-        >
-          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-sm shadow-sm" />
-          {overlayTokens.length > 0 ? (
-            <PdfTokenOverlay tokens={overlayTokens} debug={debug} onTokenClick={handleTokenClick} />
-          ) : null}
-          {debug && ocrLayout ? (
-            <div className="absolute right-3 top-3 z-[4] rounded bg-black/70 px-2 py-1 text-[10px] text-white">
-              {ocrLayout.cacheHit ? "cache" : "fresh"} | {ocrLayout.atoms.length} atoms | {ocrLayout.lines.length} lines
+      <div
+        ref={zoomSurfaceRef}
+        className="overflow-hidden"
+        style={{ touchAction: contentZoom.scale > 1 ? "none" : "pan-y" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={clearPointer}
+        onPointerCancel={clearPointer}
+        onPointerLeave={clearPointer}
+      >
+        <div className="flex justify-center">
+          <div
+            className="will-change-transform"
+            style={{
+              transform: `translate3d(${contentZoom.x}px, ${contentZoom.y}px, 0) scale(${contentZoom.scale})`,
+              transformOrigin: "0 0",
+            }}
+          >
+            <div
+              ref={containerRef}
+              className="relative w-full"
+              style={viewport ? { width: `${viewport.width}px`, maxWidth: "100vw", aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
+            >
+              <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-sm shadow-sm" />
+              {overlayTokens.length > 0 ? (
+                <PdfTokenOverlay
+                  tokens={overlayTokens}
+                  debug={debug}
+                  showHighlights={showTokenHighlights}
+                  onTokenClick={handleTokenClick}
+                />
+              ) : null}
+              {debug && ocrLayout ? (
+                <div className="absolute right-3 top-3 z-[4] rounded bg-black/70 px-2 py-1 text-[10px] text-white">
+                  {ocrLayout.cacheHit ? "cache" : "fresh"} | {ocrLayout.atoms.length} atoms | {ocrLayout.lines.length} lines
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
     </div>
