@@ -105,6 +105,10 @@
         "label": "Cache Translations",
         "description": "Store last translation per chapter for offline use"
       },
+      "verticalWriting": {
+        "label": "Japanese vertical text",
+        "description": "Read top to bottom, with columns flowing from right to left. EPUB and text books only."
+      },
       "fontSize": {
         "label": "Font Size"
       }
@@ -335,6 +339,11 @@
       "back": "Back to Library",
       "settings": "Settings",
       "clearTranslationTitle": "Show original text"
+    },
+    "dock": {
+      "label": "Reader navigation",
+      "previous": "Previous",
+      "next": "Next"
     },
     "controls": {
       "panelTitle": "Reader controls",

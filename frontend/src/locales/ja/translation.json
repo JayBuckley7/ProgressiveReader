@@ -105,6 +105,10 @@
         "label": "翻訳をキャッシュ",
         "description": "各章の最新翻訳を保存してオフラインでも利用"
       },
+      "verticalWriting": {
+        "label": "縦書き",
+        "description": "文字を上から下へ、列を右から左へ配置します。EPUB・テキスト形式のみ。"
+      },
       "fontSize": {
         "label": "フォントサイズ"
       }
@@ -331,6 +335,11 @@
       "back": "ライブラリへ戻る",
       "settings": "設定",
       "clearTranslationTitle": "原文を表示"
+    },
+    "dock": {
+      "label": "読書ナビゲーション",
+      "previous": "前へ",
+      "next": "次へ"
     },
     "controls": {
       "panelTitle": "読書コントロール",

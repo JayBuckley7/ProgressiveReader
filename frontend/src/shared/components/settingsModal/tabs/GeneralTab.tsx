@@ -82,6 +82,13 @@ export function GeneralTab({
         onChange={(v) => updateSettings({ cacheTranslations: v })}
       />
 
+      <CheckboxInput
+        label={t("settings.general.verticalWriting.label")}
+        description={t("settings.general.verticalWriting.description")}
+        checked={settings.verticalWriting ?? false}
+        onChange={(v) => updateSettings({ verticalWriting: v })}
+      />
+
       <SliderInput
         label={t("settings.general.fontSize.label")}
         value={settings.fontSize}

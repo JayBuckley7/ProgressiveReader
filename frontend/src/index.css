@@ -330,6 +330,54 @@ html {
   transition: opacity 0.2s ease-in-out;
 }
 
+/* Japanese tategaki: glyphs run top-to-bottom and columns advance right-to-left. */
+.reader-vertical-writing {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  line-break: strict;
+  word-break: normal;
+  overflow-wrap: normal;
+  line-height: 1.9;
+}
+
+.reader-vertical-writing p {
+  margin: 0 0 0 1.25em;
+}
+
+.reader-vertical-writing h1,
+.reader-vertical-writing h2,
+.reader-vertical-writing h3,
+.reader-vertical-writing h4,
+.reader-vertical-writing h5,
+.reader-vertical-writing h6 {
+  margin: 0 1.5em 0 0.75em;
+}
+
+.reader-vertical-writing blockquote {
+  border-left: 0;
+  border-right: 4px solid #e5e7eb;
+  padding-left: 0;
+  padding-right: 1em;
+  margin: 0 1.5em;
+}
+
+.dark .reader-vertical-writing blockquote {
+  border-right-color: #4b5563;
+}
+
+.reader-vertical-writing .pr-translation {
+  margin-top: 0;
+  margin-right: 0.35rem;
+  padding-left: 0;
+  padding-right: 0.75rem;
+  border-left: 0;
+  border-right: 2px solid rgba(75, 141, 255, 0.35);
+}
+
+.dark .reader-vertical-writing .pr-translation {
+  border-right-color: rgba(75, 141, 255, 0.45);
+}
+
 /* Bilingual translation overlay (used to keep JPDB highlights working while showing translations) */
 .pr-translation {
   margin-top: 0.35rem;

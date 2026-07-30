@@ -6,6 +6,7 @@ import { TtsControlModal } from "@shared/components/TtsControlModal";
 import { BookContent } from "./BookContent";
 import { MixSettingsModal } from "./MixSettingsModal";
 import { ReaderControls } from "./ReaderControls";
+import { ReaderDock } from "./ReaderDock";
 import { ReaderHeader } from "./ReaderHeader";
 import { useBookReaderController } from "./bookReader/useBookReaderController";
 
@@ -20,6 +21,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const [showSettings, setShowSettings] = useState(false);
   const [showMixSettings, setShowMixSettings] = useState(false);
   const [showReaderControls, setShowReaderControls] = useState(false);
+  const [showContents, setShowContents] = useState(false);
 
   const c = useBookReaderController({
     bookId,
@@ -28,6 +30,16 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     onBack,
     openAiKeyRefreshSignal: showMixSettings,
   });
+  const readerIndex = c.isPdf ? c.pdf.currentPage - 1 : c.chapter;
+  const readerTotal = c.isPdf ? c.pdf.pageCount : c.bookContent?.totalChapters || 1;
+  const previous = c.isPdf ? c.pdf.prevPage : c.nav.prevChapter;
+  const next = c.isPdf ? c.pdf.nextPage : c.nav.nextChapter;
+  const chapterTitles = c.isPdf
+    ? Array.from({ length: c.pdf.pageCount }, (_, i) => ({ index: i, title: `Page ${i + 1}`, href: "" }))
+    : c.bookContent?.chapterTitles || [];
+  const selectChapter = c.isPdf
+    ? (index: number) => c.pdf.setCurrentPage(index + 1)
+    : c.nav.updateChapter;
 
   if (c.isLoading) {
     return (
@@ -49,7 +61,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onBack={c.handleBack}
         onClearTranslation={() => c.translation.clearTranslation({ suppressAutoload: true })}
         onShowSettings={() => setShowSettings(true)}
-        onShowReaderControls={() => setShowReaderControls((visible) => !visible)}
+        onShowReaderControls={() => {
+          setShowContents(false);
+          setShowReaderControls((visible) => !visible);
+        }}
         readerControlsVisible={showReaderControls}
         onToggleTranslation={c.translation.applyStoredTranslation}
       />
@@ -69,26 +84,33 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         showPdfTokenHighlights={c.isPdf && c.highlighting.jpdbHighlighted}
       />
 
+      <ReaderDock
+        currentIndex={readerIndex}
+        totalItems={readerTotal}
+        onPrevious={previous}
+        onNext={next}
+        onShowContents={() => {
+          setShowReaderControls(false);
+          setShowContents(true);
+        }}
+      />
+
       <ReaderControls
         visible={showReaderControls}
         onClose={() => setShowReaderControls(false)}
-        currentChapter={c.isPdf ? c.pdf.currentPage - 1 : c.chapter}
-        totalChapters={c.isPdf ? c.pdf.pageCount : c.bookContent?.totalChapters || 1}
-        onPrevChapter={c.isPdf ? c.pdf.prevPage : c.nav.prevChapter}
-        onNextChapter={c.isPdf ? c.pdf.nextPage : c.nav.nextChapter}
+        contentsVisible={showContents}
+        onShowContents={() => {
+          setShowReaderControls(false);
+          setShowContents(true);
+        }}
+        onCloseContents={() => setShowContents(false)}
+        currentChapter={readerIndex}
+        totalChapters={readerTotal}
+        onPrevChapter={previous}
+        onNextChapter={next}
         bookId={bookId}
-        chapterTitles={
-          c.isPdf
-            ? Array.from({ length: c.pdf.pageCount }, (_, i) => ({ index: i, title: `Page ${i + 1}`, href: "" }))
-            : c.bookContent?.chapterTitles || []
-        }
-        onSelectChapter={
-          c.isPdf
-            ? (idx) => {
-              c.pdf.setCurrentPage(idx + 1);
-            }
-            : c.nav.updateChapter
-        }
+        chapterTitles={chapterTitles}
+        onSelectChapter={selectChapter}
         onToggleTts={c.tts.toggleTts}
         ttsActive={c.tts.isSpeaking}
         onToggleHighlight={c.highlighting.toggleJpdbHighlight}

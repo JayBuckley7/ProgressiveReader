@@ -23,6 +23,7 @@ interface Settings {
   disableFadeAnimation?: boolean;
   cacheTranslations?: boolean;
   hideFurigana?: boolean;
+  verticalWriting?: boolean;
 
   // English -> Mixed JP "known-word swap" reader mode
   mixEnabled: boolean;
@@ -55,6 +56,7 @@ const defaultSettings: Settings = {
   disableFadeAnimation: false,
   cacheTranslations: true,
   hideFurigana: false,
+  verticalWriting: false,
 
   mixEnabled: false,
   mixAggression: 0.25,
@@ -65,6 +67,10 @@ const defaultSettings: Settings = {
 
 const SETTINGS_COOKIE = "prSettings";
 const SETTINGS_STORAGE = "prSettings";
+
+function coerceBooleanSetting(value: unknown): boolean {
+  return value === true || value === "true" || value === 1 || value === "1";
+}
 
 function mapExternalSettings(data: Record<string, any>, prev: Settings): Settings {
   const updates: Partial<Settings> = {};
@@ -80,6 +86,10 @@ function mapExternalSettings(data: Record<string, any>, prev: Settings): Setting
   if (data.disableFadeAnimation !== undefined) updates.disableFadeAnimation = data.disableFadeAnimation;
   if (data.hideFurigana !== undefined) updates.hideFurigana = data.hideFurigana;
   if (data.cacheTranslations !== undefined) updates.cacheTranslations = data.cacheTranslations;
+  const verticalWritingRaw = data.vertical_writing ?? data.verticalWriting;
+  if (verticalWritingRaw !== undefined) {
+    updates.verticalWriting = coerceBooleanSetting(verticalWritingRaw);
+  }
 
   const mixEnabledRaw = data.mix_enabled ?? data.mixEnabled;
   if (mixEnabledRaw !== undefined) updates.mixEnabled = Boolean(mixEnabledRaw);
@@ -305,6 +315,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               if (data.disableFadeAnimation !== undefined) basicSettingsUpdates.disableFadeAnimation = data.disableFadeAnimation;
               if (data.hideFurigana !== undefined) basicSettingsUpdates.hideFurigana = data.hideFurigana;
               if (data.cacheTranslations !== undefined) basicSettingsUpdates.cacheTranslations = data.cacheTranslations;
+              const verticalWritingRaw = (data as any).vertical_writing ?? (data as any).verticalWriting;
+              if (verticalWritingRaw !== undefined) {
+                basicSettingsUpdates.verticalWriting = coerceBooleanSetting(verticalWritingRaw);
+              }
 
               // Mix mode settings (support both snake_case and camelCase keys for backward/forward compatibility)
               const mixEnabledRaw = (data as any).mix_enabled ?? (data as any).mixEnabled;
@@ -535,6 +549,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               touchscreenSupport: updated.touchscreenSupport,
               disableFadeAnimation: updated.disableFadeAnimation,
               hideFurigana: updated.hideFurigana,
+              verticalWriting: updated.verticalWriting,
               mix_enabled: updated.mixEnabled,
               mix_aggression: updated.mixAggression,
               mix_auto_enable_highlight: updated.mixAutoEnableHighlight,

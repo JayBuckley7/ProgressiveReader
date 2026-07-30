@@ -9,6 +9,9 @@ import { useAppDeps } from "@app/deps/AppDepsProvider";
 interface ReaderControlsProps {
   visible: boolean;
   onClose: () => void;
+  contentsVisible: boolean;
+  onShowContents: () => void;
+  onCloseContents: () => void;
   currentChapter: number;
   totalChapters: number;
   onPrevChapter: () => void;
@@ -29,6 +32,9 @@ interface ReaderControlsProps {
 function ReaderControlsComponent({
   visible,
   onClose,
+  contentsVisible,
+  onShowContents,
+  onCloseContents,
   currentChapter,
   totalChapters,
   onPrevChapter,
@@ -46,7 +52,6 @@ function ReaderControlsComponent({
   onShowMixSettings,
 }: ReaderControlsProps) {
   const deps = useAppDeps();
-  const [showDrawer, setShowDrawer] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
 
@@ -63,7 +68,7 @@ function ReaderControlsComponent({
   const [isAddingBookmark, setIsAddingBookmark] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible && !contentsVisible) return;
     let cancelled = false;
     setIsLoadingBookmarks(true);
     deps.backend.bookmarks
@@ -87,7 +92,7 @@ function ReaderControlsComponent({
     return () => {
       cancelled = true;
     };
-  }, [bookId, deps.backend.bookmarks, visible]);
+  }, [bookId, contentsVisible, deps.backend.bookmarks, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -162,11 +167,11 @@ function ReaderControlsComponent({
 
   const handleSelectChapter = (index: number) => {
     onSelectChapter(index);
-    setShowDrawer(false);
+    onCloseContents();
     onClose();
   };
 
-  if (!visible) return null;
+  if (!visible && !contentsVisible) return null;
 
   return (
     <>
@@ -304,7 +309,7 @@ function ReaderControlsComponent({
               <span>{isAddingBookmark ? t("reader.controls.saving") : t("reader.controls.bookmark")}</span>
             </button>
             <button
-              onClick={() => setShowDrawer(true)}
+              onClick={onShowContents}
               className={actionBtn}
               aria-label={t('reader.controls.toc')}
             >
@@ -319,10 +324,10 @@ function ReaderControlsComponent({
         </div>
       )}
 
-      {showDrawer && (
+      {contentsVisible && (
         <ContentsDrawer
-          visible={showDrawer}
-          onClose={() => setShowDrawer(false)}
+          visible={contentsVisible}
+          onClose={onCloseContents}
           chapterTitles={chapterTitles}
           currentChapter={currentChapter}
           onSelectChapter={handleSelectChapter}

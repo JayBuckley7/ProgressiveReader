@@ -17,6 +17,7 @@ describe("SettingsModal", () => {
     expect(screen.getByRole("button", { name: "Advanced" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "App & data" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Translate/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Japanese vertical text/i })).not.toBeChecked();
 
     await user.click(screen.getByRole("button", { name: "Advanced" }));
 

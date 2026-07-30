@@ -92,6 +92,7 @@ export function useBookReaderController({
     bookId,
     bookMetadata,
     chapter,
+    verticalWriting: Boolean(settings?.verticalWriting && !isPdf),
     contentRef: contentRef as RefObject<HTMLDivElement>,
     getReadingProgress,
     saveBookProgress,

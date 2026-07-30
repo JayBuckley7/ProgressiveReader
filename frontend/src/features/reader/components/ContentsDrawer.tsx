@@ -28,12 +28,25 @@ export default function ContentsDrawer({ visible, onClose, chapterTitles, curren
     }`;
 
   return (
-    <div className={`fixed inset-0 z-40 ${visible ? "" : "pointer-events-none"}`}>
+    <div
+      className={`fixed inset-0 z-40 ${visible ? "" : "pointer-events-none"}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reader-contents-title"
+    >
       <div className={`absolute inset-0 bg-black/30 transition-opacity ${visible ? "opacity-100" : "opacity-0"}`} onClick={onClose} />
       <div className={`absolute left-0 top-0 h-full w-64 bg-white dark:bg-gray-800 shadow-xl transform transition-transform ${visible ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('reader.toc.menu')}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+          <h3 id="reader-contents-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('reader.toc.menu')}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            aria-label={t("reader.controls.close")}
+            title={t("reader.controls.close")}
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
         </div>
         <div className="flex">
           <button className={tabClass("toc")} onClick={() => setActiveTab("toc")}>{t('reader.toc.tab.toc')}</button>

@@ -102,9 +102,16 @@ export default function App({ clerkPubKey }: { clerkPubKey: string }) {
 
 
 function AppContent() {
+  const location = useLocation();
+  const isReaderRoute = /^\/(?:book\/[^/]+|pdfs?|epub)\/?$/.test(location.pathname);
+
   return (
     <SettingsProvider>
-      <div className="flex flex-col min-h-screen app-shell">
+      <div
+        className={`flex flex-col app-shell ${
+          isReaderRoute ? "h-[100dvh] overflow-hidden" : "min-h-screen"
+        }`}
+      >
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<MainLayout />}>
@@ -143,7 +150,7 @@ function AppContent() {
             </Route>
           </Routes>
         </Suspense>
-        <Footer />
+        {!isReaderRoute && <Footer />}
         <DangerZone />
         <Toaster />
       </div>
