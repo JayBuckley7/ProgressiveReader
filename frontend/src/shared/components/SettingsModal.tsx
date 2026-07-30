@@ -11,16 +11,15 @@ import { createSettingsObject, coerceImportedSettings } from "./settingsModal/se
 import { readJpdbApiKeyFromCookies, readLocalSettingsState, syncSettingsToStorage } from "./settingsModal/storage";
 import type { LocalSettingsState, SettingsModalTabId, UpdateLocalSettings } from "./settingsModal/types";
 import { AccessibilityTab } from "./settingsModal/tabs/AccessibilityTab";
+import { AdvancedTab } from "./settingsModal/tabs/AdvancedTab";
 import { GeneralTab } from "./settingsModal/tabs/GeneralTab";
 import { HighlightTab } from "./settingsModal/tabs/HighlightTab";
 
 type SettingsModalProps = {
   onClose: () => void;
-  onTranslate: (useCefr: boolean) => void;
-  translating: boolean;
 };
 
-export function SettingsModal({ onClose, onTranslate, translating }: SettingsModalProps) {
+export function SettingsModal({ onClose }: SettingsModalProps) {
   const { settings, updateSettings } = useSettings();
   const { saveSettings, loadSettings, isAuthenticated } = useAppData();
   const { miningEnabled, underlinesEnabled, setMiningEnabled, setUnderlinesEnabled } = useGrammar();
@@ -36,6 +35,14 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
   useEffect(() => {
     syncSettingsToStorage({ localState, jpdbApiKey });
   }, [localState, jpdbApiKey]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   // Note: Parser selection is now automatic based on JPDB API key presence
 
@@ -119,15 +126,26 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
-      <div className="app-card w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[calc(100vh-1rem)] sm:max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 backdrop-blur-[2px] sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-dialog-title"
+        className="app-card flex max-h-[calc(100vh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[90vh] sm:max-w-xl md:max-w-2xl"
+      >
         <div className="px-4 sm:px-6 py-4 border-b app-border flex-shrink-0 flex justify-between items-center">
-          <h2 className="text-lg sm:text-xl font-semibold">{t("settings.title")}</h2>
+          <div>
+            <h2 id="settings-dialog-title" className="text-lg font-semibold sm:text-xl">{t("settings.title")}</h2>
+            <p className="mt-0.5 text-xs app-muted">{t("settings.description")}</p>
+          </div>
           <button
             onClick={onClose}
-            className="text-sm font-medium app-muted hover:text-[var(--ui-text)] transition-colors"
+            aria-label={t("settings.footer.close")}
+            className="app-icon-button flex h-10 w-10 items-center justify-center rounded-md transition-colors"
           >
-            {t("settings.footer.close")}
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -157,12 +175,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
               updateSettings={updateSettings}
               localState={localState}
               onLocalChange={handleChange}
-              isApiConfigExpanded={isApiConfigExpanded}
-              setIsApiConfigExpanded={setIsApiConfigExpanded}
-              miningEnabled={miningEnabled}
-              underlinesEnabled={underlinesEnabled}
-              setMiningEnabled={setMiningEnabled}
-              setUnderlinesEnabled={setUnderlinesEnabled}
             />
           )}
 
@@ -175,6 +187,20 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
               onLocalChange={handleChange}
               jpdbApiKey={jpdbApiKey}
               setJpdbApiKey={setJpdbApiKey}
+            />
+          )}
+
+          {activeTab === "advanced" && (
+            <AdvancedTab
+              t={t}
+              localState={localState}
+              onLocalChange={handleChange}
+              isApiConfigExpanded={isApiConfigExpanded}
+              setIsApiConfigExpanded={setIsApiConfigExpanded}
+              miningEnabled={miningEnabled}
+              underlinesEnabled={underlinesEnabled}
+              setMiningEnabled={setMiningEnabled}
+              setUnderlinesEnabled={setUnderlinesEnabled}
             />
           )}
 
@@ -194,41 +220,6 @@ export function SettingsModal({ onClose, onTranslate, translating }: SettingsMod
               applyImportedSettings={applyImportedSettings}
             />
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t app-border p-3 sm:p-4 md:p-6 flex-shrink-0">
-          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-3">
-            <div className="flex flex-row gap-2 sm:gap-3">
-              <button
-                onClick={() => onTranslate(false)}
-                disabled={translating}
-                className="flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm md:text-base font-medium whitespace-nowrap app-button-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {translating ? t("settings.footer.translating") : t("settings.footer.translate")}
-              </button>
-              <button
-                onClick={() => onTranslate(true)}
-                disabled={translating}
-                className="flex-1 sm:flex-initial px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm md:text-base font-medium whitespace-nowrap app-button-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {translating ? (
-                  t("settings.footer.translating")
-                ) : (
-                  <>
-                    <span className="hidden sm:inline">{t("settings.footer.translateCefr")}</span>
-                    <span className="sm:hidden">{t("settings.footer.translateShort")}</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <button
-              onClick={onClose}
-              className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-md text-xs sm:text-sm md:text-base font-medium app-button-muted transition-colors"
-            >
-              {t("settings.footer.close")}
-            </button>
-          </div>
         </div>
       </div>
     </div>

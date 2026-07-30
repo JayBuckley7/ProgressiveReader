@@ -353,7 +353,7 @@ export function MixSettingsModal(props: {
             </div>
             {!props.onRequestRefine ? (
               <div className="text-xs app-muted mt-2">
-                Configure OpenAI on the server (admin) or add a personal key in Settings → General.
+                Configure OpenAI on the server (admin) or add a personal key in Settings → Advanced.
               </div>
             ) : null}
           </div>

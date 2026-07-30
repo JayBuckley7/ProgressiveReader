@@ -11,7 +11,7 @@ import { useTextToSpeech } from "@features/reader/hooks/useTextToSpeech";
 import { useTranslation } from "@features/reader/hooks/useTranslation";
 import { useGrammarReadAlong } from "@features/grammar/hooks/useGrammarReadAlong";
 
-import { PdfViewerHandle } from "@shared/components/PdfViewer";
+import type { PdfViewerHandle } from "@shared/components/PdfViewer";
 
 import { useInternalEpubLinks } from "./useInternalEpubLinks";
 import { useJpdbHighlighting } from "./useJpdbHighlighting";

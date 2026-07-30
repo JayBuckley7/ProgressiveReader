@@ -87,6 +87,16 @@ export class DriveAuth {
       return null;
     }
 
+    // Most Drive operations ask for a token more than once. Reuse the healthy
+    // in-memory token instead of making a backend round trip for every file.
+    const cachedToken = gDriveCacheService.getAccessToken();
+    const cachedExpiry = gDriveCacheService.getAccessTokenExpiry();
+    if (cachedToken && cachedExpiry && Date.now() < cachedExpiry - 5 * 60 * 1000) {
+      gDriveCacheService.setLastSigninCheck(true);
+      this.gapi.setAccessToken(cachedToken);
+      return cachedToken;
+    }
+
     try {
       const clerkToken = await getTokenFromClerkBackend();
       if (clerkToken) {
@@ -94,18 +104,12 @@ export class DriveAuth {
         const accessTokenExpiry = this.computeExpiryMs(clerkToken);
 
         gDriveCacheService.setAccessToken(accessToken, accessTokenExpiry);
+        gDriveCacheService.setLastSigninCheck(true);
         this.gapi.setAccessToken(accessToken);
         return accessToken;
       }
     } catch (error) {
       appLog.warn("[DriveAuth] Failed to get token from Clerk backend, falling back to cache", error);
-    }
-
-    // Fallback: cached token still valid (with 5 minute buffer).
-    const cachedToken = gDriveCacheService.getAccessToken();
-    const cachedExpiry = gDriveCacheService.getAccessTokenExpiry();
-    if (cachedToken && cachedExpiry && Date.now() < cachedExpiry - 5 * 60 * 1000) {
-      return cachedToken;
     }
 
     this.clearCachedTokens();

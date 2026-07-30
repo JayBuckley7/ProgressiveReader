@@ -38,10 +38,12 @@
   },
   "settings": {
     "title": "設定",
+    "description": "読書、言語ツール、アプリの設定",
     "tabs": {
-      "general": "全般",
-      "highlight": "ハイライト",
-      "accessibility": "アクセシビリティ"
+      "general": "読書",
+      "highlight": "言語ツール",
+      "advanced": "詳細設定",
+      "accessibility": "アプリとデータ"
     },
     "general": {
       "api": {
@@ -214,6 +216,31 @@
       "comfortable": "標準",
       "compact": "コンパクト"
     },
+    "status": {
+      "syncing": "ライブラリを同期中…",
+      "lastSynced": "最終同期 {{time}}"
+    },
+    "continueReading": {
+      "title": "読書を続ける",
+      "subtitle": "前回の続きから",
+      "resume": "続きを読む",
+      "hide": "「読書を続ける」を閉じる",
+      "show": "{{count}}冊を表示",
+      "remove": "「{{title}}」を「読書を続ける」から削除"
+    },
+    "search": {
+      "label": "ライブラリを検索",
+      "placeholder": "タイトル・著者・フォルダーを検索",
+      "clear": "検索をクリア",
+      "noResultsTitle": "一致する本がありません",
+      "noResultsDescription": "別のタイトル、著者、フォルダー名をお試しください。"
+    },
+    "sort": {
+      "label": "並び順",
+      "recentlyAdded": "追加日の新しい順",
+      "recentlyRead": "最近読んだ順",
+      "title": "タイトル順"
+    },
     "signInPrompt": {
       "title": "ライブラリにアクセスするにはサインイン",
       "description": "本を表示・管理するにはサインインしてください"
@@ -306,13 +333,30 @@
       "clearTranslationTitle": "原文を表示"
     },
     "controls": {
+      "panelTitle": "読書コントロール",
+      "close": "読書コントロールを閉じる",
+      "chapterFallback": "第{{chapter}}章",
+      "progress": "{{current}} / {{total}} · 左右にスワイプしてページを移動",
       "prev": "前の章",
       "next": "次の章",
       "translate": "この章を翻訳",
+      "translateShort": "翻訳",
+      "translating": "翻訳中…",
       "ttsStart": "読み上げ開始",
       "ttsStop": "読み上げ停止",
+      "readAloud": "読み上げ",
+      "stopReading": "読み上げ停止",
+      "highlight": "JPDB ハイライト",
+      "highlightEnable": "JPDB ハイライトを有効化",
+      "highlightDisable": "JPDB ハイライトを無効化",
+      "mix": "日本語ミックス",
+      "mixConfigure": "日本語ミックスを設定",
+      "mixConfigureEnabled": "日本語ミックスを設定（有効）",
       "bookmarkAdd": "しおりを追加",
-      "toc": "目次としおり"
+      "bookmark": "しおり",
+      "saving": "保存中…",
+      "toc": "目次としおり",
+      "contents": "目次"
     },
     "toc": {
       "menu": "メニュー",

@@ -1,6 +1,6 @@
 import type { useSettings } from "@shared/contexts/SettingsContext";
 
-export type SettingsModalTabId = "general" | "highlight" | "accessibility";
+export type SettingsModalTabId = "general" | "highlight" | "advanced" | "accessibility";
 
 export type AppSettings = NonNullable<ReturnType<typeof useSettings>["settings"]>;
 export type UpdateAppSettings = ReturnType<typeof useSettings>["updateSettings"];

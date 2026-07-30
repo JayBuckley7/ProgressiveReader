@@ -39,9 +39,11 @@ describe('BookReader (smoke)', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reader controls' }));
     });
-    // The button has aria-label from i18n key reader.controls.translate
-    const translateBtn = screen.getAllByLabelText(/Translate current chapter|この章を翻訳/i)[0];
+    const translateBtn = screen.getByRole('button', { name: /Translate current chapter|この章を翻訳/i });
     expect(translateBtn).toBeInTheDocument();
+    expect(translateBtn).toHaveTextContent(/Translate/i);
+    expect(screen.getByRole('button', { name: /Enable JPDB highlight/i })).toHaveTextContent(/JPDB highlight/i);
+    expect(screen.getByRole('button', { name: /Table of contents and bookmarks|目次としおり/i })).toHaveTextContent(/Contents/i);
   });
 });
 

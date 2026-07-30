@@ -59,7 +59,7 @@ function ReaderControlsComponent({
   }, [chapterTitles]);
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [isLoadingBookmarks, setIsLoadingBookmarks] = useState(true);
+  const [, setIsLoadingBookmarks] = useState(true);
   const [isAddingBookmark, setIsAddingBookmark] = useState(false);
 
   useEffect(() => {
@@ -145,6 +145,10 @@ function ReaderControlsComponent({
   const bigBtn =
     "p-3 rounded-lg transition-colors text-gray-600 dark:text-gray-400 " +
     "hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700";
+  const actionBtn =
+    "min-h-11 rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 " +
+    "flex items-center gap-2 text-left text-sm font-medium text-gray-700 dark:text-gray-200 " +
+    "transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50";
 
   const handlePrevChapter = () => {
     onPrevChapter();
@@ -165,26 +169,31 @@ function ReaderControlsComponent({
   if (!visible) return null;
 
   return (
-    <div
-      ref={panelRef}
-      className="fixed right-2 top-14 z-40 w-[calc(100vw-1rem)] max-w-md sm:right-4 sm:top-16 sm:max-w-xl"
-      role="dialog"
-      aria-modal="false"
-      aria-label="Reader controls"
-    >
-      <div className="max-h-[calc(100vh-4.5rem)] sm:max-h-[34rem] overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <>
+      {visible && (
+        <div
+          ref={panelRef}
+          className="fixed right-2 top-14 z-40 w-[calc(100vw-1rem)] max-w-md sm:right-4 sm:top-16 sm:max-w-xl"
+          role="dialog"
+          aria-modal="false"
+          aria-label={t("reader.controls.panelTitle")}
+        >
+          <div className="max-h-[calc(100vh-4.5rem)] sm:max-h-[34rem] overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Reader controls</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {t("reader.controls.panelTitle")}
+            </h2>
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              {chapterTitles?.[currentChapter]?.title || `Chapter ${currentChapter + 1}`}
+              {chapterTitles?.[currentChapter]?.title ||
+                t("reader.controls.chapterFallback", { chapter: currentChapter + 1 })}
             </p>
           </div>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Close reader controls"
-            title="Close reader controls"
+            aria-label={t("reader.controls.close")}
+            title={t("reader.controls.close")}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -193,188 +202,123 @@ function ReaderControlsComponent({
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
-        {/* Mobile layout */}
-        <div className="sm:hidden">
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handlePrevChapter}
               disabled={currentChapter === 0}
-              className={`${bigBtn} disabled:opacity-50 flex items-center justify-center`}
-              aria-label={t('reader.controls.prev')}
-              title={t('reader.controls.prev')}
+              className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
+              <span>{t('reader.controls.prev')}</span>
             </button>
             <button
               onClick={handleNextChapter}
               disabled={currentChapter + 1 >= totalChapters}
-              className={`${bigBtn} disabled:opacity-50 flex items-center justify-center`}
-              aria-label={t('reader.controls.next')}
-              title={t('reader.controls.next')}
+              className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>{t('reader.controls.next')}</span>
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <button
-              onClick={() => setShowDrawer(true)}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
-              aria-label={t('reader.controls.toc')}
-              title={t('reader.controls.toc')}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
 
-            <button
-              onClick={() => setShowDrawer(true)}
-              className="flex-1 min-w-0 text-left"
-              aria-label={t('reader.controls.toc')}
-              title={t('reader.controls.toc')}
-            >
-              <div className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200">
-                <div className="text-xs font-medium truncate">
-                  {chapterTitles?.[currentChapter]?.title || `Chapter ${currentChapter + 1}`}
-                </div>
-                <div className="text-[11px] opacity-75">
-                  {currentChapter + 1} / {Math.max(1, totalChapters)} · Swipe left/right to turn
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={handleAddBookmark}
-              disabled={isAddingBookmark}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
-              aria-label={t('reader.controls.bookmarkAdd')}
-              title={t('reader.controls.bookmarkAdd')}
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M5 3a2 2 0 00-2 2v13l7-3 7 3V5a2 2 0 00-2-2H5z" />
-              </svg>
-            </button>
+          <div className="my-3 rounded-md bg-gray-100 px-3 py-2 dark:bg-gray-700/60">
+            <div className="truncate text-sm font-medium text-gray-700 dark:text-gray-200" style={{ maxWidth: `${maxLabelLength + 8}ch` }}>
+              {chapterTitles?.[currentChapter]?.title ||
+                t("reader.controls.chapterFallback", { chapter: currentChapter + 1 })}
+            </div>
+            <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {t("reader.controls.progress", {
+                current: currentChapter + 1,
+                total: Math.max(1, totalChapters),
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            <button
-              onClick={onToggleHighlight}
-              className={`p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 relative flex-shrink-0 ${jpdbHighlighted ? 'bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200' : ''}`}
-              aria-label={jpdbHighlighted ? "Disable JPDB highlight" : "Enable JPDB highlight"}
-              title={jpdbHighlighted ? "Disable JPDB highlight" : "Enable JPDB highlight"}
-            >
-              <svg className={`w-5 h-5 ${jpdbHighlighted ? 'text-yellow-600 dark:text-yellow-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5l4 4-9 9-4 1 1-4 9-9z" />
-              </svg>
-              {jpdbHighlighted && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full border border-white dark:border-gray-800"></div>
-              )}
-            </button>
-            <button
-              onClick={onShowMixSettings}
-              className={`p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 relative flex-shrink-0 ${mixEnabled ? 'bg-emerald-100 dark:bg-emerald-900 border border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-200' : ''}`}
-              aria-label={mixEnabled ? "Configure Mix Japanese (enabled)" : "Configure Mix Japanese"}
-              title={mixEnabled ? "Mix Japanese (enabled)" : "Mix Japanese"}
-            >
-              <svg className={`w-5 h-5 ${mixEnabled ? 'text-emerald-600 dark:text-emerald-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" />
-              </svg>
-              {mixEnabled && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-gray-800"></div>
-              )}
-            </button>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <button
               onClick={onTranslate}
               disabled={translating}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex-shrink-0"
+              className={actionBtn}
               aria-label={t('reader.controls.translate')}
-              title={t('reader.controls.translate')}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
               </svg>
+              <span>
+                {translating ? t("reader.controls.translating") : t("reader.controls.translateShort")}
+              </span>
             </button>
             <button
               onClick={onToggleTts}
-              className="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
+              className={actionBtn}
               aria-label={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
-              title={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5L6 9H2v6h4l5 4V5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9v6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7v10" />
+              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H2v6h4l5 4V5zM19 9v6M15 7v10" />
               </svg>
+              <span>{ttsActive ? t("reader.controls.stopReading") : t("reader.controls.readAloud")}</span>
             </button>
-          </div>
-        </div>
-
-        {/* Desktop layout */}
-        <div className="hidden sm:flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <button onClick={handlePrevChapter} disabled={currentChapter === 0} className={`${bigBtn} disabled:opacity-50`} aria-label={t('reader.controls.prev')} title={t('reader.controls.prev')}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <button
+              onClick={onToggleHighlight}
+              className={`${actionBtn} ${jpdbHighlighted ? "border-yellow-400 bg-yellow-50 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-100" : ""}`}
+              aria-label={
+                jpdbHighlighted
+                  ? t("reader.controls.highlightDisable")
+                  : t("reader.controls.highlightEnable")
+              }
+              aria-pressed={jpdbHighlighted}
+            >
+              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m15 5 4 4-9 9-4 1 1-4 9-9z" />
               </svg>
+              <span>{t("reader.controls.highlight")}</span>
             </button>
-            <span className="flex-1 min-w-0 text-sm font-medium text-gray-700 dark:text-gray-300 select-none truncate" style={{ maxWidth: `${maxLabelLength}ch` }}>
-              {chapterTitles?.[currentChapter]?.title || `Chapter ${currentChapter + 1}`}
-            </span>
-            <button onClick={handleNextChapter} disabled={currentChapter + 1 >= totalChapters} className={`${bigBtn} disabled:opacity-50`} aria-label={t('reader.controls.next')} title={t('reader.controls.next')}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-6 gap-2">
-            <button onClick={onToggleHighlight} className={`${bigBtn} relative flex justify-center ${jpdbHighlighted ? 'bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200' : ''}`} aria-label={jpdbHighlighted ? "Disable JPDB highlight" : "Enable JPDB highlight"} title={jpdbHighlighted ? "Disable JPDB highlight" : "Enable JPDB highlight"}>
-              <svg className={`w-6 h-6 ${jpdbHighlighted ? 'text-yellow-600 dark:text-yellow-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5l4 4-9 9-4 1 1-4 9-9z" />
-              </svg>
-              {jpdbHighlighted && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-              )}
-            </button>
-            <button onClick={onShowMixSettings} className={`${bigBtn} relative flex justify-center ${mixEnabled ? 'bg-emerald-100 dark:bg-emerald-900 border border-emerald-300 dark:border-emerald-600 text-emerald-800 dark:text-emerald-200' : ''}`} aria-label={mixEnabled ? "Configure Mix Japanese (enabled)" : "Configure Mix Japanese"} title={mixEnabled ? "Mix Japanese (enabled)" : "Mix Japanese"}>
-              <svg className={`w-6 h-6 ${mixEnabled ? 'text-emerald-600 dark:text-emerald-300' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button
+              onClick={onShowMixSettings}
+              className={`${actionBtn} ${mixEnabled ? "border-emerald-400 bg-emerald-50 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100" : ""}`}
+              aria-label={
+                mixEnabled
+                  ? t("reader.controls.mixConfigureEnabled")
+                  : t("reader.controls.mixConfigure")
+              }
+              aria-pressed={mixEnabled}
+            >
+              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" />
               </svg>
-              {mixEnabled && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-              )}
+              <span>{t("reader.controls.mix")}</span>
             </button>
-            <button onClick={onTranslate} disabled={translating} className={`${bigBtn} flex justify-center disabled:opacity-50`} aria-label={t('reader.controls.translate')} title={t('reader.controls.translate')}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
+            <button
+              onClick={handleAddBookmark}
+              disabled={isAddingBookmark}
+              className={actionBtn}
+              aria-label={t('reader.controls.bookmarkAdd')}
+            >
+              <svg className="h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M5 3a2 2 0 0 0-2 2v13l7-3 7 3V5a2 2 0 0 0-2-2H5z" />
               </svg>
+              <span>{isAddingBookmark ? t("reader.controls.saving") : t("reader.controls.bookmark")}</span>
             </button>
-            <button onClick={onToggleTts} className={`${bigBtn} flex justify-center`} aria-label={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')} title={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5L6 9H2v6h4l5 4V5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9v6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7v10" />
-              </svg>
-            </button>
-            <button onClick={handleAddBookmark} disabled={isAddingBookmark} className={`${bigBtn} flex justify-center disabled:opacity-50`} aria-label={t('reader.controls.bookmarkAdd')} title={t('reader.controls.bookmarkAdd')}>
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M5 3a2 2 0 00-2 2v13l7-3 7 3V5a2 2 0 00-2-2H5z" />
-              </svg>
-            </button>
-            <button onClick={() => setShowDrawer(true)} className={`${bigBtn} flex justify-center`} aria-label={t('reader.controls.toc')} title={t('reader.controls.toc')}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button
+              onClick={() => setShowDrawer(true)}
+              className={actionBtn}
+              aria-label={t('reader.controls.toc')}
+            >
+              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
+              <span>{t("reader.controls.contents")}</span>
             </button>
           </div>
         </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* drawer */}
       {showDrawer && (
         <ContentsDrawer
           visible={showDrawer}
@@ -385,7 +329,7 @@ function ReaderControlsComponent({
           bookmarks={bookmarks}
         />
       )}
-    </div>
+    </>
   );
 }
 

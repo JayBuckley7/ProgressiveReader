@@ -12,7 +12,15 @@ const PRECACHE_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        PRECACHE_ASSETS.map((asset) =>
+          cache.add(asset).catch((error) => {
+            console.warn('[sw] Failed to precache asset', asset, error);
+          })
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -53,12 +61,20 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/'))
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match('/');
+        return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
+      })
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).catch(() => {
+        return new Response('', { status: 503, statusText: 'Offline' });
+      });
+    })
   );
 });

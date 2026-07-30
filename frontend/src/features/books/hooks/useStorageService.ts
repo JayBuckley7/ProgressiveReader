@@ -29,6 +29,7 @@ import { cacheBookForOffline, hasOfflineBooksCached, loadOfflineBooks } from "./
 import { createFolderActions } from "./storageService/folders";
 import { handleUnauthorizedCloudSettingsLoad, loadCloudSettings, saveCloudSettings, type CloudSettings } from "./storageService/settings";
 import { secureSignOut, signInWithClerk, type ClerkClient } from "./storageService/auth";
+import { readLibrarySnapshot, writeLibrarySnapshot } from "../utils/librarySnapshot";
 
 function useStorageService() {
   const deps = useAppDeps();
@@ -53,10 +54,13 @@ function useStorageService() {
   const [isDriveBookLoading, setIsDriveBookLoading] = useState(false);
   const [books, setBooks] = useState<BookMetadata[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [lastLibrarySyncAt, setLastLibrarySyncAt] = useState<Date | null>(null);
 
   const booksRef = useRef<BookMetadata[]>([]);
+  const foldersRef = useRef<Folder[]>([]);
   const isRefreshingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const hydratedSnapshotUserIdRef = useRef<string | null>(null);
 
   const SESSION_COOLDOWN_MS = 30_000;
   const lastSessionToastRef = useRef(0);
@@ -66,11 +70,30 @@ function useStorageService() {
     booksRef.current = books;
   }, [books]);
 
+  useEffect(() => {
+    foldersRef.current = folders;
+  }, [folders]);
+
+  useEffect(() => {
+    if (!clerkUser || hydratedSnapshotUserIdRef.current !== clerkUser.id || !lastLibrarySyncAt) return;
+
+    const timeoutId = window.setTimeout(() => {
+      try {
+        writeLibrarySnapshot(clerkUser.id, books, folders, lastLibrarySyncAt);
+      } catch (error) {
+        appLog.warn("[useStorageService] Failed to persist library snapshot", error);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [books, clerkUser, folders, lastLibrarySyncAt]);
+
   const silentRefreshBooks = useCallback(async () => {
     if (!clerkUser || isRefreshingRef.current) return;
 
     try {
       isRefreshingRef.current = true;
+      setIsDriveBookLoading(true);
       if (import.meta.env.DEV) appLog.debug("[useStorageService] Silent refresh starting");
 
       const previous = booksRef.current;
@@ -90,6 +113,7 @@ function useStorageService() {
         booksRef,
         cleanupRemoved: (removed) => bookCache.cleanupBlobUrls(removed),
       });
+      setLastLibrarySyncAt(new Date());
     } catch (error) {
       notifyError(error, { title: "Failed to load books from Google Drive" });
     } finally {
@@ -115,7 +139,7 @@ function useStorageService() {
       return false;
     }
 
-    setIsLoading(true);
+    setIsLoading(booksRef.current.length === 0);
     setIsDriveBookLoading(true);
     isRefreshingRef.current = true;
     isDriveSyncingRef.current = true;
@@ -149,6 +173,8 @@ function useStorageService() {
         cleanupRemoved: (removed) => bookCache.cleanupBlobUrls(removed),
       });
       setFolders(userFolders);
+      foldersRef.current = userFolders;
+      setLastLibrarySyncAt(new Date());
 
       localStorage.setItem("wasGoogleDriveConnected", "true");
       toast.success("Google Drive connected and library loaded!");
@@ -159,7 +185,9 @@ function useStorageService() {
         title: "Failed to connect to Google Drive",
         description: "Showing offline books instead.",
       });
-      await loadOfflineBooksIntoState();
+      if (booksRef.current.length === 0) {
+        await loadOfflineBooksIntoState();
+      }
       return false;
     } finally {
       setIsLoading(false);
@@ -179,13 +207,38 @@ function useStorageService() {
 
     if (!clerkLoaded) return;
 
-    setIsLoading(false);
-
     if (clerkUser) {
       const currentUserId = clerkUser.id;
+
+      if (hydratedSnapshotUserIdRef.current !== currentUserId) {
+        const snapshot = readLibrarySnapshot(currentUserId);
+        hydratedSnapshotUserIdRef.current = currentUserId;
+
+        if (snapshot) {
+          bookCache.cleanupBlobUrls([]);
+          setBooks(snapshot.books);
+          booksRef.current = snapshot.books;
+          setFolders(snapshot.folders);
+          foldersRef.current = snapshot.folders;
+          setLastLibrarySyncAt(snapshot.savedAt);
+          setIsLoading(false);
+        } else {
+          bookCache.cleanupBlobUrls([]);
+          setBooks([]);
+          booksRef.current = [];
+          setFolders([]);
+          foldersRef.current = [];
+          setIsLoading(true);
+          setLastLibrarySyncAt(null);
+        }
+      }
+
       if (lastUserIdRef.current === currentUserId) return;
 
-      if (!isGoogleLinkedClerkUser(clerkUser)) return;
+      if (!isGoogleLinkedClerkUser(clerkUser)) {
+        setIsLoading(false);
+        return;
+      }
 
       lastUserIdRef.current = currentUserId;
 
@@ -197,6 +250,9 @@ function useStorageService() {
     }
 
     // User is not signed in.
+    setIsLoading(false);
+    hydratedSnapshotUserIdRef.current = null;
+    setLastLibrarySyncAt(null);
     if (!isOnline) {
       if (hasOfflineBooksCached()) {
         void loadOfflineBooksIntoState();
@@ -380,6 +436,15 @@ function useStorageService() {
     }
   }, [bookStorage]);
 
+  const getReadingProgresses = useCallback(async (bookIds: string[]): Promise<Record<string, ReadingProgress>> => {
+    try {
+      return await bookStorage.getReadingProgresses(bookIds);
+    } catch (error) {
+      appLog.error("[useStorageService] Error getting reading progress list", error);
+      return {};
+    }
+  }, [bookStorage]);
+
   const saveReadingProgress = useCallback(async (progress: ReadingProgress) => {
     try {
       await bookStorage.saveReadingProgress(progress);
@@ -427,7 +492,11 @@ function useStorageService() {
       onSignedOut: () => {
         setBooks([]);
         setFolders([]);
+        booksRef.current = [];
+        foldersRef.current = [];
         lastUserIdRef.current = null;
+        hydratedSnapshotUserIdRef.current = null;
+        setLastLibrarySyncAt(null);
         lastSessionToastRef.current = 0;
       },
       drive: deps.drive,
@@ -455,6 +524,7 @@ function useStorageService() {
     }
 
     setIsLoading(true);
+    setIsDriveBookLoading(true);
     isDriveSyncingRef.current = true;
     try {
       const onCoverReady = (bookId: string, coverUrl: string) => {
@@ -464,12 +534,14 @@ function useStorageService() {
       const synced = await syncBooksFromDrive({ drive: deps.drive, driveAuth: deps.driveAuth, bookCache, clerkUser, onCoverReady });
       setBooks(synced);
       booksRef.current = synced;
+      setLastLibrarySyncAt(new Date());
       toast.success("Library synced successfully");
       lastSessionToastRef.current = 0;
     } catch (error) {
       notifyError(error, { title: "Failed to sync books" });
     } finally {
       setIsLoading(false);
+      setIsDriveBookLoading(false);
       isDriveSyncingRef.current = false;
     }
   }, [bookCache, clerkUser, deps.drive, deps.driveAuth]);
@@ -509,6 +581,7 @@ function useStorageService() {
     folders,
     isLoading,
     isDriveBookLoading,
+    lastLibrarySyncAt,
     isAuthenticated: Boolean(clerkUser) && clerkLoaded,
     signIn,
     signOut,
@@ -518,6 +591,7 @@ function useStorageService() {
     updateBookCover,
     updateBookMetadata,
     getReadingProgress,
+    getReadingProgresses,
     saveReadingProgress,
     saveBookProgress,
     openCloudFolder,

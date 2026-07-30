@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@clerk/clerk-react";
 
@@ -70,6 +70,8 @@ function TestPreview(props: {
 }) {
   const { t } = useTranslation();
   const { onBack, onModeChange, onStart, practiceMode, selectedTest, testData } = props;
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [outlineExpanded, setOutlineExpanded] = useState(false);
   const sections = useMemo(() => buildJlptSections(testData.questions, testData.meta), [testData.meta, testData.questions]);
   const questionCount = testData.questions.length;
   const totalTime =
@@ -83,71 +85,125 @@ function TestPreview(props: {
       ? "Answer everything blind, keep moving, and review the full scored breakdown at the end."
       : "Get immediate feedback after each answer, finish each section with a recap, and retry only what you miss.";
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    titleRef.current?.focus({ preventScroll: true });
+  }, []);
+
   return (
-    <div className={pageShellClass}>
+    <div className={pageShellCompactClass}>
       <div className="mx-auto max-w-6xl">
         <button
           onClick={onBack}
-          className={`mb-5 ${buttonMutedClass}`}
+          className={`mb-4 ${buttonMutedClass}`}
         >
           {t("jlptTest.page.backToSelection")}
         </button>
 
-        <div className="border-b border-[color:var(--ui-border)] pb-6">
+        <div className="border-b border-[color:var(--ui-border)] pb-5">
           <div className={`mb-3 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>
             <span>{level}</span>
             {totalTime > 0 ? <span>{totalTime} minutes</span> : null}
             <span>{hasAnswerKey ? "Scored review available" : "Answer key missing"}</span>
           </div>
-          <h1 className="text-3xl font-semibold text-[color:var(--ui-text)]">{formatJlptTestTitle(selectedTest.name)}</h1>
+          <h1
+            ref={titleRef}
+            tabIndex={-1}
+            className="text-2xl font-semibold text-[color:var(--ui-text)] outline-none sm:text-3xl"
+          >
+            {formatJlptTestTitle(selectedTest.name)}
+          </h1>
           <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedTextClass}`}>{sourceSummary}</p>
         </div>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_360px]">
-          <main className="space-y-8">
-            <section>
-              <div className="mb-4">
-                <h2 className="text-2xl font-semibold text-[color:var(--ui-text)]">Choose how this run behaves</h2>
-                <p className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
-                  The runner either coaches each answer immediately or keeps the whole attempt blind until the review pass.
-                </p>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          <section className="lg:col-start-1 lg:row-start-1">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-[color:var(--ui-text)] sm:text-2xl">Choose a test mode</h2>
+              <p className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
+                Pick immediate coaching or a blind exam with review at the end.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(["exam", "practice"] as PracticeMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => onModeChange(mode)}
+                  aria-pressed={practiceMode === mode}
+                  className={`h-12 rounded-md border px-4 text-sm font-semibold transition-colors ${
+                    practiceMode === mode
+                      ? "border-[color:var(--ui-accent)] bg-[color:var(--ui-accent)] text-[color:var(--ui-accent-contrast)]"
+                      : "border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] text-[color:var(--ui-text)] hover:bg-[color:var(--ui-surface-alt)]"
+                  }`}
+                >
+                  {mode === "exam" ? "Exam Mode" : "Practice Mode"}
+                </button>
+              ))}
+            </div>
+
+            <div className={`mt-4 rounded-md p-4 text-sm leading-6 text-[color:var(--ui-text)] ${subtleSurfaceClass}`}>
+              {modeSummary}
+            </div>
+          </section>
+
+          <aside className="lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <div className={`${cardClass} p-6`}>
+              <div className={`text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>Ready to start</div>
+              <div className="mt-2 text-lg font-semibold text-[color:var(--ui-text)]">
+                {practiceMode === "exam" ? "Exam with final review" : "Coached practice"}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {(["exam", "practice"] as PracticeMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => onModeChange(mode)}
-                    className={`h-12 rounded-md border px-4 text-sm font-semibold transition-colors ${
-                      practiceMode === mode
-                        ? "border-[color:var(--ui-accent)] bg-[color:var(--ui-accent)] text-[color:var(--ui-accent-contrast)]"
-                        : "border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] text-[color:var(--ui-text)] hover:bg-[color:var(--ui-surface-alt)]"
-                    }`}
-                  >
-                    {mode === "exam" ? "Exam Mode" : "Practice Mode"}
-                  </button>
-                ))}
+              <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
+                {questionCount} questions
+                {totalTime ? ` · ${totalTime} minutes` : ""}
               </div>
 
-              <div className={`mt-5 rounded-md p-4 text-sm leading-7 text-[color:var(--ui-text)] ${subtleSurfaceClass}`}>
-                {modeSummary}
-              </div>
-            </section>
+              {hasAnswerKey ? (
+                <button
+                  onClick={onStart}
+                  className={`mt-5 ${buttonPrimaryClass}`}
+                >
+                  {practiceMode === "exam" ? "Start exam" : "Start practice"}
+                </button>
+              ) : (
+                <div className="mt-4 rounded-md border border-amber-500/35 bg-amber-500/10 p-4">
+                  <div className="text-sm font-semibold text-[color:var(--ui-text)]">Start blocked</div>
+                  <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
+                    Pick another test file with answer data to use this redesigned flow.
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
 
-            <section>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold text-[color:var(--ui-text)]">Section outline</h2>
-                <div className={`text-sm ${mutedTextClass}`}>{sections.length} sections</div>
-              </div>
-              <div className="space-y-3">
+          <section className="lg:col-start-1 lg:row-start-2">
+            <button
+              type="button"
+              onClick={() => setOutlineExpanded((expanded) => !expanded)}
+              aria-expanded={outlineExpanded}
+              className="flex min-h-11 w-full items-center justify-between gap-4 border-y border-[color:var(--ui-border)] py-3 text-left"
+            >
+              <span>
+                <span className="block text-base font-semibold text-[color:var(--ui-text)]">Section outline</span>
+                <span className={`mt-0.5 block text-sm ${mutedTextClass}`}>
+                  {sections.length} sections · {questionCount} questions
+                </span>
+              </span>
+              <span className={`text-sm font-medium ${mutedTextClass}`}>
+                {outlineExpanded ? "Hide" : "Review"}
+              </span>
+            </button>
+
+            {outlineExpanded ? (
+              <div className="mt-3 space-y-2">
                 {sections.map((section, index) => {
                   const label = splitSectionLabel(section.label);
                   return (
-                    <div key={`${section.sectionId}-${index}`} className={`flex items-start justify-between gap-4 rounded-md p-4 ${subtleSurfaceClass}`}>
+                    <div key={`${section.sectionId}-${index}`} className="flex items-start justify-between gap-4 border-b border-[color:var(--ui-border)] px-1 py-3">
                       <div className="min-w-0">
                         <div className={`mb-1 text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>
                           Section {index + 1}
                         </div>
-                        <div className="font-semibold text-[color:var(--ui-text)]">{label.primary}</div>
+                        <div className="font-medium text-[color:var(--ui-text)]">{label.primary}</div>
                         {label.secondary ? <div className={`mt-1 text-sm ${mutedTextClass}`}>{label.secondary}</div> : null}
                       </div>
                       <div className={`shrink-0 text-right text-sm ${mutedTextClass}`}>
@@ -158,49 +214,8 @@ function TestPreview(props: {
                   );
                 })}
               </div>
-            </section>
-          </main>
-
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <div className={`${cardClass} p-6`}>
-              <div className={`rounded-md p-4 ${subtleSurfaceClass}`}>
-                <div className={`text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>Ready to launch</div>
-                <div className="mt-2 text-lg font-semibold text-[color:var(--ui-text)]">
-                  {practiceMode === "exam" ? "Strict exam review flow" : "Coached section practice"}
-                </div>
-                <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
-                  {questionCount} questions
-                  {totalTime ? ` across ${totalTime} minutes` : ""}
-                </div>
-                <div className={`mt-3 text-sm leading-6 ${mutedTextClass}`}>
-                  {hasAnswerKey
-                    ? "This file can enter the redesigned scored runner."
-                    : "This file stays visible in the catalog, but the redesigned runner is blocked until the answer key exists."}
-                </div>
-              </div>
-
-              {hasAnswerKey ? (
-                <button
-                  onClick={onStart}
-                  className={`mt-4 ${buttonPrimaryClass}`}
-                >
-                  {practiceMode === "exam" ? "Start exam review flow" : "Start coached practice"}
-                </button>
-              ) : (
-                <div className="mt-4 rounded-md border border-amber-500/35 bg-amber-500/10 p-4">
-                  <div className="text-sm font-semibold text-[color:var(--ui-text)]">Start blocked</div>
-                  <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
-                    Pick another test file with answer data to use this redesigned flow.
-                  </div>
-                </div>
-              )}
-
-              <div className={`mt-5 border-t border-[color:var(--ui-border)] pt-5 text-sm ${mutedTextClass}`}>
-                <div className="font-semibold text-[color:var(--ui-text)]">{level}</div>
-                <div>{sourceSummary}</div>
-              </div>
-            </div>
-          </aside>
+            ) : null}
+          </section>
         </div>
       </div>
     </div>
@@ -225,6 +240,7 @@ export function JLPTTestPage() {
   const [isLoadingJpdbDecks, setIsLoadingJpdbDecks] = useState(false);
   const [loadingProgressLevel, setLoadingProgressLevel] = useState<string | null>(null);
   const [readinessDrawerLevel, setReadinessDrawerLevel] = useState<JlptLevel | null>(null);
+  const catalogScrollYRef = useRef(0);
 
   const loadTests = useCallback(async () => {
     try {
@@ -363,6 +379,7 @@ export function JLPTTestPage() {
 
   const handleSelectTest = async (test: JlptCatalogTest) => {
     try {
+      catalogScrollYRef.current = window.scrollY;
       setLoadingTest(true);
       setError(null);
       const data = await jlptTestService.loadTestData(deps.drive, test);
@@ -381,6 +398,14 @@ export function JLPTTestPage() {
     setSelectedTest(null);
     setTestData(null);
     setStartedTest(false);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: catalogScrollYRef.current, left: 0, behavior: "auto" });
+    });
+  };
+
+  const handleStartTest = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    setStartedTest(true);
   };
 
   const setActiveGoal = (params: { level: JlptLevel; test: JlptCatalogTest | null }) => {
@@ -604,7 +629,7 @@ export function JLPTTestPage() {
         testData={testData}
         practiceMode={practiceMode}
         onModeChange={setPracticeMode}
-        onStart={() => setStartedTest(true)}
+        onStart={handleStartTest}
         onBack={handleBack}
       />
     );

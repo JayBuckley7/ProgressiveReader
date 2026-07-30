@@ -1,6 +1,11 @@
+import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { PdfViewer, PdfViewerHandle } from "@shared/components/PdfViewer";
-import { BookMetadata } from "~/types";
+import type { PdfViewerHandle } from "@shared/components/PdfViewer";
+import type { BookMetadata } from "~/types";
+
+const PdfViewer = lazy(() =>
+  import("@shared/components/PdfViewer").then((module) => ({ default: module.PdfViewer }))
+);
 
 interface BookContentProps {
   bookMetadata: BookMetadata | null;
@@ -14,6 +19,7 @@ interface BookContentProps {
   setPdfCurrentPage: (page: number) => void;
   setPdfPageCount: (count: number) => void;
   settings?: { fontSize?: number; fontFamily?: string };
+  showPdfTokenHighlights?: boolean;
 }
 
 export function BookContent({
@@ -28,6 +34,7 @@ export function BookContent({
   setPdfCurrentPage,
   setPdfPageCount,
   settings,
+  showPdfTokenHighlights = false,
 }: BookContentProps) {
   const { t } = useTranslation();
 
@@ -42,15 +49,18 @@ export function BookContent({
     >
       {bookMetadata?.fileType === 'pdf' ? (
         pdfData ? (
-          <PdfViewer
-            ref={pdfViewerRef}
-            data={pdfData}
-            currentPage={pdfCurrentPage}
-            onCurrentPageChange={setPdfCurrentPage}
-            onPageCount={setPdfPageCount}
-            documentId={bookMetadata?.id}
-            documentVersion={bookMetadata?.modifiedTime}
-          />
+          <Suspense fallback={<div className="py-8 text-center">{t('reader.pdf.loading')}</div>}>
+            <PdfViewer
+              ref={pdfViewerRef}
+              data={pdfData}
+              currentPage={pdfCurrentPage}
+              onCurrentPageChange={setPdfCurrentPage}
+              onPageCount={setPdfPageCount}
+              documentId={bookMetadata?.id}
+              documentVersion={bookMetadata?.modifiedTime}
+              showTokenHighlights={showPdfTokenHighlights}
+            />
+          </Suspense>
         ) : (
           <div className="py-8 text-center">{t('reader.pdf.loading')}</div>
         )

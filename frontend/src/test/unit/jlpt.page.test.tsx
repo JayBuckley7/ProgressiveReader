@@ -17,9 +17,17 @@ const mockedGetAllTests = vi.mocked(jlptTestService.getAllTests);
 const mockedLoadTestData = vi.mocked(jlptTestService.loadTestData);
 
 describe("JLPTTestPage launch flow", () => {
+  const scrollToMock = vi.fn();
+
   beforeEach(() => {
     mockedGetAllTests.mockReset();
     mockedLoadTestData.mockReset();
+    scrollToMock.mockReset();
+    Object.defineProperty(window, "scrollTo", {
+      configurable: true,
+      writable: true,
+      value: scrollToMock,
+    });
   });
 
   it("shows the redesigned launch flow and enters the requested runner mode", async () => {
@@ -56,11 +64,13 @@ describe("JLPTTestPage launch flow", () => {
 
     await user.click(await screen.findByRole("button", { name: /Open test/i }));
 
-    expect(await screen.findByText(/Choose how this run behaves/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Choose a test mode/i)).toBeInTheDocument();
     expect(screen.getByText(/Section outline/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Section outline/i })).toHaveAttribute("aria-expanded", "false");
+    expect(scrollToMock).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "auto" });
 
     await user.click(screen.getByRole("button", { name: /Practice Mode/i }));
-    await user.click(screen.getByRole("button", { name: /Start coached practice/i }));
+    await user.click(screen.getByRole("button", { name: /Start practice/i }));
 
     expect(await screen.findByText(/Coached practice flow/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Start section/i })).toBeInTheDocument();
@@ -102,7 +112,8 @@ describe("JLPTTestPage launch flow", () => {
     expect(await screen.findByText(/Start blocked/i)).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /Start exam review flow/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Start coached practice/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Start exam$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Start practice$/i })).not.toBeInTheDocument();
     });
   });
 });

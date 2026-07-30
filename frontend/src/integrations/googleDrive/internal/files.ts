@@ -126,7 +126,7 @@ export class DriveFiles {
       return blob;
     } catch (error) {
       appLog.error(`[DriveFiles] Error downloading file ${fileId}`, error);
-      return null;
+      throw error;
     }
   }
 

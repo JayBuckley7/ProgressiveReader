@@ -1,5 +1,5 @@
 import React from "react";
-import { showDefinitionPopup, hideDefinitionPopup } from "@features/reader/components/JpdbPopup";
+import { showDefinitionPopup, hideDefinitionPopup } from "@features/reader/components/JpdbPopupBridge";
 
 /**
  * Very simple word highlighter that wraps individual words in spans. When a

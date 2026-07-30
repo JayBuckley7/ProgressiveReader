@@ -78,10 +78,19 @@ function startApp() {
 
 startApp();
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')
       .catch((err) => appLog.warn('Service worker registration failed', err));
   });
+} else if ('serviceWorker' in navigator && import.meta.env.DEV) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => {
+      registrations.forEach((registration) => {
+        void registration.unregister();
+      });
+    })
+    .catch((err) => appLog.warn('Service worker cleanup failed', err));
 }

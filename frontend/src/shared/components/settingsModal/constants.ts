@@ -20,6 +20,7 @@ export const localKeys = {
 export const SETTINGS_TABS: SettingsModalTabId[] = [
   "general",
   "highlight",
+  "advanced",
   "accessibility",
 ];
 

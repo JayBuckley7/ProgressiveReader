@@ -66,6 +66,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         setPdfCurrentPage={c.pdf.setCurrentPage}
         setPdfPageCount={c.pdf.setPageCount}
         settings={c.settings || undefined}
+        showPdfTokenHighlights={c.isPdf && c.highlighting.jpdbHighlighted}
       />
 
       <ReaderControls
@@ -117,11 +118,6 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onTranslate={(useCefr) => {
-            c.translation.setLastUseCefr(useCefr);
-            c.translation.translateCurrent(useCefr);
-          }}
-          translating={c.translation.isTranslating}
         />
       )}
 
