@@ -6,7 +6,7 @@ import { renderWithProviders } from "../test-utils";
 
 const showDefinitionPopupMock = vi.fn();
 
-vi.mock("@features/reader/components/JpdbPopup", () => ({
+vi.mock("@features/reader/components/JpdbPopupBridge", () => ({
   showDefinitionPopup: (...args: unknown[]) => showDefinitionPopupMock(...args),
 }));
 

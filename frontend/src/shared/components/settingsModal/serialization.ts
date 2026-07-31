@@ -99,6 +99,7 @@ export function createSettingsObject(params: {
     disableFadeAnimation: settings.disableFadeAnimation ?? false,
     hideFurigana: settings.hideFurigana ?? false,
     cacheTranslations: settings.cacheTranslations ?? true,
+    verticalWriting: settings.verticalWriting ?? false,
     customPopupCSS: localState.customPopupCSS,
 
     // Mix mode (English -> Mixed JP)
@@ -182,6 +183,11 @@ export function coerceImportedSettings(params: {
 
   const cacheTranslations = readOptionalBoolean(imported, "cacheTranslations");
   if (cacheTranslations !== undefined) settingsUpdates.cacheTranslations = cacheTranslations;
+
+  const verticalWriting =
+    readOptionalBoolean(imported, "verticalWriting") ??
+    readOptionalBoolean(imported, "vertical_writing");
+  if (verticalWriting !== undefined) settingsUpdates.verticalWriting = verticalWriting;
 
   // Mix mode settings
   if (hasOwn(imported, "mix_enabled")) {

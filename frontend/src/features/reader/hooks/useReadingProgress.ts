@@ -13,6 +13,7 @@ interface UseReadingProgressProps {
   bookId: string;
   bookMetadata: { fileType?: string } | null;
   chapter: number;
+  verticalWriting?: boolean;
   contentRef: React.RefObject<HTMLDivElement>;
   getReadingProgress: (bookId: string) => Promise<ReadingProgress | null>;
   saveBookProgress: (
@@ -37,6 +38,7 @@ export function useReadingProgress({
   bookId,
   bookMetadata,
   chapter,
+  verticalWriting = false,
   contentRef,
   getReadingProgress,
   saveBookProgress,
@@ -53,6 +55,7 @@ export function useReadingProgress({
   const searchParamsRef = useRef(searchParams);
   const currentChapterRef = useRef(currentChapter);
   const setSearchParamsRef = useRef(setSearchParams);
+  const verticalWritingRef = useRef(verticalWriting);
 
   useEffect(() => {
     searchParamsRef.current = searchParams;
@@ -65,6 +68,10 @@ export function useReadingProgress({
   useEffect(() => {
     currentChapterRef.current = currentChapter;
   }, [currentChapter]);
+
+  useEffect(() => {
+    verticalWritingRef.current = verticalWriting;
+  }, [verticalWriting]);
 
   // Load reading progress when book opens (runs once per book)
   useEffect(() => {
@@ -99,7 +106,18 @@ export function useReadingProgress({
           if (progress.currentPosition !== undefined && progress.currentPosition !== null) {
             setTimeout(() => {
               if (contentRef.current) {
-                contentRef.current.scrollTop = progress.currentPosition!;
+                if (verticalWritingRef.current && bookMetadata.fileType !== "pdf") {
+                  const maxScrollLeft = Math.max(
+                    0,
+                    contentRef.current.scrollWidth - contentRef.current.clientWidth
+                  );
+                  contentRef.current.scrollLeft = Math.max(
+                    0,
+                    maxScrollLeft - progress.currentPosition!
+                  );
+                } else {
+                  contentRef.current.scrollTop = progress.currentPosition!;
+                }
               }
             }, 500); // Delay to ensure content is loaded
           }
@@ -117,8 +135,16 @@ export function useReadingProgress({
   const saveProgress = useCallback(() => {
     if (fileType && progressLoaded && fileType !== "pdf") {
       const el = contentRef.current;
-      const scrollHeight = el ? el.scrollHeight : undefined;
-      const viewportHeight = el ? el.clientHeight : undefined;
+      const scrollExtent = el
+        ? verticalWriting
+          ? el.scrollWidth
+          : el.scrollHeight
+        : undefined;
+      const viewportExtent = el
+        ? verticalWriting
+          ? el.clientWidth
+          : el.clientHeight
+        : undefined;
       saveBookProgress(
         bookId,
         chapter,
@@ -126,11 +152,11 @@ export function useReadingProgress({
         undefined,
         undefined,
         fileType,
-        scrollHeight,
-        viewportHeight
+        scrollExtent,
+        viewportExtent
       );
     }
-  }, [fileType, progressLoaded, saveBookProgress, bookId, chapter, contentRef]);
+  }, [fileType, progressLoaded, saveBookProgress, bookId, chapter, contentRef, verticalWriting]);
 
   const saveProgressRef = useRef(saveProgress);
   useEffect(() => {
@@ -140,7 +166,14 @@ export function useReadingProgress({
   // Stable scroll handler that doesn't change with saveProgress updates
   const handleScroll = useCallback(() => {
     if (!contentRef.current) return;
-    scrollPositionRef.current = contentRef.current.scrollTop;
+    scrollPositionRef.current = verticalWritingRef.current
+      ? Math.max(
+          0,
+          contentRef.current.scrollWidth -
+            contentRef.current.clientWidth -
+            contentRef.current.scrollLeft
+        )
+      : contentRef.current.scrollTop;
     if (saveProgressTimeoutRef.current) {
       clearTimeout(saveProgressTimeoutRef.current);
     }
@@ -180,6 +213,18 @@ export function useReadingProgress({
         clearTimeout(saveProgressTimeoutRef.current);
       }
 
+      // Reset both axes after the new chapter renders. Only one axis is active,
+      // but clearing both prevents a stale position when writing mode changes.
+      setTimeout(() => {
+        scrollPositionRef.current = 0;
+        if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+          contentRef.current.scrollLeft = verticalWritingRef.current
+            ? Math.max(0, contentRef.current.scrollWidth - contentRef.current.clientWidth)
+            : 0;
+        }
+      }, 0);
+
       // If chapter is controlled externally, delegate and exit early.
       if (setCurrentChapter) {
         setCurrentChapter(ch);
@@ -191,14 +236,6 @@ export function useReadingProgress({
       const newParams = new URLSearchParams(searchParamsRef.current);
       newParams.set("ch", String(ch));
       setSearchParamsRef.current(newParams, { replace: true });
-
-      // Reset scroll position at the next tick (after new content renders).
-      setTimeout(() => {
-        scrollPositionRef.current = 0;
-        if (contentRef.current) {
-          contentRef.current.scrollTop = 0;
-        }
-      }, 0);
 
       // Save progress for the new chapter starting at position 0.
       if (bookMetadata && progressLoaded) {

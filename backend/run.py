@@ -4,6 +4,12 @@ import logging # Import the logging module
 import os
 import sys
 
+# Running this file directly is the local development entry point. Select the
+# development secrets before creating the app so Clerk's frontend and backend
+# keys always come from the same instance.
+if __name__ == "__main__":
+    os.environ.setdefault("APP_ENV", "development")
+
 app = create_app()
 
 if __name__ == '__main__':

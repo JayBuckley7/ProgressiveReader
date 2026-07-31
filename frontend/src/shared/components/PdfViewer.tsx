@@ -14,6 +14,7 @@ interface PdfViewerProps {
   onPageCount?: (count: number) => void;
   documentId?: string;
   documentVersion?: string;
+  showTokenHighlights?: boolean;
 }
 
 type PdfViewportLike = {
@@ -46,6 +47,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(({
   onPageCount,
   documentId,
   documentVersion,
+  showTokenHighlights = false,
 }, ref) => {
   const [pdf, setPdf] = useState<PdfDocumentLike | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +110,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(({
         pageNumber={Math.min(Math.max(1, currentPage), pdf.numPages)}
         documentId={documentId}
         documentVersion={documentVersion}
+        showTokenHighlights={showTokenHighlights}
       />
     </div>
   );

@@ -51,8 +51,15 @@ class DriveAuthManager implements DriveAuthPort {
   ensureAuthenticated = async (): Promise<boolean> => {
     if (this.isAuthenticating && this.authPromise) return this.authPromise;
     this.isAuthenticating = true;
-    this.authPromise = this.performAuthentication();
-    return this.authPromise;
+    const attempt = this.performAuthentication();
+    const wrappedAttempt = attempt.finally(() => {
+      if (this.authPromise === wrappedAttempt) {
+        this.isAuthenticating = false;
+        this.authPromise = null;
+      }
+    });
+    this.authPromise = wrappedAttempt;
+    return wrappedAttempt;
   };
 
   private async performAuthentication(): Promise<boolean> {

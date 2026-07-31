@@ -1,5 +1,5 @@
 import { useAppDeps } from "@app/deps/AppDepsProvider";
-import { showDefinitionPopup } from "@features/reader/components/JpdbPopup";
+import { showDefinitionPopup } from "@features/reader/components/JpdbPopupBridge";
 import { loadConfig as loadJpdbConfig, parseText } from "@features/reader/content/api-adapter";
 import { parseWithLocalLookup } from "@features/reader/utils/localTextParser";
 import { appLog } from "@shared/appLog";

@@ -39,9 +39,29 @@ describe('BookReader (smoke)', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reader controls' }));
     });
-    // The button has aria-label from i18n key reader.controls.translate
-    const translateBtn = screen.getAllByLabelText(/Translate current chapter|この章を翻訳/i)[0];
+    const translateBtn = screen.getByRole('button', { name: /Translate current chapter|この章を翻訳/i });
     expect(translateBtn).toBeInTheDocument();
+    expect(translateBtn).toHaveTextContent(/Translate/i);
+    expect(screen.getByRole('button', { name: /Enable JPDB highlight/i })).toHaveTextContent(/JPDB highlight/i);
+    expect(screen.getByRole('button', { name: /^(Table of contents and bookmarks|目次としおり)$/i })).toHaveTextContent(/Contents/i);
+  });
+
+  it('keeps chapter navigation reachable and opens contents from the dock', async () => {
+    renderWithProviders(
+      <BookReader bookId="demo-1" currentChapter={0} setCurrentChapter={() => {}} onBack={() => {}} />
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Reader navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous chapter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next chapter' })).toBeDisabled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Table of contents and bookmarks: 1 / 1' }));
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Menu' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chapter 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close reader controls' })).toBeInTheDocument();
   });
 });
 

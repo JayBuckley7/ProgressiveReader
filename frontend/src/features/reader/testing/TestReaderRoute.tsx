@@ -67,6 +67,17 @@ async function fetchBookBlob(url: string): Promise<Blob> {
 
 function createTestReaderData(book: BookMetadata, fileUrl: string): AppDataContextType {
   const progressKey = `reading_progress_${book.id}`;
+  const readStoredProgress = (): ReadingProgress | null => {
+    const raw = localStorage.getItem(progressKey);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return { ...parsed, lastUpdated: new Date(parsed.lastUpdated) } as ReadingProgress;
+    } catch {
+      localStorage.removeItem(progressKey);
+      return null;
+    }
+  };
 
   return {
     books: [book],
@@ -91,16 +102,10 @@ function createTestReaderData(book: BookMetadata, fileUrl: string): AppDataConte
     updateFolder: async () => {},
     deleteFolder: async () => {},
     moveBookToFolder: async () => {},
-    getReadingProgress: async () => {
-      const raw = localStorage.getItem(progressKey);
-      if (!raw) return null;
-      try {
-        const parsed = JSON.parse(raw);
-        return { ...parsed, lastUpdated: new Date(parsed.lastUpdated) } as ReadingProgress;
-      } catch {
-        localStorage.removeItem(progressKey);
-        return null;
-      }
+    getReadingProgress: async () => readStoredProgress(),
+    getReadingProgresses: async (bookIds) => {
+      const stored = readStoredProgress();
+      return stored && bookIds.includes(book.id) ? { [book.id]: stored } : {};
     },
     saveBookProgress: async (
       bookId,

@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
-import { SettingsModal } from "@shared/components/SettingsModal";
-import { FolderManager } from "./FolderManager";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { FolderView } from "./FolderView";
+import { ContinueReading } from "./ContinueReading";
 import { TokenStatusWarning } from "@shared/components/TokenStatusWarning";
-import { MassUploadModal } from "./MassUploadModal";
 import { useAppData } from "@shared/contexts/AppDataContext";
 import { useUser } from "@clerk/clerk-react";
 import { useSettings } from "@shared/contexts/SettingsContext";
-import { vocabBank } from "@features/vocabulary/services/vocabBank";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
 import { isGoogleLinkedClerkUser } from "@features/books/services/bookLibrary/provider";
 
@@ -15,6 +12,32 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SignInForm } from "@shared/components/SignInForm";
 import { appLog } from '@shared/appLog'
+import type { BookMetadata, ReadingProgress } from "~/types";
+import {
+  continueReadingBooks,
+  filterAndSortBooks,
+  type LibrarySort,
+  type ReadingProgressByBookId,
+} from "../utils/libraryView";
+import {
+  dismissContinueReadingProgress,
+  isContinueReadingProgressDismissed,
+  readContinueReadingPreferences,
+  writeContinueReadingPreferences,
+} from "../utils/continueReadingPreferences";
+
+const SettingsModal = lazy(() =>
+  import("@shared/components/SettingsModal").then((module) => ({ default: module.SettingsModal }))
+);
+const LazyGrammarProvider = lazy(() =>
+  import("@features/grammar/contexts/GrammarContext").then((module) => ({ default: module.GrammarProvider }))
+);
+const FolderManager = lazy(() =>
+  import("./FolderManager").then((module) => ({ default: module.FolderManager }))
+);
+const MassUploadModal = lazy(() =>
+  import("./MassUploadModal").then((module) => ({ default: module.MassUploadModal }))
+);
 
 interface BookLibraryProps {
   onSelectBook?: (bookId: string) => void;
@@ -27,19 +50,72 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   const { t } = useTranslation();
   const { settings, updateSettings } = useSettings();
   const [vocabStats, setVocabStats] = useState({ saved: 0, mastered: 0 });
+  const [progressByBookId, setProgressByBookId] = useState<ReadingProgressByBookId>({});
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<LibrarySort>("recentlyAdded");
+  const continueReadingUserId = clerkUser?.id ?? "offline";
+  const [continueReadingPreferences, setContinueReadingPreferences] = useState(() =>
+    readContinueReadingPreferences(continueReadingUserId)
+  );
+  const [continueReadingPreferencesUserId, setContinueReadingPreferencesUserId] =
+    useState(continueReadingUserId);
   const density = settings?.libraryDensity ?? "comfortable";
 
   useEffect(() => {
+    if (continueReadingPreferencesUserId === continueReadingUserId) return;
+    setContinueReadingPreferences(readContinueReadingPreferences(continueReadingUserId));
+    setContinueReadingPreferencesUserId(continueReadingUserId);
+  }, [continueReadingPreferencesUserId, continueReadingUserId]);
+
+  useEffect(() => {
+    if (continueReadingPreferencesUserId !== continueReadingUserId) return;
+    writeContinueReadingPreferences(continueReadingUserId, continueReadingPreferences);
+  }, [continueReadingPreferences, continueReadingPreferencesUserId, continueReadingUserId]);
+
+  useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
-    let hasLoaded = false;
-    const unsubscribe = deps.driveAuth.onAuthStateChange((authed) => {
-      if (authed && !hasLoaded) {
-        hasLoaded = true;
-        vocabBank.load(deps.drive).then(() => setVocabStats(vocabBank.getStats()));
+    let hasScheduled = false;
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    const idleWindow = window as typeof window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    const loadStats = async () => {
+      try {
+        const { vocabBank } = await import("@features/vocabulary/services/vocabBank");
+        await vocabBank.load(deps.drive);
+        if (!cancelled) setVocabStats(vocabBank.getStats());
+      } catch (error) {
+        appLog.warn("[BookLibrary] Failed to load vocabulary stats", error);
       }
+    };
+
+    const scheduleStats = () => {
+      if (hasScheduled) return;
+      hasScheduled = true;
+
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(() => void loadStats(), { timeout: 4000 });
+      } else {
+        timeoutHandle = window.setTimeout(() => void loadStats(), 1200);
+      }
+    };
+
+    const unsubscribe = deps.driveAuth.onAuthStateChange((authed) => {
+      if (authed) scheduleStats();
     });
-    return unsubscribe;
-  }, [deps.driveAuth, isLoaded, isSignedIn]);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timeoutHandle !== null) window.clearTimeout(timeoutHandle);
+    };
+  }, [deps.drive, deps.driveAuth, isLoaded, isSignedIn]);
 
   const handleSelectBook = (id: string) => {
     if (onSelectBook) {
@@ -130,10 +206,67 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
     isDriveConnected,
     isLoading,
     isDriveBookLoading,
+    lastLibrarySyncAt,
+    getReadingProgresses,
     connectToGoogleDriveAndLoad
   } = useAppData();
 
   // All book handling is delegated to the storage service.
+
+  const bookIdSignature = useMemo(
+    () => books.map((book) => book.id).sort().join("|"),
+    [books]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const bookIds = bookIdSignature ? bookIdSignature.split("|") : [];
+
+    if (bookIds.length === 0) {
+      setProgressByBookId({});
+      return;
+    }
+
+    void getReadingProgresses(bookIds).then((progresses) => {
+      if (!cancelled) setProgressByBookId(progresses);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookIdSignature, getReadingProgresses, isDriveConnected, lastLibrarySyncAt]);
+
+  const visibleBooks = useMemo(
+    () => filterAndSortBooks({ books, folders, progressByBookId, query, sort }),
+    [books, folders, progressByBookId, query, sort]
+  );
+
+  const continueItems = useMemo(
+    () =>
+      continueReadingBooks(books, progressByBookId, books.length)
+        .filter(
+          ({ progress }) => !isContinueReadingProgressDismissed(continueReadingPreferences, progress)
+        )
+        .slice(0, 4),
+    [books, continueReadingPreferences, progressByBookId]
+  );
+
+  const handleResumeBook = (book: BookMetadata, progress: ReadingProgress) => {
+    const baseUrl = `/book/${book.id}`;
+    if (progress.fileType?.toLowerCase() === "pdf" && progress.currentPage) {
+      navigate(`${baseUrl}?page=${progress.currentPage}`);
+      return;
+    }
+    navigate(`${baseUrl}?ch=${Math.max(progress.currentChapter, 0)}`);
+  };
+
+  const lastSyncLabel = useMemo(() => {
+    if (!lastLibrarySyncAt) return null;
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(lastLibrarySyncAt));
+  }, [lastLibrarySyncAt]);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showFolderManager, setShowFolderManager] = useState(false);
@@ -177,6 +310,16 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
                   </span>
                 </div>
               )}
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-xs app-muted" role="status" aria-live="polite">
+              {isDriveBookLoading ? (
+                <>
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--ui-accent)]" />
+                  <span>{t("bookLibrary.status.syncing")}</span>
+                </>
+              ) : lastSyncLabel ? (
+                <span>{t("bookLibrary.status.lastSynced", { time: lastSyncLabel })}</span>
+              ) : null}
             </div>
           </div>
 
@@ -276,7 +419,96 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
       <TokenStatusWarning />
 
       {/* Main content rendering logic */}
-      {isLoading ? (
+      {books.length > 0 ? (
+        <>
+          <ContinueReading
+            items={continueItems}
+            onResume={handleResumeBook}
+            collapsed={continueReadingPreferences.collapsed}
+            onCollapsedChange={(collapsed) =>
+              setContinueReadingPreferences((current) => ({ ...current, collapsed }))
+            }
+            onDismiss={(progress) =>
+              setContinueReadingPreferences((current) =>
+                dismissContinueReadingProgress(current, progress)
+              )
+            }
+          />
+
+          <div className="mb-5 flex flex-col gap-3 border-y app-border py-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1">
+              <svg
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 app-muted"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("bookLibrary.search.placeholder")}
+                aria-label={t("bookLibrary.search.label")}
+                className="h-10 w-full rounded-md border app-border bg-[var(--ui-surface)] pl-9 pr-9 text-sm outline-none transition-colors focus:border-[color:var(--ui-accent)]"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md app-muted hover:bg-[var(--ui-surface-alt)]"
+                  aria-label={t("bookLibrary.search.clear")}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="library-sort" className="whitespace-nowrap text-xs app-muted">
+                {t("bookLibrary.sort.label")}
+              </label>
+              <select
+                id="library-sort"
+                value={sort}
+                onChange={(event) => setSort(event.target.value as LibrarySort)}
+                className="h-10 rounded-md border app-border bg-[var(--ui-surface)] px-3 text-sm outline-none focus:border-[color:var(--ui-accent)]"
+              >
+                <option value="recentlyAdded">{t("bookLibrary.sort.recentlyAdded")}</option>
+                <option value="recentlyRead">{t("bookLibrary.sort.recentlyRead")}</option>
+                <option value="title">{t("bookLibrary.sort.title")}</option>
+              </select>
+            </div>
+          </div>
+
+          {visibleBooks.length > 0 ? (
+            <FolderView
+              books={visibleBooks}
+              folders={folders}
+              onSelectBook={handleSelectBook}
+              onDeleteBook={deleteBook}
+              onUpdateCover={updateBookCover}
+              onMoveBookToFolder={moveBookToFolder}
+              density={density}
+              hideEmptySections={query.trim().length > 0}
+            />
+          ) : (
+            <div className="py-14 text-center">
+              <h2 className="text-base font-semibold">{t("bookLibrary.search.noResultsTitle")}</h2>
+              <p className="mt-1 text-sm app-muted">{t("bookLibrary.search.noResultsDescription")}</p>
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="mt-4 h-9 rounded-md px-4 text-sm font-medium app-button-muted"
+              >
+                {t("bookLibrary.search.clear")}
+              </button>
+            </div>
+          )}
+        </>
+      ) : isLoading ? (
         <div className="flex justify-center py-12">
           <div className="w-full max-w-md app-card p-6 text-center">
             <div className="flex justify-center">
@@ -303,29 +535,12 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             </div>
           </div>
         ) : (
-          <div className="flex justify-center py-12" id="sign-in-section">
-            <div className="w-full max-w-md app-card p-6">
-              <h2 className="text-lg font-semibold mb-2 text-center">
-                {t("bookLibrary.signInPrompt.title") || "Sign in to your library"}
-              </h2>
-              <p className="text-sm app-muted mb-6 text-center">
-                {t("bookLibrary.signInPrompt.description") || "Sign in to view and manage your books"}
-              </p>
+          <div className="flex justify-center px-4 py-12" id="sign-in-section">
+            <div className="w-full max-w-md">
               <SignInForm />
             </div>
           </div>
         )
-      ) : books.length > 0 ? (
-        /* OFFLINE-FIRST: Always show books if we have them, regardless of connection state */
-        <FolderView
-          books={books}
-          folders={folders}
-          onSelectBook={handleSelectBook}
-          onDeleteBook={deleteBook}
-          onUpdateCover={updateBookCover}
-          onMoveBookToFolder={moveBookToFolder}
-          density={density}
-        />
       ) : !isDriveConnected ? (
         renderNotConnectedState()
       ) : (isDriveBookLoading) && isDriveConnected ? (
@@ -379,33 +594,46 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
         </div>
       )}
 
-      {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-          onTranslate={() => { }}
-          translating={false}
-        />
-      )}
+      <Suspense fallback={<ModalLoadingFallback />}>
+        {showSettings && (
+          <LazyGrammarProvider>
+            <SettingsModal
+              onClose={() => setShowSettings(false)}
+            />
+          </LazyGrammarProvider>
+        )}
 
-      {showFolderManager && (
-        <FolderManager
-          folders={folders}
-          onCreateFolder={createFolder}
-          onUpdateFolder={updateFolder}
-          onDeleteFolder={deleteFolder}
-          onClose={() => setShowFolderManager(false)}
-        />
-      )}
+        {showFolderManager && (
+          <FolderManager
+            folders={folders}
+            onCreateFolder={createFolder}
+            onUpdateFolder={updateFolder}
+            onDeleteFolder={deleteFolder}
+            onClose={() => setShowFolderManager(false)}
+          />
+        )}
 
-      {showMassUpload && (
-        <MassUploadModal
-          onClose={() => setShowMassUpload(false)}
-          onUploadComplete={() => {
-            // Refresh the library after successful uploads
-            syncBooks();
-          }}
-        />
-      )}
+        {showMassUpload && (
+          <MassUploadModal
+            onClose={() => setShowMassUpload(false)}
+            onUploadComplete={() => {
+              // Refresh the library after successful uploads
+              syncBooks();
+            }}
+          />
+        )}
+      </Suspense>
+    </div>
+  );
+}
+
+function ModalLoadingFallback() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="status">
+      <div className="app-card flex items-center gap-3 px-5 py-4 text-sm app-muted">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[color:var(--ui-border)] border-t-[color:var(--ui-text)]" />
+        Loading…
+      </div>
     </div>
   );
 }

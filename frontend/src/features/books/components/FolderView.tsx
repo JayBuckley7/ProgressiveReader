@@ -11,6 +11,7 @@ interface FolderViewProps {
   onUpdateCover: (bookId: string, coverFile: File) => void;
   onMoveBookToFolder: (bookId: string, folderId: string | null) => void;
   density?: "comfortable" | "compact";
+  hideEmptySections?: boolean;
 }
 
 export function FolderView({
@@ -20,7 +21,8 @@ export function FolderView({
   onDeleteBook,
   onUpdateCover,
   onMoveBookToFolder,
-  density = "comfortable"
+  density = "comfortable",
+  hideEmptySections = false,
 }: FolderViewProps) {
   const handleMoveBook = (bookId: string, targetFolderId: string | null) => {
     onMoveBookToFolder(bookId, targetFolderId);
@@ -93,7 +95,7 @@ export function FolderView({
 
     return (
       <div className="space-y-5">
-        {sections.map((shelf) => {
+        {sections.filter((shelf) => !hideEmptySections || shelf.books.length > 0).map((shelf) => {
           const isCollapsed = collapsedShelves.has(shelf.id);
           
           return (

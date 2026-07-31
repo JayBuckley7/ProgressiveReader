@@ -61,6 +61,7 @@ export type AppDataContextType = {
   folders: Folder[];
   isLoading: boolean;
   isDriveBookLoading: boolean;
+  lastLibrarySyncAt?: Date | null;
   isAuthenticated: boolean;
   syncBooks: () => Promise<void>;
   uploadBook: (
@@ -78,6 +79,7 @@ export type AppDataContextType = {
   deleteFolder: (folderId: string) => Promise<void>;
   moveBookToFolder: (bookId: string, folderId: string | null) => Promise<void>;
   getReadingProgress: (bookId: string) => Promise<ReadingProgress | null>;
+  getReadingProgresses: (bookIds: string[]) => Promise<Record<string, ReadingProgress>>;
   saveBookProgress: (
     bookId: string,
     currentChapter: number,
@@ -115,6 +117,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     folders: storageData.folders,
     isLoading: storageData.isLoading,
     isDriveBookLoading: storageData.isDriveBookLoading,
+    lastLibrarySyncAt: storageData.lastLibrarySyncAt,
     isAuthenticated: storageData.isAuthenticated,
     syncBooks: storageData.syncBooks,
     uploadBook: storageData.uploadBook,
@@ -128,6 +131,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     deleteFolder: storageData.deleteFolder,
     moveBookToFolder: storageData.moveBookToFolder,
     getReadingProgress: storageData.getReadingProgress,
+    getReadingProgresses: storageData.getReadingProgresses,
     saveBookProgress: storageData.saveBookProgress,
     saveSettings: storageData.saveSettings,
     loadSettings: storageData.loadSettings,

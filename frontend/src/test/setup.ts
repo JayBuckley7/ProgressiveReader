@@ -97,6 +97,7 @@ const defaultAppData = {
   deleteFolder: async () => {},
   moveBookToFolder: async () => {},
   getReadingProgress: async () => ({}),
+  getReadingProgresses: async () => ({}),
   saveBookProgress: async () => {},
   saveSettings: async () => true,
   loadSettings: async () => ({}),

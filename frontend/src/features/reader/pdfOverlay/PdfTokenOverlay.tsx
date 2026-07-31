@@ -5,6 +5,7 @@ import type { PdfOverlayToken } from "./types";
 interface PdfTokenOverlayProps {
   tokens: PdfOverlayToken[];
   debug: boolean;
+  showHighlights: boolean;
   onTokenClick: (token: PdfOverlayToken, event: MouseEvent<HTMLButtonElement>) => void;
 }
 
@@ -12,15 +13,19 @@ function percent(value: number): string {
   return `${Number((value * 100).toFixed(4))}%`;
 }
 
-export function PdfTokenOverlay({ tokens, debug, onTokenClick }: PdfTokenOverlayProps) {
+export function PdfTokenOverlay({ tokens, debug, showHighlights, onTokenClick }: PdfTokenOverlayProps) {
   return (
     <div className="absolute inset-0 z-[3] pointer-events-none">
       {tokens.map((token) => (
         <button
           key={token.id}
           type="button"
-          className={`absolute pointer-events-auto rounded-sm ${
-            debug ? "bg-sky-400/20 ring-1 ring-sky-500/70" : "bg-transparent"
+          className={`absolute pointer-events-auto rounded-sm transition-colors ${
+            debug
+              ? "bg-sky-400/20 ring-1 ring-sky-500/70"
+              : showHighlights
+                ? "bg-yellow-300/25 ring-1 ring-yellow-500/45 hover:bg-yellow-300/40"
+                : "bg-transparent hover:bg-yellow-300/15"
           }`}
           style={{
             left: percent(token.bboxNorm.x),

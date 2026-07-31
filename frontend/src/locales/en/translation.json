@@ -38,10 +38,12 @@
   },
   "settings": {
     "title": "Settings",
+    "description": "Reading, language tools, and app preferences",
     "tabs": {
-      "general": "General",
-      "highlight": "Highlighter",
-      "accessibility": "Accessibility"
+      "general": "Reading",
+      "highlight": "Language tools",
+      "advanced": "Advanced",
+      "accessibility": "App & data"
     },
     "general": {
       "api": {
@@ -102,6 +104,10 @@
       "cacheTranslations": {
         "label": "Cache Translations",
         "description": "Store last translation per chapter for offline use"
+      },
+      "verticalWriting": {
+        "label": "Japanese vertical text",
+        "description": "Read top to bottom, with columns flowing from right to left. EPUB and text books only."
       },
       "fontSize": {
         "label": "Font Size"
@@ -218,6 +224,31 @@
       "comfortable": "Comfortable",
       "compact": "Compact"
     },
+    "status": {
+      "syncing": "Syncing library…",
+      "lastSynced": "Last synced {{time}}"
+    },
+    "continueReading": {
+      "title": "Continue reading",
+      "subtitle": "Pick up where you left off",
+      "resume": "Resume",
+      "hide": "Hide Continue Reading",
+      "show": "Show {{count}}",
+      "remove": "Remove {{title}} from Continue Reading"
+    },
+    "search": {
+      "label": "Search library",
+      "placeholder": "Search titles, authors, and folders",
+      "clear": "Clear search",
+      "noResultsTitle": "No matching books",
+      "noResultsDescription": "Try a different title, author, or folder name."
+    },
+    "sort": {
+      "label": "Sort",
+      "recentlyAdded": "Recently added",
+      "recentlyRead": "Recently read",
+      "title": "Title"
+    },
     "signInPrompt": {
       "title": "Sign in to access your library",
       "description": "Sign in to view and manage your books"
@@ -309,14 +340,36 @@
       "settings": "Settings",
       "clearTranslationTitle": "Show original text"
     },
+    "dock": {
+      "label": "Reader navigation",
+      "previous": "Previous",
+      "next": "Next"
+    },
     "controls": {
+      "panelTitle": "Reader controls",
+      "close": "Close reader controls",
+      "chapterFallback": "Chapter {{chapter}}",
+      "progress": "{{current}} of {{total}} · Swipe left or right to turn",
       "prev": "Previous chapter",
       "next": "Next chapter",
       "translate": "Translate current chapter",
+      "translateShort": "Translate",
+      "translating": "Translating…",
       "ttsStart": "Start text to speech",
       "ttsStop": "Stop text to speech",
+      "readAloud": "Read aloud",
+      "stopReading": "Stop reading",
+      "highlight": "JPDB highlight",
+      "highlightEnable": "Enable JPDB highlight",
+      "highlightDisable": "Disable JPDB highlight",
+      "mix": "Mix Japanese",
+      "mixConfigure": "Configure Mix Japanese",
+      "mixConfigureEnabled": "Configure Mix Japanese (enabled)",
       "bookmarkAdd": "Add bookmark",
-      "toc": "Table of contents and bookmarks"
+      "bookmark": "Bookmark",
+      "saving": "Saving…",
+      "toc": "Table of contents and bookmarks",
+      "contents": "Contents"
     },
     "toc": {
       "menu": "Menu",

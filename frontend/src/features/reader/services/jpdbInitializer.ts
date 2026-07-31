@@ -9,7 +9,7 @@ import {
     isDefinitionPopupSuppressedFor,
     isDefinitionPopupActivationSuppressed,
     clearDefinitionPopupSuppression,
-} from '@features/reader/components/JpdbPopup';
+} from '@features/reader/components/JpdbPopupBridge';
 import { Keybind } from '~/types';
 import { appLog } from '@shared/appLog';
 

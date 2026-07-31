@@ -283,51 +283,64 @@ export class BookStorageService {
         });
     }
 
-    async getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
-        appLog.debug('Getting reading progress for book:', bookId);
+    async getReadingProgresses(bookIds: string[]): Promise<Record<string, ReadingProgress>> {
         try {
-            // First try local storage for immediate access
-            const localKey = `reading_progress_${bookId}`;
-            const localProgress = localStorage.getItem(localKey);
+            const progressByBookId: Record<string, ReadingProgress> = {};
+            const missingBookIds: string[] = [];
 
-            if (localProgress) {
+            for (const bookId of bookIds) {
+                const localKey = `reading_progress_${bookId}`;
+                const localProgress = localStorage.getItem(localKey);
+                if (!localProgress) {
+                    missingBookIds.push(bookId);
+                    continue;
+                }
+
                 try {
                     const parsed = JSON.parse(localProgress);
-                    return {
+                    progressByBookId[bookId] = {
                         ...parsed,
                         lastUpdated: new Date(parsed.lastUpdated)
                     };
                 } catch (error) {
                     appLog.warn('Failed to parse local reading progress:', error);
                     localStorage.removeItem(localKey);
+                    missingBookIds.push(bookId);
                 }
             }
 
-            // Fallback to cloud storage if connected
-            if (this.drive.isSignedIn()) {
+            // Fill every local miss from one metadata request rather than one request per book.
+            if (missingBookIds.length > 0 && this.drive.isSignedIn()) {
                 try {
                     const metadataInfo = await this.drive.getMetadataFile();
-                    if (metadataInfo?.data?.progress?.[bookId]) {
-                        const cloudProgress = metadataInfo.data.progress[bookId];
+                    for (const bookId of missingBookIds) {
+                        const cloudProgress = metadataInfo?.data?.progress?.[bookId];
+                        if (!cloudProgress) continue;
+
                         const progress: ReadingProgress = {
                             ...cloudProgress,
                             lastUpdated: new Date(cloudProgress.lastUpdated)
                         };
 
-                        // Cache to local storage for faster access
-                        localStorage.setItem(localKey, JSON.stringify(progress));
-                        return progress;
+                        progressByBookId[bookId] = progress;
+                        localStorage.setItem(`reading_progress_${bookId}`, JSON.stringify(progress));
                     }
                 } catch (error) {
-                    appLog.warn('Failed to get progress from cloud metadata:', error);
+                    appLog.warn('Failed to get reading progress from cloud metadata:', error);
                 }
             }
 
-            return null;
+            return progressByBookId;
         } catch (error) {
-            appLog.error('Error fetching reading progress:', error);
-            return null;
+            appLog.error('Error fetching reading progress list:', error);
+            return {};
         }
+    }
+
+    async getReadingProgress(bookId: string): Promise<ReadingProgress | null> {
+        appLog.debug('Getting reading progress for book:', bookId);
+        const progresses = await this.getReadingProgresses([bookId]);
+        return progresses[bookId] ?? null;
     }
 
     async saveReadingProgress(progress: ReadingProgress): Promise<void> {

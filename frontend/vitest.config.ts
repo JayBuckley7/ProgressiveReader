@@ -22,7 +22,7 @@ export default defineConfig({
     pool: 'threads',
     maxThreads: 1,
     minThreads: 1,
-    isolate: false,
+    isolate: true,
     restoreMocks: true,
     clearMocks: true,
   },

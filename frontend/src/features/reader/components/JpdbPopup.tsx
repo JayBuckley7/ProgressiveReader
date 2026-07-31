@@ -6,6 +6,19 @@ import { getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import {
+  clearDefinitionPopupSuppression,
+  isDefinitionPopupActivationSuppressed,
+  isDefinitionPopupSuppressedFor,
+  setDefinitionPopupSuppression,
+  suppressDefinitionPopupActivation,
+} from "./JpdbPopupBridge";
+
+export {
+  clearDefinitionPopupSuppression,
+  isDefinitionPopupActivationSuppressed,
+  isDefinitionPopupSuppressedFor,
+} from "./JpdbPopupBridge";
 
 // React version of the pitch renderer
 function renderPitchReact(reading: string, pitch: string): React.ReactElement {
@@ -58,6 +71,13 @@ type PopupState = {
     sourceElement?: Element | null;
 } | null;
 
+type PendingPopupRequest = {
+  word: string;
+  anchorOrPosition: Element | { x: number; y: number };
+  wordData?: WordData;
+  options?: { pin?: boolean; sourceElement?: Element };
+};
+
 type PopupRubyPart = {
   base: string;
   ruby?: string;
@@ -72,18 +92,15 @@ type VisualViewportMetrics = {
 };
 
 let setPopup: React.Dispatch<React.SetStateAction<PopupState>> | null = null;
+let pendingPopupRequest: PendingPopupRequest | null = null;
 let hideTimeout: number | null = null;
 let isPopupHovered = false;
 let isPopupPinned = false;
-let suppressedHoverElement: Element | null = null;
-let suppressedHoverKey: string | null = null;
 const POPUP_HISTORY_KEY = "__progressiveReaderJpdbPopup";
 let popupBackEntryActive = false;
 let ignoreNextPopupPopState = false;
-let suppressPopupActivationUntil = 0;
 
 const HIDE_DELAY = 1500; // ms delay before hiding popup when mouse leaves
-const CLOSE_ACTIVATION_SUPPRESSION_MS = 700;
 
 function canUsePopupSpeech(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -145,28 +162,6 @@ function clearHideTimeout() {
     }
 }
 
-function getPopupSourceKey(element?: Element | null): string | null {
-  const token = (element as (Element & { jpdbData?: WordData }) | null)?.jpdbData?.token;
-  const card = token?.card;
-  if (card && (card.vid || card.sid)) {
-    return `${card.vid || 0}/${card.sid || 0}`;
-  }
-  const text = element?.textContent?.trim();
-  return text || null;
-}
-
-function nowMs(): number {
-  return typeof performance !== "undefined" ? performance.now() : Date.now();
-}
-
-export function isDefinitionPopupActivationSuppressed(): boolean {
-  return nowMs() < suppressPopupActivationUntil;
-}
-
-function suppressDefinitionPopupActivation() {
-  suppressPopupActivationUntil = nowMs() + CLOSE_ACTIVATION_SUPPRESSION_MS;
-}
-
 function shouldUseBackButtonDismiss(): boolean {
   if (typeof window === "undefined") return false;
   const hasTouchPoints = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
@@ -221,22 +216,9 @@ function closeDefinitionPopupInternal(
   }
   isPopupPinned = false;
   isPopupHovered = false;
-  suppressedHoverElement = suppressSourceElement ?? null;
-  suppressedHoverKey = getPopupSourceKey(suppressSourceElement);
+  pendingPopupRequest = null;
+  setDefinitionPopupSuppression(suppressSourceElement);
   setPopup?.(null);
-}
-
-export function isDefinitionPopupSuppressedFor(element: Element): boolean {
-  return suppressedHoverElement === element || (
-    suppressedHoverKey !== null && getPopupSourceKey(element) === suppressedHoverKey
-  );
-}
-
-export function clearDefinitionPopupSuppression(element?: Element | null) {
-  if (!element || suppressedHoverElement === element || getPopupSourceKey(element) === suppressedHoverKey) {
-    suppressedHoverElement = null;
-    suppressedHoverKey = null;
-  }
 }
 
 export function closeDefinitionPopup(
@@ -309,7 +291,10 @@ export function showDefinitionPopup(
     wordData?: WordData,
     options?: { pin?: boolean; sourceElement?: Element }
 ) {
-    if (!setPopup) return;
+    if (!setPopup) {
+      pendingPopupRequest = { word, anchorOrPosition, wordData, options };
+      return;
+    }
     clearHideTimeout();
     isPopupPinned = Boolean(options?.pin);
 
@@ -360,9 +345,28 @@ export function JpdbPopupController() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCompactPopup, setIsCompactPopup] = useState(getInitialCompactPopup);
   const [visualViewportMetrics, setVisualViewportMetrics] = useState(getVisualViewportMetrics);
-  setPopup = _setPopup;
   const navigate = useNavigate();
   const { learningSet, getGrammarPoint } = useGrammar();
+
+  useEffect(() => {
+    setPopup = _setPopup;
+    const pending = pendingPopupRequest;
+    pendingPopupRequest = null;
+    if (pending) {
+      queueMicrotask(() => {
+        showDefinitionPopup(
+          pending.word,
+          pending.anchorOrPosition,
+          pending.wordData,
+          pending.options
+        );
+      });
+    }
+
+    return () => {
+      if (setPopup === _setPopup) setPopup = null;
+    };
+  }, []);
 
   const closePopup = useCallback((options?: { suppressSource?: boolean; syncHistory?: boolean; suppressActivation?: boolean }) => {
     const shouldSuppressSource = options?.suppressSource ?? true;

@@ -477,7 +477,7 @@ export default function GrammarPage() {
         <div className="mt-4 space-y-3">
           {!miningEnabled ? (
             <div className="text-xs app-muted">
-              Mining is currently disabled. Enable it in Settings → General → Grammar.
+              Mining is currently disabled. Enable it in Settings → Advanced.
             </div>
           ) : null}
 
