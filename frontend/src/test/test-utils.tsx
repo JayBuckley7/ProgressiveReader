@@ -25,6 +25,7 @@ import { createVocabularyBackendPort } from '@integrations/backend/vocabulary';
 import { createCoversBackendPort } from '@integrations/backend/covers';
 import { createOpenAiKeyBackendPort } from '@integrations/backend/openaiKey';
 import { createJlptBackendPort } from '@integrations/backend/jlpt';
+import { createLyricsBackendPort } from '@integrations/backend/lyrics';
 
 type AnyObj = Record<string, any>;
 
@@ -262,6 +263,7 @@ function createTestDeps(overrides?: Partial<AppDeps>): AppDeps {
     covers: createCoversBackendPort(backendFetch),
     openaiKey: createOpenAiKeyBackendPort(backendFetch),
     jlpt: createJlptBackendPort(backendFetch),
+    lyrics: createLyricsBackendPort(backendFetch),
   };
 
   const base: AppDeps = {

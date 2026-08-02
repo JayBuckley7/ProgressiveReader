@@ -17,6 +17,7 @@ import { createVocabularyBackendPort } from "@integrations/backend/vocabulary";
 import { createCoversBackendPort } from "@integrations/backend/covers";
 import { createOpenAiKeyBackendPort } from "@integrations/backend/openaiKey";
 import { createJlptBackendPort } from "@integrations/backend/jlpt";
+import { createLyricsBackendPort } from "@integrations/backend/lyrics";
 
 import { gDriveService } from "@integrations/googleDrive/gdriveService";
 import * as driveCache from "@integrations/googleDrive/services/driveCache";
@@ -188,6 +189,7 @@ export function createAppDeps(): AppDeps {
     covers: createCoversBackendPort(backendFetch),
     openaiKey: createOpenAiKeyBackendPort(backendFetch),
     jlpt: createJlptBackendPort(backendFetch),
+    lyrics: createLyricsBackendPort(backendFetch),
   };
 
   const drive = createDrivePort();

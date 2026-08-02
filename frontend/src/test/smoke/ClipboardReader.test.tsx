@@ -44,4 +44,29 @@ describe('ClipboardReader (smoke)', () => {
       Object.defineProperty(navigator, 'permissions', { configurable: true, value: originalPermissions });
     }
   });
+
+  it('imports the kanji version of Uta-Net lyrics', async () => {
+    const importKanjiLyrics = vi.fn(async () => ({
+      title: '星の歌',
+      artist: '試験バンド',
+      text: '夜空を見上げる\n星が光っている',
+      source_url: 'https://www.uta-net.com/global/en/lyric/335761/',
+    }));
+
+    renderWithProviders(<ClipboardReader />, {
+      depsOverride: { backend: { lyrics: { importKanjiLyrics } } as any },
+    });
+
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /Uta-Net lyrics URL/ }),
+      'https://www.uta-net.com/global/en/lyric/335761/?utm_source=chatgpt.com'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Import Kanji/ }));
+
+    await waitFor(() => {
+      expect(importKanjiLyrics).toHaveBeenCalled();
+      expect(screen.getByText('星の歌 — 試験バンド')).toBeInTheDocument();
+      expect(screen.getByText(/夜空を見上げる/)).toBeInTheDocument();
+    });
+  });
 });

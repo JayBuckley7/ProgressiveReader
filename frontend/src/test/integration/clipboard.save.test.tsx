@@ -11,7 +11,7 @@ describe('Clipboard integration: paste and save', () => {
 
     // Simulate paste via button (uses navigator.clipboard.readText)
     // Fallback: dispatch paste event
-    const pasteArea = screen.getByRole('textbox');
+    const pasteArea = screen.getByPlaceholderText(/Ctrl\+V/);
     const text = 'Hello world';
     fireEvent.paste(pasteArea, {
       clipboardData: {

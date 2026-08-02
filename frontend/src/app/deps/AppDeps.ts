@@ -6,6 +6,7 @@ import type {
   CoversBackendPort,
   GrammarBackendPort,
   JlptBackendPort,
+  LyricsBackendPort,
   MixBackendPort,
   OcrBackendPort,
   OpenAiKeyBackendPort,
@@ -38,6 +39,7 @@ export type AppDeps = {
     covers: CoversBackendPort;
     openaiKey: OpenAiKeyBackendPort;
     jlpt: JlptBackendPort;
+    lyrics: LyricsBackendPort;
   };
 
   drive: DrivePort;
