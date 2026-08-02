@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.progressivereader.kmp.domain.reader.BookFormat
 import com.progressivereader.kmp.domain.reader.BookState
 import com.progressivereader.kmp.domain.reader.Bookmark
+import com.progressivereader.kmp.domain.reader.isReflowable
 import com.progressivereader.kmp.grammar.GrammarPoint
 import com.progressivereader.kmp.grammar.HintQuality
 import com.progressivereader.kmp.grammar.getGrammarPointById
@@ -39,6 +40,7 @@ import com.progressivereader.kmp.usecases.reader.UnderlineGrammarUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateCachedTokenStateUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateWordStateUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -348,10 +350,14 @@ class ReaderViewModel(
                             epubBook = res.epubBook,
                         )
                     }
+                    AppLog.i(
+                        "Reader",
+                        "Opened cached ${res.format} book $normalized with ${res.epubBook?.chapters?.size ?: 0} reflowable chapters.",
+                    )
 
                     runCatching { markBookOpenedUseCase(normalized) }
 
-                    if (res.format != BookFormat.EPUB) return@launch
+                    if (!res.format.isReflowable()) return@launch
 
                     val book = res.epubBook ?: run {
                         _state.update { it.copy(openError = "Failed to open book.") }
@@ -359,11 +365,14 @@ class ReaderViewModel(
                     }
 
                     val state = loadBookStateUseCase(normalized)
-                    val safeIndex = state.lastChapterIndex.coerceIn(0, book.chapters.lastIndex.coerceAtLeast(0))
+                    val hrefIndex = state.lastChapterHref?.let { savedHref -> book.chapters.indexOfFirst { it.href == savedHref } }
+                    val restoredIndex = hrefIndex?.takeIf { it >= 0 } ?: state.lastChapterIndex
+                    val safeIndex = restoredIndex.coerceIn(0, book.chapters.lastIndex.coerceAtLeast(0))
                     _state.update { it.copy(bookState = state, chapterIndex = safeIndex) }
 
                     loadChapter(bookId = normalized, chapterIndex = safeIndex)
                 } catch (t: Throwable) {
+                    AppLog.e("Reader", "Failed to open cached book $normalized.", t)
                     _state.update { it.copy(openError = t.message ?: "Failed to open book") }
                 } finally {
                     _state.update { it.copy(isOpening = false) }
@@ -462,7 +471,11 @@ class ReaderViewModel(
                     )
                 }
 
-                val updated = _state.value.bookState.copy(lastChapterIndex = expectedChapter)
+                val updated =
+                    _state.value.bookState.copy(
+                        lastChapterIndex = expectedChapter,
+                        lastChapterHref = chapter.href,
+                    )
                 _state.update { it.copy(bookState = updated) }
                 runCatching { saveBookStateUseCase(expectedBookId, updated) }
 
@@ -759,11 +772,11 @@ class ReaderViewModel(
     private fun scheduleMixRefresh() {
         mixJob?.cancel()
         val snapshot = _state.value
-        if (snapshot.format != BookFormat.EPUB) return
+        if (snapshot.format?.isReflowable() != true) return
         mixJob =
             viewModelScope.launch {
                 val s0 = _state.value
-                if (s0.format != BookFormat.EPUB) return@launch
+                if (s0.format?.isReflowable() != true) return@launch
                 val expectedBookId = s0.bookId
                 val expectedChapter = s0.chapterIndex
 
@@ -882,7 +895,7 @@ class ReaderViewModel(
 
     private fun scheduleHighlightRefresh() {
         highlightJob?.cancel()
-        if (_state.value.format != BookFormat.EPUB) return
+        if (_state.value.format?.isReflowable() != true) return
         highlightJob =
             viewModelScope.launch {
                 val s0 = _state.value
@@ -946,7 +959,7 @@ class ReaderViewModel(
                     st.copy(isApplyingHighlights = true)
                 }
                 val result =
-                    runCatching {
+                    try {
                         highlightChapterUseCase(
                             bookId = input.bookId,
                             bodyHtml = input.bodyHtml,
@@ -955,7 +968,16 @@ class ReaderViewModel(
                             jpdbApiKey = key,
                             isOnline = s0.isOnline,
                         )
-                    }.getOrNull()
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Throwable) {
+                        AppLog.e(
+                            "Reader",
+                            "Highlight refresh failed for ${input.bookId} chapter=${input.chapterIndex} translated=${input.isTranslated}.",
+                            error,
+                        )
+                        null
+                    }
                 _state.update { st ->
                     if (st.bookId != expectedBookId || st.chapterIndex != expectedChapter) return@update st
                     st.copy(isApplyingHighlights = false)
@@ -1016,7 +1038,7 @@ class ReaderViewModel(
 
     private fun scheduleGrammarRefresh() {
         grammarJob?.cancel()
-        if (_state.value.format != BookFormat.EPUB) return
+        if (_state.value.format?.isReflowable() != true) return
         grammarJob =
             viewModelScope.launch {
                 val s0 = _state.value

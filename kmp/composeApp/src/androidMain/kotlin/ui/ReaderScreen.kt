@@ -1,6 +1,12 @@
 package com.progressivereader.kmp.ui
 
+import android.content.ClipData
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,16 +23,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -36,6 +43,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -50,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,10 +71,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,6 +88,7 @@ import com.progressivereader.kmp.tts.TtsController
 import com.progressivereader.kmp.ui.viewmodels.JpdbTokenUi
 import com.progressivereader.kmp.ui.viewmodels.ReaderUiState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
 
@@ -152,7 +162,7 @@ fun ReaderScreen(
 ) {
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val context = LocalContext.current
 
     val ttsController = remember { TtsController(context) }
@@ -165,6 +175,30 @@ fun ReaderScreen(
     var showQuickSettingsSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember(state.bookId) { mutableStateOf(false) }
     var selectedTokenId by remember { mutableStateOf<String?>(null) }
+    var chromeVisible by rememberSaveable(state.bookId) { mutableStateOf(true) }
+    var chromeActivity by remember(state.bookId) { mutableStateOf(0L) }
+
+    fun revealChrome() {
+        chromeVisible = true
+        chromeActivity += 1L
+    }
+
+    LaunchedEffect(
+        chromeVisible,
+        chromeActivity,
+        showQuickSettingsSheet,
+        showOverflowMenu,
+        selectedTokenId,
+        drawerState.currentValue,
+    ) {
+        if (!chromeVisible || showQuickSettingsSheet || showOverflowMenu || selectedTokenId != null || drawerState.isOpen) {
+            return@LaunchedEffect
+        }
+        delay(4_000)
+        chromeVisible = false
+    }
+
+    LaunchedEffect(state.chapterIndex) { revealChrome() }
 
     var ttsRate by remember { mutableStateOf(state.ttsRate) }
     LaunchedEffect(state.ttsRate) {
@@ -174,6 +208,7 @@ fun ReaderScreen(
 
     val darkModeEffective = isDarkThemeMode(state.theme)
     val totalChapters = state.epubBook?.chapters?.size ?: 0
+    val locationLabel = readerLocationLabel(state.epubBook, state.chapterIndex)
     val isBookmarkedForCurrentChapter = state.bookState.bookmarks.any { it.chapterIndex == state.chapterIndex }
 
     val swipeHintShown = rememberSaveable(state.bookId) { mutableStateOf(false) }
@@ -283,60 +318,96 @@ fun ReaderScreen(
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                ReaderTopBar(
-                    title = state.epubBook?.title ?: state.title,
-                    subtitle = if (totalChapters > 0) "Chapter ${state.chapterIndex + 1} of $totalChapters" else null,
-                    isBusy = state.isTranslating || state.isApplyingHighlights || state.isApplyingMix || state.isRefiningMix,
-                    onBack = onBack,
-                    canOpenContents = totalChapters > 0,
-                    onOpenContents = { scope.launch { drawerState.open() } },
-                    onOpenQuickSettings = {
-                        selectedTokenId = null
-                        showQuickSettingsSheet = true
-                    },
-                    onOpenOverflow = { showOverflowMenu = true },
-                    overflowMenu = {
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false },
+                Box(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+                    AnimatedVisibility(
+                        visible = chromeVisible,
+                        enter = fadeIn() + slideInVertically { -it / 2 },
+                        exit = fadeOut() + slideOutVertically { -it / 2 },
+                    ) {
+                        ReaderTopBar(
+                            title = state.epubBook?.title ?: state.title,
+                            subtitle = locationLabel,
+                            isBusy = state.isTranslating || state.isApplyingHighlights || state.isApplyingMix || state.isRefiningMix,
+                            onBack = onBack,
+                            canOpenContents = totalChapters > 0,
+                            onOpenContents = {
+                                revealChrome()
+                                scope.launch { drawerState.open() }
+                            },
+                            onOpenQuickSettings = {
+                                revealChrome()
+                                selectedTokenId = null
+                                showQuickSettingsSheet = true
+                            },
+                            onOpenOverflow = {
+                                revealChrome()
+                                showOverflowMenu = true
+                            },
+                            overflowMenu = {
+                                DropdownMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Advanced settings") },
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            onOpenSettings()
+                                        },
+                                    )
+                                    if (state.mixEnabled) {
+                                        DropdownMenuItem(
+                                            text = { Text("Refine mix swaps") },
+                                            enabled =
+                                                state.mixActive &&
+                                                    state.isOnline &&
+                                                    state.hasOpenAiApiKey &&
+                                                    !state.isApplyingMix &&
+                                                    !state.isRefiningMix &&
+                                                    !state.isApplyingHighlights &&
+                                                    !state.isTranslating,
+                                            onClick = {
+                                                showOverflowMenu = false
+                                                onRefineMix()
+                                            },
+                                        )
+                                    }
+                                    if (state.refinedChoices.isNotEmpty()) {
+                                        DropdownMenuItem(
+                                            text = { Text("Clear refined swaps") },
+                                            enabled = !state.isApplyingMix && !state.isRefiningMix,
+                                            onClick = {
+                                                showOverflowMenu = false
+                                                onClearRefineMix()
+                                            },
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                    }
+
+                    if (!chromeVisible) {
+                        Surface(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 4.dp)
+                                    .size(width = 52.dp, height = 24.dp)
+                                    .clickable { revealChrome() },
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("Advanced settings") },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    onOpenSettings()
-                                },
-                            )
-                            if (state.mixEnabled) {
-                                DropdownMenuItem(
-                                    text = { Text("Refine mix swaps") },
-                                    enabled =
-                                        state.mixActive &&
-                                            state.isOnline &&
-                                            state.hasOpenAiApiKey &&
-                                            !state.isApplyingMix &&
-                                            !state.isRefiningMix &&
-                                            !state.isApplyingHighlights &&
-                                            !state.isTranslating,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        onRefineMix()
-                                    },
-                                )
-                            }
-                            if (state.refinedChoices.isNotEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text("Clear refined swaps") },
-                                    enabled = !state.isApplyingMix && !state.isRefiningMix,
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        onClearRefineMix()
-                                    },
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ExpandMore,
+                                    contentDescription = "Show reader controls",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
-                    },
-                )
+                    }
+                }
             },
         ) { padding ->
             Column(
@@ -403,6 +474,16 @@ fun ReaderScreen(
                                 SwipeDirection.RIGHT -> onPrevChapter()
                             }
                         },
+                        onInteraction = { revealChrome() },
+                    )
+                }
+
+                if (totalChapters > 1) {
+                    LinearProgressIndicator(
+                        progress = { readerProgress(state.epubBook, state.chapterIndex) },
+                        modifier = Modifier.fillMaxWidth().height(2.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = if (chromeVisible) 0.8f else 0.45f),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                     )
                 }
             }
@@ -481,7 +562,7 @@ private fun ReaderTopBar(
         subtitle = subtitle,
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
             }
         },
         actions = {
@@ -492,7 +573,7 @@ private fun ReaderTopBar(
                 )
             }
             IconButton(enabled = canOpenContents, onClick = onOpenContents) {
-                Icon(Icons.Outlined.MenuBook, contentDescription = "Contents")
+                Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = "Contents")
             }
             IconButton(onClick = onOpenQuickSettings) {
                 Icon(Icons.Outlined.Tune, contentDescription = "Quick settings")
@@ -551,6 +632,7 @@ private fun ReaderBody(
     presentation: HtmlPresentationSpec,
     onUrlClick: (String) -> Boolean,
     onSwipe: ((SwipeDirection) -> Unit)?,
+    onInteraction: () -> Unit,
 ) {
     Box(modifier = modifier) {
         HtmlContent(
@@ -558,6 +640,7 @@ private fun ReaderBody(
             presentation = presentation,
             onUrlClick = onUrlClick,
             onSwipe = onSwipe,
+            onInteraction = onInteraction,
         )
     }
 }
@@ -587,12 +670,19 @@ private fun ReaderQuickSettingsSheet(
     onToggleTts: () -> Unit,
     onStopTts: () -> Unit,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val contentScrollState = rememberScrollState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(contentScrollState)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             AppSectionHeader(
@@ -696,7 +786,7 @@ private fun ReaderQuickSettingsSheet(
                                     when {
                                         isSpeaking -> Icons.Outlined.PauseCircle
                                         isPaused -> Icons.Outlined.PlayCircle
-                                        else -> Icons.Outlined.VolumeUp
+                                        else -> Icons.AutoMirrored.Outlined.VolumeUp
                                     },
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
@@ -760,7 +850,7 @@ private fun ReaderToggleRow(
 private fun ReaderTokenSheet(
     token: JpdbTokenUi?,
     state: ReaderUiState,
-    clipboard: ClipboardManager,
+    clipboard: Clipboard,
     snackbarHostState: SnackbarHostState,
     onDismiss: () -> Unit,
     onJpdbMineWord: (tokenId: String, vid: Int, sid: Int) -> Unit,
@@ -768,12 +858,19 @@ private fun ReaderTokenSheet(
     onJpdbReviewCard: (tokenId: String, vid: Int, sid: Int, rating: String, label: String) -> Unit,
     scope: CoroutineScope,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val contentScrollState = rememberScrollState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(contentScrollState)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (token == null) {
@@ -892,8 +989,15 @@ private fun ReaderTokenSheet(
                             )
                         }
 
-                        if (state.isJpdbActionBusy) {
-                            AppMutedText("Processing...")
+                        // Reserve this row so a review action cannot change the sheet height and
+                        // make an already-expanded sheet jump against the top edge.
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(20.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            if (state.isJpdbActionBusy) {
+                                AppMutedText("Processing...")
+                            }
                         }
                     }
                 }
@@ -904,16 +1008,24 @@ private fun ReaderTokenSheet(
                     text = "Copy word",
                     enabled = !card.spelling.isNullOrBlank(),
                     onClick = {
-                        card.spelling?.let { clipboard.setText(AnnotatedString(it)) }
-                        scope.launch { snackbarHostState.showSnackbar("Copied word") }
+                        card.spelling?.let { word ->
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Word", word)))
+                                snackbarHostState.showSnackbar("Copied word")
+                            }
+                        }
                     },
                 )
                 AppTonalButton(
                     text = "Copy reading",
                     enabled = !card.reading.isNullOrBlank(),
                     onClick = {
-                        card.reading?.let { clipboard.setText(AnnotatedString(it)) }
-                        scope.launch { snackbarHostState.showSnackbar("Copied reading") }
+                        card.reading?.let { reading ->
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Reading", reading)))
+                                snackbarHostState.showSnackbar("Copied reading")
+                            }
+                        }
                     },
                 )
             }
@@ -930,6 +1042,8 @@ private fun DrawerContents(
     bookmarks: List<Bookmark>,
     onSelectChapter: (Int) -> Unit,
 ) {
+    val navigationEntries = buildReaderNavigationEntries(epubBook)
+    val currentNavigationId = epubBook?.chapters?.getOrNull(chapterIndex)?.navigationId
     Column(
         modifier =
             Modifier
@@ -940,7 +1054,14 @@ private fun DrawerContents(
     ) {
         AppSectionHeader(
             title = "Contents",
-            subtitle = epubBook?.chapters?.size?.let { "$it chapters" } ?: "Loading",
+            subtitle =
+                epubBook?.let { book ->
+                    if (navigationEntries.size == book.chapters.size) {
+                        "${navigationEntries.size} chapters"
+                    } else {
+                        "${navigationEntries.size} chapters · ${book.chapters.size} reading sections"
+                    }
+                } ?: "Loading",
         )
 
         if (epubBook == null) {
@@ -949,7 +1070,9 @@ private fun DrawerContents(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            epubBook.chapters.forEachIndexed { idx, ch ->
+            navigationEntries.forEach { entry ->
+                val idx = entry.chapterIndex
+                val ch = entry.chapter
                 NavigationDrawerItem(
                     label = {
                         Text(
@@ -958,7 +1081,7 @@ private fun DrawerContents(
                             overflow = TextOverflow.Ellipsis,
                         )
                     },
-                    selected = idx == chapterIndex,
+                    selected = ch.navigationId == currentNavigationId,
                     onClick = { onSelectChapter(idx) },
                 )
             }
@@ -973,8 +1096,16 @@ private fun DrawerContents(
         } else {
             unique.forEach { bm ->
                 val idx = bm.chapterIndex
+                val bookmarkedChapter = epubBook.chapters.getOrNull(idx)
                 val label =
-                    epubBook.chapters.getOrNull(idx)?.title?.ifBlank { null }
+                    bookmarkedChapter?.let { chapter ->
+                        val title = chapter.title.ifBlank { return@let null }
+                        if (chapter.partCount > 1) {
+                            "$title · ${chapter.partIndex + 1}/${chapter.partCount}"
+                        } else {
+                            title
+                        }
+                    }
                         ?: "Chapter ${idx + 1}"
                 Row(
                     modifier =

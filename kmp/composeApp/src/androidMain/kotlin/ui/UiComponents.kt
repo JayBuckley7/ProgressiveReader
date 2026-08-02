@@ -40,6 +40,24 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private fun decodeCover(path: String, targetPx: Int = 720): ImageBitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+    var sampleSize = 1
+    while (bounds.outWidth / sampleSize > targetPx * 2 || bounds.outHeight / sampleSize > targetPx * 2) {
+        sampleSize *= 2
+    }
+
+    val options =
+        BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+        }
+    return BitmapFactory.decodeFile(path, options)?.asImageBitmap()
+}
+
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
@@ -49,7 +67,6 @@ fun AppCard(
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
         shadowElevation = 0.dp,
     ) {
         content()
@@ -64,8 +81,7 @@ fun AppChip(
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
     ) {
         Text(
             text = text,
@@ -212,11 +228,11 @@ fun AppSectionSurface(
 }
 
 @Composable
-fun AppShellBarColors(): NavigationBarItemColors =
+fun appShellBarColors(): NavigationBarItemColors =
     androidx.compose.material3.NavigationBarItemDefaults.colors(
         selectedIconColor = MaterialTheme.colorScheme.primary,
         selectedTextColor = MaterialTheme.colorScheme.onSurface,
-        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -257,7 +273,7 @@ fun CoverArt(
         value =
             withContext(Dispatchers.IO) {
                 if (coverPath.isNullOrBlank()) return@withContext null
-                runCatching { BitmapFactory.decodeFile(coverPath)?.asImageBitmap() }.getOrNull()
+                runCatching { decodeCover(coverPath) }.getOrNull()
             }
     }
 

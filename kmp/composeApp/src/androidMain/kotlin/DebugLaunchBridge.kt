@@ -17,6 +17,7 @@ internal object DebugLaunchBridge {
 
     const val EXTRA_ROUTE = "pr.debug.route"
     const val EXTRA_AUTO_SIGN_IN = "pr.debug.auto_sign_in"
+    const val EXTRA_BOOK_ID = "pr.debug.book_id"
 
     var pendingRequest: DebugLaunchRequest? by mutableStateOf(null)
         private set
@@ -42,7 +43,14 @@ internal object DebugLaunchBridge {
         return when (intent.getStringExtra(EXTRA_ROUTE)?.trim()?.lowercase()) {
             "login" -> Screen.Login(autoStartSignIn = intent.getBooleanExtra(EXTRA_AUTO_SIGN_IN, false))
             "library" -> Screen.Library
+            "clipboard" -> Screen.Clipboard
+            "more" -> Screen.More
             "settings" -> Screen.Settings(showBack = false)
+            "reader" ->
+                intent.getStringExtra(EXTRA_BOOK_ID)
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let(Screen::Reader)
             else -> null
         }
     }

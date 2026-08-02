@@ -53,12 +53,17 @@ class AndroidLibraryPort(
         val coverFile =
             if (lower.endsWith(".epub") || mt.contains("epub")) {
                 runCatching {
+                    val extractedDir = bookCache.extractedDir(bookId)
                     epubRepository.extractIfNeeded(
                         epubFile = bookCache.epubFile(bookId),
-                        extractedDir = bookCache.extractedDir(bookId),
+                        extractedDir = extractedDir,
                     )
+                    // Prepare navigation metadata and sanitized reader sections while the cover
+                    // still shows its compact loading state. Opening the book can then stay on
+                    // the fast path instead of parsing and splitting the EPUB in the reader.
+                    runCatching { epubRepository.loadBook(extractedDir) }
                     epubRepository.extractCoverIfNeeded(
-                        extractedDir = bookCache.extractedDir(bookId),
+                        extractedDir = extractedDir,
                         bookDir = bookCache.bookDir(bookId),
                     )
                 }.getOrNull()

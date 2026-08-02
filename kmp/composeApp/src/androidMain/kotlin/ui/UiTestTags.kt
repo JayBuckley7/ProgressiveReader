@@ -5,7 +5,6 @@ internal object UiTestTags {
     const val libraryActionFolders = "library-action-folders"
     const val libraryActionRefresh = "library-action-refresh"
     const val libraryActionImport = "library-action-import"
-    const val libraryActionSettings = "library-action-settings"
     const val libraryActionSignIn = "library-action-sign-in"
     const val libraryBannerOffline = "library-banner-offline"
     const val libraryBannerGuest = "library-banner-guest"
@@ -19,7 +18,9 @@ internal object UiTestTags {
 
     fun libraryTile(bookId: String): String = "library-book-tile-${bookId.slugify()}"
 
-    fun libraryPrimaryAction(bookId: String): String = "library-book-primary-${bookId.slugify()}"
+    fun libraryCover(bookId: String): String = "library-book-cover-${bookId.slugify()}"
+
+    fun libraryCoverStatus(bookId: String): String = "library-book-cover-status-${bookId.slugify()}"
 
     fun libraryOverflowMenu(bookId: String): String = "library-book-overflow-${bookId.slugify()}"
 

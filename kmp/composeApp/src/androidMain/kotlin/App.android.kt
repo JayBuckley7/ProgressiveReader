@@ -1,3 +1,5 @@
+@file:Suppress("RememberReturnType") // Compose lint cannot resolve commonMain constructor return types in this KMP module.
+
 package com.progressivereader.kmp
 
 import androidx.compose.runtime.Composable
@@ -9,9 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import com.clerk.api.Clerk
-import com.clerk.api.network.serialization.ClerkResult
-import com.clerk.api.session.fetchToken
+import com.progressivereader.kmp.auth.ClerkAndroid
 import com.progressivereader.kmp.adapters.AndroidCoverCachePort
 import com.progressivereader.kmp.adapters.AndroidCryptoPort
 import com.progressivereader.kmp.adapters.AndroidDocumentPort
@@ -79,11 +79,7 @@ import com.progressivereader.kmp.usecases.reader.TranslateChapterUseCase
 import com.progressivereader.kmp.usecases.reader.UnderlineGrammarUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateCachedTokenStateUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateWordStateUseCase
-import java.util.Base64
 import kotlinx.coroutines.delay
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
 actual fun App() {
@@ -106,7 +102,7 @@ actual fun App() {
     var jwtOverride by remember { mutableStateOf<String?>(null) }
     val sessionJwt =
         (if (hasJwtOverride) jwtOverride else storedJwt)
-            ?.takeIf { isSessionJwtUsable(it) }
+            ?.takeIf { ClerkAndroid.isSessionTokenUsable(it) }
     val sessionJwtState = rememberUpdatedState(sessionJwt)
     val storedJwtState = rememberUpdatedState(storedJwt)
     val autoSignInEnabledState = rememberUpdatedState(autoSignInEnabled)
@@ -133,24 +129,14 @@ actual fun App() {
     }
 
     suspend fun refreshSessionJwtFromClerk(reason: String): String? {
-        val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
-        if (publishableKey.isBlank()) return null
+        if (!ClerkAndroid.isConfigured) return null
 
-        runCatching {
-            if (Clerk.isInitialized.value != true) {
-                Clerk.initialize(
-                    context = appContext,
-                    publishableKey = publishableKey,
-                )
-                AppLog.i("Auth", "Clerk initialized from compose app.")
-            }
-        }.onFailure {
+        ClerkAndroid.initialize(appContext).onFailure {
             AppLog.e("Auth", "Failed to initialize Clerk while refreshing session token for $reason.", it)
             return null
         }
 
-        val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-        val freshJwt = (tokenRes as? ClerkResult.Success)?.value?.jwt?.takeIf { isSessionJwtUsable(it) }
+        val freshJwt = ClerkAndroid.fetchSessionToken(appContext)
         if (freshJwt.isNullOrBlank()) {
             AppLog.w("Auth", "No usable Clerk session token available for $reason.")
             return null
@@ -168,7 +154,7 @@ actual fun App() {
         val current =
             sessionJwtState.value
                 ?.takeIf { !forceRefresh }
-                ?.takeIf { isSessionJwtUsable(it) }
+                ?.takeIf { ClerkAndroid.isSessionTokenUsable(it) }
         if (!current.isNullOrBlank()) return current
         if (!autoSignInEnabledState.value) return null
         return refreshSessionJwtFromClerk(reason)
@@ -177,9 +163,20 @@ actual fun App() {
     LaunchedEffect(sessionJwt, autoSignInEnabled) {
         if (!autoSignInEnabled) return@LaunchedEffect
 
-        if (BuildConfig.CLERK_PUBLISHABLE_KEY.isBlank()) return@LaunchedEffect
+        if (!ClerkAndroid.isConfigured) return@LaunchedEffect
 
         while (true) {
+            val currentJwt = sessionJwtState.value
+            if (currentJwt.isNullOrBlank()) {
+                // Give DataStore a chance to restore the saved token before asking Clerk to refresh it.
+                delay(1_000)
+            } else {
+                // Refresh near expiry instead of waking Clerk and the network every 30 seconds.
+                val secondsUntilRefresh =
+                    ((ClerkAndroid.secondsUntilExpiry(currentJwt) ?: 300L) - 300L)
+                        .coerceIn(30L, 21_600L)
+                delay(secondsUntilRefresh * 1_000L)
+            }
             refreshSessionJwtFromClerk(reason = "background refresh")
             delay(30_000)
         }
@@ -373,30 +370,4 @@ actual fun App() {
             },
         )
     }
-}
-
-private fun isSessionJwtUsable(jwt: String): Boolean {
-    val expSeconds = decodeJwtExpSeconds(jwt) ?: return false
-    val nowSeconds = System.currentTimeMillis() / 1000L
-    return expSeconds > nowSeconds + 15L
-}
-
-private fun decodeJwtExpSeconds(jwt: String): Long? {
-    val payload =
-        jwt.split('.')
-            .getOrNull(1)
-            ?.let { segment ->
-                runCatching {
-                    val normalized =
-                        segment
-                            .replace('-', '+')
-                            .replace('_', '/')
-                            .let { s -> s + "=".repeat((4 - (s.length % 4)) % 4) }
-                    String(Base64.getDecoder().decode(normalized), Charsets.UTF_8)
-                }.getOrNull()
-            } ?: return null
-
-    return runCatching {
-        Json.parseToJsonElement(payload).jsonObject["exp"]?.jsonPrimitive?.content?.toLong()
-    }.getOrNull()
 }

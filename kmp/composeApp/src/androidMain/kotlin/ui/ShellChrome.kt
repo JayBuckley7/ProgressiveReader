@@ -89,8 +89,7 @@ fun AppBanner(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -123,8 +122,8 @@ fun AppBanner(
 @Composable
 fun AppSectionHeader(
     title: String,
-    subtitle: String? = null,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     Row(

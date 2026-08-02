@@ -13,6 +13,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
+private const val JPDB_TOKEN_CACHE_VERSION = 2
+
 @Serializable
 data class CachedJpdbToken(
     val id: String,
@@ -25,7 +27,7 @@ data class CachedJpdbToken(
 
 @Serializable
 data class JpdbTokenCacheFile(
-    val version: Int = 1,
+    val version: Int = JPDB_TOKEN_CACHE_VERSION,
     val createdAt: String,
     val sourceHash: String,
     val tokens: List<CachedJpdbToken>,
@@ -62,6 +64,7 @@ class JpdbTokenCache(private val bookDir: File) {
                     runCatching { json.decodeFromString(JpdbTokenCacheFile.serializer(), f.readText()) }
                         .getOrNull()
                         ?: return null
+                if (parsed.version != JPDB_TOKEN_CACHE_VERSION) return null
                 if (parsed.sourceHash != sourceHash) return null
                 return parsed
             }

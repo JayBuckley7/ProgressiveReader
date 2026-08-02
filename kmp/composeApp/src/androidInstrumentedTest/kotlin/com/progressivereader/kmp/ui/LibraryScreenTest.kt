@@ -3,7 +3,6 @@ package com.progressivereader.kmp.ui
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -72,20 +71,55 @@ class LibraryScreenTest {
             onDownload = { file, _, _, _ -> downloads += file.id },
         )
 
-        rule.onNodeWithTag(UiTestTags.libraryTile("cached")).assertHasClickAction().performClick()
-        rule.onNodeWithTag(UiTestTags.libraryTile("remote")).assertHasNoClickAction()
-        rule.onNodeWithTag(UiTestTags.libraryTile("stale")).assertHasClickAction()
+        rule.onNodeWithTag(UiTestTags.libraryCover("cached")).assertHasClickAction().performClick()
+        rule.onNodeWithTag(UiTestTags.libraryCover("remote")).assertHasClickAction().performClick()
+        rule.onNodeWithTag(UiTestTags.libraryCover("stale")).assertHasClickAction()
 
-        rule.onNodeWithTag(UiTestTags.libraryPrimaryAction("cached")).assertIsDisplayed()
-        rule.onNodeWithTag(UiTestTags.libraryPrimaryAction("cached")).assertTextEquals("Read")
-        rule.onAllNodesWithTag(UiTestTags.libraryPrimaryAction("remote")).assertCountEquals(0)
-        rule.onNodeWithTag(UiTestTags.libraryPrimaryAction("stale")).assertTextEquals("Read")
-        rule.onNodeWithText("Update").assertExists()
         rule.onNodeWithTag(UiTestTags.libraryOverflowMenu("remote")).performClick()
-        rule.onNodeWithTag(UiTestTags.libraryOverflowAction("remote", "download")).assertIsDisplayed().performClick()
-
+        rule.onNodeWithTag(UiTestTags.libraryOverflowAction("remote", "download")).assertTextEquals("Download")
         assertEquals(listOf("cached"), opened)
         assertEquals(listOf("remote"), downloads)
+    }
+
+    @Test
+    fun downloadFailureStaysOnTheBookAndOffersRetry() {
+        val downloads = mutableListOf<String>()
+        renderLibrary(
+            state =
+                LibraryUiState(
+                    sessionJwt = "jwt",
+                    remoteFiles = listOf(DriveFile(id = "remote", name = "Remote.epub", size = 2_048)),
+                    cachedIndex = LibraryIndex(updatedAt = "now", books = emptyList()),
+                    downloadErrorByBookId = mapOf("remote" to "Couldn't download this book."),
+                ),
+            onDownload = { file, _, _, _ -> downloads += file.id },
+        )
+
+        rule.onNodeWithText("Download failed \u2022 EPUB \u2022 2 KB").assertIsDisplayed()
+        rule.onNodeWithTag(UiTestTags.libraryCoverStatus("remote")).assertIsDisplayed()
+        rule.onNodeWithText("Tap to retry").assertIsDisplayed()
+        rule.onNodeWithTag(UiTestTags.libraryCover("remote")).performClick()
+        rule.onNodeWithTag(UiTestTags.libraryOverflowMenu("remote")).performClick()
+        rule.onNodeWithTag(UiTestTags.libraryOverflowAction("remote", "download")).assertTextEquals("Retry download").performClick()
+
+        assertEquals(listOf("remote", "remote"), downloads)
+    }
+
+    @Test
+    fun activeDownloadKeepsProgressAnchoredToTheCover() {
+        renderLibrary(
+            state =
+                LibraryUiState(
+                    sessionJwt = "jwt",
+                    remoteFiles = listOf(DriveFile(id = "remote", name = "Remote.epub", size = 2_048)),
+                    cachedIndex = LibraryIndex(updatedAt = "now", books = emptyList()),
+                    downloadingId = "remote",
+                ),
+        )
+
+        rule.onNodeWithTag(UiTestTags.libraryCoverStatus("remote")).assertIsDisplayed()
+        rule.onNodeWithText("Getting ready…").assertIsDisplayed()
+        rule.onNodeWithText("Getting ready \u2022 EPUB \u2022 2 KB").assertIsDisplayed()
     }
 
     private fun renderLibrary(
@@ -99,7 +133,6 @@ class LibraryScreenTest {
                     state = state,
                     snackbarHostState = SnackbarHostState(),
                     onOpenReader = onOpenReader,
-                    onOpenSettings = {},
                     onOpenLogin = {},
                     onRefreshDrive = {},
                     onImportUri = {},

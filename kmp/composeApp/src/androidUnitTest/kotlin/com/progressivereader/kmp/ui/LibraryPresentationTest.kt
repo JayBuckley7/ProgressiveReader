@@ -80,7 +80,7 @@ class LibraryPresentationTest {
     }
 
     @Test
-    fun `presentBook omits download needed label for uncached books`() {
+    fun `presentBook identifies uncached Drive books explicitly`() {
         val book =
             presentDriveShelves(
                 LibraryUiState(
@@ -88,6 +88,7 @@ class LibraryPresentationTest {
                 ),
             ).first().books.first()
 
+        assertEquals("In Drive", book.availabilityLabel)
         assertEquals("EPUB • 10.8 MB", book.detailLine)
     }
 }

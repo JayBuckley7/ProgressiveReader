@@ -5,9 +5,13 @@ import kotlinx.serialization.Serializable
 
 enum class BookFormat {
     EPUB,
+    MOBI,
     PDF,
     TXT,
 }
+
+fun BookFormat.isReflowable(): Boolean =
+    this == BookFormat.EPUB || this == BookFormat.MOBI || this == BookFormat.TXT
 
 data class ChapterContent(
     val headHtml: String,
@@ -27,6 +31,7 @@ data class Bookmark(
 data class BookState(
     val version: Int = 1,
     val lastChapterIndex: Int = 0,
+    val lastChapterHref: String? = null,
     val lastPdfPageIndex: Int = 0,
     val bookmarks: List<Bookmark> = emptyList(),
     val readerSettingsOverride: ReaderSettings? = null,

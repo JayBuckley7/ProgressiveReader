@@ -10,7 +10,10 @@ interface ReaderPort {
 
     suspend fun detectCachedFormat(bookId: String): BookFormat?
 
-    suspend fun openEpubBook(bookId: String): EpubBook?
+    suspend fun openReflowableBook(
+        bookId: String,
+        format: BookFormat,
+    ): EpubBook?
 
     suspend fun loadChapterContent(
         bookId: String,

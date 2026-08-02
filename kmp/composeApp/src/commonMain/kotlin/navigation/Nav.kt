@@ -10,6 +10,7 @@ sealed interface Screen {
     data object Vocabulary : Screen
     data object Clipboard : Screen
     data object Grammar : Screen
+    data object More : Screen
     data class Reader(val bookId: String) : Screen
     data class Settings(val showBack: Boolean = false) : Screen
 }
