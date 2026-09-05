@@ -9,7 +9,7 @@ vi.mock('@features/reader/hooks/useBookContent', () => ({
       title: 'Demo Book',
       totalChapters: 1,
       chapters: ['<p>Chapter 1</p>'],
-      chapterTitles: [{ index: 0, label: 'Chapter 1' }],
+      chapterTitles: [{ index: 0, title: 'Chapter 1', href: '' }],
     },
     currentChapterContent: '<p>Chapter 1</p>',
     isLoading: false,

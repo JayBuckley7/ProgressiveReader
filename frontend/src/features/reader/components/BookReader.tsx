@@ -29,11 +29,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     setCurrentChapter,
     onBack,
     openAiKeyRefreshSignal: showMixSettings,
+    keyboardNavigationEnabled:
+      !showSettings && !showMixSettings && !showReaderControls && !showContents,
   });
   const readerIndex = c.isPdf ? c.pdf.currentPage - 1 : c.chapter;
   const readerTotal = c.isPdf ? c.pdf.pageCount : c.bookContent?.totalChapters || 1;
   const previous = c.isPdf ? c.pdf.prevPage : c.nav.prevChapter;
   const next = c.isPdf ? c.pdf.nextPage : c.nav.nextChapter;
+  const rightToLeftPageTurning = Boolean(c.settings?.verticalWriting && !c.isPdf);
   const chapterTitles = c.isPdf
     ? Array.from({ length: c.pdf.pageCount }, (_, i) => ({ index: i, title: `Page ${i + 1}`, href: "" }))
     : c.bookContent?.chapterTitles || [];
@@ -89,6 +92,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         totalItems={readerTotal}
         onPrevious={previous}
         onNext={next}
+        rightToLeftPageTurning={rightToLeftPageTurning}
+        navigationUnit={c.isPdf ? "page" : "chapter"}
         onShowContents={() => {
           setShowReaderControls(false);
           setShowContents(true);
@@ -108,9 +113,15 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         totalChapters={readerTotal}
         onPrevChapter={previous}
         onNextChapter={next}
+        rightToLeftPageTurning={rightToLeftPageTurning}
+        navigationUnit={c.isPdf ? "page" : "chapter"}
         bookId={bookId}
         chapterTitles={chapterTitles}
         onSelectChapter={selectChapter}
+        onSelectBookmark={(bookmark) =>
+          c.nav.navigateToBookmark(bookmark.chapterIndex, bookmark.position)
+        }
+        getBookmarkPosition={c.nav.getCurrentReadingPosition}
         onToggleTts={c.tts.toggleTts}
         ttsActive={c.tts.isSpeaking}
         onToggleHighlight={c.highlighting.toggleJpdbHighlight}

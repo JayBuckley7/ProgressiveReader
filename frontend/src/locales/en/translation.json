@@ -337,6 +337,8 @@
     },
     "header": {
       "back": "Back to Library",
+      "controls": "Reader controls",
+      "tools": "Reader tools",
       "settings": "Settings",
       "clearTranslationTitle": "Show original text"
     },
@@ -352,6 +354,8 @@
       "progress": "{{current}} of {{total}} · Swipe left or right to turn",
       "prev": "Previous chapter",
       "next": "Next chapter",
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
       "translate": "Translate current chapter",
       "translateShort": "Translate",
       "translating": "Translating…",

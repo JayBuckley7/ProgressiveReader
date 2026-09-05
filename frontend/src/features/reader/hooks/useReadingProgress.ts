@@ -88,6 +88,10 @@ export function useReadingProgress({
             const currentSearchParams = searchParamsRef.current;
             if (!currentSearchParams.get('page')) {
               setPdfCurrentPage(progress.currentPage);
+              const newParams = new URLSearchParams(currentSearchParams);
+              newParams.delete("ch");
+              newParams.set("page", String(progress.currentPage));
+              setSearchParamsRef.current(newParams, { replace: true });
             }
           } else if (progress.currentChapter !== undefined) {
             // For EPUB/text books, restore the chapter (only if not set via URL or prop)
@@ -128,7 +132,16 @@ export function useReadingProgress({
         setProgressLoaded(true);
       }
     })();
-  }, [bookId, bookMetadata, getReadingProgress, setLocalChapter, setPdfCurrentPage, setSearchParams, contentRef]);
+  }, [
+    bookId,
+    bookMetadata,
+    contentRef,
+    getReadingProgress,
+    progressLoaded,
+    setLocalChapter,
+    setPdfCurrentPage,
+    setSearchParams,
+  ]);
 
   // Save reading progress helper
   const fileType = bookMetadata?.fileType;

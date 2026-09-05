@@ -23,6 +23,7 @@ interface UseBookReaderControllerProps {
   setCurrentChapter?: (chapter: number) => void;
   onBack?: () => void;
   openAiKeyRefreshSignal: unknown;
+  keyboardNavigationEnabled?: boolean;
 }
 
 export function useBookReaderController({
@@ -31,6 +32,7 @@ export function useBookReaderController({
   setCurrentChapter,
   onBack,
   openAiKeyRefreshSignal,
+  keyboardNavigationEnabled = true,
 }: UseBookReaderControllerProps) {
   const navigate = useNavigate();
   const { books, downloadBook, getReadingProgress, saveBookProgress } = useAppData();
@@ -57,9 +59,12 @@ export function useBookReaderController({
   }, [searchParams]);
 
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
-  const [pdfLoaded, setPdfLoaded] = useState(false);
   const [pdfCurrentPage, setPdfCurrentPage] = useState(initialPdfPage);
   const [pdfPageCount, setPdfPageCount] = useState(0);
+  const [pendingBookmark, setPendingBookmark] = useState<{
+    chapterIndex: number;
+    position: number;
+  } | null>(null);
 
   const [localChapter, setLocalChapter] = useState(() => {
     const fromQuery = parseInt(searchParams.get("ch") || "0", 10);
@@ -68,7 +73,13 @@ export function useBookReaderController({
   const chapter = currentChapter ?? localChapter;
 
   // Hooks must be called before any conditional returns.
-  const { bookContent, currentChapterContent, isLoading, error } = useBookContent(bookId, chapter);
+  const {
+    bookContent,
+    currentChapterContent,
+    currentChapterContentChapter,
+    isLoading,
+    error,
+  } = useBookContent(bookId, chapter);
 
   const pdfViewerRef = useRef<PdfViewerHandle>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -147,7 +158,6 @@ export function useBookReaderController({
       if (blob) {
         const arrayBuffer = await blob.arrayBuffer();
         setPdfData(arrayBuffer);
-        setPdfLoaded(true);
       }
     };
 
@@ -178,50 +188,178 @@ export function useBookReaderController({
     }
   }, [chapter, clearTranslation, updateChapter]);
 
-  // PDF page navigation handlers
-  const nextPdfPage = useCallback(() => {
-    if (pdfPageCount && pdfCurrentPage < pdfPageCount) {
-      const newPage = pdfCurrentPage + 1;
-      setPdfCurrentPage(newPage);
+  const goToPdfPage = useCallback(
+    (requestedPage: number) => {
+      if (!Number.isFinite(requestedPage)) return;
+      const wholePage = Math.trunc(requestedPage);
+      const newPage = Math.min(Math.max(1, wholePage), pdfPageCount || Math.max(1, wholePage));
 
-      // Save progress when PDF page changes.
-      if (bookMetadata && progressLoaded) {
-        saveBookProgress(
+      setPdfCurrentPage(newPage);
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.delete("ch");
+          next.set("page", String(newPage));
+          return next;
+        },
+        { replace: true }
+      );
+
+      if (bookMetadata && progressLoaded && pdfPageCount) {
+        void saveBookProgress(
           bookId,
-          newPage - 1, // Use 0-based chapter for consistency
+          newPage - 1,
           0,
           newPage,
           pdfPageCount,
           "pdf"
         );
       }
+    },
+    [bookId, bookMetadata, pdfPageCount, progressLoaded, saveBookProgress, setSearchParams]
+  );
+
+  const nextPdfPage = useCallback(() => {
+    if (pdfPageCount && pdfCurrentPage < pdfPageCount) {
+      goToPdfPage(pdfCurrentPage + 1);
     }
-  }, [bookId, bookMetadata, pdfCurrentPage, pdfPageCount, progressLoaded, saveBookProgress]);
+  }, [goToPdfPage, pdfCurrentPage, pdfPageCount]);
 
   const prevPdfPage = useCallback(() => {
     if (pdfCurrentPage > 1) {
-      const newPage = pdfCurrentPage - 1;
-      setPdfCurrentPage(newPage);
-
-      // Save progress when PDF page changes.
-      if (bookMetadata && progressLoaded) {
-        saveBookProgress(
-          bookId,
-          newPage - 1, // Use 0-based chapter for consistency
-          0,
-          newPage,
-          pdfPageCount,
-          "pdf"
-        );
-      }
+      goToPdfPage(pdfCurrentPage - 1);
     }
-  }, [bookId, bookMetadata, pdfCurrentPage, pdfPageCount, progressLoaded, saveBookProgress]);
+  }, [goToPdfPage, pdfCurrentPage]);
+
+  useEffect(() => {
+    if (!isPdf) return;
+    const pageParam = searchParams.get("page");
+    if (!pageParam) return;
+    const requestedPage = Number.parseInt(pageParam, 10);
+    const boundedPage = Math.min(
+      Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1),
+      pdfPageCount || Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1)
+    );
+    setPdfCurrentPage((currentPage) =>
+      currentPage === boundedPage ? currentPage : boundedPage
+    );
+  }, [isPdf, pdfPageCount, searchParams]);
+
+  const getCurrentReadingPosition = useCallback(() => {
+    const readingSurface = contentRef.current;
+    if (!readingSurface || isPdf) return 0;
+    if (settings?.verticalWriting) {
+      const maxScrollLeft = Math.max(
+        0,
+        readingSurface.scrollWidth - readingSurface.clientWidth
+      );
+      return Math.round(Math.max(0, maxScrollLeft - readingSurface.scrollLeft));
+    }
+    return Math.round(Math.max(0, readingSurface.scrollTop));
+  }, [isPdf, settings?.verticalWriting]);
+
+  const navigateToBookmark = useCallback(
+    (chapterIndex: number, position: number) => {
+      if (isPdf) {
+        goToPdfPage(chapterIndex + 1);
+        return;
+      }
+
+      const lastChapter = Math.max(0, (bookContent?.totalChapters || 1) - 1);
+      const boundedChapter = Math.min(Math.max(0, Math.trunc(chapterIndex)), lastChapter);
+      setPendingBookmark({
+        chapterIndex: boundedChapter,
+        position: Math.max(0, Number.isFinite(position) ? position : 0),
+      });
+      clearTranslation();
+      updateChapter(boundedChapter);
+    },
+    [bookContent?.totalChapters, clearTranslation, goToPdfPage, isPdf, updateChapter]
+  );
+
+  useEffect(() => {
+    if (
+      !pendingBookmark ||
+      isPdf ||
+      pendingBookmark.chapterIndex !== chapter ||
+      currentChapterContentChapter !== chapter
+    ) {
+      return;
+    }
+
+    const restoreTimer = window.setTimeout(() => {
+      const readingSurface = contentRef.current;
+      if (!readingSurface) return;
+
+      if (settings?.verticalWriting) {
+        const maxScrollLeft = Math.max(
+          0,
+          readingSurface.scrollWidth - readingSurface.clientWidth
+        );
+        readingSurface.scrollLeft = Math.max(0, maxScrollLeft - pendingBookmark.position);
+      } else {
+        readingSurface.scrollTop = pendingBookmark.position;
+      }
+      setPendingBookmark(null);
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
+  }, [
+    chapter,
+    contentRef,
+    currentChapterContentChapter,
+    isPdf,
+    mix.contentVersion,
+    pendingBookmark,
+    settings?.verticalWriting,
+  ]);
+
+  const rightToLeftPageTurning = Boolean(settings?.verticalWriting && !isPdf);
+  const previousPage = isPdf ? prevPdfPage : prevChapter;
+  const nextPage = isPdf ? nextPdfPage : nextChapter;
 
   useSwipe(
     contentRef as RefObject<HTMLElement>,
-    isPdf ? nextPdfPage : nextChapter,
-    isPdf ? prevPdfPage : prevChapter
+    rightToLeftPageTurning ? previousPage : nextPage,
+    rightToLeftPageTurning ? nextPage : previousPage
   );
+
+  useEffect(() => {
+    if (!keyboardNavigationEnabled) return;
+
+    const handlePageTurnKey = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        (target instanceof HTMLElement && target.isContentEditable) ||
+        (target instanceof Element &&
+          Boolean(target.closest("input, textarea, select, [role='dialog'], [data-jpdb-popup]"))) ||
+        document.querySelector("[role='dialog'], [data-jpdb-popup]")
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      if (event.key === "ArrowLeft") {
+        (rightToLeftPageTurning ? nextPage : previousPage)();
+      } else {
+        (rightToLeftPageTurning ? previousPage : nextPage)();
+      }
+    };
+
+    window.addEventListener("keydown", handlePageTurnKey);
+    return () => window.removeEventListener("keydown", handlePageTurnKey);
+  }, [keyboardNavigationEnabled, nextPage, previousPage, rightToLeftPageTurning]);
 
   return {
     handleBack,
@@ -237,7 +375,7 @@ export function useBookReaderController({
       data: pdfData,
       viewerRef: pdfViewerRef,
       currentPage: pdfCurrentPage,
-      setCurrentPage: setPdfCurrentPage,
+      setCurrentPage: goToPdfPage,
       pageCount: pdfPageCount,
       setPageCount: setPdfPageCount,
       nextPage: nextPdfPage,
@@ -252,6 +390,8 @@ export function useBookReaderController({
       updateChapter,
       nextChapter,
       prevChapter,
+      getCurrentReadingPosition,
+      navigateToBookmark,
     },
     controls: {
       applyStoredTranslation,

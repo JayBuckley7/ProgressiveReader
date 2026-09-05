@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 
 export interface ChapterTitle {
   index: number;
-  label: string;
+  title: string;
   href: string;
 }
 
@@ -269,7 +269,7 @@ class EpubProcessor {
       const flat = this._flattenToc(this.book.navigation.toc);
       return flat.map((item, index) => ({
         index,
-        label: String(item.label || '').trim(),
+        title: String(item.label || '').trim(),
         href: item.href,
       }));
     } catch (err) {

@@ -151,11 +151,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
         {/* Tab Navigation */}
         <div className="border-b app-border flex-shrink-0">
-          <div className="flex gap-1 p-2 overflow-x-auto scrollbar-hide">
+          <div className="scrollbar-hide grid grid-cols-2 gap-1 p-2 sm:flex sm:overflow-x-auto">
             {SETTINGS_TABS.map((tabId) => (
               <button
                 key={tabId}
-                className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors app-nav-item ${
+                className={`min-h-11 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors app-nav-item ${
                   activeTab === tabId ? "app-nav-active" : ""
                 }`}
                 onClick={() => setActiveTab(tabId)}

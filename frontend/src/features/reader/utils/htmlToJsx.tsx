@@ -68,6 +68,14 @@ const convertAttribs = (attribs: Record<string, string>) => {
       converted.xmlnsXlink = value;
       continue;
     }
+    if (keyLower === "xml:lang") {
+      converted.xmlLang = value;
+      continue;
+    }
+    if (keyLower === "xml:space") {
+      converted.xmlSpace = value;
+      continue;
+    }
     if (keyLower === "viewbox") {
       converted.viewBox = value;
       continue;

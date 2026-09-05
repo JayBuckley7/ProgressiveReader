@@ -3,7 +3,7 @@ import { parseHtmlToJsx } from "@features/reader/utils/htmlToJsx";
 describe("parseHtmlToJsx (SVG attributes)", () => {
   it("normalizes common SVG attribute names to React-compatible props", () => {
     const html =
-      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewbox="0 0 10 10" preserveaspectratio="xMidYMid meet">' +
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:lang="ja" xml:space="preserve" viewbox="0 0 10 10" preserveaspectratio="xMidYMid meet">' +
       '<use xlink:href="#a"></use>' +
       "</svg>";
 
@@ -34,6 +34,10 @@ describe("parseHtmlToJsx (SVG attributes)", () => {
     expect(svg.props.preserveaspectratio).toBeUndefined();
     expect(svg.props.xmlnsXlink).toBe("http://www.w3.org/1999/xlink");
     expect(svg.props["xmlns:xlink"]).toBeUndefined();
+    expect(svg.props.xmlLang).toBe("ja");
+    expect(svg.props["xml:lang"]).toBeUndefined();
+    expect(svg.props.xmlSpace).toBe("preserve");
+    expect(svg.props["xml:space"]).toBeUndefined();
 
     const useEl = findFirst(svg, "use");
     expect(useEl).toBeTruthy();

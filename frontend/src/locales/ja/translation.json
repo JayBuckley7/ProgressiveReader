@@ -333,6 +333,8 @@
     },
     "header": {
       "back": "ライブラリへ戻る",
+      "controls": "読書コントロール",
+      "tools": "読書ツール",
       "settings": "設定",
       "clearTranslationTitle": "原文を表示"
     },
@@ -348,6 +350,8 @@
       "progress": "{{current}} / {{total}} · 左右にスワイプしてページを移動",
       "prev": "前の章",
       "next": "次の章",
+      "prevPage": "前のページ",
+      "nextPage": "次のページ",
       "translate": "この章を翻訳",
       "translateShort": "翻訳",
       "translating": "翻訳中…",
