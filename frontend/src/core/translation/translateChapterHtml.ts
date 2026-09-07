@@ -1,4 +1,5 @@
 import type { LlmChatPort } from "@core/llm/ports";
+import { DEFAULTS } from "@core/prefs/keys";
 import { stripMarkdownCodeFences } from "@core/utils/markdown";
 
 export async function translateChapterHtmlWithLlm(args: {
@@ -12,7 +13,7 @@ export async function translateChapterHtmlWithLlm(args: {
   signal?: AbortSignal;
 }): Promise<string> {
   const targetLang = (args.targetLanguage || "English").trim() || "English";
-  const model = (args.model || "gpt-4o-mini").trim() || "gpt-4o-mini";
+  const model = (args.model || DEFAULTS.openAiModel).trim() || DEFAULTS.openAiModel;
   const cefrLevel = (args.cefrLevel || "").trim();
 
   let systemPrompt =

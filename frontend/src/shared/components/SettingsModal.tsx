@@ -17,9 +17,11 @@ import { HighlightTab } from "./settingsModal/tabs/HighlightTab";
 
 type SettingsModalProps = {
   onClose: () => void;
+  onTranslate?: (useCefr: boolean) => void;
+  translating?: boolean;
 };
 
-export function SettingsModal({ onClose }: SettingsModalProps) {
+export function SettingsModal({ onClose, onTranslate, translating = false }: SettingsModalProps) {
   const { settings, updateSettings } = useSettings();
   const { saveSettings, loadSettings, isAuthenticated } = useAppData();
   const { miningEnabled, underlinesEnabled, setMiningEnabled, setUnderlinesEnabled } = useGrammar();
@@ -221,6 +223,38 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             />
           )}
         </div>
+
+        {onTranslate ? (
+          <div className="flex shrink-0 flex-col gap-3 border-t app-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">{t("settings.footer.translateChapter")}</p>
+              <p className="mt-0.5 truncate text-xs app-muted">
+                {t("settings.footer.translationSummary", {
+                  language: settings.targetLanguage,
+                  model: localState.openaiModel,
+                })}
+              </p>
+            </div>
+            <div className="grid shrink-0 grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onTranslate(false)}
+                disabled={translating}
+                className="app-button-primary min-h-11 rounded-md px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {translating ? t("settings.footer.translating") : t("settings.footer.translate")}
+              </button>
+              <button
+                type="button"
+                onClick={() => onTranslate(true)}
+                disabled={translating}
+                className="app-button-muted min-h-11 rounded-md px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {translating ? t("settings.footer.translating") : t("settings.footer.translateCefr")}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

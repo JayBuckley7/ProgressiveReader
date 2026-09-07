@@ -1,8 +1,7 @@
 import { appLog } from "@shared/appLog";
+import { DEFAULTS } from "@core/prefs/keys";
 import { DEPRECATED_STORAGE_KEYS, localKeys } from "./constants";
 import type { LocalSettingsState } from "./types";
-
-const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
 function readString(key: string, fallback: string): string {
   return localStorage.getItem(key) ?? fallback;
@@ -24,7 +23,7 @@ function readBoolean(key: string, fallback: boolean): boolean {
 export function readLocalSettingsState(): LocalSettingsState {
   return {
     openaiKey: readString(localKeys.openaiKey, ""),
-    openaiModel: readString(localKeys.openaiModel, DEFAULT_OPENAI_MODEL),
+    openaiModel: readString(localKeys.openaiModel, DEFAULTS.openAiModel),
     cefrLevel: readNumber(localKeys.cefrLevel, 3),
     autoload: readBoolean(localKeys.autoload, false),
     jpdbDeckId: readString(localKeys.jpdbDeckId, ""),
