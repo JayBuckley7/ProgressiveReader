@@ -66,9 +66,9 @@
       "model": {
         "label": "Preferred Model",
         "options": {
-          "gpt-5.6-terra": "GPT-5.6 Terra (Balanced, recommended)",
+          "gpt-5.6-terra": "GPT-5.6 Terra (Higher quality)",
           "gpt-5.6-sol": "GPT-5.6 Sol (Highest quality)",
-          "gpt-5.6-luna": "GPT-5.6 Luna (Fastest, lowest cost)",
+          "gpt-5.6-luna": "GPT-5.6 Luna (Recommended, lowest cost)",
           "gpt-4o-mini": "GPT-4o Mini (Legacy)"
         }
       },
