@@ -257,7 +257,10 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
       navigate(`${baseUrl}?page=${progress.currentPage}`);
       return;
     }
-    navigate(`${baseUrl}?ch=${Math.max(progress.currentChapter, 0)}`);
+    // Reflowable books restore their stable sentence locator after layout.
+    // Supplying `ch` would be interpreted as an explicit URL override and
+    // intentionally skip that exact persisted restore.
+    navigate(baseUrl);
   };
 
   const lastSyncLabel = useMemo(() => {

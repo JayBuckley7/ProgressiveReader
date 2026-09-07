@@ -1,6 +1,20 @@
 // JPDB Highlighter Initialization Service
-import { displayCategory, Fragment, Paragraph, applyTokens, setWordHoverHandlers, reverseIndex } from '@features/reader/content/parse';
-import { getCurrentConfig, loadConfig, parseText, type JpdbApiPort } from '@features/reader/content/api-adapter';
+import {
+    displayCategory,
+    Fragment,
+    Paragraph,
+    applyTokens,
+    clearReverseIndexSegments,
+    removeFromReverseIndexes,
+    setWordHoverHandlers,
+} from '@features/reader/content/parse';
+import {
+    getCurrentConfig,
+    loadConfig,
+    parseText,
+    type JpdbApiPort,
+    type JpHighlighterConfig,
+} from '@features/reader/content/api-adapter';
 import { JpdbWord, getJpdbData, getSentences } from '@features/reader/content/word';
 import { notifyError } from '@shared/utils/notify';
 import {
@@ -10,7 +24,7 @@ import {
     isDefinitionPopupActivationSuppressed,
     clearDefinitionPopupSuppression,
 } from '@features/reader/components/JpdbPopupBridge';
-import { Keybind } from '~/types';
+import { Keybind, Token } from '~/types';
 import { appLog } from '@shared/appLog';
 
 let currentHover: [JpdbWord, number, number] | null = null;
@@ -18,6 +32,68 @@ let popupKeyHeld = false; // Add popupKeyHeld state
 
 // Track initialization state and event listener references
 let isInitialized = false;
+
+const SEGMENT_TOKEN_CACHE_LIMIT = 256;
+const segmentTokenCache = new Map<string, Token[]>();
+const inFlightSegmentTokens = new Map<string, Promise<Token[]>>();
+const segmentApplicationGeneration = new WeakMap<HTMLElement, symbol>();
+
+export interface HighlightContentSegmentsOptions {
+    /**
+     * Cancels DOM application, not the already-dispatched JPDB request. A
+     * completed stale request may still warm the token cache for a later visit.
+     */
+    signal?: AbortSignal;
+}
+
+function cloneTokens(tokens: readonly Token[]): Token[] {
+    return tokens.map((token) => ({
+        ...token,
+        card: { ...token.card },
+        rubies: token.rubies.map((ruby) => ({ ...ruby })),
+    }));
+}
+
+function sensitiveValueFingerprint(value: string): string {
+    let hash = 0x811c9dc5;
+    for (const character of value) {
+        hash ^= character.codePointAt(0) ?? 0;
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(36);
+}
+
+function segmentTokenCacheKey(
+    root: HTMLElement,
+    textSegments: readonly string[],
+    config: JpHighlighterConfig,
+): string {
+    return JSON.stringify([
+        'jpdb-segment-tokens-v1',
+        root.dataset.prSegmentId || '',
+        root.dataset.prSourceHash || '',
+        textSegments,
+        config.apiKey ? `remote:${sensitiveValueFingerprint(config.apiKey)}` : 'local',
+    ]);
+}
+
+function readCachedTokens(key: string): Token[] | undefined {
+    const tokens = segmentTokenCache.get(key);
+    if (tokens === undefined) return undefined;
+    segmentTokenCache.delete(key);
+    segmentTokenCache.set(key, tokens);
+    return cloneTokens(tokens);
+}
+
+function cacheTokens(key: string, tokens: readonly Token[]): void {
+    segmentTokenCache.delete(key);
+    segmentTokenCache.set(key, cloneTokens(tokens));
+    while (segmentTokenCache.size > SEGMENT_TOKEN_CACHE_LIMIT) {
+        const oldestKey = segmentTokenCache.keys().next().value as string | undefined;
+        if (oldestKey === undefined) break;
+        segmentTokenCache.delete(oldestKey);
+    }
+}
 
 export function setDebug(flag: boolean): void {
     appLog.setLevel(flag ? 'debug' : 'warn');
@@ -197,14 +273,20 @@ function createParagraphFragments(contentElement: HTMLElement): Paragraph[] {
 
 export function removeJpdbHighlighting(contentElement: HTMLElement): void {
     try {
-        reverseIndex.clear();
+        const affectedSegmentRoots = contentElement.matches('[data-pr-segment-id]')
+            ? [contentElement]
+            : Array.from(contentElement.querySelectorAll<HTMLElement>('[data-pr-segment-id]'));
+        clearReverseIndexSegments(
+            affectedSegmentRoots.flatMap((root) => root.dataset.prSegmentId || [])
+        );
 
         // Remove any injected ruby text (furigana) nodes inside jpdb wrappers.
         const injectedRt = contentElement.querySelectorAll('.jpdb-word rt');
         injectedRt.forEach((node) => node.parentNode?.removeChild(node));
 
         // Unwrap all JPDB wrappers, restoring original text nodes.
-        const wrappers = Array.from(contentElement.querySelectorAll('.jpdb-word'));
+        const wrappers = Array.from(contentElement.querySelectorAll<JpdbWord>('.jpdb-word'));
+        removeFromReverseIndexes(wrappers);
         for (const wrapper of wrappers) {
             const parent = wrapper.parentNode;
             if (!parent) continue;
@@ -217,8 +299,231 @@ export function removeJpdbHighlighting(contentElement: HTMLElement): void {
         if (contentElement.normalize) {
             contentElement.normalize();
         }
+
+        affectedSegmentRoots.forEach((root) => {
+            delete root.dataset.prJpdbHighlighted;
+        });
     } catch (error) {
         appLog.error('[jpdb] Error removing highlighting', error);
+    }
+}
+
+/**
+ * Keep the rendered JPDB DOM bounded to the active page window. Tokens remain
+ * in the segment cache, so returning to a page re-applies them without another
+ * parsing request.
+ */
+export function retainJpdbHighlightingForSegments(
+    contentElement: HTMLElement,
+    retainedSegmentIds: ReadonlySet<string>,
+): string[] {
+    const removedIds: string[] = [];
+    const roots = Array.from(
+        contentElement.querySelectorAll<HTMLElement>('[data-pr-segment-id]')
+    );
+    roots.forEach((root) => {
+        const id = root.dataset.prSegmentId || '';
+        if (
+            !id ||
+            retainedSegmentIds.has(id) ||
+            (root.dataset.prJpdbHighlighted !== 'true' && !root.querySelector('.jpdb-word'))
+        ) {
+            return;
+        }
+        removeJpdbHighlighting(root);
+        removedIds.push(id);
+    });
+    return removedIds;
+}
+
+/**
+ * Highlight only the requested stable source segments. Text from all requested segments is sent
+ * in one JPDB batch, while offsets are mapped back to each live DOM subtree independently.
+ */
+export async function highlightContentSegments(
+    api: JpdbApiPort,
+    contentElement: HTMLElement,
+    segmentIds: readonly string[],
+    options: HighlightContentSegmentsOptions = {},
+): Promise<void> {
+    if (options.signal?.aborted) return;
+
+    const wanted = new Set(segmentIds);
+    const roots = Array.from(
+        contentElement.querySelectorAll<HTMLElement>('[data-pr-segment-id]')
+    ).filter((element) => wanted.has(element.dataset.prSegmentId || ''));
+
+    if (roots.length === 0) return;
+
+    setWordHoverHandlers(onWordHoverStart, onWordHoverStop);
+    const currentConfig = loadConfig();
+    const renderVersionAtStart = contentElement.dataset.prRenderVersion ?? null;
+    const applicationGenerations = new Map<HTMLElement, symbol>();
+
+    try {
+        const work = roots.map((root) => {
+            const applicationGeneration = Symbol(root.dataset.prSegmentId || 'jpdb-segment');
+            segmentApplicationGeneration.set(root, applicationGeneration);
+            applicationGenerations.set(root, applicationGeneration);
+            removeJpdbHighlighting(root);
+            const textSegments = extractCleanTextSegments(root);
+            const textLength = textSegments.reduce((sum, text) => sum + text.length, 0);
+            const cacheKey = segmentTokenCacheKey(root, textSegments, currentConfig);
+            return {
+                id: root.dataset.prSegmentId || '',
+                root,
+                textSegments,
+                textLength,
+                paragraphs: createParagraphFragments(root),
+                cacheKey,
+                tokens: textLength > 0 ? readCachedTokens(cacheKey) : [],
+                tokenPromise: undefined as Promise<Token[]> | undefined,
+                batchStart: 0,
+                applicationGeneration,
+            };
+        });
+
+        if (work.every((item) => item.textLength === 0)) return;
+
+        const missing = work.filter((item) => item.textLength > 0 && item.tokens === undefined);
+        if (missing.length > 0) {
+            const fresh: typeof missing = [];
+            missing.forEach((item) => {
+                const pending = inFlightSegmentTokens.get(item.cacheKey);
+                if (pending) item.tokenPromise = pending;
+                else fresh.push(item);
+            });
+
+            const missingTextSegments: string[] = [];
+            let batchOffset = 0;
+            fresh.forEach((item) => {
+                item.batchStart = batchOffset;
+                batchOffset += item.textLength;
+                missingTextSegments.push(...item.textSegments);
+            });
+
+            if (fresh.length > 0) {
+                // Preserve page batching: every new miss in this page window shares one call.
+                // Per-segment promises let an overlapping page pass reuse that work without
+                // forcing later callers to wait on or re-request unrelated segments.
+                const batchPromise = parseText(api, missingTextSegments, { notifyOnError: false });
+                fresh.forEach((item) => {
+                    const segmentStart = item.batchStart;
+                    const segmentEnd = segmentStart + item.textLength;
+                    const tokenPromise = batchPromise.then((batchTokens) => {
+                        const tokens = batchTokens
+                            .filter((token) => token.start < segmentEnd && token.end > segmentStart)
+                            .map((token) => {
+                                const start = Math.max(0, token.start - segmentStart);
+                                const end = Math.min(item.textLength, token.end - segmentStart);
+                                return {
+                                    ...token,
+                                    card: { ...token.card },
+                                    rubies: token.rubies.map((ruby) => ({ ...ruby })),
+                                    start,
+                                    end,
+                                    length: end - start,
+                                };
+                            })
+                            .filter((token) => token.length > 0);
+                        cacheTokens(item.cacheKey, tokens);
+                        return cloneTokens(tokens);
+                    });
+                    item.tokenPromise = tokenPromise;
+                    inFlightSegmentTokens.set(item.cacheKey, tokenPromise);
+                    void tokenPromise.then(
+                        () => {
+                            if (inFlightSegmentTokens.get(item.cacheKey) === tokenPromise) {
+                                inFlightSegmentTokens.delete(item.cacheKey);
+                            }
+                        },
+                        () => {
+                            if (inFlightSegmentTokens.get(item.cacheKey) === tokenPromise) {
+                                inFlightSegmentTokens.delete(item.cacheKey);
+                            }
+                        },
+                    );
+                });
+            }
+
+            await Promise.all(missing.map(async (item) => {
+                item.tokens = cloneTokens(await item.tokenPromise!);
+            }));
+        }
+
+        const renderVersionNow = contentElement.dataset.prRenderVersion ?? null;
+        if (
+            options.signal?.aborted ||
+            !contentElement.isConnected ||
+            renderVersionAtStart !== renderVersionNow
+        ) return;
+
+        for (const item of work) {
+            // A newer pass for this same live segment owns DOM application. This
+            // also prevents overlapping callers that share token work from
+            // wrapping the same text twice.
+            const liveTextSegments = extractCleanTextSegments(item.root);
+            const textStillMatches =
+                liveTextSegments.length === item.textSegments.length &&
+                liveTextSegments.every((text, index) => text === item.textSegments[index]);
+            const fragmentsStillConnected = item.paragraphs.every((paragraph) =>
+                paragraph.every((fragment) =>
+                    fragment.node.isConnected && item.root.contains(fragment.node)
+                )
+            );
+            if (
+                options.signal?.aborted ||
+                !item.root.isConnected ||
+                !contentElement.contains(item.root) ||
+                segmentApplicationGeneration.get(item.root) !== item.applicationGeneration ||
+                !textStillMatches ||
+                !fragmentsStillConnected
+            ) continue;
+
+            const segmentTokens = item.tokens || [];
+            for (const paragraph of item.paragraphs) {
+                if (paragraph.length === 0) continue;
+                const paragraphStart = paragraph[0].start;
+                const paragraphEnd = paragraph[paragraph.length - 1].end;
+                const relativeTokens = segmentTokens
+                    .filter((token) => token.start < paragraphEnd && token.end > paragraphStart)
+                    .map((token) => {
+                        const start = Math.max(0, token.start - paragraphStart);
+                        const end = Math.min(paragraphEnd - paragraphStart, token.end - paragraphStart);
+                        return {
+                            ...token,
+                            card: { ...token.card },
+                            rubies: token.rubies.map((ruby) => ({ ...ruby })),
+                            start,
+                            end,
+                            length: end - start,
+                        };
+                    });
+                if (relativeTokens.length === 0) continue;
+                const relativeFragments = paragraph.map((fragment) => ({
+                    ...fragment,
+                    start: fragment.start - paragraphStart,
+                    end: fragment.end - paragraphStart,
+                }));
+                applyTokens(relativeFragments, relativeTokens, { segmentId: item.id });
+            }
+
+            item.root.dataset.prJpdbHighlighted = 'true';
+        }
+    } catch (error) {
+        if (
+            options.signal?.aborted ||
+            !contentElement.isConnected ||
+            contentElement.dataset.prRenderVersion !== renderVersionAtStart
+        ) return;
+        appLog.error('[jpdb] Error in segmented highlighting', error);
+        notifyError(error, { title: 'JPDB highlight error' });
+        roots.forEach((root) => {
+            if (
+                contentElement.contains(root) &&
+                segmentApplicationGeneration.get(root) === applicationGenerations.get(root)
+            ) removeJpdbHighlighting(root);
+        });
     }
 }
 

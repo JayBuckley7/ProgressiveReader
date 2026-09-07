@@ -1,10 +1,18 @@
 import type { GrammarValidateRequest, GrammarValidateResponse } from "@core/grammar/validateCandidates";
 import type { TeachExampleRequest, TeachExampleResponse } from "@core/grammar/teachExamples";
 import type { MixRefineBackendPort, RefineChoices } from "@core/mix/refineAmbiguousSwaps";
+import type {
+  TranslateSegmentsRequest,
+  TranslateSegmentsResponse,
+} from "@core/translation/segments";
 import type { AddBookmarkRequest, Bookmark, GetBookmarksRequest, TranslateRequest, TranslateResponse } from "~/types/api";
 
 export interface TranslationBackendPort {
   translateChapter(req: TranslateRequest, opts?: { signal?: AbortSignal }): Promise<TranslateResponse>;
+  translateSegments(
+    req: TranslateSegmentsRequest,
+    opts?: { signal?: AbortSignal }
+  ): Promise<TranslateSegmentsResponse>;
   translateChapterStream(
     req: TranslateRequest,
     onChunk?: (chunk: string) => void,

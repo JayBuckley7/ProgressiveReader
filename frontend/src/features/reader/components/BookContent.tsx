@@ -10,10 +10,13 @@ const PdfViewer = lazy(() =>
 interface BookContentProps {
   bookMetadata: BookMetadata | null;
   contentRef: React.RefObject<HTMLDivElement>;
+  flowRef: React.RefObject<HTMLDivElement>;
   jsxContent: React.ReactNode | null;
   error: string | null;
   isLoading: boolean;
   pdfData: ArrayBuffer | null;
+  pdfLoadError?: string | null;
+  onRetryPdfLoad?: () => void;
   pdfViewerRef: React.RefObject<PdfViewerHandle>;
   pdfCurrentPage: number;
   setPdfCurrentPage: (page: number) => void;
@@ -25,10 +28,12 @@ interface BookContentProps {
 export function BookContent({
   bookMetadata,
   contentRef,
+  flowRef,
   jsxContent,
   error,
-  isLoading,
   pdfData,
+  pdfLoadError = null,
+  onRetryPdfLoad,
   pdfViewerRef,
   pdfCurrentPage,
   setPdfCurrentPage,
@@ -42,50 +47,21 @@ export function BookContent({
   );
 
   useEffect(() => {
+    if (bookMetadata?.fileType !== "pdf") return;
     if (!contentRef.current) return;
     contentRef.current.scrollTop = 0;
     contentRef.current.scrollLeft = verticalWriting
       ? Math.max(0, contentRef.current.scrollWidth - contentRef.current.clientWidth)
       : 0;
-  }, [contentRef, verticalWriting]);
+  }, [bookMetadata?.fileType, contentRef, pdfCurrentPage, verticalWriting]);
 
-  useEffect(() => {
-    const readingSurface = contentRef.current;
-    if (!readingSurface || !verticalWriting) return;
-
-    const handleVerticalWheel = (event: WheelEvent) => {
-      if (
-        Math.abs(event.deltaY) <= Math.abs(event.deltaX) ||
-        readingSurface.scrollWidth <= readingSurface.clientWidth
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      readingSurface.scrollLeft -= event.deltaY;
-    };
-
-    readingSurface.addEventListener("wheel", handleVerticalWheel, { passive: false });
-    return () => readingSurface.removeEventListener("wheel", handleVerticalWheel);
-  }, [contentRef, verticalWriting]);
-
-  return (
-    <div 
-      ref={contentRef}
-      data-writing-mode={verticalWriting ? "vertical-rl" : "horizontal-tb"}
-      className={`flex-1 min-h-0 pb-24 px-3 sm:px-4 md:px-8 lg:px-16 reader-content-transition ${
-        verticalWriting
-          ? "overflow-x-auto overflow-y-hidden touch-pan-x overscroll-contain"
-          : "overflow-y-auto touch-pan-y"
-      }`}
-      style={{
-        fontSize: settings?.fontSize ? `${settings.fontSize}px` : '16px',
-        fontFamily: settings?.fontFamily || 'Inter',
-      }}
-    >
-      {bookMetadata?.fileType === 'pdf' ? (
-        pdfData ? (
+  if (bookMetadata?.fileType === "pdf") {
+    return (
+      <div
+        ref={contentRef}
+        className="reader-content-transition flex-1 min-h-0 overflow-y-auto px-3 pb-24 sm:px-4 md:px-8 lg:px-16"
+      >
+        {pdfData ? (
           <Suspense fallback={<div className="py-8 text-center">{t('reader.pdf.loading')}</div>}>
             <PdfViewer
               ref={pdfViewerRef}
@@ -98,28 +74,52 @@ export function BookContent({
               showTokenHighlights={showPdfTokenHighlights}
             />
           </Suspense>
+        ) : pdfLoadError ? (
+          <div
+            role="alert"
+            className="mx-auto flex max-w-lg flex-col items-center gap-3 py-10 text-center"
+          >
+            <p className="font-medium text-red-600 dark:text-red-400">
+              {t("reader.pdf.loadFailed")}
+            </p>
+            <p className="text-sm text-[color:var(--ui-text-muted)]">{pdfLoadError}</p>
+            {onRetryPdfLoad && (
+              <button
+                type="button"
+                className="rounded-md bg-[color:var(--ui-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ui-accent)] focus-visible:ring-offset-2"
+                onClick={onRetryPdfLoad}
+              >
+                {t("reader.pdf.retry")}
+              </button>
+            )}
+          </div>
         ) : (
           <div className="py-8 text-center">{t('reader.pdf.loading')}</div>
-        )
-      ) : (
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 min-h-0 px-3 pb-20 pt-3 sm:px-4 sm:pb-24 sm:pt-4 md:px-8 lg:px-16">
+      <div
+        ref={contentRef}
+        data-writing-mode={verticalWriting ? "vertical-rl" : "horizontal-tb"}
+        className="reader-content-transition h-full min-h-0 w-full"
+        style={{
+          fontSize: settings?.fontSize ? `${settings.fontSize}px` : "16px",
+          fontFamily: settings?.fontFamily || "Inter",
+        }}
+      >
         <div
-          className={
-            verticalWriting
-              ? "h-full min-w-full box-border py-4 sm:py-6 md:py-8"
-              : "max-w-4xl mx-auto py-4 sm:py-6 md:py-8"
-          }
+          ref={flowRef}
+          lang={verticalWriting ? "ja" : undefined}
+          className={`prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none ${
+            verticalWriting ? "reader-vertical-writing" : "leading-relaxed"
+          }`}
         >
           {jsxContent ? (
-            <div
-              lang={verticalWriting ? "ja" : undefined}
-              className={`prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none ${
-                verticalWriting
-                  ? "reader-vertical-writing h-full w-max min-w-full"
-                  : "leading-relaxed"
-              }`}
-            >
-              {jsxContent}
-            </div>
+            jsxContent
           ) : error ? (
             <div className="text-center py-8">
               <div className="text-red-600 dark:text-red-400 mb-4">
@@ -132,7 +132,7 @@ export function BookContent({
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

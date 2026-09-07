@@ -6,6 +6,32 @@
 //   highlighter can ignore them.
 
 const STRIP_TAGS_SELECTOR = "script, iframe, object, embed, form, style, link, meta";
+const URL_ATTRIBUTES = new Set(["action", "formaction", "href", "poster", "src", "xlink:href"]);
+const TARGET_LANGUAGE_TAGS: Readonly<Record<string, string>> = {
+  chinese: "zh",
+  danish: "da",
+  dutch: "nl",
+  english: "en",
+  finnish: "fi",
+  french: "fr",
+  german: "de",
+  italian: "it",
+  japanese: "ja",
+  korean: "ko",
+  norwegian: "no",
+  portuguese: "pt",
+  spanish: "es",
+  swedish: "sv",
+};
+
+/** Convert display labels from settings into valid BCP-47 language tags. */
+export function targetLanguageTag(language: string): string {
+  const value = language.trim();
+  const mapped = TARGET_LANGUAGE_TAGS[value.toLowerCase()];
+  if (mapped) return mapped;
+  if (/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/iu.test(value)) return value;
+  return "und";
+}
 
 function unwrapElement(el: Element) {
   const parent = el.parentNode;
@@ -14,17 +40,50 @@ function unwrapElement(el: Element) {
   parent.removeChild(el);
 }
 
-function sanitizeTranslationRoot(root: ParentNode) {
+function unsafeUrl(value: string): boolean {
+  const normalized = Array.from(value)
+    .filter((character) => (character.codePointAt(0) ?? 0) > 0x20)
+    .join("")
+    .toLowerCase();
+  return (
+    normalized.startsWith("javascript:") ||
+    normalized.startsWith("vbscript:") ||
+    normalized.startsWith("data:text/html")
+  );
+}
+
+function sanitizeRoot(root: ParentNode, unwrapAnchors: boolean) {
   // Remove potentially-dangerous / layout-breaking tags from model output.
   root.querySelectorAll(STRIP_TAGS_SELECTOR).forEach((n) => n.remove());
 
+  root.querySelectorAll("*").forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      if (
+        name.startsWith("on") ||
+        name === "srcdoc" ||
+        (URL_ATTRIBUTES.has(name) && unsafeUrl(attribute.value)) ||
+        (name === "style" && /(?:expression\s*\(|url\s*\(\s*["']?\s*(?:javascript|vbscript):)/iu.test(attribute.value))
+      ) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+  });
+
   // Unwrap all anchors so JPDB token wrapping can safely introduce its own <a> wrappers.
-  root.querySelectorAll("a").forEach(unwrapElement);
+  if (unwrapAnchors) root.querySelectorAll("a").forEach(unwrapElement);
 }
 
-function parseAsDocument(html: string): Document {
-  // DOMParser is forgiving for malformed HTML, which is common for LLM output.
-  return new DOMParser().parseFromString(html, "text/html");
+function parseAsDocument(html: string, unwrapAnchors: boolean): Document {
+  // Parse inside an inert template first. This keeps active publication/model
+  // markup disconnected until it has been sanitized (and also protects DOM
+  // implementations which incorrectly execute scripts during DOMParser use).
+  const doc = document.implementation.createHTMLDocument("");
+  const template = doc.createElement("template");
+  template.innerHTML = html;
+  sanitizeRoot(template.content, unwrapAnchors);
+  doc.body.appendChild(template.content);
+  return doc;
 }
 
 /**
@@ -33,13 +92,20 @@ function parseAsDocument(html: string): Document {
  * Handles legacy cached translations that wrapped content in `.prose` containers.
  */
 export function normalizeTranslatedHtml(html: string): string {
-  const doc = parseAsDocument(html);
-  sanitizeTranslationRoot(doc);
-
+  const doc = parseAsDocument(html, false);
+  // Translated pages remain normal reader content: safe internal and external
+  // links must keep working. Dangerous URL schemes and event handlers are
+  // still removed by the sanitizer.
   // Prefer the inner prose container when present to avoid nesting layout wrappers.
   const prose = doc.querySelector(".prose");
   const root = prose ?? doc.body;
   return root.innerHTML;
+}
+
+/** Sanitize publication markup while preserving ordinary internal/external links. */
+export function sanitizeReaderHtml(html: string): string {
+  const doc = parseAsDocument(html, false);
+  return doc.body.innerHTML;
 }
 
 function collectBlocks(root: ParentNode): Element[] {
@@ -66,13 +132,11 @@ function createTranslationNode(doc: Document, html: string): HTMLDivElement {
  * the original text (and ignore `.pr-translation` nodes).
  */
 export function buildBilingualHtml(params: { originalHtml: string; translatedHtml: string }): string {
-  const origDoc = parseAsDocument(params.originalHtml);
-  const transDoc = parseAsDocument(params.translatedHtml);
+  const origDoc = parseAsDocument(params.originalHtml, false);
+  const transDoc = parseAsDocument(params.translatedHtml, true);
 
   // If the original HTML already has translation nodes (e.g. due to stale cache), strip them first.
   origDoc.querySelectorAll(".pr-translation,[data-pr-translation]").forEach((n) => n.remove());
-
-  sanitizeTranslationRoot(transDoc);
 
   const origBlocks = collectBlocks(origDoc.body);
   const transBlocks = collectBlocks(transDoc.body);

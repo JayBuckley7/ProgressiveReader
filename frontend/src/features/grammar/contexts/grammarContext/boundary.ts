@@ -18,6 +18,11 @@ type ProgressLike = {
   currentPosition?: number;
   scrollHeight?: number;
   viewportHeight?: number;
+  locator?: {
+    kind?: string;
+    chapterIndex?: number;
+    progression?: number;
+  };
 };
 
 function isProgressLike(value: unknown): value is ProgressLike {
@@ -27,13 +32,21 @@ function isProgressLike(value: unknown): value is ProgressLike {
 export function boundaryFromProgress(progress: unknown): GrammarScanBoundary {
   if (!isProgressLike(progress)) return { uptoChapter: 0, uptoPercent: 0.05 };
 
-  const ch = typeof progress.currentChapter === "number" ? progress.currentChapter : 0;
+  const locator = progress.locator?.kind === "reflow" ? progress.locator : undefined;
+  const ch = typeof locator?.chapterIndex === "number"
+    ? locator.chapterIndex
+    : typeof progress.currentChapter === "number"
+      ? progress.currentChapter
+      : 0;
   const scrollTop = typeof progress.currentPosition === "number" ? progress.currentPosition : 0;
   const scrollHeight = typeof progress.scrollHeight === "number" ? progress.scrollHeight : null;
   const viewportHeight = typeof progress.viewportHeight === "number" ? progress.viewportHeight : null;
 
-  let percent = 0.1;
-  if (scrollHeight && viewportHeight) {
+  let percent =
+    typeof locator?.progression === "number"
+      ? Math.max(0, Math.min(1, locator.progression))
+      : 0.1;
+  if (typeof locator?.progression !== "number" && scrollHeight && viewportHeight) {
     const denom = Math.max(1, scrollHeight - viewportHeight);
     percent = Math.max(0, Math.min(1, scrollTop / denom));
   }

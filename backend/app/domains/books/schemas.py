@@ -1,7 +1,5 @@
-from __future__ import annotations
-
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing import Literal, Optional
 
 
 class Book(BaseModel):
@@ -14,6 +12,33 @@ class Book(BaseModel):
     path: Optional[str] = None
 
 
+class ReaderLocator(BaseModel):
+    """Versioned, stable reading location for reflowable books and PDFs."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    version: Literal[2]
+    kind: Literal["reflow", "pdf"]
+    chapterIndex: Optional[int] = None
+    segmentId: Optional[str] = Field(default=None, min_length=1)
+    textOffset: Optional[int] = None
+    quote: Optional[str] = None
+    progression: Optional[float] = None
+    pageNumber: Optional[int] = None
+
+    @model_validator(mode="after")
+    def validate_kind_fields(self) -> "ReaderLocator":
+        if self.kind == "reflow":
+            required = ("chapterIndex", "segmentId", "textOffset", "progression")
+        else:
+            required = ("pageNumber",)
+
+        missing = [field for field in required if getattr(self, field) is None]
+        if missing:
+            raise ValueError(f"{self.kind} locator requires {', '.join(missing)}")
+        return self
+
+
 class Bookmark(BaseModel):
     id: int | str
     bookId: str
@@ -21,6 +46,7 @@ class Bookmark(BaseModel):
     position: int
     note: Optional[str] = None
     createdAt: Optional[str] = None
+    locator: Optional[ReaderLocator] = None
 
 
 class GetBookmarksRequest(BaseModel):
@@ -32,6 +58,7 @@ class AddBookmarkRequest(BaseModel):
     chapterIndex: int
     position: int
     note: Optional[str] = None
+    locator: Optional[ReaderLocator] = None
 
 
 class ToggleJlptRequest(BaseModel):

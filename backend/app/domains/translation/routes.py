@@ -6,8 +6,9 @@ from pydantic import ValidationError
 
 from ...utils.clerk_auth import optional_auth
 from ...utils.request_normalization import normalize_aliases
-from .http import stream_translate_chapter_sse
-from .schemas import TranslateRequest, TranslateResponse
+from .http import stream_translate_chapter_sse, stream_translate_segments_sse
+from .schemas import TranslateRequest, TranslateSegmentsRequest
+from .service import SegmentBoundaryError
 
 translation_bp = Blueprint('translation', __name__, url_prefix='/api/translate')
 
@@ -72,6 +73,61 @@ def translate_chapter():
     except Exception as e:
         current_app.logger.error(f"Error calling OpenAI API for chapter: {e}", exc_info=True)
         return jsonify({"error": "Error during chapter translation"}), 500
+
+
+@translation_bp.route('/segments', methods=['POST'])
+@optional_auth
+def translate_segments():
+    """Translate stable reader segments in one batched provider call."""
+    try:
+        data = _get_json_dict()
+        normalize_aliases(
+            data,
+            {
+                "target_language": ["targetLanguage", "target_lang", "targetLang"],
+                "api_key": ["apiKey"],
+                "use_cefr": ["useCefr"],
+                "cefr_level": ["cefrLevel"],
+                "prompt_version": ["promptVersion"],
+            },
+        )
+        req = TranslateSegmentsRequest(**data)
+    except ValidationError as e:
+        return jsonify({"error": f"Invalid request: {str(e)}"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    container = current_app.extensions["container"]
+    api_key_to_use = container.openai_key_resolver.resolve(req.api_key, use_server_key=True)
+    if not api_key_to_use:
+        return jsonify({"error": "OpenAI API key not configured"}), 400
+
+    current_app.logger.info(
+        "--- Segment Translation Request --- Count: %s, Lang: %s, Model: %s, "
+        "CEFR: %s, Prompt: %s, Stream: %s",
+        len(req.segments),
+        req.target_language,
+        req.model,
+        req.cefr_level or "N/A",
+        req.prompt_version or "N/A",
+        req.stream,
+    )
+
+    try:
+        service = container.make_translation_service(api_key_to_use)
+        if req.stream:
+            return Response(stream_translate_segments_sse(service=service, req=req), content_type="text/event-stream")
+
+        result = service.translate_segments(req)
+        return jsonify(result.model_dump(by_alias=True, exclude_none=True))
+    except SegmentBoundaryError as e:
+        current_app.logger.warning("Segment translation boundaries were not preserved: %s", e)
+        return jsonify({"error": str(e), "code": "segment_boundary_error"}), 502
+    except Exception as e:
+        current_app.logger.error("Error calling OpenAI API for segments: %s", e, exc_info=True)
+        return jsonify({"error": "Error during segment translation"}), 500
 
 
 #

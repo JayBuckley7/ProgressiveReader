@@ -1,4 +1,6 @@
 import { parseHtmlToJsx } from "@features/reader/utils/htmlToJsx";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 describe("parseHtmlToJsx (SVG attributes)", () => {
   it("normalizes common SVG attribute names to React-compatible props", () => {
@@ -43,5 +45,52 @@ describe("parseHtmlToJsx (SVG attributes)", () => {
     expect(useEl).toBeTruthy();
     expect(useEl.props.xlinkHref).toBe("#a");
     expect(useEl.props["xlink:href"]).toBeUndefined();
+  });
+});
+
+describe("parseHtmlToJsx (segment-scoped highlighting)", () => {
+  const html = [
+    '<div data-pr-segment-id="past"><p data-testid="past">dog</p></div>',
+    '<div data-pr-segment-id="current"><p data-testid="current">cat</p></div>',
+    '<div data-pr-segment-id="next"><p data-testid="next">bird</p></div>',
+  ].join("");
+
+  it("only transforms selected segment roots while retaining source-wide node ordinals", () => {
+    const calls: Array<{ text: string; textNodeIndex: number | undefined }> = [];
+    render(
+      parseHtmlToJsx(
+        html,
+        (text, context) => {
+          calls.push({ text, textNodeIndex: context?.textNodeIndex });
+          return [`${text}:${context?.textNodeIndex}`];
+        },
+        { highlightSegmentIds: new Set(["current", "next"]) }
+      )
+    );
+
+    expect(screen.getByTestId("past")).toHaveTextContent("dog");
+    expect(screen.getByTestId("current")).toHaveTextContent("cat:1");
+    expect(screen.getByTestId("next")).toHaveTextContent("bird:2");
+    expect(calls).toEqual([
+      { text: "cat", textNodeIndex: 1 },
+      { text: "bird", textNodeIndex: 2 },
+    ]);
+  });
+
+  it("distinguishes an explicit empty scope from the legacy omitted scope", () => {
+    const scopedHighlight = vi.fn((text: string) => [`mixed:${text}`]);
+    const scoped = render(
+      parseHtmlToJsx(html, scopedHighlight, { highlightSegmentIds: new Set() })
+    );
+    expect(scopedHighlight).not.toHaveBeenCalled();
+    expect(scoped.getByTestId("current")).toHaveTextContent("cat");
+    scoped.unmount();
+
+    const legacyHighlight = vi.fn((text: string) => [`mixed:${text}`]);
+    render(parseHtmlToJsx(html, legacyHighlight));
+    expect(legacyHighlight).toHaveBeenCalledTimes(3);
+    expect(screen.getByTestId("past")).toHaveTextContent("mixed:dog");
+    expect(screen.getByTestId("current")).toHaveTextContent("mixed:cat");
+    expect(screen.getByTestId("next")).toHaveTextContent("mixed:bird");
   });
 });

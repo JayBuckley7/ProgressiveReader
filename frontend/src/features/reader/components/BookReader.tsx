@@ -32,10 +32,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     keyboardNavigationEnabled:
       !showSettings && !showMixSettings && !showReaderControls && !showContents,
   });
-  const readerIndex = c.isPdf ? c.pdf.currentPage - 1 : c.chapter;
-  const readerTotal = c.isPdf ? c.pdf.pageCount : c.bookContent?.totalChapters || 1;
-  const previous = c.isPdf ? c.pdf.prevPage : c.nav.prevChapter;
-  const next = c.isPdf ? c.pdf.nextPage : c.nav.nextChapter;
+  const readerIndex = c.isPdf ? c.pdf.currentPage - 1 : c.pagination.pageIndex;
+  const readerTotal = c.isPdf ? c.pdf.pageCount : c.pagination.pageCount;
+  const previous = c.nav.previousPage;
+  const next = c.nav.nextPage;
+  const canPrevious = c.nav.canPrevious;
+  const canNext = c.nav.canNext;
   const rightToLeftPageTurning = Boolean(c.settings?.verticalWriting && !c.isPdf);
   const chapterTitles = c.isPdf
     ? Array.from({ length: c.pdf.pageCount }, (_, i) => ({ index: i, title: `Page ${i + 1}`, href: "" }))
@@ -43,6 +45,14 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   const selectChapter = c.isPdf
     ? (index: number) => c.pdf.setCurrentPage(index + 1)
     : c.nav.updateChapter;
+  const chapterTitle = c.bookContent?.chapterTitles?.find(
+    (item) => item.index === c.chapter
+  )?.title;
+  const pageStatus = c.isPdf
+    ? `Page ${c.pdf.currentPage} of ${Math.max(1, c.pdf.pageCount)}`
+    : c.pagination.isLayoutReady
+      ? `${chapterTitle || `Chapter ${c.chapter + 1}`} · Page ${c.pagination.pageIndex + 1} of ${Math.max(1, c.pagination.pageCount)}`
+      : `${chapterTitle || `Chapter ${c.chapter + 1}`} · Laying out pages…`;
 
   if (c.isLoading) {
     return (
@@ -57,7 +67,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       <ReaderHeader
         bookContent={c.bookContent}
         chapter={c.chapter}
-        progressLabel={c.isPdf ? `Page ${c.pdf.currentPage} / ${Math.max(1, c.pdf.pageCount)}` : undefined}
+        progressLabel={pageStatus}
         bookId={bookId}
         isTranslated={c.translation.isTranslated}
         isAutoloaded={c.translation.isAutoloaded}
@@ -75,10 +85,13 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       <BookContent
         bookMetadata={c.bookMetadata}
         contentRef={c.contentRef as RefObject<HTMLDivElement>}
+        flowRef={c.flowRef as RefObject<HTMLDivElement>}
         jsxContent={c.mix.jsxContent}
         error={c.error}
         isLoading={c.isLoading}
         pdfData={c.pdf.data}
+        pdfLoadError={c.pdf.loadError}
+        onRetryPdfLoad={c.pdf.retryLoad}
         pdfViewerRef={c.pdf.viewerRef}
         pdfCurrentPage={c.pdf.currentPage}
         setPdfCurrentPage={c.pdf.setCurrentPage}
@@ -87,13 +100,33 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         showPdfTokenHighlights={c.isPdf && c.highlighting.jpdbHighlighted}
       />
 
+      {!c.isPdf && c.translation.pageTranslationError && (
+        <div
+          role="alert"
+          className="fixed bottom-24 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-amber-300/70 bg-[color:var(--ui-surface)] px-4 py-2 text-sm text-[color:var(--ui-text)] shadow-lg dark:border-amber-700/70"
+        >
+          <span className="truncate">Translation failed for this page.</span>
+          <button
+            type="button"
+            className="shrink-0 font-semibold text-[color:var(--ui-accent)] hover:underline disabled:opacity-50"
+            onClick={c.translation.retryPageTranslation}
+            disabled={c.translation.isTranslating}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <ReaderDock
         currentIndex={readerIndex}
         totalItems={readerTotal}
         onPrevious={previous}
         onNext={next}
+        canPrevious={canPrevious}
+        canNext={canNext}
         rightToLeftPageTurning={rightToLeftPageTurning}
-        navigationUnit={c.isPdf ? "page" : "chapter"}
+        navigationUnit="page"
+        statusLabel={pageStatus}
         onShowContents={() => {
           setShowReaderControls(false);
           setShowContents(true);
@@ -109,25 +142,33 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           setShowContents(true);
         }}
         onCloseContents={() => setShowContents(false)}
-        currentChapter={readerIndex}
-        totalChapters={readerTotal}
+        currentChapter={c.isPdf ? readerIndex : c.chapter}
+        totalChapters={c.isPdf ? Math.max(1, readerTotal) : c.bookContent?.totalChapters || 1}
+        navigationIndex={readerIndex}
+        navigationTotal={readerTotal}
+        navigationStatus={pageStatus}
+        canPrevious={canPrevious}
+        canNext={canNext}
         onPrevChapter={previous}
         onNextChapter={next}
         rightToLeftPageTurning={rightToLeftPageTurning}
-        navigationUnit={c.isPdf ? "page" : "chapter"}
+        navigationUnit="page"
         bookId={bookId}
         chapterTitles={chapterTitles}
         onSelectChapter={selectChapter}
         onSelectBookmark={(bookmark) =>
-          c.nav.navigateToBookmark(bookmark.chapterIndex, bookmark.position)
+          c.nav.navigateToBookmark(bookmark.chapterIndex, bookmark.position, bookmark.locator)
         }
         getBookmarkPosition={c.nav.getCurrentReadingPosition}
+        getBookmarkLocator={c.nav.getCurrentReadingLocator}
         onToggleTts={c.tts.toggleTts}
         ttsActive={c.tts.isSpeaking}
         onToggleHighlight={c.highlighting.toggleJpdbHighlight}
         jpdbHighlighted={c.highlighting.jpdbHighlighted}
         onTranslate={() => c.translation.translateCurrent(c.translation.lastUseCefr)}
+        translationAvailable={!c.isPdf}
         translating={c.translation.isTranslating}
+        ttsAvailable={!c.isPdf}
         mixEnabled={Boolean(c.settings?.mixEnabled)}
         onShowMixSettings={() => setShowMixSettings(true)}
       />
@@ -151,7 +192,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onTranslate={(useCefr) => {
+          onTranslate={c.isPdf ? undefined : (useCefr) => {
             setShowSettings(false);
             c.translation.setLastUseCefr(useCefr);
             void c.translation.translateCurrent(useCefr);

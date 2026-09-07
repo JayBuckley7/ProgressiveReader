@@ -330,6 +330,83 @@ html {
   transition: opacity 0.2s ease-in-out;
 }
 
+/* Reflowable reader pagination. The hook supplies exact viewport dimensions. */
+.pr-reflow-viewport {
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+  scrollbar-width: none;
+  /* Horizontal movement is page navigation handled by the shared reader API.
+     Keeping native pan-x enabled would scroll part of a column and then also
+     fire the swipe handler, producing apparent double page turns. */
+  touch-action: pan-y pinch-zoom;
+}
+
+.pr-reflow-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.pr-reflow-content {
+  box-sizing: border-box;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+/* Metadata wrappers must not change the EPUB author's block layout. */
+.pr-annotated-chapter,
+.pr-source-segment {
+  display: contents;
+}
+
+.pr-reflow-content[data-pr-reflow-mode="horizontal-columns"] {
+  width: var(--pr-reflow-page-width);
+  min-width: var(--pr-reflow-page-width);
+  height: var(--pr-reflow-page-height);
+  column-width: var(--pr-reflow-page-width);
+  column-gap: var(--pr-reflow-page-gap);
+  column-fill: auto;
+}
+
+.pr-reflow-content[data-pr-reflow-mode="vertical-rl"] {
+  width: max-content;
+  min-width: var(--pr-reflow-page-width);
+  height: var(--pr-reflow-page-height);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.pr-reflow-content img,
+.pr-reflow-content svg,
+.pr-reflow-content video {
+  max-width: 100%;
+  max-height: var(--pr-reflow-page-height);
+  object-fit: contain;
+}
+
+.pr-reflow-content pre,
+.pr-reflow-content table {
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: calc(var(--pr-reflow-page-height) - 1rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+  break-inside: avoid;
+}
+
+.pr-reflow-content table {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-reflow-viewport {
+    scroll-behavior: auto;
+  }
+}
+
 /* Japanese tategaki: glyphs run top-to-bottom and columns advance right-to-left. */
 .reader-vertical-writing {
   writing-mode: vertical-rl;
