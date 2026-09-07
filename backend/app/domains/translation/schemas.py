@@ -9,7 +9,7 @@ class TranslateRequest(BaseModel):
         description="Target language (e.g., 'English', 'Japanese')"
     )
     source_lang: Optional[str] = Field(default=None, description="Optional source language")
-    model: Optional[str] = Field(default="gpt-5.6-terra", description="Model name for provider")
+    model: Optional[str] = Field(default="gpt-5.6-luna", description="Model name for provider")
     api_key: Optional[str] = Field(default=None, description="Optional user-provided API key")
     cefr_level: Optional[str] = Field(default=None, description="Optional CEFR level (e.g., 'B2')")
     stream: Optional[bool] = Field(default=False, description="Enable server-sent events streaming")

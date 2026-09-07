@@ -33,7 +33,7 @@ describe("SettingsModal", () => {
     expect(screen.getByText("Study automation")).toBeInTheDocument();
     expect(screen.getByText("AI Grammar Mining")).toBeInTheDocument();
     expect(screen.getByText("API Configuration")).toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toHaveValue("gpt-5.6-terra");
+    expect(screen.getByRole("combobox")).toHaveValue("gpt-5.6-luna");
     expect(screen.getByRole("option", { name: /GPT-5\.6 Sol/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /GPT-5\.6 Luna/ })).toBeInTheDocument();
   });

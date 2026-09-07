@@ -66,9 +66,9 @@
       "model": {
         "label": "推奨モデル",
         "options": {
-          "gpt-5.6-terra": "GPT-5.6 Terra（バランス・推奨）",
+          "gpt-5.6-terra": "GPT-5.6 Terra（高品質）",
           "gpt-5.6-sol": "GPT-5.6 Sol（最高品質）",
-          "gpt-5.6-luna": "GPT-5.6 Luna（最速・低コスト）",
+          "gpt-5.6-luna": "GPT-5.6 Luna（推奨・最安）",
           "gpt-4o-mini": "GPT-4o Mini（レガシー）"
         }
       },
