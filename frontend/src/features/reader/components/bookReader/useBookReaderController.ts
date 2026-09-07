@@ -778,13 +778,12 @@ export function useBookReaderController({
   useEffect(() => {
     const surface = contentRef.current;
     if (!surface || isPdf) return;
-    let locked = false;
-    let unlockTimer: number | undefined;
+    let accumulatedDelta = 0;
+    let pageTurnedForGesture = false;
+    let gestureEndTimer: number | undefined;
     const handleWheel = (event: WheelEvent) => {
-      const dominantDelta =
-        Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
       const localScroller = event.target instanceof Element
-        ? event.target.closest<HTMLElement>("pre, table")
+        ? event.target.closest<HTMLElement>("pre, table, [data-reader-local-scroll]")
         : null;
       const localCanConsume = localScroller
         ? Math.abs(event.deltaX) > Math.abs(event.deltaY)
@@ -798,27 +797,45 @@ export function useBookReaderController({
               : localScroller.scrollTop < localScroller.scrollHeight - localScroller.clientHeight)
         : false;
       if (
-        locked ||
         event.ctrlKey ||
-        Math.abs(dominantDelta) < 18 ||
         localCanConsume ||
         document.querySelector("[role='dialog'], [data-jpdb-popup]") ||
         !document.getSelection()?.isCollapsed
       ) {
         return;
       }
+
+      // A trackpad swipe is a burst of wheel events, including a long momentum
+      // tail. Consume the entire burst and allow exactly one page turn. A fixed
+      // post-navigation lock eventually expires while momentum is still being
+      // emitted, which can otherwise race through several pages or chapters.
       event.preventDefault();
-      if (dominantDelta > 0) nextPage();
+      if (gestureEndTimer !== undefined) window.clearTimeout(gestureEndTimer);
+      gestureEndTimer = window.setTimeout(() => {
+        accumulatedDelta = 0;
+        pageTurnedForGesture = false;
+      }, 320);
+      if (pageTurnedForGesture) return;
+
+      const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+        ? event.deltaX
+        : event.deltaY;
+      const deltaScale = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? Math.max(1, surface.clientHeight)
+          : 1;
+      accumulatedDelta += rawDelta * deltaScale;
+      if (Math.abs(accumulatedDelta) < 32) return;
+
+      if (accumulatedDelta > 0) nextPage();
       else previousPage();
-      locked = true;
-      unlockTimer = window.setTimeout(() => {
-        locked = false;
-      }, 240);
+      pageTurnedForGesture = true;
     };
     surface.addEventListener("wheel", handleWheel, { passive: false });
     return () => {
       surface.removeEventListener("wheel", handleWheel);
-      if (unlockTimer !== undefined) window.clearTimeout(unlockTimer);
+      if (gestureEndTimer !== undefined) window.clearTimeout(gestureEndTimer);
     };
   }, [contentRef, isPdf, nextPage, previousPage]);
 

@@ -335,13 +335,13 @@ html {
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   scroll-behavior: auto;
   scrollbar-width: none;
-  /* Horizontal movement is page navigation handled by the shared reader API.
-     Keeping native pan-x enabled would scroll part of a column and then also
-     fire the swipe handler, producing apparent double page turns. */
-  touch-action: pan-y pinch-zoom;
+  /* The reader owns all one-finger navigation. Native panning would move an
+     ancestor or expose part of a neighboring column before the page handler
+     runs. Pinch zoom remains available for accessibility. */
+  touch-action: pinch-zoom;
 }
 
 .pr-reflow-viewport::-webkit-scrollbar {

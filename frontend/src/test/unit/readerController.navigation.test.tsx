@@ -417,19 +417,38 @@ describe("useBookReaderController navigation", () => {
     );
   });
 
-  it("turns one page for a dominant horizontal trackpad gesture", () => {
+  it("turns exactly one page for an entire trackpad momentum gesture", () => {
     render(<WheelNavigationHarness />);
     const surface = screen.getByTestId("reader-surface");
-    const wheel = new WheelEvent("wheel", {
-      bubbles: true,
-      cancelable: true,
-      deltaX: 64,
-      deltaY: 4,
+    const wheels = [64, 48, 26, 12].map((deltaX) =>
+      new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        deltaX,
+        deltaY: 4,
+      })
+    );
+
+    wheels.forEach((wheel) => surface.dispatchEvent(wheel));
+
+    expect(wheels.every((wheel) => wheel.defaultPrevented)).toBe(true);
+    expect(fakes.navigateToChapter).toHaveBeenCalledOnce();
+    expect(fakes.navigateToChapter).toHaveBeenCalledWith(2);
+  });
+
+  it("accumulates a subtle trackpad gesture before turning one page", () => {
+    render(<WheelNavigationHarness />);
+    const surface = screen.getByTestId("reader-surface");
+
+    [8, 10, 16].forEach((deltaY) => {
+      surface.dispatchEvent(new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        deltaX: 0,
+        deltaY,
+      }));
     });
 
-    surface.dispatchEvent(wheel);
-
-    expect(wheel.defaultPrevented).toBe(true);
     expect(fakes.navigateToChapter).toHaveBeenCalledOnce();
     expect(fakes.navigateToChapter).toHaveBeenCalledWith(2);
   });
