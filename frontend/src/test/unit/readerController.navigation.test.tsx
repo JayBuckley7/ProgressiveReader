@@ -20,6 +20,9 @@ const fakes = vi.hoisted(() => ({
   paginationCanPrevious: false,
   paginationCanNext: false,
   paginationGoToPage: vi.fn(),
+  paginationCurrentSegmentIds: [] as string[],
+  paginationNextSegmentIds: [] as string[],
+  highlightingArgs: null as null | { currentSegmentIds?: readonly string[]; nextSegmentIds?: readonly string[] },
   paginationCaptureAnchor: vi.fn(() => null as null | { segmentId: string; textOffset: number }),
   readingProgressOptions: null as Parameters<typeof useReadingProgress>[0] | null,
   chapterContent: "<p>chapter</p>",
@@ -87,8 +90,8 @@ vi.mock("@features/reader/pagination", async (importOriginal) => {
       canGoPrevious: fakes.paginationCanPrevious,
       canGoNext: fakes.paginationCanNext,
       visibleSegmentIds: [],
-      currentSegmentIds: [],
-      nextSegmentIds: [],
+      currentSegmentIds: fakes.paginationCurrentSegmentIds,
+      nextSegmentIds: fakes.paginationNextSegmentIds,
       goToPage: fakes.paginationGoToPage,
       nextPage: vi.fn(),
       previousPage: vi.fn(),
@@ -160,7 +163,14 @@ vi.mock("@features/reader/components/bookReader/useInternalEpubLinks", () => ({
   useInternalEpubLinks: vi.fn(),
 }));
 vi.mock("@features/reader/components/bookReader/useJpdbHighlighting", () => ({
-  useJpdbHighlighting: () => ({}),
+  useJpdbHighlighting: (args: { currentSegmentIds?: readonly string[]; nextSegmentIds?: readonly string[] }) => {
+    fakes.highlightingArgs = args;
+    return {
+      jpdbHighlighted: false,
+      toggleJpdbHighlight: vi.fn(),
+      setJpdbHighlighted: vi.fn(),
+    };
+  },
 }));
 vi.mock("@features/reader/components/bookReader/useMixModeContent", () => ({
   useMixModeContent: () => ({
@@ -223,6 +233,9 @@ describe("useBookReaderController navigation", () => {
     fakes.paginationCanPrevious = false;
     fakes.paginationCanNext = false;
     fakes.paginationGoToPage.mockReset();
+    fakes.paginationCurrentSegmentIds = [];
+    fakes.paginationNextSegmentIds = [];
+    fakes.highlightingArgs = null;
     fakes.paginationCaptureAnchor.mockReset();
     fakes.paginationCaptureAnchor.mockReturnValue(null);
     fakes.readingProgressOptions = null;
@@ -431,6 +444,28 @@ describe("useBookReaderController navigation", () => {
     fireEvent.keyDown(nextButton, { key: "ArrowRight" });
 
     expect(fakes.navigateToChapter).not.toHaveBeenCalled();
+  });
+
+  it("keeps the last settled highlight window while JPDB DOM changes are remeasured", async () => {
+    fakes.paginationCurrentSegmentIds = ["visible-segment"];
+    fakes.paginationNextSegmentIds = ["lookahead-segment"];
+    const { rerender } = renderHook(() =>
+      useBookReaderController({ ...controllerProps, currentChapter: 1 })
+    );
+
+    await waitFor(() =>
+      expect(fakes.highlightingArgs?.currentSegmentIds).toEqual(["visible-segment"])
+    );
+
+    // useReflowPagination exposes empty arrays while its MutationObserver is
+    // measuring JPDB's wrapper mutations. They must not clear the highlights.
+    fakes.paginationReady = false;
+    fakes.paginationCurrentSegmentIds = [];
+    fakes.paginationNextSegmentIds = [];
+    rerender();
+
+    expect(fakes.highlightingArgs?.currentSegmentIds).toEqual(["visible-segment"]);
+    expect(fakes.highlightingArgs?.nextSegmentIds).toEqual(["lookahead-segment"]);
   });
 
   it("turns to the next right-to-left page for a downward wheel gesture", () => {
