@@ -25,13 +25,20 @@ class ShellChromeModelTest {
     }
 
     @Test
-    fun `settings screen only shows bottom bar for root settings route`() {
+    fun `more owns root settings while pushed settings stays focused`() {
         val rootChrome = shellChromeFor(Screen.Settings(showBack = false))
         val pushedChrome = shellChromeFor(Screen.Settings(showBack = true))
 
         assertTrue(rootChrome.showBottomBar)
-        assertEquals("Settings", rootChrome.selectedDestination?.label)
+        assertEquals("More", rootChrome.selectedDestination?.label)
         assertFalse(pushedChrome.showBottomBar)
         assertNull(pushedChrome.selectedDestination)
+    }
+
+    @Test
+    fun `more and clipboard select the utility destination`() {
+        assertEquals("More", shellChromeFor(Screen.More).selectedDestination?.label)
+        assertEquals("More", shellChromeFor(Screen.Clipboard).selectedDestination?.label)
+        assertEquals(4, shellDestinations.size)
     }
 }

@@ -337,6 +337,8 @@
     },
     "header": {
       "back": "Back to Library",
+      "controls": "Reader controls",
+      "tools": "Reader tools",
       "settings": "Settings",
       "clearTranslationTitle": "Show original text"
     },
@@ -352,6 +354,8 @@
       "progress": "{{current}} of {{total}} · Swipe left or right to turn",
       "prev": "Previous chapter",
       "next": "Next chapter",
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
       "translate": "Translate current chapter",
       "translateShort": "Translate",
       "translating": "Translating…",
@@ -493,6 +497,10 @@
     "pasteNow": "Paste Now",
     "save": "Save to Library",
     "saveTitle": "Save current clipboard text as a .txt book in your library",
+    "lyricsUrlLabel": "Uta-Net lyrics URL",
+    "lyricsUrlPlaceholder": "Paste a Uta-Net lyrics URL",
+    "importKanjiLyrics": "Import Kanji",
+    "importingLyrics": "Importing...",
     "autoRefresh": "Auto-refresh",
     "grantTip": "Grant clipboard permission to enable auto-refresh",
     "interval": "Interval",
@@ -520,7 +528,9 @@
       "nothingToSave": "Nothing to save",
       "signInRequired": "Please sign in to upload books",
       "saved": "Saved to your library",
-      "saveFailed": "Failed to save to library"
+      "saveFailed": "Failed to save to library",
+      "lyricsImported": "Imported the Japanese lyrics",
+      "lyricsImportFailed": "Failed to import Japanese lyrics"
     },
     "titleFrom": "Clipboard Paste"
   },

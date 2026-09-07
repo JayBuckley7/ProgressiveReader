@@ -19,7 +19,6 @@ fun LibraryRoute(
     sessionJwt: String?,
     viewModelFactory: LibraryViewModelFactory,
     onOpenReader: (bookId: String) -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenLogin: () -> Unit,
     bottomBar: (@Composable () -> Unit)? = null,
 ) {
@@ -61,7 +60,6 @@ fun LibraryRoute(
         state = state,
         snackbarHostState = snackbarHostState,
         onOpenReader = onOpenReader,
-        onOpenSettings = onOpenSettings,
         onOpenLogin = onOpenLogin,
         onRefreshDrive = { force -> vm.refreshDrive(force) },
         onImportUri = { uriString -> vm.importFromUri(uriString) },

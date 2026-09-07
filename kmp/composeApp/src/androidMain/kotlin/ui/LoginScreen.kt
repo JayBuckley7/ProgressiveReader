@@ -14,16 +14,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Login
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Login
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,10 +44,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.clerk.api.Clerk
 import com.clerk.api.network.serialization.ClerkResult
-import com.clerk.api.session.fetchToken
 import com.clerk.api.signin.SignIn
 import com.clerk.api.sso.OAuthProvider
 import com.progressivereader.kmp.BuildConfig
+import com.progressivereader.kmp.auth.ClerkAndroid
 import com.progressivereader.kmp.logging.AppLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -68,33 +67,25 @@ fun LoginScreen(
 
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var manualToken by remember { mutableStateOf("") }
     var signInJob by remember { mutableStateOf<Job?>(null) }
     var restoreChecked by remember { mutableStateOf(false) }
     var autoStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
-        if (publishableKey.isBlank()) {
+        if (!ClerkAndroid.isConfigured) {
             AppLog.w("Auth", "Login screen opened without a Clerk publishable key.")
             restoreChecked = true
             return@LaunchedEffect
         }
 
-        runCatching {
-            if (Clerk.isInitialized.value != true) {
-                Clerk.initialize(
-                    context = context.applicationContext,
-                    publishableKey = publishableKey,
-                )
-                AppLog.i("Auth", "Clerk initialized from login screen.")
-            }
-        }
+        ClerkAndroid.initialize(context)
+            .onSuccess { AppLog.i("Auth", "Clerk initialization is available to the login screen.") }
+            .onFailure { AppLog.e("Auth", "Failed to initialize Clerk from login screen.", it) }
 
-        val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-        if (tokenRes is ClerkResult.Success) {
+        val existingJwt = ClerkAndroid.fetchSessionToken(context)
+        if (!existingJwt.isNullOrBlank()) {
             AppLog.i("Auth", "Login screen restored an existing Clerk session.")
-            onSignedIn(tokenRes.value.jwt)
+            onSignedIn(existingJwt)
             return@LaunchedEffect
         }
         restoreChecked = true
@@ -106,8 +97,7 @@ fun LoginScreen(
         signInJob =
             scope.launch {
                 error = null
-                val publishableKey = BuildConfig.CLERK_PUBLISHABLE_KEY
-                if (publishableKey.isBlank()) {
+                if (!ClerkAndroid.isConfigured) {
                     AppLog.w("Auth", "Blocked sign-in because Clerk publishable key is blank.")
                     error = "Missing Clerk publishable key (CLERK_PUBLISHABLE_KEY)."
                     return@launch
@@ -115,17 +105,12 @@ fun LoginScreen(
 
                 isLoading = true
                 try {
-                    if (Clerk.isInitialized.value != true) {
-                        Clerk.initialize(
-                            context = context.applicationContext,
-                            publishableKey = publishableKey,
-                        )
-                    }
+                    ClerkAndroid.initialize(context).getOrThrow()
 
-                    val existingToken = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-                    if (existingToken is ClerkResult.Success) {
+                    val existingJwt = ClerkAndroid.fetchSessionToken(context)
+                    if (!existingJwt.isNullOrBlank()) {
                         AppLog.i("Auth", "Using existing Clerk session token instead of redirecting.")
-                        onSignedIn(existingToken.value.jwt)
+                        onSignedIn(existingJwt)
                         return@launch
                     }
 
@@ -144,10 +129,10 @@ fun LoginScreen(
                                 result.error?.errors?.firstOrNull()?.message
                                     ?: "Sign in failed"
                             AppLog.w("Auth", "Clerk redirect sign-in failed: $msg")
-                            val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-                            if (tokenRes is ClerkResult.Success) {
+                            val recoveredJwt = ClerkAndroid.fetchSessionToken(context)
+                            if (!recoveredJwt.isNullOrBlank()) {
                                 AppLog.i("Auth", "Recovered Clerk token after redirect failure.")
-                                onSignedIn(tokenRes.value.jwt)
+                                onSignedIn(recoveredJwt)
                                 return@launch
                             }
                             error = msg
@@ -158,10 +143,10 @@ fun LoginScreen(
                                 result.value.signIn?.createdSessionId
                                     ?: result.value.signUp?.createdSessionId
                             if (sessionId.isNullOrBlank()) {
-                                val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-                                if (tokenRes is ClerkResult.Success) {
+                                val recoveredJwt = ClerkAndroid.fetchSessionToken(context)
+                                if (!recoveredJwt.isNullOrBlank()) {
                                     AppLog.i("Auth", "Recovered Clerk token without a createdSessionId.")
-                                    onSignedIn(tokenRes.value.jwt)
+                                    onSignedIn(recoveredJwt)
                                     return@launch
                                 }
 
@@ -173,10 +158,10 @@ fun LoginScreen(
                             val activeResult = Clerk.setActive(sessionId)
                             if (activeResult is ClerkResult.Failure) {
                                 AppLog.w("Auth", "Failed to activate Clerk session $sessionId.")
-                                val tokenRes = runCatching { Clerk.session?.fetchToken() }.getOrNull()
-                                if (tokenRes is ClerkResult.Success) {
+                                val recoveredJwt = ClerkAndroid.fetchSessionToken(context)
+                                if (!recoveredJwt.isNullOrBlank()) {
                                     AppLog.i("Auth", "Recovered Clerk token after setActive failure.")
-                                    onSignedIn(tokenRes.value.jwt)
+                                    onSignedIn(recoveredJwt)
                                     return@launch
                                 }
 
@@ -186,23 +171,13 @@ fun LoginScreen(
                                 return@launch
                             }
 
-                            val tokenRes = Clerk.session?.fetchToken()
-                            when (tokenRes) {
-                                is ClerkResult.Success -> {
-                                    AppLog.i("Auth", "Clerk sign-in completed successfully.")
-                                    onSignedIn(tokenRes.value.jwt)
-                                }
-                                is ClerkResult.Failure -> {
-                                    AppLog.w("Auth", "Failed to fetch Clerk session token after sign-in.")
-                                    error =
-                                        tokenRes.error?.errors?.firstOrNull()?.message
-                                            ?: "Failed to fetch session token"
-                                }
-
-                                null -> {
-                                    AppLog.w("Auth", "Clerk sign-in completed with no active session token.")
-                                    error = "No active session token available"
-                                }
+                            val signedInJwt = ClerkAndroid.fetchSessionToken(context)
+                            if (!signedInJwt.isNullOrBlank()) {
+                                AppLog.i("Auth", "Clerk sign-in completed successfully.")
+                                onSignedIn(signedInJwt)
+                            } else {
+                                AppLog.w("Auth", "Clerk sign-in completed with no active session token.")
+                                error = "No active session token available"
                             }
                         }
                     }
@@ -251,7 +226,7 @@ fun LoginScreen(
                             onBack()
                         },
                     ) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
             )
@@ -289,21 +264,20 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    AppIconTile(icon = Icons.Outlined.MenuBook, contentDescription = null)
+                    AppIconTile(icon = Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null)
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "Progressive Reader",
                             style = MaterialTheme.typography.titleLarge,
                         )
                         Text(
-                            text = "Your Digital Bookshelf, Reimagined.",
+                            text = "Your library, wherever you read.",
                             style = MaterialTheme.typography.titleMedium,
                         )
                         AppMutedText(
                             text =
                                 "Sign in to browse Drive, download EPUBs for offline reading, and pick up where you left off.",
                         )
-                        AppMutedText("Offline Reading • Bookmarks • Progress")
                     }
                 }
 
@@ -326,11 +300,12 @@ fun LoginScreen(
                             text =
                                 when {
                                     !isOnline -> "Offline"
+                                    !ClerkAndroid.isConfigured -> "Sign-in unavailable"
                                     isLoading -> "Signing in…"
-                                    else -> "Sign in with Clerk"
+                                    else -> "Continue with Google"
                                 },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = isOnline && !isLoading,
+                            enabled = isOnline && !isLoading && ClerkAndroid.isConfigured,
                             onClick = { beginSignIn() },
                             icon = {
                                 if (isLoading) {
@@ -339,13 +314,13 @@ fun LoginScreen(
                                         modifier = Modifier.size(18.dp),
                                     )
                                 } else {
-                                    Icon(Icons.Outlined.Login, contentDescription = null)
+                                    Icon(Icons.AutoMirrored.Outlined.Login, contentDescription = null)
                                 }
                             },
                         )
 
                         AppTonalButton(
-                            text = "Continue as Guest",
+                            text = "Continue as guest",
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading,
                             onClick = {
@@ -359,6 +334,8 @@ fun LoginScreen(
 
                         if (!isOnline) {
                             AppMutedText("You're offline. Connect to the internet to sign in.")
+                        } else if (!ClerkAndroid.isConfigured) {
+                            AppMutedText("This build has no Clerk key. Guest reading remains available.")
                         }
 
                         if (isLoading) {
@@ -368,34 +345,6 @@ fun LoginScreen(
                                     signInJob?.cancel()
                                     signInJob = null
                                     isLoading = false
-                                },
-                            )
-                        }
-                    }
-                }
-
-                if (BuildConfig.DEBUG) {
-                    AppCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Text("Debug fallback", style = MaterialTheme.typography.titleMedium)
-                            AppMutedText("If native sign-in is blocked, paste a Clerk JWT.")
-                            OutlinedTextField(
-                                value = manualToken,
-                                onValueChange = { manualToken = it },
-                                label = { Text("Paste Clerk JWT") },
-                                singleLine = true,
-                                enabled = !isLoading,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            AppTextButton(
-                                text = "Use pasted token",
-                                enabled = !isLoading,
-                                onClick = {
-                                    val trimmed = manualToken.trim()
-                                    if (trimmed.isBlank()) error = "Token is empty" else onSignedIn(trimmed)
                                 },
                             )
                         }

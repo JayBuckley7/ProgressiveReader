@@ -10,7 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.clerk.api.Clerk
+import com.progressivereader.kmp.auth.ClerkAndroid
 import com.progressivereader.kmp.navigation.Navigator
 import com.progressivereader.kmp.navigation.Screen
 import com.progressivereader.kmp.offline.BookCache
@@ -61,7 +61,6 @@ fun AppRoot(
                 sessionJwt = sessionJwt,
                 viewModelFactory = libraryViewModelFactory,
                 onOpenReader = { bookId -> navigator.push(Screen.Reader(bookId)) },
-                onOpenSettings = { navigator.reset(Screen.Settings(showBack = false)) },
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 bottomBar = { ShellBottomBar(current = Screen.Library, onSelect = { navigator.reset(it) }) },
             )
@@ -76,10 +75,14 @@ fun AppRoot(
 
         Screen.Clipboard ->
             ClipboardScreen(
-                settings = settings,
-                sessionJwt = sessionJwt,
-                onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
-                bottomBar = { ShellBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) },
+                showBack = navigator.canPop(),
+                onBack = { navigator.pop() },
+                bottomBar =
+                    if (navigator.canPop()) {
+                        null
+                    } else {
+                        { ShellBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) }
+                    },
             )
 
         Screen.Grammar ->
@@ -91,6 +94,15 @@ fun AppRoot(
                 showBack = false,
                 onBack = { navigator.pop() },
                 bottomBar = { ShellBottomBar(current = Screen.Grammar, onSelect = { navigator.reset(it) }) },
+            )
+
+        Screen.More ->
+            MoreScreen(
+                sessionJwt = sessionJwt,
+                onOpenClipboard = { navigator.push(Screen.Clipboard) },
+                onOpenSettings = { navigator.push(Screen.Settings(showBack = true)) },
+                onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
+                bottomBar = { ShellBottomBar(current = Screen.More, onSelect = { navigator.reset(it) }) },
             )
 
         is Screen.Login ->
@@ -154,7 +166,7 @@ fun AppRoot(
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 onSignOut = {
                     scope.launch {
-                        runCatching { Clerk.signOut() }
+                        runCatching { ClerkAndroid.signOut() }
                         onSetSessionJwt(null)
                         navigator.reset(Screen.Library)
                     }
@@ -192,7 +204,7 @@ internal fun ShellBottomBar(
                 modifier = Modifier.testTag(UiTestTags.shellDestination(destination.label)),
                 selected = chrome.selectedDestination == destination,
                 onClick = { select(destination.target) },
-                colors = AppShellBarColors(),
+                colors = appShellBarColors(),
                 icon = { Icon(destination.icon, contentDescription = destination.label) },
                 label = { Text(destination.shortLabel) },
             )

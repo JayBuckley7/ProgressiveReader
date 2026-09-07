@@ -56,6 +56,7 @@ class BookCache(private val context: Context) {
 
     fun bookDir(bookId: String): File = File(booksRootDir(), bookId)
     fun epubFile(bookId: String): File = File(bookDir(bookId), "book.epub")
+    fun mobiFile(bookId: String): File = File(bookDir(bookId), "book.mobi")
     fun pdfFile(bookId: String): File = File(bookDir(bookId), "book.pdf")
     fun txtFile(bookId: String): File = File(bookDir(bookId), "book.txt")
     fun extractedDir(bookId: String): File = File(bookDir(bookId), "extracted")
@@ -66,15 +67,25 @@ class BookCache(private val context: Context) {
         when {
             isPdf(mimeType = mimeType, filename = filename) -> pdfFile(bookId)
             isTxt(mimeType = mimeType, filename = filename) -> txtFile(bookId)
+            isMobi(mimeType = mimeType, filename = filename) -> mobiFile(bookId)
             else -> epubFile(bookId)
         }
 
-    fun cachedContentFile(entry: CachedBookEntry): File =
-        contentFile(
-            bookId = entry.id,
-            mimeType = entry.mimeType,
-            filename = entry.name,
-        )
+    fun cachedContentFile(entry: CachedBookEntry): File {
+        val preferred =
+            contentFile(
+                bookId = entry.id,
+                mimeType = entry.mimeType,
+                filename = entry.name,
+            )
+        // Older Android builds stored every non-PDF/TXT download as book.epub,
+        // including MOBI files. Keep those downloads usable after the format fix.
+        if (isMobi(entry.mimeType, entry.name) && !preferred.exists()) {
+            val legacy = epubFile(entry.id)
+            if (legacy.exists()) return legacy
+        }
+        return preferred
+    }
 
     fun findCoverFile(bookId: String): File? {
         val dir = bookDir(bookId)
@@ -194,12 +205,14 @@ class BookCache(private val context: Context) {
                 ?.mapNotNull { dir ->
                     val bookId = dir.name
                     val epub = epubFile(bookId)
+                    val mobi = mobiFile(bookId)
                     val pdf = pdfFile(bookId)
                     val txt = txtFile(bookId)
 
                     val content =
                         when {
                             epub.exists() -> epub
+                            mobi.exists() -> mobi
                             pdf.exists() -> pdf
                             txt.exists() -> txt
                             else -> null
@@ -209,6 +222,7 @@ class BookCache(private val context: Context) {
                         when (content.name) {
                             "book.pdf" -> "application/pdf"
                             "book.txt" -> "text/plain"
+                            "book.mobi" -> "application/x-mobipocket-ebook"
                             else -> "application/epub+zip"
                         }
 
@@ -289,5 +303,11 @@ class BookCache(private val context: Context) {
         val mt = mimeType?.lowercase()?.trim()
         if (mt == "text/plain" || mt?.startsWith("text/") == true) return true
         return filename.endsWith(".txt", ignoreCase = true)
+    }
+
+    private fun isMobi(mimeType: String?, filename: String): Boolean {
+        val mt = mimeType?.lowercase()?.trim()
+        if (mt == "application/x-mobipocket-ebook" || mt?.contains("mobipocket") == true) return true
+        return filename.endsWith(".mobi", ignoreCase = true)
     }
 }

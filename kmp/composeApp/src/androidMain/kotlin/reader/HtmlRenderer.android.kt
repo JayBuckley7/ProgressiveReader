@@ -1,5 +1,6 @@
 package com.progressivereader.kmp.reader
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.MotionEvent
 import android.view.View
@@ -18,6 +19,11 @@ private class ReaderWebView(context: Context) : WebView(context) {
     var lastContentKey: String? = null
     var lastPresentationKey: String? = null
     var pendingRestoreScrollY: Int? = null
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
 }
 
 internal fun cssForPresentation(presentation: HtmlPresentationSpec): String =
@@ -136,14 +142,17 @@ private fun ReaderWebView.applyPresentation(presentation: HtmlPresentationSpec) 
 }
 
 @Composable
+@SuppressLint("SetJavaScriptEnabled") // Required only for local CSS updates; network loads and document scripts are blocked.
 actual fun HtmlContent(
     document: HtmlDocumentSpec,
     presentation: HtmlPresentationSpec,
     onUrlClick: (String) -> Boolean,
     onSwipe: ((SwipeDirection) -> Unit)?,
+    onInteraction: (() -> Unit)?,
 ) {
     val onUrlClickState = rememberUpdatedState(onUrlClick)
     val onSwipeState = rememberUpdatedState(onSwipe)
+    val onInteractionState = rememberUpdatedState(onInteraction)
     val presentationState = rememberUpdatedState(presentation)
 
     AndroidView(
@@ -188,11 +197,11 @@ actual fun HtmlContent(
                         var didSwipe = false
 
                         override fun onTouch(v: View, event: MotionEvent): Boolean {
-                            val handler = onSwipeState.value ?: return false
                             if (event.pointerCount != 1) return false
 
                             when (event.actionMasked) {
                                 MotionEvent.ACTION_DOWN -> {
+                                    onInteractionState.value?.invoke()
                                     downX = event.x
                                     downY = event.y
                                     didSwipe = false
@@ -205,11 +214,13 @@ actual fun HtmlContent(
                                     val absDx = abs(dx)
                                     val absDy = abs(dy)
                                     val isHorizontalSwipe = absDx >= minSwipeDxPx && absDx > absDy * 1.35f
-                                    if (isHorizontalSwipe) {
+                                    val handler = onSwipeState.value
+                                    if (isHorizontalSwipe && handler != null) {
                                         didSwipe = true
                                         handler(if (dx < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT)
                                         return true
                                     }
+                                    v.performClick()
                                 }
 
                                 MotionEvent.ACTION_CANCEL -> {

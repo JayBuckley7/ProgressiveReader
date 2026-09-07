@@ -17,6 +17,7 @@ interface BookContent {
 interface UseBookContentReturn {
   bookContent: BookContent | null;
   currentChapterContent: string | null;
+  currentChapterContentChapter: number | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -25,6 +26,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   const { books, downloadBook, isLoading: isAppLoading } = useAppData();
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [currentChapterContent, setCurrentChapterContent] = useState<string | null>(null);
+  const [currentChapterContentChapter, setCurrentChapterContentChapter] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const processorRef = useRef<any>(null);
@@ -235,6 +237,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
       prevMetadataRef.current = null;
       setBookContent(null);
       setCurrentChapterContent(null);
+      setCurrentChapterContentChapter(null);
       processorRef.current = null;
     }
     if (activeLoadRef.current?.bookId !== bookId) {
@@ -246,14 +249,22 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
   useEffect(() => {
     if (!bookContent || !processorRef.current) {
       setCurrentChapterContent(null);
+      setCurrentChapterContentChapter(null);
       return;
     }
+
+    let cancelled = false;
+    setCurrentChapterContent(null);
+    setCurrentChapterContentChapter(null);
 
     const loadChapterContent = async () => {
       try {
         // If chapter is pre-loaded, use it
         if (bookContent.chapters[currentChapter]) {
-          setCurrentChapterContent(bookContent.chapters[currentChapter]);
+          if (!cancelled) {
+            setCurrentChapterContent(bookContent.chapters[currentChapter]);
+            setCurrentChapterContentChapter(currentChapter);
+          }
           return;
         }
 
@@ -262,19 +273,30 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           appLog.debug('Loading chapter content on-demand:', currentChapter);
         }
         const chapterHtml = await processorRef.current.getChapterHtml(currentChapter);
-        setCurrentChapterContent(chapterHtml || '<p>Chapter content not available</p>');
+        if (!cancelled) {
+          setCurrentChapterContent(chapterHtml || '<p>Chapter content not available</p>');
+          setCurrentChapterContentChapter(currentChapter);
+        }
       } catch (error) {
         appLog.error('[useBookContent] Error loading chapter content', error);
-        setCurrentChapterContent('<p>Error loading chapter content</p>');
+        if (!cancelled) {
+          setCurrentChapterContent('<p>Error loading chapter content</p>');
+          setCurrentChapterContentChapter(currentChapter);
+        }
       }
     };
 
-    loadChapterContent();
+    void loadChapterContent();
+
+    return () => {
+      cancelled = true;
+    };
   }, [bookContent, currentChapter]);
 
   return {
     bookContent,
     currentChapterContent,
+    currentChapterContentChapter,
     isLoading,
     error
   };

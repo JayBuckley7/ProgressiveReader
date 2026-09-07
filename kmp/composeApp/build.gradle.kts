@@ -4,7 +4,7 @@ import java.io.File
 plugins {
     kotlin("multiplatform") version "2.2.21"
     kotlin("plugin.serialization") version "2.2.21"
-    id("com.android.application") version "8.6.0"
+    id("com.android.application") version "8.10.1"
     id("org.jetbrains.compose") version "1.9.2"
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
 }
@@ -40,6 +40,19 @@ private fun readJsonConfigValue(jsonFile: File, key: String): String? {
         ?.takeIf { it.isNotBlank() }
 }
 
+val clerkKey =
+    (project.findProperty("CLERK_PUBLISHABLE_KEY") as String?)
+        ?: (project.findProperty("VITE_CLERK_PUBLISHABLE_KEY") as String?)
+        ?: System.getenv("CLERK_PUBLISHABLE_KEY")
+        ?: System.getenv("VITE_CLERK_PUBLISHABLE_KEY")
+        ?: readJsonConfigValue(rootProject.file("../env.json"), "CLERK_PUBLISHABLE_KEY")
+        ?: readJsonConfigValue(rootProject.file("../env.json"), "VITE_CLERK_PUBLISHABLE_KEY")
+        ?: readJsonConfigValue(rootProject.file("../env_dev.json"), "CLERK_PUBLISHABLE_KEY")
+        ?: readJsonConfigValue(rootProject.file("../env_dev.json"), "VITE_CLERK_PUBLISHABLE_KEY")
+        ?: readDotEnvValue(rootProject.file("../.env"), "CLERK_PUBLISHABLE_KEY")
+        ?: readDotEnvValue(rootProject.file("../.env"), "VITE_CLERK_PUBLISHABLE_KEY")
+        ?: ""
+
 kotlin {
     jvmToolchain(17)
     androidTarget()
@@ -73,7 +86,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-okhttp:2.3.9")
 
                 // Clerk Android SDK (Android only)
-                implementation("com.clerk:clerk-android:0.1.19")
+                implementation("com.clerk:clerk-android:0.1.24")
 
                 // HTML parsing/sanitization + reader highlighting
                 implementation("org.jsoup:jsoup:1.17.2")
@@ -97,9 +110,9 @@ kotlin {
         val androidInstrumentedTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("androidx.test.ext:junit:1.2.1")
-                implementation("androidx.test:runner:1.6.2")
-                implementation("androidx.test.espresso:espresso-core:3.6.1")
+                implementation("androidx.test.ext:junit:1.3.0")
+                implementation("androidx.test:runner:1.7.0")
+                implementation("androidx.test.espresso:espresso-core:3.7.0")
             }
         }
     }
@@ -107,31 +120,29 @@ kotlin {
 
 android {
     namespace = "com.progressivereader.kmp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.progressivereader.kmp"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
 
-        val clerkKey =
-            (project.findProperty("CLERK_PUBLISHABLE_KEY") as String?)
-                ?: (project.findProperty("VITE_CLERK_PUBLISHABLE_KEY") as String?)
-                ?: System.getenv("CLERK_PUBLISHABLE_KEY")
-                ?: System.getenv("VITE_CLERK_PUBLISHABLE_KEY")
-                ?: readJsonConfigValue(rootProject.file("../env.json"), "CLERK_PUBLISHABLE_KEY")
-                ?: readJsonConfigValue(rootProject.file("../env.json"), "VITE_CLERK_PUBLISHABLE_KEY")
-                ?: readJsonConfigValue(rootProject.file("../env_dev.json"), "CLERK_PUBLISHABLE_KEY")
-                ?: readJsonConfigValue(rootProject.file("../env_dev.json"), "VITE_CLERK_PUBLISHABLE_KEY")
-                ?: readDotEnvValue(rootProject.file("../.env"), "CLERK_PUBLISHABLE_KEY")
-                ?: readDotEnvValue(rootProject.file("../.env"), "VITE_CLERK_PUBLISHABLE_KEY")
-                ?: ""
-
         val escaped = clerkKey.replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "CLERK_PUBLISHABLE_KEY", "\"$escaped\"")
+        buildConfigField("boolean", "AUTH_CONFIGURED", clerkKey.isNotBlank().toString())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
+    }
+
+    buildTypes {
+        debug {
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
+        release {
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+        }
     }
 
     buildFeatures {
@@ -148,6 +159,23 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
+
+    testOptions {
+        animationsDisabled = true
+    }
+
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = true
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    doFirst {
+        check(clerkKey.isNotBlank()) {
+            "Release builds require CLERK_PUBLISHABLE_KEY (or VITE_CLERK_PUBLISHABLE_KEY)."
         }
     }
 }

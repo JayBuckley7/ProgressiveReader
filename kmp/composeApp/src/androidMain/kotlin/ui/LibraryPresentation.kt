@@ -21,12 +21,14 @@ internal data class LibraryBookPresentation(
     val file: DriveFile,
     val cachedEntry: CachedBook?,
     val displayTitle: String,
+    val availabilityLabel: String,
     val detailLine: String,
     val coverPath: String?,
     val hasCustomCover: Boolean,
     val isCached: Boolean,
     val needsUpdate: Boolean,
     val isBusy: Boolean,
+    val downloadError: String?,
     val remoteCoverAttempted: Boolean,
     val typeLabel: String,
     val parentFolderId: String? = null,
@@ -64,6 +66,7 @@ internal fun presentDriveShelves(state: LibraryUiState): List<LibraryShelfPresen
                         remoteCoverAttempted = state.remoteCoverPathByBookId.containsKey(file.id),
                         hasCustomCover = !state.coverImageIdByBookId[file.id].isNullOrBlank(),
                         isBusy = state.downloadingId == file.id,
+                        downloadError = state.downloadErrorByBookId[file.id],
                     )
                 },
         )
@@ -88,6 +91,7 @@ internal fun presentDriveShelves(state: LibraryUiState): List<LibraryShelfPresen
                                 remoteCoverAttempted = state.remoteCoverPathByBookId.containsKey(file.id),
                                 hasCustomCover = !state.coverImageIdByBookId[file.id].isNullOrBlank(),
                                 isBusy = state.downloadingId == file.id,
+                                downloadError = state.downloadErrorByBookId[file.id],
                                 parentFolderId = folderId,
                                 parentFolderName = name,
                             )
@@ -207,6 +211,7 @@ private fun presentBook(
     remoteCoverAttempted: Boolean,
     hasCustomCover: Boolean,
     isBusy: Boolean,
+    downloadError: String? = null,
     parentFolderId: String? = null,
     parentFolderName: String? = null,
 ): LibraryBookPresentation {
@@ -228,16 +233,17 @@ private fun presentBook(
             localCoverPath ?: remoteCoverPath
         }
 
-    val statusLabel =
+    val availabilityLabel =
         when {
-            isBusy -> "Downloading"
-            needsUpdate -> "Update ready"
-            isCached -> "Cached"
-            else -> null
+            isBusy -> "Getting ready"
+            downloadError != null && isCached -> "Update failed"
+            downloadError != null -> "Download failed"
+            needsUpdate -> "Update available"
+            isCached -> "On device"
+            else -> "In Drive"
         }
 
     val detailParts = buildList {
-        statusLabel?.let { add(it) }
         add(typeLabel)
         file.size?.let { add(formatBytes(it)) }
     }
@@ -246,12 +252,14 @@ private fun presentBook(
         file = file,
         cachedEntry = cachedEntry,
         displayTitle = cleanLibraryDisplayTitle(file.name),
+        availabilityLabel = availabilityLabel,
         detailLine = detailParts.joinToString(" \u2022 "),
         coverPath = coverPath,
         hasCustomCover = hasCustomCover,
         isCached = isCached,
         needsUpdate = needsUpdate,
         isBusy = isBusy,
+        downloadError = downloadError,
         remoteCoverAttempted = remoteCoverAttempted,
         typeLabel = typeLabel,
         parentFolderId = parentFolderId,

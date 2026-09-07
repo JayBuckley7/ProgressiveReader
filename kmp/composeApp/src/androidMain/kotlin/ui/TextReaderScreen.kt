@@ -145,6 +145,7 @@ fun TextReaderScreen(
                             ),
                         onUrlClick = { true },
                         onSwipe = null,
+                        onInteraction = null,
                     )
                 }
             }

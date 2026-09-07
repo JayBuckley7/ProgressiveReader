@@ -2,6 +2,8 @@ package com.progressivereader.kmp.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,18 +24,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Login
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Login
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,7 +75,6 @@ fun LibraryScreen(
     state: LibraryUiState,
     snackbarHostState: SnackbarHostState,
     onOpenReader: (bookId: String) -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenLogin: () -> Unit,
     onRefreshDrive: (force: Boolean) -> Unit,
     onImportUri: (uriString: String) -> Unit,
@@ -87,7 +89,8 @@ fun LibraryScreen(
     bottomBar: (@Composable () -> Unit)? = null,
 ) {
     val canUseDrive = state.isOnline && !state.sessionJwt.isNullOrBlank()
-    val showDrive = canUseDrive && (state.remoteFiles != null || !state.driveFetchFailed)
+    val showDrive = canUseDrive && state.remoteFiles != null && !state.driveFetchFailed
+    val isSyncingDrive = canUseDrive && state.remoteFiles == null && !state.driveFetchFailed
     val showSignedOutLanding =
         state.sessionJwt.isNullOrBlank() &&
             state.cachedIndex != null &&
@@ -292,16 +295,9 @@ fun LibraryScreen(
                         )
                     }
 
-                    AppShellAction(
-                        icon = Icons.Outlined.Settings,
-                        contentDescription = "Settings",
-                        modifier = Modifier.testTag(UiTestTags.libraryActionSettings),
-                        onClick = onOpenSettings,
-                    )
-
                     if (state.sessionJwt.isNullOrBlank() && !showSignedOutLanding) {
                         AppShellAction(
-                            icon = Icons.Outlined.Login,
+                            icon = Icons.AutoMirrored.Outlined.Login,
                             contentDescription = "Sign in",
                             modifier = Modifier.testTag(UiTestTags.libraryActionSignIn),
                             onClick = onOpenLogin,
@@ -342,7 +338,7 @@ fun LibraryScreen(
                     item {
                         InfoBanner(
                             tag = UiTestTags.libraryBannerGuest,
-                            icon = Icons.Outlined.Login,
+                            icon = Icons.AutoMirrored.Outlined.Login,
                             title = "Guest mode",
                             body = "Sign in to sync books from Drive.",
                             actionLabel = "Sign in",
@@ -369,6 +365,10 @@ fun LibraryScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+            }
+
+            if (isSyncingDrive && state.cachedIndex != null) {
+                item { InlineLoadingState(message = "Syncing Drive in the background…") }
             }
 
             if (!showDrive) {
@@ -406,9 +406,6 @@ fun LibraryScreen(
             }
 
             when {
-                state.remoteFiles == null ->
-                    item { InlineLoadingState(message = "Refreshing library...") }
-
                 driveShelves.none { shelf -> shelf.books.isNotEmpty() } ->
                     item {
                         EmptyLibraryState(
@@ -663,16 +660,72 @@ private fun LibraryBookTile(
         modifier =
             Modifier
                 .width(148.dp)
-                .testTag(UiTestTags.libraryTile(presentation.file.id))
-                .clickable(enabled = presentation.isCached && !presentation.isBusy, onClick = onOpen),
+                .testTag(UiTestTags.libraryTile(presentation.file.id)),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CoverArt(
-            coverPath = presentation.coverPath,
-            title = presentation.displayTitle,
-            modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f),
-            typeLabel = presentation.typeLabel,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(3f / 4f)
+                    .testTag(UiTestTags.libraryCover(presentation.file.id))
+                    .clickable(
+                        enabled = !presentation.isBusy,
+                        onClickLabel = if (presentation.isCached) "Read book" else "Download book",
+                        onClick = if (presentation.isCached) onOpen else onDownload,
+                    ),
+        ) {
+            CoverArt(
+                coverPath = presentation.coverPath,
+                title = presentation.displayTitle,
+                modifier = Modifier.fillMaxSize(),
+                typeLabel = presentation.typeLabel,
+            )
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = presentation.isBusy || presentation.downloadError != null,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter),
+            ) {
+                val isRetry = presentation.downloadError != null && !presentation.isCached
+                Surface(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag(UiTestTags.libraryCoverStatus(presentation.file.id)),
+                    color =
+                        if (presentation.downloadError != null) {
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.94f)
+                        } else {
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+                        },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        if (presentation.isBusy) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(15.dp))
+                        } else {
+                            Icon(Icons.Outlined.ErrorOutline, contentDescription = null, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text =
+                                when {
+                                    presentation.isBusy -> "Getting ready…"
+                                    isRetry -> "Tap to retry"
+                                    else -> "Saved copy available"
+                                },
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -687,8 +740,9 @@ private fun LibraryBookTile(
                 modifier = Modifier.weight(1f),
             )
 
-            val showDownloadInMenu = !presentation.isCached && !presentation.isBusy
-            val menuEnabled = showDownloadInMenu || onMoveToFolder != null || onSetCover != null || onRemoveCover != null
+            val showDownloadAction =
+                !presentation.isBusy && (!presentation.isCached || presentation.needsUpdate)
+            val menuEnabled = showDownloadAction || onMoveToFolder != null || onSetCover != null || onRemoveCover != null
             if (menuEnabled) {
                 var expanded by remember(presentation.file.id) { mutableStateOf(false) }
                 IconButton(
@@ -698,15 +752,29 @@ private fun LibraryBookTile(
                     Icon(Icons.Outlined.MoreVert, contentDescription = "More actions")
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    if (showDownloadInMenu) {
+                    if (showDownloadAction) {
+                        val actionKey = if (presentation.needsUpdate) "update" else "download"
                         DropdownMenuItem(
-                            text = { Text("Download") },
+                            text = {
+                                Text(
+                                    when {
+                                        presentation.downloadError != null -> "Retry download"
+                                        presentation.needsUpdate -> "Update download"
+                                        else -> "Download"
+                                    },
+                                )
+                            },
                             onClick = {
                                 expanded = false
                                 onDownload()
                             },
-                            modifier = Modifier.testTag(UiTestTags.libraryOverflowAction(presentation.file.id, "download")),
-                            leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) },
+                            modifier = Modifier.testTag(UiTestTags.libraryOverflowAction(presentation.file.id, actionKey)),
+                            leadingIcon = {
+                                Icon(
+                                    if (presentation.needsUpdate) Icons.Outlined.Update else Icons.Outlined.CloudDownload,
+                                    contentDescription = null,
+                                )
+                            },
                         )
                     }
                     if (onMoveToFolder != null) {
@@ -746,59 +814,44 @@ private fun LibraryBookTile(
             }
         }
 
-        AppMutedText(text = presentation.detailLine)
-
-        if (presentation.isCached || presentation.isBusy) {
-            BookActionRow(
-                presentation = presentation,
-                onOpen = onOpen,
-                onDownload = onDownload,
-            )
-        }
+        BookAvailabilityLine(presentation)
     }
 }
 
 @Composable
-private fun BookActionRow(
-    presentation: LibraryBookPresentation,
-    onOpen: () -> Unit,
-    onDownload: () -> Unit,
-) {
-    when {
-        presentation.isBusy ->
-            Row(
-                modifier = Modifier.fillMaxWidth().height(36.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-                AppMutedText("Downloading...")
-            }
+private fun BookAvailabilityLine(presentation: LibraryBookPresentation) {
+    val isError = presentation.downloadError != null
+    val tint =
+        when {
+            isError -> MaterialTheme.colorScheme.error
+            presentation.isCached -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    val statusIcon =
+        when {
+            isError -> Icons.Outlined.ErrorOutline
+            presentation.needsUpdate -> Icons.Outlined.Update
+            presentation.isCached -> Icons.Outlined.DownloadDone
+            else -> Icons.Outlined.CloudDownload
+        }
 
-        presentation.isCached && presentation.needsUpdate ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AppPrimaryButton(
-                    text = "Read",
-                    modifier = Modifier.weight(1f).testTag(UiTestTags.libraryPrimaryAction(presentation.file.id)),
-                    onClick = onOpen,
-                )
-                AppTonalButton(
-                    text = "Update",
-                    onClick = onDownload,
-                    icon = { Icon(Icons.Outlined.Update, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                )
-            }
-
-        presentation.isCached ->
-            AppPrimaryButton(
-                text = "Read",
-                modifier = Modifier.fillMaxWidth().testTag(UiTestTags.libraryPrimaryAction(presentation.file.id)),
-                onClick = onOpen,
-            )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        if (presentation.isBusy) {
+            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp), color = tint)
+        } else {
+            Icon(statusIcon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
+        }
+        Text(
+            text = "${presentation.availabilityLabel} \u2022 ${presentation.detailLine}",
+            style = MaterialTheme.typography.bodySmall,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -894,7 +947,7 @@ private fun SignedOutLanding(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AppIconTile(icon = Icons.Outlined.MenuBook, contentDescription = null)
+                AppIconTile(icon = Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = "Sign in to load your library",
@@ -915,7 +968,7 @@ private fun SignedOutLanding(
                 text = "Sign in",
                 enabled = isOnline,
                 onClick = onSignIn,
-                icon = { Icon(Icons.Outlined.Login, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                icon = { Icon(Icons.AutoMirrored.Outlined.Login, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 modifier = Modifier.fillMaxWidth().testTag(UiTestTags.libraryActionSignIn),
             )
 

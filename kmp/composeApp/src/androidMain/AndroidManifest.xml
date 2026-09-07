@@ -6,9 +6,11 @@
 
     <application
         android:name=".ProgressiveReaderApplication"
+        android:icon="@drawable/ic_launcher"
         android:label="ProgressiveReader"
+        android:roundIcon="@drawable/ic_launcher"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
 
         <activity
             android:name=".MainActivity"

@@ -1,3 +1,5 @@
+@file:Suppress("RememberReturnType") // Compose lint cannot resolve commonMain constructor return types in this KMP module.
+
 package com.progressivereader.kmp.ui
 
 import androidx.compose.foundation.layout.Arrangement

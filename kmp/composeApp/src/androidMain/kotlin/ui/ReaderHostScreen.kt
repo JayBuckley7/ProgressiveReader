@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.progressivereader.kmp.domain.reader.BookFormat
+import com.progressivereader.kmp.domain.reader.isReflowable
 import com.progressivereader.kmp.ui.viewmodels.ReaderUiState
 
 @Composable
@@ -19,8 +20,7 @@ fun ReaderHostScreen(
     state: ReaderUiState,
     onBack: () -> Unit,
     pdfContent: @Composable () -> Unit,
-    txtContent: @Composable () -> Unit,
-    epubContent: @Composable () -> Unit,
+    reflowableContent: @Composable () -> Unit,
 ) {
     // Ensure Android system back exits the reader to the library (or previous screen) instead of closing the app.
     BackHandler(onBack = onBack)
@@ -46,7 +46,6 @@ fun ReaderHostScreen(
         }
 
         state.format == BookFormat.PDF -> pdfContent()
-        state.format == BookFormat.TXT -> txtContent()
-        state.format == BookFormat.EPUB -> epubContent()
+        state.format?.isReflowable() == true -> reflowableContent()
     }
 }

@@ -4,6 +4,7 @@ import com.progressivereader.kmp.domain.reader.BookFormat
 import com.progressivereader.kmp.domain.reader.BookState
 import com.progressivereader.kmp.domain.reader.ChapterContent
 import com.progressivereader.kmp.domain.reader.TranslationCacheEntry
+import com.progressivereader.kmp.domain.reader.isReflowable
 import com.progressivereader.kmp.jpdb.JpdbService
 import com.progressivereader.kmp.jpdbMirror.JpdbKnownVocabRecord
 import com.progressivereader.kmp.jpdbMirror.JpdbVocabId
@@ -47,14 +48,15 @@ class OpenBookUseCase(
                     BookFormat.PDF -> "PDF"
                     BookFormat.TXT -> "TXT"
                     BookFormat.EPUB -> "Reader"
+                    BookFormat.MOBI -> "MOBI"
                 }
         val epubBook =
-            if (format == BookFormat.EPUB) {
-                readerPort.openEpubBook(bookId)
+            if (format.isReflowable()) {
+                readerPort.openReflowableBook(bookId, format)
             } else {
                 null
             }
-        if (format == BookFormat.EPUB && epubBook == null) return null
+        if (format.isReflowable() && epubBook == null) return null
         return OpenBookResult(bookId = bookId, title = title, format = format, epubBook = epubBook)
     }
 }

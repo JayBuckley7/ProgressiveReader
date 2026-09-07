@@ -41,6 +41,8 @@ from .domains.kanji.service import KanjiService
 from .domains.kanji.adapters.json_file_repository import JsonFileKanjiRepository
 from .domains.ocr.service import OCRService
 from .domains.ocr.layout_service import OcrLayoutService
+from .domains.lyrics.service import LyricsService
+from .domains.lyrics.adapters.uta_net import UtaNetPageProvider
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,7 @@ class Container:
     ocr_service: OCRService | None
     ocr_layout_service: OcrLayoutService | None
     ocr_init_error: str | None
+    lyrics_service: LyricsService
 
 
 def create_container(*, settings: AppSettings, db_session: Any) -> Container:
@@ -100,6 +103,8 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
 
     def make_kanji_service() -> KanjiService:
         return KanjiService(JsonFileKanjiRepository(settings.kanji_data_path))
+
+    lyrics_service = LyricsService(UtaNetPageProvider())
 
     # Optional: OCR dependencies may not be installed in all environments.
     ocr_service = None
@@ -145,6 +150,7 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
         ocr_service=ocr_service,
         ocr_layout_service=ocr_layout_service,
         ocr_init_error=ocr_init_error,
+        lyrics_service=lyrics_service,
     )
 
 

@@ -16,9 +16,13 @@ interface ReaderControlsProps {
   totalChapters: number;
   onPrevChapter: () => void;
   onNextChapter: () => void;
+  rightToLeftPageTurning?: boolean;
+  navigationUnit?: "chapter" | "page";
   bookId: string;
   chapterTitles: ChapterTitle[];
   onSelectChapter: (index: number) => void;
+  onSelectBookmark: (bookmark: Bookmark) => void;
+  getBookmarkPosition: () => number;
   onToggleTts: () => void;
   onToggleHighlight: () => void;
   onTranslate: () => void;
@@ -39,9 +43,13 @@ function ReaderControlsComponent({
   totalChapters,
   onPrevChapter,
   onNextChapter,
+  rightToLeftPageTurning = false,
+  navigationUnit = "chapter",
   bookId,
   chapterTitles,
   onSelectChapter,
+  onSelectBookmark,
+  getBookmarkPosition,
   onToggleTts,
   onToggleHighlight,
   onTranslate,
@@ -68,7 +76,7 @@ function ReaderControlsComponent({
   const [isAddingBookmark, setIsAddingBookmark] = useState(false);
 
   useEffect(() => {
-    if (!visible && !contentsVisible) return;
+    if (!contentsVisible) return;
     let cancelled = false;
     setIsLoadingBookmarks(true);
     deps.backend.bookmarks
@@ -92,7 +100,7 @@ function ReaderControlsComponent({
     return () => {
       cancelled = true;
     };
-  }, [bookId, contentsVisible, deps.backend.bookmarks, visible]);
+  }, [bookId, contentsVisible, deps.backend.bookmarks]);
 
   useEffect(() => {
     if (!visible) return;
@@ -134,7 +142,7 @@ function ReaderControlsComponent({
         const newBookmark = await deps.backend.bookmarks.addBookmark({
           bookId,
           chapterIndex: currentChapter,
-          position: window.scrollY,
+          position: getBookmarkPosition(),
           note: note || undefined,
         });
         setBookmarks((prev) => [...prev, newBookmark]);
@@ -170,6 +178,49 @@ function ReaderControlsComponent({
     onCloseContents();
     onClose();
   };
+
+  const previousChapterButton = (
+    <button
+      type="button"
+      onClick={handlePrevChapter}
+      disabled={currentChapter === 0}
+      className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
+      aria-label={t(navigationUnit === "page" ? "reader.controls.prevPage" : "reader.controls.prev")}
+    >
+      {!rightToLeftPageTurning && (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      )}
+      <span>{t(navigationUnit === "page" ? "reader.controls.prevPage" : "reader.controls.prev")}</span>
+      {rightToLeftPageTurning && (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      )}
+    </button>
+  );
+  const nextChapterButton = (
+    <button
+      type="button"
+      onClick={handleNextChapter}
+      disabled={currentChapter + 1 >= totalChapters}
+      className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
+      aria-label={t(navigationUnit === "page" ? "reader.controls.nextPage" : "reader.controls.next")}
+    >
+      {rightToLeftPageTurning && (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      )}
+      <span>{t(navigationUnit === "page" ? "reader.controls.nextPage" : "reader.controls.next")}</span>
+      {!rightToLeftPageTurning && (
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      )}
+    </button>
+  );
 
   if (!visible && !contentsVisible) return null;
 
@@ -208,26 +259,8 @@ function ReaderControlsComponent({
 
         <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handlePrevChapter}
-              disabled={currentChapter === 0}
-              className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span>{t('reader.controls.prev')}</span>
-            </button>
-            <button
-              onClick={handleNextChapter}
-              disabled={currentChapter + 1 >= totalChapters}
-              className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
-            >
-              <span>{t('reader.controls.next')}</span>
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            {rightToLeftPageTurning ? nextChapterButton : previousChapterButton}
+            {rightToLeftPageTurning ? previousChapterButton : nextChapterButton}
           </div>
 
           <div className="my-3 rounded-md bg-gray-100 px-3 py-2 dark:bg-gray-700/60">
@@ -331,6 +364,7 @@ function ReaderControlsComponent({
           chapterTitles={chapterTitles}
           currentChapter={currentChapter}
           onSelectChapter={handleSelectChapter}
+          onSelectBookmark={onSelectBookmark}
           bookmarks={bookmarks}
         />
       )}

@@ -46,6 +46,7 @@ data class LibraryUiState(
     val driveFetchFailed: Boolean = false,
     val error: String? = null,
     val downloadingId: String? = null,
+    val downloadErrorByBookId: Map<String, String> = emptyMap(),
     val isImporting: Boolean = false,
     val isUpdatingMetadata: Boolean = false,
     val metadataLoadError: String? = null,
@@ -127,6 +128,7 @@ class LibraryViewModel(
                     virtualFolderIdByBookId = emptyMap(),
                     remoteCoverPathByBookId = emptyMap(),
                     remoteCoverLoadingByBookId = emptyMap(),
+                    downloadErrorByBookId = emptyMap(),
                 )
             }
         }
@@ -246,7 +248,18 @@ class LibraryViewModel(
         parentFolderName: String?,
     ) {
         viewModelScope.launch {
-            _state.update { it.copy(error = null, downloadingId = file.id) }
+            if (_state.value.downloadingId != null) {
+                _events.tryEmit(LibraryEvent.Snackbar("Another book is already downloading."))
+                return@launch
+            }
+
+            _state.update {
+                it.copy(
+                    error = null,
+                    downloadingId = file.id,
+                    downloadErrorByBookId = it.downloadErrorByBookId - file.id,
+                )
+            }
             try {
                 val res =
                     downloadBookUseCase(
@@ -256,8 +269,7 @@ class LibraryViewModel(
                         parentFolderName = parentFolderName,
                     )
                 if (res == null) {
-                    _state.update { it.copy(error = "Download failed.") }
-                    _events.tryEmit(LibraryEvent.Snackbar(if (needsUpdate) "Update failed" else "Download failed"))
+                    markDownloadFailed(file, needsUpdate, "Download returned no local book.")
                     return@launch
                 }
 
@@ -265,16 +277,34 @@ class LibraryViewModel(
                     it.copy(
                         cachedIndex = res.index,
                         localCoverPathByBookId = it.localCoverPathByBookId + (res.bookId to res.localCoverPath),
+                        downloadErrorByBookId = it.downloadErrorByBookId - file.id,
                     )
                 }
-                _events.tryEmit(LibraryEvent.Snackbar(if (needsUpdate) "Updated download" else "Downloaded"))
+                _events.tryEmit(
+                    LibraryEvent.Snackbar(
+                        if (needsUpdate) "Update complete. Opening book..." else "Download complete. Opening book...",
+                    ),
+                )
                 _events.tryEmit(LibraryEvent.OpenReader(res.bookId))
             } catch (t: Throwable) {
-                _state.update { it.copy(error = t.message ?: "Download failed") }
+                markDownloadFailed(file, needsUpdate, t.message ?: t::class.java.simpleName)
             } finally {
                 _state.update { it.copy(downloadingId = null) }
             }
         }
+    }
+
+    private fun markDownloadFailed(
+        file: DriveFile,
+        needsUpdate: Boolean,
+        detail: String,
+    ) {
+        val userMessage = if (needsUpdate) "Couldn't update this book." else "Couldn't download this book."
+        AppLog.e("Library", "$userMessage bookId=${file.id}, detail=$detail")
+        _state.update {
+            it.copy(downloadErrorByBookId = it.downloadErrorByBookId + (file.id to userMessage))
+        }
+        _events.tryEmit(LibraryEvent.Snackbar("$userMessage Check your connection and retry."))
     }
 
     fun importFromUri(uriString: String) {

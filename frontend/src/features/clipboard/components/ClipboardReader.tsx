@@ -48,6 +48,8 @@ export default function ClipboardReader() {
   const [jpdbHighlighted, setJpdbHighlighted] = useState<boolean>(false);
   const [permissionState, setPermissionState] = useState<"unknown" | "granted" | "denied" | "prompt">("unknown");
   const [clipboardReadUnlocked, setClipboardReadUnlocked] = useState<boolean>(false);
+  const [lyricsUrl, setLyricsUrl] = useState<string>("");
+  const [isImportingLyrics, setIsImportingLyrics] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const jpdbInitRef = useRef(false);
   const lastClipboardRef = useRef<string>("");
@@ -220,6 +222,25 @@ export default function ClipboardReader() {
 	      notifyError(e, { title: t('clipboard.toasts.denied') });
 	    }
 	  };
+
+  const importKanjiLyrics = async () => {
+    const url = lyricsUrl.trim();
+    if (!url || isImportingLyrics) return;
+
+    setIsImportingLyrics(true);
+    try {
+      const imported = await deps.backend.lyrics.importKanjiLyrics({ url });
+      const heading = [imported.title, imported.artist].filter(Boolean).join(" — ");
+      ingestText([heading, imported.text].filter(Boolean).join("\n\n"));
+      setLyricsUrl(imported.source_url);
+      toast.success(t('clipboard.toasts.lyricsImported'));
+    } catch (error) {
+      appLog.error("[ClipboardReader] Lyrics import failed", error);
+      notifyError(error, { title: t('clipboard.toasts.lyricsImportFailed') });
+    } finally {
+      setIsImportingLyrics(false);
+    }
+  };
 
   const handleToggleAppend = (checked: boolean) => {
     setAppendMode(checked);
@@ -402,6 +423,27 @@ export default function ClipboardReader() {
             {t('clipboard.save')}
           </button>
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="url"
+            value={lyricsUrl}
+            onChange={(event) => setLyricsUrl(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void importKanjiLyrics();
+            }}
+            className="h-10 min-w-0 flex-1 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            placeholder={t('clipboard.lyricsUrlPlaceholder')}
+            aria-label={t('clipboard.lyricsUrlLabel')}
+          />
+          <button
+            onClick={() => void importKanjiLyrics()}
+            className={primaryButtonClass}
+            disabled={!lyricsUrl.trim() || isImportingLyrics}
+          >
+            {isImportingLyrics ? t('clipboard.importingLyrics') : t('clipboard.importKanjiLyrics')}
+          </button>
         </div>
 
         <details className="mt-3 sm:hidden">

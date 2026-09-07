@@ -128,7 +128,9 @@ class JpdbHighlighter(
         fun process(node: Node) {
             when (category(node)) {
                 Category.TEXT -> {
-                    val text = (node as TextNode).text().replace('\u00A0', ' ')
+                    // JPDB offsets must be measured against the exact text WebView renders.
+                    // TextNode.text() normalizes whitespace, which shifts links in <pre> content.
+                    val text = (node as TextNode).getWholeText().replace('\u00A0', ' ')
                     if (text.trim().isNotEmpty()) appendText(text)
                 }
 
@@ -157,9 +159,10 @@ class JpdbHighlighter(
             when (category(node)) {
                 Category.TEXT -> {
                     val n = node as TextNode
-                    val text = n.text().replace('\u00A0', ' ')
+                    val rawText = n.getWholeText()
+                    val text = rawText.replace('\u00A0', ' ')
                     if (text.trim().isEmpty()) return
-                    if (text != n.text()) n.text(text)
+                    if (text != rawText) n.text(text)
                     val start = globalOffset
                     val end = globalOffset + text.length
                     fragments.add(Fragment(start = start, end = end, node = n))

@@ -42,6 +42,17 @@ export interface CoversBackendPort {
   lookupCover(args: { title: string; signal?: AbortSignal }): Promise<Blob | undefined>;
 }
 
+export type ImportedLyrics = {
+  title: string;
+  artist: string;
+  text: string;
+  source_url: string;
+};
+
+export interface LyricsBackendPort {
+  importKanjiLyrics(args: { url: string; signal?: AbortSignal }): Promise<ImportedLyrics>;
+}
+
 export type OcrProgress = {
   type: "progress" | "complete" | "error";
   page?: number;

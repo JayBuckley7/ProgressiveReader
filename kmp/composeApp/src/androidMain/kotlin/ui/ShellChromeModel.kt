@@ -2,9 +2,8 @@ package com.progressivereader.kmp.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoFixHigh
-import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.progressivereader.kmp.navigation.Screen
@@ -46,18 +45,15 @@ internal val shellDestinations =
             matches = { it is Screen.Grammar },
         ),
         ShellDestinationSpec(
-            label = "Clipboard",
-            shortLabel = "Clipboard",
-            icon = Icons.Outlined.ContentPaste,
-            target = Screen.Clipboard,
-            matches = { it is Screen.Clipboard },
-        ),
-        ShellDestinationSpec(
-            label = "Settings",
-            shortLabel = "Settings",
-            icon = Icons.Outlined.Settings,
-            target = Screen.Settings(showBack = false),
-            matches = { it is Screen.Settings && !it.showBack },
+            label = "More",
+            shortLabel = "More",
+            icon = Icons.Outlined.MoreHoriz,
+            target = Screen.More,
+            matches = {
+                it is Screen.More ||
+                    it is Screen.Clipboard ||
+                    (it is Screen.Settings && !it.showBack)
+            },
         ),
     )
 
@@ -68,6 +64,7 @@ internal fun shellChromeFor(screen: Screen): ShellChromeSpec {
             Screen.Vocabulary,
             Screen.Grammar,
             Screen.Clipboard,
+            Screen.More,
             -> true
 
             is Screen.Settings -> !screen.showBack

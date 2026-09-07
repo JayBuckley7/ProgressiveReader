@@ -26,4 +26,5 @@ expect fun HtmlContent(
     presentation: HtmlPresentationSpec,
     onUrlClick: (String) -> Boolean,
     onSwipe: ((SwipeDirection) -> Unit)?,
+    onInteraction: (() -> Unit)? = null,
 )

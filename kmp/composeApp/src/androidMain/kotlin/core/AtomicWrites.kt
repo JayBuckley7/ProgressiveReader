@@ -3,8 +3,6 @@ package com.progressivereader.kmp.core
 import android.util.AtomicFile
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * Disk writes must be resilient to:
@@ -52,15 +50,11 @@ private fun fallbackAtomicWriteUtf8(target: File, content: String) {
     val tempFile = File.createTempFile("${target.name}.", ".tmp", parent)
     try {
         tempFile.writeText(content, Charsets.UTF_8)
-        runCatching {
-            Files.move(
-                tempFile.toPath(),
-                target.toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE,
-            )
-        }.getOrElse {
-            Files.move(tempFile.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        if (target.exists() && !target.delete()) {
+            error("Could not replace ${target.absolutePath}")
+        }
+        if (!tempFile.renameTo(target)) {
+            tempFile.copyTo(target, overwrite = true)
         }
     } finally {
         if (tempFile.exists()) {

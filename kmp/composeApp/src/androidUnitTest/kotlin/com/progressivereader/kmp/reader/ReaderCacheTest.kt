@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.jsoup.Jsoup
 import org.junit.Test
 
 class ReaderCacheTest {
@@ -98,6 +99,72 @@ class ReaderCacheTest {
 
         val wrong = cache.loadIfValid(0, sourceHash = "hash2")
         assertNull(wrong)
+
+        cache.save(
+            1,
+            JpdbTokenCacheFile(
+                version = 1,
+                createdAt = TranslationCache.isoNowUtc(),
+                sourceHash = "old-layout",
+                tokens = listOf(token),
+            ),
+        )
+        assertNull(cache.loadIfValid(1, sourceHash = "old-layout"))
+    }
+
+    @Test
+    fun jpdbHighlighter_preservesPreformattedWhitespaceWhenMappingTokens() = runBlocking {
+        val dir = Files.createTempDirectory("pr-jpdb-highlighter-pre").toFile()
+        val tokenCache = JpdbTokenCache(dir)
+        val bodyHtml = "<pre style=\"white-space: pre-wrap\">ODO - ADO\n\n\n半端なら</pre>"
+        val sourceHash = "preformatted-hash"
+
+        fun token(
+            start: Int,
+            end: Int,
+            spelling: String,
+        ) =
+            JpdbTokenCache.toCachedToken(
+                JpdbService.ProcessedToken(
+                    start = start,
+                    length = end - start,
+                    end = end,
+                    card =
+                        buildJsonObject {
+                            put("spelling", JsonPrimitive(spelling))
+                            put("state", JsonArray(emptyList()))
+                        },
+                    rubies = emptyList(),
+                ),
+            )
+
+        val hanpa = token(start = 12, end = 14, spelling = "半端")
+        val nara = token(start = 14, end = 16, spelling = "なら")
+        tokenCache.save(
+            0,
+            JpdbTokenCacheFile(
+                createdAt = TranslationCache.isoNowUtc(),
+                sourceHash = sourceHash,
+                tokens = listOf(hanpa, nara),
+            ),
+        )
+
+        val result =
+            JpdbHighlighter(tokenCache = tokenCache, jpdbService = JpdbService()).highlightChapter(
+                bodyHtml = bodyHtml,
+                chapterIndex = 0,
+                sourceHash = sourceHash,
+                jpdbApiKey = "ignored",
+                isOnline = false,
+            )
+        assertNotNull(result)
+
+        val doc = Jsoup.parseBodyFragment(result.html)
+        val links = doc.select("a.jpdb-word")
+        assertEquals(listOf("半端", "なら"), links.map { it.text() })
+        assertEquals("pr://jpdb?tid=${hanpa.id}", links[0].attr("href"))
+        assertEquals("pr://jpdb?tid=${nara.id}", links[1].attr("href"))
+        assertTrue(result.html.contains("ODO - ADO\n\n\n<a"))
     }
 
     @Test

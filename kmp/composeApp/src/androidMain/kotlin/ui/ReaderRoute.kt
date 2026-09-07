@@ -84,17 +84,7 @@ fun ReaderRoute(
                 onSetTtsRate = onSetTtsRate,
             )
         },
-        txtContent = {
-            TextReaderScreen(
-                bookId = effectiveBookId,
-                title = state.title,
-                settings = settings,
-                bookCache = bookCache,
-                onBack = onBack,
-                onOpenSettings = onOpenSettings,
-            )
-        },
-        epubContent = {
+        reflowableContent = {
             ReaderScreen(
                 state = state,
                 snackbarHostState = snackbarHostState,

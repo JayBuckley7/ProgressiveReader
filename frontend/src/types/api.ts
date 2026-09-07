@@ -122,6 +122,17 @@ export interface HealthResponse {
   service: string;
 }
 
+export interface ImportLyricsRequest {
+  url: string;
+}
+
+export interface ImportedLyrics {
+  title: string;
+  artist: string;
+  text: string;
+  sourceUrl: string;
+}
+
 export interface KanjiSearchRequest {
   query: string;
 }
