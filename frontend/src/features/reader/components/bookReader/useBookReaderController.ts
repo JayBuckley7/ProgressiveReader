@@ -219,7 +219,14 @@ export function useBookReaderController({
         existing.next.every((id, index) => id === next[index]);
       return sameCurrent && sameNext && existing.layoutVersion === pagination.layoutRevision
         ? existing
-        : { current, next, layoutVersion: pagination.layoutRevision };
+        : {
+            // Keep array identity stable when a DOM-only reflow produces the
+            // same page window. Highlighting changes the DOM itself, and a new
+            // array here would otherwise restart that work unnecessarily.
+            current: sameCurrent ? existing.current : current,
+            next: sameNext ? existing.next : next,
+            layoutVersion: pagination.layoutRevision,
+          };
     });
   }, [
     pagination.currentSegmentIds,
@@ -237,8 +244,11 @@ export function useBookReaderController({
     contentVersion: mix.contentVersion,
     mixEnabled: Boolean(settings?.mixEnabled),
     mixAutoEnableHighlight: Boolean(settings?.mixAutoEnableHighlight),
-    currentSegmentIds: pagination.currentSegmentIds,
-    nextSegmentIds: pagination.nextSegmentIds,
+    // Reflow deliberately becomes temporarily unready while JPDB wrappers are
+    // inserted. Use the last settled page window so that transient empty
+    // pagination arrays cannot tell the highlighter to remove its own work.
+    currentSegmentIds: pageWindow.current,
+    nextSegmentIds: pageWindow.next,
   });
 
   useGrammarReadAlong({
