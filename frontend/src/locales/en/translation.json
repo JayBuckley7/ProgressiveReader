@@ -66,9 +66,10 @@
       "model": {
         "label": "Preferred Model",
         "options": {
-          "gpt-4o-mini": "GPT-4o Mini (Fast)",
-          "gpt-4": "GPT-4 (Powerful)",
-          "gpt-3.5-turbo": "GPT-3.5 Turbo (Legacy)"
+          "gpt-5.6-terra": "GPT-5.6 Terra (Balanced, recommended)",
+          "gpt-5.6-sol": "GPT-5.6 Sol (Highest quality)",
+          "gpt-5.6-luna": "GPT-5.6 Luna (Fastest, lowest cost)",
+          "gpt-4o-mini": "GPT-4o Mini (Legacy)"
         }
       },
       "targetLanguage": {
@@ -183,8 +184,10 @@
       }
     },
     "footer": {
+      "translateChapter": "Translate this chapter",
+      "translationSummary": "To {{language}} with {{model}}",
       "translate": "Translate",
-      "translateCefr": "Translate (CEFR)",
+      "translateCefr": "Adapt to CEFR",
       "translateShort": "CEFR",
       "translating": "Translating...",
       "close": "Close"

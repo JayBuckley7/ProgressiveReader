@@ -21,7 +21,7 @@ class OpenAIProvider(TranslationProvider):
         model: Optional[str] = None,
     ) -> str:
         client = OpenAI(api_key=self._api_key)
-        model = model or "gpt-4o-mini"
+        model = model or "gpt-5.6-terra"
 
         system_prompt = (
             "You are a professional translator specializing in literary content. "
@@ -58,7 +58,7 @@ class OpenAIProvider(TranslationProvider):
         model: Optional[str] = None,
     ) -> Iterator[str]:
         client = OpenAI(api_key=self._api_key)
-        model = model or "gpt-4o-mini"
+        model = model or "gpt-5.6-terra"
 
         system_prompt = (
             "You are a professional translator specializing in literary content. "
@@ -96,7 +96,7 @@ class OpenAIProvider(TranslationProvider):
         model: Optional[str] = None,
     ) -> str:
         client = OpenAI(api_key=self._api_key)
-        model = model or "gpt-4o-mini"
+        model = model or "gpt-5.6-terra"
 
         system_prompt = (
             "You are a precise translator for vocabulary learning. "

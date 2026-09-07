@@ -66,9 +66,10 @@
       "model": {
         "label": "推奨モデル",
         "options": {
-          "gpt-4o-mini": "GPT-4o Mini（高速）",
-          "gpt-4": "GPT-4（高性能）",
-          "gpt-3.5-turbo": "GPT-3.5 Turbo（レガシー）"
+          "gpt-5.6-terra": "GPT-5.6 Terra（バランス・推奨）",
+          "gpt-5.6-sol": "GPT-5.6 Sol（最高品質）",
+          "gpt-5.6-luna": "GPT-5.6 Luna（最速・低コスト）",
+          "gpt-4o-mini": "GPT-4o Mini（レガシー）"
         }
       },
       "targetLanguage": {
@@ -179,8 +180,10 @@
       }
     },
     "footer": {
+      "translateChapter": "この章を翻訳",
+      "translationSummary": "{{model}} で{{language}}に翻訳",
       "translate": "翻訳",
-      "translateCefr": "翻訳（CEFR）",
+      "translateCefr": "CEFR に合わせる",
       "translateShort": "CEFR",
       "translating": "翻訳中...",
       "close": "閉じる"

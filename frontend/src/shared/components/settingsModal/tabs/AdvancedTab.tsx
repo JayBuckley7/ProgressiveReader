@@ -51,9 +51,10 @@ export function AdvancedTab({
         value={localState.openaiModel}
         onChange={(v) => onLocalChange("openaiModel", v)}
         options={[
+          { value: "gpt-5.6-terra", label: t("settings.general.model.options.gpt-5.6-terra") },
+          { value: "gpt-5.6-sol", label: t("settings.general.model.options.gpt-5.6-sol") },
+          { value: "gpt-5.6-luna", label: t("settings.general.model.options.gpt-5.6-luna") },
           { value: "gpt-4o-mini", label: t("settings.general.model.options.gpt-4o-mini") },
-          { value: "gpt-4", label: t("settings.general.model.options.gpt-4") },
-          { value: "gpt-3.5-turbo", label: t("settings.general.model.options.gpt-3.5-turbo") },
         ]}
       />
 

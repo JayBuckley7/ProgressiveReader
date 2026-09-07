@@ -9,7 +9,7 @@ export const PREF_KEYS = {
 } as const;
 
 export const DEFAULTS = {
-  openAiModel: "gpt-4o-mini",
+  openAiModel: "gpt-5.6-terra",
   cefrLevel: "B2",
 } as const;
 

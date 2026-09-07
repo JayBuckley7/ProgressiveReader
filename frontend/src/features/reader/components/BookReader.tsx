@@ -151,6 +151,12 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
+          onTranslate={(useCefr) => {
+            setShowSettings(false);
+            c.translation.setLastUseCefr(useCefr);
+            void c.translation.translateCurrent(useCefr);
+          }}
+          translating={c.translation.isTranslating}
         />
       )}
 
