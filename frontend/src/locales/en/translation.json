@@ -184,7 +184,7 @@
       }
     },
     "footer": {
-      "translateChapter": "Translate this chapter",
+      "translateChapter": "Translate this page",
       "translationSummary": "To {{language}} with {{model}}",
       "translate": "Translate",
       "translateCefr": "Adapt to CEFR",
@@ -327,7 +327,9 @@
   "reader": {
     "chapterNumber": "Chapter {{number}}",
     "pdf": {
-      "loading": "Loading PDF..."
+      "loading": "Loading PDF...",
+      "loadFailed": "The PDF could not be loaded.",
+      "retry": "Retry"
     },
     "error": {
       "loading": "Error loading book:",
@@ -359,7 +361,7 @@
       "next": "Next chapter",
       "prevPage": "Previous page",
       "nextPage": "Next page",
-      "translate": "Translate current chapter",
+      "translate": "Translate current page",
       "translateShort": "Translate",
       "translating": "Translating…",
       "ttsStart": "Start text to speech",

@@ -16,6 +16,18 @@ export function readingProgressRatio(book: BookMetadata, progress?: ReadingProgr
     return Math.min(1, Math.max(0, progress.currentPage / progress.totalPages));
   }
 
+  if (progress.locator?.kind === "reflow") {
+    const chapterIndex = progress.locator.chapterIndex ?? progress.currentChapter;
+    const chapterProgress = Math.min(1, Math.max(0, progress.locator.progression ?? 0));
+    if (book.totalChapters && book.totalChapters > 0) {
+      return Math.min(
+        1,
+        Math.max(0, (chapterIndex + chapterProgress) / book.totalChapters)
+      );
+    }
+    return chapterProgress;
+  }
+
   const scrollableHeight =
     progress.scrollHeight && progress.viewportHeight
       ? progress.scrollHeight - progress.viewportHeight

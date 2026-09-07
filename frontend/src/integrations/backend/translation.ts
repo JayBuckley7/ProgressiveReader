@@ -1,6 +1,102 @@
 import type { BackendFetchPort } from "@core/backend/fetchPort";
 import type { TranslationBackendPort } from "@core/backend/ports";
+import {
+  SEGMENT_TRANSLATION_PROMPT_VERSION,
+  type TranslateSegmentInput,
+  type TranslateSegmentResult,
+  type TranslateSegmentsRequest,
+  type TranslateSegmentsResponse,
+} from "@core/translation/segments";
 import type { TranslateRequest, TranslateResponse } from "~/types/api";
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function normalizeSegmentResult(value: unknown): TranslateSegmentResult {
+  const candidate = value as Record<string, unknown> | null;
+  const id = optionalString(candidate?.id)?.trim();
+  const translatedHtml = optionalString(candidate?.translatedHtml ?? candidate?.translated_html);
+  if (!id || !translatedHtml) {
+    throw new Error("Invalid segmented translation response");
+  }
+
+  const sourceHash = optionalString(candidate?.sourceHash ?? candidate?.source_hash)?.trim();
+  const modelUsed = optionalString(candidate?.modelUsed ?? candidate?.model_used)?.trim();
+  return {
+    id,
+    translatedHtml,
+    ...(sourceHash ? { sourceHash } : {}),
+    ...(modelUsed ? { modelUsed } : {}),
+  };
+}
+
+function normalizeSegmentsRequest(request: TranslateSegmentsRequest): TranslateSegmentsRequest {
+  if (!Array.isArray(request.segments) || request.segments.length === 0) {
+    throw new TypeError("Segment translation request must include at least one segment");
+  }
+
+  const segments: TranslateSegmentInput[] = request.segments.map((segment) => {
+    const id = String(segment.id || "").trim();
+    if (!id) throw new TypeError("Segment translation request ids must be non-empty");
+    if (typeof segment.html !== "string" || !segment.html.trim()) {
+      throw new TypeError(`Segment translation source HTML must be non-empty for ${id}`);
+    }
+    const sourceHash = segment.sourceHash?.trim();
+    return {
+      id,
+      html: segment.html,
+      ...(sourceHash ? { sourceHash } : {}),
+    };
+  });
+  if (new Set(segments.map((segment) => segment.id)).size !== segments.length) {
+    throw new TypeError("Segment translation request ids must be unique");
+  }
+
+  const targetLanguage = String(request.targetLanguage || "").trim();
+  if (!targetLanguage) throw new TypeError("targetLanguage must be non-empty");
+  return {
+    ...request,
+    segments,
+    targetLanguage,
+    promptVersion: request.promptVersion?.trim() || SEGMENT_TRANSLATION_PROMPT_VERSION,
+  };
+}
+
+function normalizeSegmentsResponse(
+  value: unknown,
+  request: TranslateSegmentsRequest
+): TranslateSegmentsResponse {
+  const candidate = value as Record<string, unknown> | null;
+  if (!Array.isArray(candidate?.segments)) {
+    throw new Error("Invalid segmented translation response");
+  }
+  const requestedIds = request.segments.map((segment) => segment.id);
+  const requestedIdSet = new Set(requestedIds);
+
+  const normalizedSegments = candidate.segments.map(normalizeSegmentResult);
+  const resultById = new Map(normalizedSegments.map((segment) => [segment.id, segment]));
+  if (
+    resultById.size !== normalizedSegments.length ||
+    normalizedSegments.some((segment) => !requestedIdSet.has(segment.id))
+  ) {
+    throw new Error("Segmented translation response did not match the request ids");
+  }
+
+  const modelUsed = optionalString(candidate?.modelUsed ?? candidate?.model_used)?.trim();
+  const orderedSegments = request.segments.flatMap((requested) => {
+    const result = resultById.get(requested.id);
+    if (!result) return [];
+    if (requested.sourceHash && result.sourceHash && requested.sourceHash !== result.sourceHash) {
+      throw new Error(`Segmented translation response source hash mismatch for ${requested.id}`);
+    }
+    return [result.modelUsed || !modelUsed ? result : { ...result, modelUsed }];
+  });
+  return {
+    segments: orderedSegments,
+    ...(modelUsed ? { modelUsed } : {}),
+  };
+}
 
 export function createTranslationBackendPort(fetchPort: BackendFetchPort): TranslationBackendPort {
   return {
@@ -11,6 +107,20 @@ export function createTranslationBackendPort(fetchPort: BackendFetchPort): Trans
         body: { ...req, stream: false },
         signal: opts?.signal,
       });
+    },
+
+    async translateSegments(
+      req: TranslateSegmentsRequest,
+      opts?: { signal?: AbortSignal }
+    ): Promise<TranslateSegmentsResponse> {
+      const normalizedRequest = normalizeSegmentsRequest(req);
+      const response = await fetchPort.requestJson<unknown>({
+        path: "/api/translate/segments",
+        method: "POST",
+        body: normalizedRequest,
+        signal: opts?.signal,
+      });
+      return normalizeSegmentsResponse(response, normalizedRequest);
     },
 
     async *translateChapterStream(

@@ -18,7 +18,9 @@ export async function translateChapterHtmlWithLlm(args: {
 
   let systemPrompt =
     "You are a professional translator specializing in literary content. " +
-    "Translate the provided chapter HTML into the target language. Preserve all HTML formatting, including headings, paragraphs, and emphasis. " +
+    "Translate only text nodes in the provided chapter HTML into the target language. " +
+    "Preserve every element, its order, and every attribute exactly, including custom " +
+    "pr-translation-batch and pr-translation-segment boundaries and data-pr-segment-id values. " +
     "Do not add explanations or extra text beyond the translation.";
   if (args.useCefr && cefrLevel) {
     systemPrompt += ` Aim for a CEFR level of ${cefrLevel}. Simplify complex expressions while keeping the meaning.`;

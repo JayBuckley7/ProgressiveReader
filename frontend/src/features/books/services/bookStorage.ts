@@ -1,4 +1,5 @@
 import { BookMetadata, ReadingProgress } from '~/types';
+import type { ReaderLocator } from '~/types/api';
 import { addOfflineBook } from '@features/books/utils/offlineLibrary';
 import { appLog } from '@shared/appLog'
 import type { DriveCachePort } from '@core/drive/cachePort';
@@ -427,7 +428,8 @@ export class BookStorageService {
         totalPages?: number,
         fileType?: string,
         scrollHeight?: number,
-        viewportHeight?: number
+        viewportHeight?: number,
+        locator?: ReaderLocator
     ): Promise<void> {
         const progress: ReadingProgress = {
             bookId,
@@ -439,6 +441,7 @@ export class BookStorageService {
             fileType,
             scrollHeight,
             viewportHeight,
+            locator,
             lastUpdated: new Date()
         };
 

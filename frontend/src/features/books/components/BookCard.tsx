@@ -71,13 +71,12 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
     if (onSelectBook) {
       // External navigation (preferred) - delegate to parent
       if (resumeFromProgress && progress) {
-        // Add chapter/page info to URL for resumption
         const baseUrl = `/book/${book.id}`;
         if (progress.fileType === 'pdf' && progress.currentPage) {
           window.location.href = `${baseUrl}?page=${progress.currentPage}`;
-        } else if (progress.currentChapter !== undefined) {
-          window.location.href = `${baseUrl}?ch=${progress.currentChapter}`;
         } else {
+          // The reader resolves the saved reflow locator (and its chapter)
+          // once the dynamic layout is ready.
           onSelectBook(book.id);
         }
       } else {
@@ -90,8 +89,6 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
       if (resumeFromProgress && progress) {
         if (progress.fileType === 'pdf' && progress.currentPage) {
           window.location.href = `${baseUrl}?page=${progress.currentPage}`;
-        } else if (progress.currentChapter !== undefined) {
-          window.location.href = `${baseUrl}?ch=${progress.currentChapter}`;
         } else {
           window.location.href = baseUrl;
         }

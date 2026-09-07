@@ -1,5 +1,5 @@
-import type { ReactElement } from "react";
 import type { JpdbKnownVocabRecord } from "@features/jpdbMirror/types";
+import type { HighlightContext, HighlightFn } from "./htmlToJsx";
 
 const EN_STOPWORDS = new Set<string>([
   "a",
@@ -281,7 +281,8 @@ function isSwapEligibleGlossKey(glossKey: string): boolean {
 }
 
 export interface SwapHighlighter {
-  highlightFn: (text: string) => Array<ReactElement | string>;
+  highlightFn: HighlightFn;
+  highlightText: (text: string, context?: HighlightContext) => string;
   getAmbiguousGlosses: () => string[];
   clearAmbiguousGlosses: () => void;
 }
@@ -299,15 +300,15 @@ export function createEnglishSwapHighlighter(args: {
 
   const onAmbiguous = (glossKey: string) => ambiguous.add(glossKey);
 
-  const highlightFn = (text: string): Array<ReactElement | string> => {
-    const currentNode = nodeIndex;
-    nodeIndex += 1;
+  const highlightText = (text: string, context?: HighlightContext): string => {
+    const currentNode = context?.textNodeIndex ?? nodeIndex;
+    nodeIndex = Math.max(nodeIndex, currentNode + 1);
 
     // Fast path: no Latin letters => no swaps.
-    if (!/[A-Za-z]/.test(text)) return [text];
+    if (!/[A-Za-z]/.test(text)) return text;
 
     const words = tokenizeWords(text);
-    if (words.length === 0) return [text];
+    if (words.length === 0) return text;
 
     const actions: Array<{ start: number; end: number; replacement: string }> = [];
 
@@ -357,7 +358,8 @@ export function createEnglishSwapHighlighter(args: {
         }
         if (!chosen || !chosen.record) continue;
 
-        const seed = `${args.bookId}:${args.chapter}|${currentNode}|${matchOrdinal}|${chosen.key}`;
+        const structuralSeed = context?.segmentId || `${args.bookId}:${args.chapter}:${currentNode}`;
+        const seed = `${structuralSeed}|${matchOrdinal}|${chosen.key}`;
         const r = stableRand01(seed);
         if (r >= Math.max(0, Math.min(1, args.aggression))) {
           matchOrdinal += 1;
@@ -376,7 +378,7 @@ export function createEnglishSwapHighlighter(args: {
       if (!matched) i += 1;
     }
 
-    if (actions.length === 0) return [text];
+    if (actions.length === 0) return text;
 
     actions.sort((a, b) => a.start - b.start);
     let out = "";
@@ -389,11 +391,14 @@ export function createEnglishSwapHighlighter(args: {
     }
     out += text.slice(cursor);
 
-    return [out];
+    return out;
   };
+
+  const highlightFn: HighlightFn = (text, context) => [highlightText(text, context)];
 
   return {
     highlightFn,
+    highlightText,
     getAmbiguousGlosses: () => Array.from(ambiguous.values()).sort(),
     clearAmbiguousGlosses: () => ambiguous.clear(),
   };

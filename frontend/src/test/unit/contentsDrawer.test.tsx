@@ -1,4 +1,5 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { useState } from "react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ContentsDrawer from "@features/reader/components/ContentsDrawer";
@@ -20,6 +21,60 @@ const bookmark: Bookmark = {
 };
 
 describe("ContentsDrawer", () => {
+  it("removes the closed drawer and its controls from the accessibility tree", () => {
+    renderWithProviders(
+      <ContentsDrawer
+        visible={false}
+        onClose={() => undefined}
+        chapterTitles={chapters}
+        currentChapter={0}
+        onSelectChapter={() => undefined}
+        bookmarks={[]}
+      />
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Close/ })).not.toBeInTheDocument();
+
+    const closedDrawer = screen.getByRole("dialog", { hidden: true });
+    expect(closedDrawer).toHaveAttribute("aria-hidden", "true");
+    expect(closedDrawer).toHaveAttribute("inert");
+    expect(closedDrawer).not.toHaveAttribute("aria-modal");
+  });
+
+  it("takes focus, closes on Escape, and restores the trigger", async () => {
+    function Harness() {
+      const [visible, setVisible] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setVisible(true)}>Open contents</button>
+          {visible && (
+            <ContentsDrawer
+              visible
+              onClose={() => setVisible(false)}
+              chapterTitles={chapters}
+              currentChapter={0}
+              onSelectChapter={() => undefined}
+              bookmarks={[]}
+            />
+          )}
+        </>
+      );
+    }
+
+    renderWithProviders(<Harness />);
+    const trigger = screen.getByRole("button", { name: "Open contents" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const close = await screen.findByRole("button", { name: /Close/ });
+    await waitFor(() => expect(close).toHaveFocus());
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
   it("renders real chapter titles and selects a chapter", () => {
     const onClose = vi.fn();
     const onSelectChapter = vi.fn();

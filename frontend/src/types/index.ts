@@ -1,3 +1,5 @@
+import type { ReaderLocator } from "./api";
+
 // Add global declarations for window.jpHighlighter
 declare global {
     interface Window {
@@ -122,6 +124,8 @@ export interface ReadingProgress {
   fileType?: string; // Track whether it's pdf, epub, etc.
   scrollHeight?: number; // For non-PDF scrolling progress bounds
   viewportHeight?: number; // For non-PDF scrolling progress bounds
+  /** Stable source position. Visual page numbers are deliberately not persisted. */
+  locator?: ReaderLocator;
 }
 
 // Required to make this a module

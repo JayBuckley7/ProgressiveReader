@@ -180,7 +180,7 @@
       }
     },
     "footer": {
-      "translateChapter": "この章を翻訳",
+      "translateChapter": "このページを翻訳",
       "translationSummary": "{{model}} で{{language}}に翻訳",
       "translate": "翻訳",
       "translateCefr": "CEFR に合わせる",
@@ -323,7 +323,9 @@
   "reader": {
     "chapterNumber": "第{{number}}章",
     "pdf": {
-      "loading": "PDF を読み込み中..."
+      "loading": "PDF を読み込み中...",
+      "loadFailed": "PDF を読み込めませんでした。",
+      "retry": "再試行"
     },
     "error": {
       "loading": "本の読み込みエラー:",
@@ -355,7 +357,7 @@
       "next": "次の章",
       "prevPage": "前のページ",
       "nextPage": "次のページ",
-      "translate": "この章を翻訳",
+      "translate": "このページを翻訳",
       "translateShort": "翻訳",
       "translating": "翻訳中…",
       "ttsStart": "読み上げ開始",

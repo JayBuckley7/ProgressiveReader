@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from .ports import BooksRepositoryPort, StorageProviderPort, CoverLookupPort
-from .schemas import Book, Bookmark
+from .schemas import Book, Bookmark, ReaderLocator
 
 
 class BooksService:
@@ -30,6 +30,7 @@ class BooksService:
         position: int,
         note: Optional[str] = None,
         user_id: Optional[str] = None,
+        locator: Optional[ReaderLocator] = None,
     ) -> Bookmark:
         """Create a bookmark."""
         return self._repo.add_bookmark(
@@ -38,4 +39,5 @@ class BooksService:
             position=position,
             note=note,
             user_id=user_id,
+            locator=locator,
         )

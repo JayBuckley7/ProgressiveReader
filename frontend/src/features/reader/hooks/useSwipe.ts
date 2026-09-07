@@ -1,18 +1,43 @@
 import { RefObject, useEffect } from 'react';
 
+const LOCAL_SCROLL_SELECTOR = 'pre, table, [data-reader-local-scroll]';
+
+/**
+ * Oversized publication content owns gestures that begin inside its local
+ * scroll container. Without this exemption the bubbled pointer/touch end is
+ * also interpreted as a reader page turn.
+ */
+export function isReaderLocalScrollTarget(
+  target: EventTarget | null,
+  readerSurface: HTMLElement
+): boolean {
+  if (!(target instanceof Element)) return false;
+  const localScroller = target.closest<HTMLElement>(LOCAL_SCROLL_SELECTOR);
+  if (!localScroller || !readerSurface.contains(localScroller)) return false;
+
+  return (
+    localScroller.scrollWidth > localScroller.clientWidth ||
+    localScroller.scrollHeight > localScroller.clientHeight
+  );
+}
+
 export function useSwipe(
   ref: RefObject<HTMLElement>,
   onSwipeLeft: () => void,
   onSwipeRight: () => void,
-  threshold: number = 72
+  threshold: number = 72,
+  enabled: boolean = true
 ) {
   useEffect(() => {
+    if (!enabled) return;
     const el = ref.current;
     if (!el) return;
     const ratio = 1.3; // avoid accidental triggers while vertically scrolling
     let startX = 0;
     let startY = 0;
     let activePointerId: number | null = null;
+    const touchPointerIds = new Set<number>();
+    let activeTouch = false;
     let suppressClick = false;
 
     const clickCapture = (e: MouseEvent) => {
@@ -29,8 +54,19 @@ export function useSwipe(
     if (hasPointer) {
       const handlePointerDown = (e: PointerEvent) => {
         if (e.pointerType !== 'touch') return;
-        // Ignore multi-touch. (Second finger -> do nothing.)
-        if (activePointerId !== null) return;
+        touchPointerIds.add(e.pointerId);
+        // A second finger invalidates the whole gesture so pinch-zoom can
+        // never be mistaken for a page turn when the first finger lifts.
+        if (touchPointerIds.size !== 1) {
+          activePointerId = null;
+          suppressClick = false;
+          return;
+        }
+        if (isReaderLocalScrollTarget(e.target, el)) {
+          activePointerId = null;
+          suppressClick = false;
+          return;
+        }
         activePointerId = e.pointerId;
         startX = e.clientX;
         startY = e.clientY;
@@ -38,6 +74,7 @@ export function useSwipe(
       };
 
       const handlePointerUp = (e: PointerEvent) => {
+        touchPointerIds.delete(e.pointerId);
         if (e.pointerId !== activePointerId) return;
         activePointerId = null;
         const dx = e.clientX - startX;
@@ -53,6 +90,7 @@ export function useSwipe(
       };
 
       const handlePointerCancel = (e: PointerEvent) => {
+        touchPointerIds.delete(e.pointerId);
         if (e.pointerId !== activePointerId) return;
         activePointerId = null;
         suppressClick = false;
@@ -71,7 +109,13 @@ export function useSwipe(
     }
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
+      activeTouch = e.touches.length === 1;
+      if (!activeTouch) return;
+      if (isReaderLocalScrollTarget(e.target, el)) {
+        activeTouch = false;
+        suppressClick = false;
+        return;
+      }
       const t = e.touches[0];
       startX = t.clientX;
       startY = t.clientY;
@@ -79,7 +123,8 @@ export function useSwipe(
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (e.changedTouches.length !== 1) return;
+      if (!activeTouch || e.changedTouches.length !== 1) return;
+      activeTouch = false;
       const t = e.changedTouches[0];
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
@@ -101,5 +146,5 @@ export function useSwipe(
       el.removeEventListener('touchstart', handleTouchStart);
       el.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [ref, onSwipeLeft, onSwipeRight, threshold]);
+  }, [enabled, ref, onSwipeLeft, onSwipeRight, threshold]);
 }

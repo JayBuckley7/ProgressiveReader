@@ -16,13 +16,15 @@ const metadata: BookMetadata = {
 };
 
 describe("BookContent vertical writing", () => {
-  it("lays out Japanese text top-to-bottom and maps the mouse wheel to right-to-left columns", () => {
+  it("lays out Japanese text top-to-bottom and leaves wheel navigation to the reader controller", () => {
     const contentRef = createRef<HTMLDivElement>();
+    const flowRef = createRef<HTMLDivElement>();
 
     const { container } = renderWithProviders(
       <BookContent
         bookMetadata={metadata}
         contentRef={contentRef}
+        flowRef={flowRef}
         jsxContent={<p>縦書きの本文</p>}
         error={null}
         isLoading={false}
@@ -45,7 +47,34 @@ describe("BookContent vertical writing", () => {
 
     const wheelWasNotCancelled = fireEvent.wheel(readingSurface!, { deltaX: 0, deltaY: 120 });
 
-    expect(wheelWasNotCancelled).toBe(false);
-    expect(readingSurface!.scrollLeft).toBe(480);
+    expect(wheelWasNotCancelled).toBe(true);
+    expect(readingSurface!.scrollLeft).toBe(600);
+  });
+
+  it("shows a retry action when loading PDF bytes fails", () => {
+    const retry = vi.fn();
+    const pdfMetadata: BookMetadata = { ...metadata, fileType: "pdf" };
+
+    renderWithProviders(
+      <BookContent
+        bookMetadata={pdfMetadata}
+        contentRef={createRef()}
+        flowRef={createRef()}
+        jsxContent={null}
+        error={null}
+        isLoading={false}
+        pdfData={null}
+        pdfLoadError="PDF network failure"
+        onRetryPdfLoad={retry}
+        pdfViewerRef={createRef()}
+        pdfCurrentPage={1}
+        setPdfCurrentPage={vi.fn()}
+        setPdfPageCount={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("PDF network failure");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledOnce();
   });
 });

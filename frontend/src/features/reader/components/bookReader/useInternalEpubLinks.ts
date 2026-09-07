@@ -11,13 +11,15 @@ export function useInternalEpubLinks(params: {
   isPdf: boolean;
   contentRef: React.RefObject<HTMLElement>;
   bookContent: LinkableBookContent | null;
-  navigateToChapter: (chapterIndex: number) => void;
+  navigateToChapter: (chapterIndex: number, fragmentId?: string) => void;
+  revealElement?: (element: HTMLElement) => boolean;
 }) {
-  const { bookId, isPdf, contentRef, bookContent, navigateToChapter } = params;
+  const { bookId, isPdf, contentRef, bookContent, navigateToChapter, revealElement } = params;
 
   // Refs for current values to avoid effect dependencies.
   const bookContentRef = useRef(bookContent);
   const navigateRef = useRef(navigateToChapter);
+  const revealElementRef = useRef(revealElement);
 
   useEffect(() => {
     bookContentRef.current = bookContent;
@@ -26,6 +28,10 @@ export function useInternalEpubLinks(params: {
   useEffect(() => {
     navigateRef.current = navigateToChapter;
   }, [navigateToChapter]);
+
+  useEffect(() => {
+    revealElementRef.current = revealElement;
+  }, [revealElement]);
 
   // Stable link click handler that doesn't change with chapter updates.
   const handleLinkClick = useCallback((e: Event) => {
@@ -63,6 +69,13 @@ export function useInternalEpubLinks(params: {
 
     // Try to find the target chapter.
     let targetChapter = -1;
+    const rawFragment = href.includes("#") ? href.slice(href.indexOf("#") + 1) : "";
+    let fragmentId = rawFragment;
+    try {
+      fragmentId = decodeURIComponent(rawFragment);
+    } catch {
+      // Keep a malformed-but-literal fragment usable when possible.
+    }
 
     // Method 1: Look for chapter by href in chapterTitles.
     if (currentBookContent.chapterTitles) {
@@ -94,27 +107,27 @@ export function useInternalEpubLinks(params: {
 
     // Method 3: Look for anchor in current chapter.
     if (targetChapter === -1 && href.startsWith("#")) {
-      const anchorId = href.substring(1);
-      const currentContent = contentEl.innerHTML;
-      if (currentContent.includes(`id="${anchorId}"`)) {
-        const anchorEl = contentEl.querySelector(`#${anchorId}`);
-        if (anchorEl) {
+      const anchorId = fragmentId;
+      const anchorEl = Array.from(contentEl.querySelectorAll<HTMLElement>("[id]"))
+        .find((element) => element.id === anchorId);
+      if (anchorEl) {
+        if (!revealElementRef.current?.(anchorEl)) {
           anchorEl.scrollIntoView({ behavior: "smooth", block: "start" });
-          return;
         }
+        return;
       }
     }
 
     // Navigate to the target chapter if found.
     if (targetChapter >= 0 && targetChapter < currentBookContent.totalChapters) {
-      navigateRef.current(targetChapter);
+      navigateRef.current(targetChapter, fragmentId || undefined);
     } else {
       notifyError(String(link.textContent || href), {
         title: "Unable to navigate",
         description: "This link could not be mapped to a chapter in the current book structure.",
       });
     }
-  }, []); // Stable handler.
+  }, [contentRef]);
 
   // Handle internal EPUB links (bind once per book, not per chapter).
   useEffect(() => {

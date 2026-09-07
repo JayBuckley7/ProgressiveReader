@@ -21,7 +21,7 @@ describe("SettingsModal", () => {
     expect(screen.getByRole("button", { name: "Language tools" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Advanced" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "App & data" })).toBeInTheDocument();
-    expect(screen.getByText("Translate this chapter")).toBeInTheDocument();
+    expect(screen.getByText("Translate this page")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Translate" }));
     await user.click(screen.getByRole("button", { name: "Adapt to CEFR" }));
     expect(onTranslate).toHaveBeenNthCalledWith(1, false);

@@ -6,7 +6,8 @@ export interface AddBookmarkRequest {
   bookId: string;
   chapterIndex: number;
   position: number;
-  note?: any;
+  note?: string | null;
+  locator?: ReaderLocator | null;
 }
 
 export interface AddOpenAIKeyRequest {
@@ -40,11 +41,11 @@ export interface AdminStatusResponse {
 export interface Book {
   id: string;
   title: string;
-  fileType?: any;
-  driveFileId?: any;
-  filename?: any;
-  source?: any;
-  path?: any;
+  fileType?: string | null;
+  driveFileId?: string | null;
+  filename?: string | null;
+  source?: string | null;
+  path?: string | null;
 }
 
 export interface Bookmark {
@@ -52,8 +53,9 @@ export interface Bookmark {
   bookId: string;
   chapterIndex: number;
   position: number;
-  note?: any;
-  createdAt?: any;
+  note?: string | null;
+  createdAt?: string | null;
+  locator?: ReaderLocator | null;
 }
 
 export interface Deck {
@@ -214,6 +216,17 @@ export interface ProcessedToken {
   rubies?: Ruby[];
 }
 
+export interface ReaderLocator {
+  version: 2;
+  kind: 'reflow' | 'pdf';
+  chapterIndex?: number | null;
+  segmentId?: string | null;
+  textOffset?: number | null;
+  quote?: string | null;
+  progression?: number | null;
+  pageNumber?: number | null;
+}
+
 export interface RemoveOpenAIKeyRequest {
   key: string;
 }
@@ -315,6 +328,35 @@ export interface TranslateRequest {
 
 export interface TranslateResponse {
   translatedText: string;
+  modelUsed?: string | null;
+}
+
+export interface TranslateSegmentRequest {
+  id: string;
+  html: string;
+  sourceHash?: string | null;
+}
+
+export interface TranslateSegmentsRequest {
+  segments: TranslateSegmentRequest[];
+  targetLanguage?: string | null;
+  model?: string | null;
+  apiKey?: string | null;
+  cefrLevel?: string | null;
+  useCefr?: boolean | null;
+  promptVersion?: string | null;
+  stream?: boolean | null;
+}
+
+export interface TranslateSegmentsResponse {
+  segments: TranslatedSegment[];
+  modelUsed?: string | null;
+}
+
+export interface TranslatedSegment {
+  id: string;
+  translatedHtml: string;
+  sourceHash?: string | null;
   modelUsed?: string | null;
 }
 

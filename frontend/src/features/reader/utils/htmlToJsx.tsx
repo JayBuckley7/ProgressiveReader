@@ -2,7 +2,26 @@ import React from "react";
 import { parseDocument } from "htmlparser2";
 import type { Element, Text, Node } from "domhandler";
 
-export type HighlightFn = (text: string) => Array<React.ReactElement | string>;
+export interface HighlightContext {
+  /** Stable ordinal among highlightable text nodes in the complete HTML source. */
+  textNodeIndex: number;
+  /** Stable structural identity supplied by paginated reader content. */
+  segmentId?: string;
+}
+
+export type HighlightFn = (
+  text: string,
+  context?: HighlightContext
+) => Array<React.ReactElement | string>;
+
+export interface ParseHtmlToJsxOptions {
+  /**
+   * When supplied, highlighting only runs below matching data-pr-segment-id
+   * roots. An empty set intentionally highlights nothing; omission preserves
+   * the legacy whole-document behavior.
+   */
+  highlightSegmentIds?: ReadonlySet<string>;
+}
 
 // DOM "Name" production is broader than ASCII; we keep this conservative to avoid
 // InvalidCharacterError crashes when React creates DOM nodes / sets attributes.
@@ -105,18 +124,30 @@ const convertAttribs = (attribs: Record<string, string>) => {
  * Parse arbitrary HTML into a JSX tree. Optionally run a highlighting
  * function on text nodes.
  */
-export function parseHtmlToJsx(html: string, highlightFn?: HighlightFn): React.ReactElement {
+export function parseHtmlToJsx(
+  html: string,
+  highlightFn?: HighlightFn,
+  options: ParseHtmlToJsxOptions = {}
+): React.ReactElement {
   const dom = parseDocument(html);
+  let highlightableTextNodeIndex = 0;
+  const segmentScope = options.highlightSegmentIds;
 
   const convertNode = (
     node: Node,
     key: number,
-    inRawTextContainer: boolean
+    inRawTextContainer: boolean,
+    inHighlightedSegment: boolean,
+    activeSegmentId?: string
   ): React.ReactElement | string | null => {
     if (node.type === "text") {
       const textNode = node as Text;
       if (highlightFn && !inRawTextContainer) {
-        return <React.Fragment key={key}>{highlightFn(textNode.data)}</React.Fragment>;
+        const context = { textNodeIndex: highlightableTextNodeIndex, segmentId: activeSegmentId };
+        highlightableTextNodeIndex += 1;
+        if (segmentScope === undefined || inHighlightedSegment) {
+          return <React.Fragment key={key}>{highlightFn(textNode.data, context)}</React.Fragment>;
+        }
       }
       return textNode.data;
     }
@@ -128,7 +159,9 @@ export function parseHtmlToJsx(html: string, highlightFn?: HighlightFn): React.R
         // "1abc" or "a b", which would crash the render with InvalidCharacterError.
         // Preserve the content by rendering children directly.
         const children = (el.children || [])
-          .map((child: Node, i: number) => convertNode(child, i, inRawTextContainer))
+          .map((child: Node, i: number) =>
+            convertNode(child, i, inRawTextContainer, inHighlightedSegment, activeSegmentId)
+          )
           .filter((x): x is React.ReactElement | string => x !== null);
         return <React.Fragment key={key}>{children}</React.Fragment>;
       }
@@ -136,8 +169,17 @@ export function parseHtmlToJsx(html: string, highlightFn?: HighlightFn): React.R
       const tagLower = el.name.toLowerCase();
       const nextInRawTextContainer =
         inRawTextContainer || tagLower === "script" || tagLower === "style";
+      const ownSegmentId = el.attribs?.["data-pr-segment-id"];
+      const nextSegmentId = ownSegmentId || activeSegmentId;
+      const nextInHighlightedSegment = segmentScope === undefined
+        ? true
+        : ownSegmentId !== undefined
+          ? segmentScope.has(ownSegmentId)
+          : inHighlightedSegment;
       const children = (el.children || [])
-        .map((child: Node, i: number) => convertNode(child, i, nextInRawTextContainer))
+        .map((child: Node, i: number) =>
+          convertNode(child, i, nextInRawTextContainer, nextInHighlightedSegment, nextSegmentId)
+        )
         .filter((x): x is React.ReactElement | string => x !== null);
 
       return React.createElement(
@@ -150,5 +192,5 @@ export function parseHtmlToJsx(html: string, highlightFn?: HighlightFn): React.R
     return null;
   };
 
-  return <>{dom.children.map((node, i) => convertNode(node, i, false))}</>;
+  return <>{dom.children.map((node, i) => convertNode(node, i, false, false, undefined))}</>;
 }

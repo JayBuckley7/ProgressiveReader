@@ -256,5 +256,7 @@ function SignedOutLayout() {
 function BookReaderRoute() {
   const { bookId } = useParams<{ bookId: string }>();
   if (!bookId) return null;
-  return <BookReader bookId={bookId} />;
+  // Reader hooks own book-scoped progress, translation, speech, and DOM state.
+  // Remount at the route boundary so none of it can leak across book IDs.
+  return <BookReader key={bookId} bookId={bookId} />;
 }

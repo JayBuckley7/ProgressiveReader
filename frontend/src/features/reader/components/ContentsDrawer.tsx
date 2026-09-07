@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChapterTitle } from "~/types";
 import type { Bookmark } from "~/types/api";
@@ -24,10 +24,51 @@ export default function ContentsDrawer({
 }: ContentsDrawerProps) {
   const [activeTab, setActiveTab] = useState<"toc" | "bookmarks">("toc");
   const { t } = useTranslation();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (visible) setActiveTab("toc");
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const focusFrame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => !element.hasAttribute("hidden"));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [onClose, visible]);
 
   const tabClass = (tab: "toc" | "bookmarks") =>
     `flex min-h-11 flex-1 items-center justify-center border-b-2 px-3 text-center text-sm font-medium transition-colors ${
@@ -49,14 +90,17 @@ export default function ContentsDrawer({
     <div
       className={`fixed inset-0 z-40 ${visible ? "" : "pointer-events-none"}`}
       role="dialog"
-      aria-modal="true"
+      aria-modal={visible ? "true" : undefined}
+      aria-hidden={visible ? undefined : true}
       aria-labelledby="reader-contents-title"
+      inert={!visible}
     >
       <div className={`absolute inset-0 bg-black/30 transition-opacity ${visible ? "opacity-100" : "opacity-0"}`} onClick={onClose} />
-      <div className={`absolute left-0 top-0 h-full w-[calc(100vw-1rem)] max-w-sm bg-white dark:bg-gray-800 shadow-xl transform transition-transform ${visible ? "translate-x-0" : "-translate-x-full"}`}>
+      <div ref={panelRef} className={`absolute left-0 top-0 h-full w-[calc(100vw-1rem)] max-w-sm bg-white dark:bg-gray-800 shadow-xl transform transition-transform ${visible ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
           <h3 id="reader-contents-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('reader.toc.menu')}</h3>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"

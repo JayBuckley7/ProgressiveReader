@@ -5,8 +5,11 @@ interface ReaderDockProps {
   totalItems: number;
   onPrevious: () => void;
   onNext: () => void;
+  canPrevious?: boolean;
+  canNext?: boolean;
   rightToLeftPageTurning?: boolean;
   navigationUnit?: "chapter" | "page";
+  statusLabel?: string;
   onShowContents: () => void;
 }
 
@@ -15,14 +18,20 @@ export function ReaderDock({
   totalItems,
   onPrevious,
   onNext,
+  canPrevious,
+  canNext,
   rightToLeftPageTurning = false,
   navigationUnit = "chapter",
+  statusLabel,
   onShowContents,
 }: ReaderDockProps) {
   const { t } = useTranslation();
   const safeTotal = Math.max(1, totalItems);
   const currentPosition = Math.min(Math.max(1, currentIndex + 1), safeTotal);
   const progress = Math.min(100, Math.max(0, (currentPosition / safeTotal) * 100));
+  const previousEnabled = canPrevious ?? currentIndex > 0;
+  const nextEnabled = canNext ?? currentIndex + 1 < safeTotal;
+  const displayStatus = statusLabel || `${currentPosition} / ${safeTotal}`;
   const previousLabel = t(
     navigationUnit === "page" ? "reader.controls.prevPage" : "reader.controls.prev"
   );
@@ -33,7 +42,7 @@ export function ReaderDock({
     <button
       type="button"
       onClick={onPrevious}
-      disabled={currentIndex <= 0}
+      disabled={!previousEnabled}
       className="flex h-12 min-w-0 touch-manipulation items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold text-[color:var(--ui-text)] transition-[background-color,color,transform] hover:bg-[color:var(--ui-surface-alt)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-30 disabled:active:scale-100 motion-reduce:transition-none"
       aria-label={previousLabel}
       aria-keyshortcuts={rightToLeftPageTurning ? "ArrowRight" : "ArrowLeft"}
@@ -55,7 +64,7 @@ export function ReaderDock({
     <button
       type="button"
       onClick={onNext}
-      disabled={currentIndex + 1 >= safeTotal}
+      disabled={!nextEnabled}
       className="flex h-12 min-w-0 touch-manipulation items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold text-[color:var(--ui-text)] transition-[background-color,color,transform] hover:bg-[color:var(--ui-surface-alt)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-30 disabled:active:scale-100 motion-reduce:transition-none"
       aria-label={nextLabel}
       aria-keyshortcuts={rightToLeftPageTurning ? "ArrowLeft" : "ArrowRight"}
@@ -96,13 +105,13 @@ export function ReaderDock({
           type="button"
           onClick={onShowContents}
           className="flex h-11 touch-manipulation items-center justify-center gap-2 rounded-full border border-[color:var(--ui-border)] bg-[color:var(--ui-surface-alt)] px-3 text-sm font-semibold tabular-nums text-[color:var(--ui-text)] transition-[background-color,transform] hover:brightness-95 active:scale-[0.97] motion-reduce:transition-none sm:px-4"
-          aria-label={`${t("reader.controls.toc")}: ${currentPosition} / ${safeTotal}`}
+          aria-label={`${t("reader.controls.toc")}: ${displayStatus}`}
           aria-live="polite"
         >
           <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
-          <span>{currentPosition} / {safeTotal}</span>
+          <span className="max-w-52 truncate">{displayStatus}</span>
         </button>
 
         {rightToLeftPageTurning ? previousButton : nextButton}

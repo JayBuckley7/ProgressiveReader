@@ -2,7 +2,7 @@ import { Token, Card, CardState } from '~/types';
 import { Canceled } from '@shared/utils/util';
 import { notifyError } from '@shared/utils/notify';
 import { appLog } from '@shared/appLog';
-import { reverseIndex } from './parse.tsx';
+import { forEachReverseIndexEntry } from './parse.tsx';
 import { Keybind } from '~/types';
 import { vocabBank } from '@features/vocabulary/services/vocabBank';
 import { parseWithLocalLookup } from '@features/reader/utils/localTextParser';
@@ -385,16 +385,15 @@ export async function reviewCard(api: JpdbApiPort, card: Card, rating: string): 
 
 // Helper function to update UI for a card
 function updateUIForCard(card: Card, newState: CardState) {
-    const idx = reverseIndex.get(`${card.vid}/${card.sid}`);
-    if (!idx) return;
-    
     const className = `jpdb-word ${newState.join(' ')}`;
-    if (idx.className === className) return;
-    
-    for (const element of idx.elements) {
-        element.className = className;
-        element.jpdbData.token.card.state = newState;
-    }
-    
-    idx.className = className;
+    forEachReverseIndexEntry(`${card.vid}/${card.sid}`, (entry) => {
+        if (entry.className === className) return;
+
+        for (const element of entry.elements) {
+            element.className = className;
+            element.jpdbData.token.card.state = newState;
+        }
+
+        entry.className = className;
+    });
 } 
