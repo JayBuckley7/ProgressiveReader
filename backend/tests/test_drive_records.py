@@ -45,6 +45,18 @@ def test_idempotency_and_separate_collections():
         vocab.add_vocabulary_word('alice', 'different', 'meaning', 'Japanese')
 
 
+def test_precise_bookmark_location_survives_drive_replay():
+    from app.domains.books.schemas import ReaderLocator
+    storage = MemoryDrive()
+    _, books = repositories(storage, lambda: 'located-bookmark')
+    locator = ReaderLocator(version=2, kind='reflow', chapterIndex=2,
+        segmentId='segment-4', textOffset=8, progression=0.4)
+    first = books.add_bookmark('book', 2, 42, user_id='alice', locator=locator)
+    assert books.add_bookmark('book', 2, 42, user_id='alice', locator=locator) == first
+    assert len(storage.operations) == 1
+    assert books.get_bookmarks('book', 'alice')[0].locator == locator
+
+
 def test_concurrent_writes_duplicates_and_mastered_order():
     storage = MemoryDrive()
     a, _ = repositories(storage, lambda: 'create-a')

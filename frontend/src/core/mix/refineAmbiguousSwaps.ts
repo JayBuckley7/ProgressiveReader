@@ -62,11 +62,16 @@ export function getRefineCacheKey(args: {
   chapter: number;
   model: string;
   textSample: string;
+  scopeSignature?: string;
   ambiguousKeys: string[];
   candidatesByKey: Record<string, Array<{ id: string }>>;
 }): string {
   const normalized = {
     model: args.model,
+    // Page-scoped refinement choices are contextual. Include the ordered
+    // structural ids and source hashes so a different visual page cannot
+    // inherit a cache entry produced for the previous page view.
+    scopeSignature: args.scopeSignature || "",
     ambiguousKeys: args.ambiguousKeys.slice().sort(),
     candidatesByKey: Object.fromEntries(
       Object.entries(args.candidatesByKey)

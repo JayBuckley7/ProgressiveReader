@@ -4,6 +4,7 @@ import { useAppDeps } from '@app/deps/AppDepsProvider';
 import type { DrivePort } from '@core/drive/ports';
 
 import type { BookMetadata, Folder, ReadingProgress } from '~/types';
+import type { ReaderLocator } from '~/types/api';
 
 function useDriveStatus(): {
   isDriveConnected: boolean;
@@ -88,7 +89,8 @@ export type AppDataContextType = {
     totalPages?: number,
     fileType?: string,
     scrollHeight?: number,
-    viewportHeight?: number
+    viewportHeight?: number,
+    locator?: ReaderLocator
   ) => Promise<void>;
   saveSettings: (settings: any) => Promise<boolean>;
   loadSettings: () => Promise<any>;

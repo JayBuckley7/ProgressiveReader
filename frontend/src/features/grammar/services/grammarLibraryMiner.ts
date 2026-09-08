@@ -51,6 +51,9 @@ function clamp01(n: number): number {
 
 function percentFromProgress(progress: ReadingProgress | null): number {
   if (!progress) return 0;
+  if (progress.locator?.kind === "reflow" && typeof progress.locator.progression === "number") {
+    return clamp01(progress.locator.progression);
+  }
   const scrollTop = (progress as any).currentPosition;
   const scrollHeight = (progress as any).scrollHeight;
   const viewportHeight = (progress as any).viewportHeight;

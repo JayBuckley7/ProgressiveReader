@@ -106,3 +106,168 @@ def test_translate_chapter_api_key_not_configured(client):
     assert response.status_code == 400
     data = response.get_json()
     assert 'error' in data
+
+
+def test_translate_segments_matches_camel_case_contract_and_batches_once(client, mock_provider):
+    mock_provider.translate_chapter.side_effect = lambda **kwargs: (
+        kwargs["content"].replace("<p>one</p>", "<p>ONE</p>").replace("<em>two</em>", "<em>TWO</em>")
+    )
+    container = Mock()
+    container.openai_key_resolver.resolve.return_value = "resolved-key"
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
+        "segments": [
+            {"id": "s-1", "html": "<p>one</p>", "sourceHash": "hash-1"},
+            {"id": "s-2", "html": "<em>two</em>"},
+        ],
+        "targetLanguage": "English",
+        "model": "gpt-4o-mini",
+        "useCefr": True,
+        "cefrLevel": "B2",
+        "promptVersion": "segments-v1",
+    })
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "segments": [
+            {
+                "id": "s-1",
+                "translatedHtml": "<p>ONE</p>",
+                "sourceHash": "hash-1",
+                "modelUsed": "gpt-4o-mini",
+            },
+            {
+                "id": "s-2",
+                "translatedHtml": "<em>TWO</em>",
+                "modelUsed": "gpt-4o-mini",
+            },
+        ],
+        "modelUsed": "gpt-4o-mini",
+    }
+    mock_provider.translate_chapter.assert_called_once()
+    call = mock_provider.translate_chapter.call_args.kwargs
+    assert call["target_lang"] == "English"
+    assert call["use_cefr"] is True
+    assert call["cefr_level"] == "B2"
+
+
+def test_translate_segments_accepts_snake_case_and_target_lang_alias(client, mock_provider):
+    mock_provider.translate_chapter.side_effect = lambda **kwargs: kwargs["content"]
+    container = Mock()
+    container.openai_key_resolver.resolve.return_value = "resolved-key"
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
+        "segments": [{"id": "s-1", "html": "<p>one</p>", "source_hash": "hash-1"}],
+        "target_lang": "French",
+        "use_cefr": False,
+        "prompt_version": "segments-v1",
+    })
+
+    assert response.status_code == 200
+    assert response.get_json()["segments"][0]["sourceHash"] == "hash-1"
+    assert mock_provider.translate_chapter.call_args.kwargs["target_lang"] == "French"
+
+
+def test_translate_segments_streaming_sends_typed_segment_events(client, mock_provider):
+    mock_provider.stream_translate_chapter.side_effect = lambda **kwargs: iter([
+        kwargs["content"].replace("<p>one</p>", "<p>ONE</p>"),
+    ])
+    container = Mock()
+    container.openai_key_resolver.resolve.return_value = "resolved-key"
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
+        "segments": [{"id": "s-1", "html": "<p>one</p>", "sourceHash": "hash-1"}],
+        "targetLanguage": "English",
+        "stream": True,
+    })
+
+    assert response.status_code == 200
+    assert response.content_type == "text/event-stream"
+    body = response.get_data(as_text=True)
+    assert '"segmentCount": 1' in body
+    assert '"translatedHtml": "<p>ONE</p>"' in body
+    assert '"sourceHash": "hash-1"' in body
+    assert "data: [DONE]" in body
+    mock_provider.stream_translate_chapter.assert_called_once()
+
+
+def test_translate_segments_returns_paid_subset_when_repair_cannot_restore_all_boundaries(client, mock_provider):
+    mock_provider.translate_chapter.side_effect = [
+        '<pr-translation-segment data-pr-index="0"><p>ONE</p></pr-translation-segment>',
+        "<p>translated without boundaries</p>",
+    ]
+    container = Mock()
+    container.openai_key_resolver.resolve.return_value = "resolved-key"
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
+        "segments": [
+            {"id": "s-1", "html": "<p>one</p>", "sourceHash": "hash-1"},
+            {"id": "s-2", "html": "<p>two</p>", "sourceHash": "hash-2"},
+        ],
+        "targetLanguage": "English",
+    })
+
+    assert response.status_code == 200
+    assert response.get_json()["segments"] == [{
+        "id": "s-1",
+        "translatedHtml": "<p>ONE</p>",
+        "sourceHash": "hash-1",
+        "modelUsed": "gpt-5.6-luna",
+    }]
+    assert mock_provider.translate_chapter.call_count == 2
+    assert "<p>one</p>" not in mock_provider.translate_chapter.call_args_list[1].kwargs["content"]
+    assert "<p>two</p>" in mock_provider.translate_chapter.call_args_list[1].kwargs["content"]
+
+
+def test_translate_segments_stream_marks_an_exhausted_partial_batch_incomplete(client, mock_provider):
+    mock_provider.stream_translate_chapter.side_effect = [
+        iter(['<pr-translation-segment data-pr-index="0"><p>ONE</p></pr-translation-segment>']),
+        iter(["<p>translated without boundaries</p>"]),
+    ]
+    container = Mock()
+    container.openai_key_resolver.resolve.return_value = "resolved-key"
+    container.make_translation_service.return_value = TranslationService(mock_provider)
+    client.application.extensions["container"] = container
+
+    response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
+        "segments": [
+            {"id": "s-1", "html": "<p>one</p>"},
+            {"id": "s-2", "html": "<p>two</p>"},
+        ],
+        "targetLanguage": "English",
+        "stream": True,
+    })
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert '"id": "s-1"' in body
+    assert '"complete": false' in body
+    assert "data: [DONE]" in body
+    assert mock_provider.stream_translate_chapter.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "segments",
+    [[], [{"id": "duplicate", "html": "one"}, {"id": "duplicate", "html": "two"}]],
+)
+def test_translate_segments_rejects_empty_or_duplicate_segments(client, segments):
+    response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
+        "segments": segments,
+        "targetLanguage": "English",
+    })
+
+    assert response.status_code == 400

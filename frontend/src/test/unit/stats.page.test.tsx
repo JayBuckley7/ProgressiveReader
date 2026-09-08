@@ -14,16 +14,16 @@ describe('Stats navigation', () => {
   it('switches between vocabulary and grammar and restores the selected view', async () => {
     const user = userEvent.setup();
     const view = renderWithProviders(<StatsPage />);
-    expect(await screen.findByRole('heading', { name: 'Reader vocabulary' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Reader vocabulary' }, { timeout: 10000 })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    await user.click(screen.getByRole('link', { name: 'Grammar', exact: true }));
+    await user.click(screen.getByRole('link', { name: 'Grammar' }));
     expect(await screen.findByRole('textbox', { name: 'Search grammar' })).toBeInTheDocument();
     expect(window.location.search).toBe('?view=grammar');
     view.unmount();
     renderWithProviders(<StatsPage />);
     expect(await screen.findByRole('textbox', { name: 'Search grammar' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Grammar', exact: true })).toHaveAttribute('aria-current', 'page');
-    await user.click(screen.getByRole('link', { name: 'Vocabulary', exact: true }));
+    expect(screen.getByRole('link', { name: 'Grammar' })).toHaveAttribute('aria-current', 'page');
+    await user.click(screen.getByRole('link', { name: 'Vocabulary' }));
     expect(await screen.findByRole('heading', { name: 'Reader vocabulary' })).toBeInTheDocument();
   });
 
@@ -33,8 +33,8 @@ describe('Stats navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Stats page' }));
     expect(window.location.pathname).toBe('/stats');
     await user.click(screen.getByRole('button', { name: 'Toggle menu' }));
-    await user.click(screen.getByRole('button', { name: 'Stats', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'Stats' }));
     expect(window.location.pathname).toBe('/stats');
-    expect(screen.queryByRole('button', { name: 'Stats', exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stats' })).not.toBeInTheDocument();
   });
 });

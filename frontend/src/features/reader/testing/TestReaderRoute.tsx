@@ -115,7 +115,8 @@ function createTestReaderData(book: BookMetadata, fileUrl: string): AppDataConte
       totalPages,
       fileType,
       scrollHeight,
-      viewportHeight
+      viewportHeight,
+      locator
     ) => {
       const progress: ReadingProgress = {
         bookId,
@@ -127,6 +128,7 @@ function createTestReaderData(book: BookMetadata, fileUrl: string): AppDataConte
         fileType,
         scrollHeight,
         viewportHeight,
+        locator,
         lastUpdated: new Date(),
       };
       localStorage.setItem(progressKey, JSON.stringify(progress));

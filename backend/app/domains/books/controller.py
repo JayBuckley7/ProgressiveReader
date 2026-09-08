@@ -31,6 +31,7 @@ class BooksController:
             position=req.position,
             note=req.note,
             user_id=user_id,
+            locator=req.locator,
         )
         return bookmark.model_dump()
 

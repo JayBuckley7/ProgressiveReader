@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from .schemas import Book, Bookmark
+from .schemas import Book, Bookmark, ReaderLocator
 
 
 class BooksRepositoryPort(ABC):
@@ -21,6 +21,7 @@ class BooksRepositoryPort(ABC):
         position: int,
         note: Optional[str] = None,
         user_id: Optional[str] = None,
+        locator: Optional[ReaderLocator] = None,
     ) -> Bookmark:
         raise NotImplementedError
 

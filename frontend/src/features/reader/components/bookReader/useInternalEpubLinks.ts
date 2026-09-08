@@ -13,11 +13,12 @@ function decode(value: string): string {
 export function useInternalEpubLinks(params: {
   bookId: string;
   isPdf: boolean;
-  contentRef: React.RefObject<HTMLElement>;
+  contentRef: React.RefObject<HTMLElement | null>;
   bookContent: LinkableBookContent | null;
   currentChapter: number;
   renderedChapter: number | null;
-  navigateToChapter: (chapterIndex: number) => void;
+  navigateToChapter: (chapterIndex: number, fragmentId?: string) => void;
+  revealElement?: (element: HTMLElement) => boolean;
 }) {
   const pendingAnchor = useRef<{ bookId: string; chapter: number; id: string } | null>(null);
 
@@ -30,7 +31,7 @@ export function useInternalEpubLinks(params: {
       const anchor = Array.from(surface.querySelectorAll<HTMLElement>("[id], a[name]"))
         .find(el => el.id === id || el.getAttribute("name") === id);
       if (!anchor) return false;
-      anchor.scrollIntoView({ block: "start", inline: "start" });
+      if (!params.revealElement?.(anchor)) anchor.scrollIntoView({ block: "start", inline: "start" });
       return true;
     };
     const restoreAnchor = () => {
@@ -70,7 +71,8 @@ export function useInternalEpubLinks(params: {
         return;
       }
       pendingAnchor.current = id ? { bookId, chapter: match.index, id } : null;
-      navigateToChapter(match.index);
+      if (params.revealElement) navigateToChapter(match.index, id || undefined);
+      else navigateToChapter(match.index);
       if (match.index === renderedChapter) restoreAnchor();
     };
     surface.addEventListener("click", handleClick);

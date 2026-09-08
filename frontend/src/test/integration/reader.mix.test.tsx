@@ -12,6 +12,7 @@ vi.mock("@features/reader/hooks/useBookContent", () => ({
       chapterTitles: [{ index: 0, title: "Chapter 1", href: "" }],
     },
     currentChapterContent: "<p>I went to the park with my dog.</p>",
+    currentChapterContentChapter: 0,
     isLoading: false,
     error: null,
   }),
@@ -42,6 +43,28 @@ vi.mock("@features/jpdbMirror/db", () => {
 
 describe("Reader integration: mix mode", () => {
   beforeEach(() => {
+    const originalBoundingRect = HTMLElement.prototype.getBoundingClientRect;
+    const originalClientRects = Element.prototype.getClientRects;
+
+    // JSDOM does not perform layout, so every element otherwise reports an
+    // empty rectangle. Model a single visible reader page so pagination can
+    // discover its segment before page-scoped mix processing begins.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      if (this.classList.contains("pr-reflow-viewport")) {
+        return new DOMRect(0, 0, 800, 600);
+      }
+      if (this.hasAttribute("data-pr-segment-id")) {
+        return new DOMRect(24, 24, 500, 32);
+      }
+      return originalBoundingRect.call(this);
+    });
+    vi.spyOn(Element.prototype, "getClientRects").mockImplementation(function () {
+      if (this instanceof HTMLElement && this.hasAttribute("data-pr-segment-id")) {
+        return [this.getBoundingClientRect()] as unknown as DOMRectList;
+      }
+      return originalClientRects.call(this);
+    });
+
     // Enable mix mode via SettingsContext localStorage load.
     localStorage.setItem(
       "prSettings",
@@ -57,6 +80,7 @@ describe("Reader integration: mix mode", () => {
 
   afterEach(() => {
     localStorage.removeItem("prSettings");
+    vi.restoreAllMocks();
   });
 
   it("swaps known nouns into English text", async () => {

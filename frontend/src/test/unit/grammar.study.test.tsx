@@ -18,7 +18,7 @@ describe('Grammar progress and reading support without AI', () => {
     await user.click(screen.getByRole('button', { name: 'Start learning' }));
     await waitFor(() => expect(loadGrammarStateV2FromLocalStorage('test-user').learningIds).toHaveLength(1));
     expect(screen.getByText('Learning patterns').nextElementSibling).toHaveTextContent('1');
-    await user.click(screen.getByRole('button', { name: 'Mark known', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'Mark known' }));
     await waitFor(() => expect(loadGrammarStateV2FromLocalStorage('test-user').knownIds).toHaveLength(1));
     expect(loadGrammarStateV2FromLocalStorage('test-user').learningIds).toEqual([]);
     expect(screen.getByText('Known patterns').nextElementSibling).toHaveTextContent('1');

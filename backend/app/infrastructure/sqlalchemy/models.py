@@ -15,6 +15,7 @@ class Bookmark(db.Model):
     chapter_index = db.Column(db.Integer, nullable=False)
     position = db.Column(db.Integer, nullable=False)
     note = db.Column(db.String(255))
+    locator_json = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 

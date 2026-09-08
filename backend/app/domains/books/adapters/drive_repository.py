@@ -18,8 +18,9 @@ class DriveBooksRepository(BooksRepositoryPort):
                 result.append(bookmark)
         return sorted(result, key=lambda b: (b.createdAt or '', int(b.id)))
 
-    def add_bookmark(self, book_id, chapter_index, position, note=None, user_id=None):
+    def add_bookmark(self, book_id, chapter_index, position, note=None, user_id=None, locator=None):
         data = self.records.write(user_id, 'bookmark', 'create', {
             'bookId': book_id, 'chapterIndex': chapter_index, 'position': position, 'note': note,
+            **({'locator': locator.model_dump(mode='json')} if locator is not None else {}),
         })
         return Bookmark(**data)

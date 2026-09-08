@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useUser } from "@clerk/clerk-react";
 import ContentsDrawer from "./ContentsDrawer";
 import type { ChapterTitle } from "~/types";
-import type { Bookmark } from "~/types/api";
+import type { Bookmark, ReaderLocator } from "~/types/api";
 import { appLog } from "@shared/appLog";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
 import { notifyError } from "@shared/utils/notify";
@@ -16,6 +16,11 @@ interface ReaderControlsProps {
   onCloseContents: () => void;
   currentChapter: number;
   totalChapters: number;
+  navigationIndex?: number;
+  navigationTotal?: number;
+  navigationStatus?: string;
+  canPrevious?: boolean;
+  canNext?: boolean;
   onPrevChapter: () => void;
   onNextChapter: () => void;
   rightToLeftPageTurning?: boolean;
@@ -25,11 +30,14 @@ interface ReaderControlsProps {
   onSelectChapter: (index: number) => void;
   onSelectBookmark: (bookmark: Bookmark) => void;
   getBookmarkPosition: () => number;
+  getBookmarkLocator?: () => ReaderLocator | undefined;
   onToggleTts: () => void;
   onToggleHighlight: () => void;
   onTranslate: () => void;
+  translationAvailable?: boolean;
   translating: boolean;
   ttsActive: boolean;
+  ttsAvailable?: boolean;
   jpdbHighlighted: boolean;
   mixEnabled: boolean;
   onShowMixSettings: () => void;
@@ -43,6 +51,11 @@ function ReaderControlsComponent({
   onCloseContents,
   currentChapter,
   totalChapters,
+  navigationIndex,
+  navigationTotal,
+  navigationStatus,
+  canPrevious,
+  canNext,
   onPrevChapter,
   onNextChapter,
   rightToLeftPageTurning = false,
@@ -52,11 +65,14 @@ function ReaderControlsComponent({
   onSelectChapter,
   onSelectBookmark,
   getBookmarkPosition,
+  getBookmarkLocator,
   onToggleTts,
   onToggleHighlight,
   onTranslate,
+  translationAvailable = true,
   translating,
   ttsActive,
+  ttsAvailable = true,
   jpdbHighlighted,
   mixEnabled,
   onShowMixSettings,
@@ -147,6 +163,7 @@ function ReaderControlsComponent({
           bookId,
           chapterIndex: currentChapter,
           position: getBookmarkPosition(),
+          locator: getBookmarkLocator?.(),
           note: note || undefined,
         });
         setBookmarks((prev) => [...prev, newBookmark]);
@@ -188,7 +205,7 @@ function ReaderControlsComponent({
     <button
       type="button"
       onClick={handlePrevChapter}
-      disabled={currentChapter === 0}
+      disabled={!(canPrevious ?? currentChapter > 0)}
       className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
       aria-label={t(navigationUnit === "page" ? "reader.controls.prevPage" : "reader.controls.prev")}
     >
@@ -209,7 +226,7 @@ function ReaderControlsComponent({
     <button
       type="button"
       onClick={handleNextChapter}
-      disabled={currentChapter + 1 >= totalChapters}
+      disabled={!(canNext ?? currentChapter + 1 < totalChapters)}
       className={`${bigBtn} min-h-11 disabled:opacity-50 flex items-center justify-center gap-2`}
       aria-label={t(navigationUnit === "page" ? "reader.controls.nextPage" : "reader.controls.next")}
     >
@@ -274,37 +291,42 @@ function ReaderControlsComponent({
                 t("reader.controls.chapterFallback", { chapter: currentChapter + 1 })}
             </div>
             <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-              {t("reader.controls.progress", {
-                current: currentChapter + 1,
-                total: Math.max(1, totalChapters),
-              })}
+              {navigationStatus ||
+                t("reader.controls.progress", {
+                  current: (navigationIndex ?? currentChapter) + 1,
+                  total: Math.max(1, navigationTotal ?? totalChapters),
+                })}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <button
-              onClick={onTranslate}
-              disabled={translating}
-              className={actionBtn}
-              aria-label={t('reader.controls.translate')}
-            >
-              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
-              </svg>
-              <span>
-                {translating ? t("reader.controls.translating") : t("reader.controls.translateShort")}
-              </span>
-            </button>
-            <button
-              onClick={onToggleTts}
-              className={actionBtn}
-              aria-label={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
-            >
-              <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H2v6h4l5 4V5zM19 9v6M15 7v10" />
-              </svg>
-              <span>{ttsActive ? t("reader.controls.stopReading") : t("reader.controls.readAloud")}</span>
-            </button>
+            {translationAvailable && (
+              <button
+                onClick={onTranslate}
+                disabled={translating}
+                className={actionBtn}
+                aria-label={t('reader.controls.translate')}
+              >
+                <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
+                </svg>
+                <span>
+                  {translating ? t("reader.controls.translating") : t("reader.controls.translateShort")}
+                </span>
+              </button>
+            )}
+            {ttsAvailable && (
+              <button
+                onClick={onToggleTts}
+                className={actionBtn}
+                aria-label={ttsActive ? t('reader.controls.ttsStop') : t('reader.controls.ttsStart')}
+              >
+                <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H2v6h4l5 4V5zM19 9v6M15 7v10" />
+                </svg>
+                <span>{ttsActive ? t("reader.controls.stopReading") : t("reader.controls.readAloud")}</span>
+              </button>
+            )}
             <button
               onClick={onToggleHighlight}
               className={`${actionBtn} ${jpdbHighlighted ? "border-yellow-400 bg-yellow-50 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-100" : ""}`}

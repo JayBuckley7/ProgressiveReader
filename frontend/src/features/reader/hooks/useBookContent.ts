@@ -123,6 +123,31 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
           fileType: bookMetadata.fileType,
         });
 
+        // PDFs have their own physical-page viewer and are downloaded there
+        // after progress restoration. Do not also parse every PDF page through
+        // TextProcessor: that duplicate path delays first paint and creates
+        // invisible chapter HTML that language tools could accidentally spend
+        // against.
+        if (bookMetadata.fileType === 'pdf') {
+          if (activeLoadRef.current?.requestId !== requestId) return;
+          processorRef.current = null;
+          setCurrentChapterContent(null);
+          setCurrentChapterContentChapter(null);
+          setBookContent({
+            title: bookMetadata.title,
+            totalChapters: 1,
+            chapters: [],
+            chapterTitles: [{ index: 0, title: bookMetadata.title, href: '' }],
+          });
+          loadedBookIdRef.current = bookId;
+          prevMetadataRef.current = {
+            title: bookMetadata.title,
+            fileType: bookMetadata.fileType,
+            driveFileId: bookMetadata.driveFileId,
+          };
+          return;
+        }
+
         // Get the processors
         const processors = getProcessors();
 
@@ -162,18 +187,11 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         const totalChapters = processor.getTotalChapters();
         const chapterTitles = (await processor.getChapterTitles()) as ChapterTitle[];
 
-        // Pre-load all chapters (for smaller books) or load them on-demand
+        // Chapters are intentionally loaded on demand. Besides improving initial render time,
+        // this prevents small books from doing chapter-wide DOM work before the reader has even
+        // displayed its first page.
         const chapters: string[] = [];
-        if (totalChapters <= 10) {
-          // Pre-load all chapters for small books
-          appLog.debug('[useBookContent] Preloading chapters', { bookId, totalChapters });
-          for (let i = 0; i < totalChapters; i++) {
-            const chapterHtml = await processor.getChapterHtml(i);
-            chapters[i] = chapterHtml || '';
-          }
-        } else {
-          appLog.debug('[useBookContent] Skipping preload (large book)', { bookId, totalChapters });
-        }
+        appLog.debug('[useBookContent] Chapter loading is on-demand', { bookId, totalChapters });
 
         // Bail out if the user navigated away before load finished
         if (activeLoadRef.current?.requestId !== requestId) {

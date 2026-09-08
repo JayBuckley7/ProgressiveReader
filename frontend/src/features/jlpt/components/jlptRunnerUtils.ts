@@ -359,7 +359,7 @@ export const buildOverallSummary = (params: {
 };
 
 export const extractLevel = (name: string, meta?: JlptRunnerTestMeta | null) =>
-  extractCatalogLevel(name, meta) || 'N5';
+  extractCatalogLevel(name, meta ?? undefined) || 'N5';
 
 export const getReviewOutcome = (params: {
   question: JlptRunnerQuestion;

@@ -28,7 +28,7 @@ export type Fragment = {
 export type Paragraph = Fragment[];
 
 export function displayCategory(node: Node): 'text' | 'ruby' | 'ruby-text' | 'inline' | 'block' | 'none' {
-    if (node instanceof Text || node instanceof CDATASection) {
+    if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
         return 'text';
     } else if (node instanceof Element) {
         // Translation overlays must be ignored by the tokenizer/fragments so JPDB offsets still map
@@ -124,7 +124,87 @@ function wrap(node: Node, wrapper: HTMLElement) {
     wrapper.append(node);
 }
 
-export const reverseIndex = new Map<string, { className: string; elements: JpdbWord[] }>();
+export type ReverseIndexEntry = { className: string; elements: JpdbWord[] };
+
+const LEGACY_REVERSE_INDEX = Symbol('legacy-jpdb-content');
+type ReverseIndexScope = string | typeof LEGACY_REVERSE_INDEX;
+
+// Segment-scoped indexes keep one page cleanup from discarding word references on adjacent pages.
+// Calls through the legacy whole-content API use the dedicated symbol scope.
+const reverseIndexes = new Map<ReverseIndexScope, Map<string, ReverseIndexEntry>>();
+const reverseIndexScopeByElement = new WeakMap<JpdbWord, ReverseIndexScope>();
+
+function reverseIndexForScope(scope: ReverseIndexScope): Map<string, ReverseIndexEntry> {
+    let index = reverseIndexes.get(scope);
+    if (!index) {
+        index = new Map();
+        reverseIndexes.set(scope, index);
+    }
+    return index;
+}
+
+function addToReverseIndex(
+    cardKey: string,
+    className: string,
+    element: JpdbWord,
+    segmentId?: string,
+): void {
+    const scope = segmentId || LEGACY_REVERSE_INDEX;
+    const index = reverseIndexForScope(scope);
+    const entry = index.get(cardKey);
+    if (entry) entry.elements.push(element);
+    else index.set(cardKey, { className, elements: [element] });
+    reverseIndexScopeByElement.set(element, scope);
+}
+
+/** Remove only index entries associated with the supplied rendered word elements. */
+export function removeFromReverseIndexes(elements: Iterable<JpdbWord>): void {
+    const removedByScope = new Map<ReverseIndexScope, Set<JpdbWord>>();
+    for (const element of elements) {
+        const scope = reverseIndexScopeByElement.get(element);
+        if (scope === undefined) continue;
+        let removed = removedByScope.get(scope);
+        if (!removed) {
+            removed = new Set();
+            removedByScope.set(scope, removed);
+        }
+        removed.add(element);
+        reverseIndexScopeByElement.delete(element);
+    }
+
+    for (const [scope, removed] of removedByScope) {
+        const index = reverseIndexes.get(scope);
+        if (!index) continue;
+        for (const [cardKey, entry] of index) {
+            entry.elements = entry.elements.filter((element) => !removed.has(element));
+            if (entry.elements.length === 0) index.delete(cardKey);
+        }
+        if (index.size === 0) reverseIndexes.delete(scope);
+    }
+}
+
+/** Drop complete indexes for segments whose DOM is being replaced or unwrapped. */
+export function clearReverseIndexSegments(segmentIds: Iterable<string>): void {
+    for (const segmentId of segmentIds) {
+        const index = reverseIndexes.get(segmentId);
+        if (!index) continue;
+        for (const entry of index.values()) {
+            entry.elements.forEach((element) => reverseIndexScopeByElement.delete(element));
+        }
+        reverseIndexes.delete(segmentId);
+    }
+}
+
+/** Visit matching entries across legacy content and every currently rendered segment. */
+export function forEachReverseIndexEntry(
+    cardKey: string,
+    visit: (entry: ReverseIndexEntry) => void,
+): void {
+    for (const index of reverseIndexes.values()) {
+        const entry = index.get(cardKey);
+        if (entry) visit(entry);
+    }
+}
 
 // Function that will be hooked up to event handlers
 let onWordHoverStart: (event: MouseEvent) => void = () => {};
@@ -201,7 +281,11 @@ function getColorClass(token: Token): string {
     }
 }
 
-export function applyTokens(fragments: Paragraph, tokens: Token[]) {
+export function applyTokens(
+    fragments: Paragraph,
+    tokens: Token[],
+    options: { segmentId?: string } = {},
+) {
     fragments = fragments.filter(f => f.length > 0);
     let fragmentIndex = 0;
     let curOffset = 0;
@@ -292,12 +376,12 @@ export function applyTokens(fragments: Paragraph, tokens: Token[]) {
                 }
             });
 
-            const idx = reverseIndex.get(`${token.card.vid}/${token.card.sid}`);
-            if (idx === undefined) {
-                reverseIndex.set(`${token.card.vid}/${token.card.sid}`, { className, elements: [wrapper] });
-            } else {
-                idx.elements.push(wrapper);
-            }
+            addToReverseIndex(
+                `${token.card.vid}/${token.card.sid}`,
+                className,
+                wrapper,
+                options.segmentId,
+            );
 
             wrapper.jpdbData = {
                 token,

@@ -2,11 +2,34 @@ from __future__ import annotations
 
 from ....core.errors import require_identity
 
+import json
 from typing import List, Optional, Any
 
 from ....infrastructure.sqlalchemy.models import Bookmark as BookmarkModel
 from ..ports import BooksRepositoryPort
-from ..schemas import Bookmark
+from ..schemas import Bookmark, ReaderLocator
+
+
+def _decode_locator(raw: Optional[str]) -> Optional[ReaderLocator]:
+    if not raw:
+        return None
+    try:
+        return ReaderLocator.model_validate(json.loads(raw))
+    except (TypeError, ValueError):
+        # A malformed optional locator must not make older bookmark rows unreadable.
+        return None
+
+
+def _to_bookmark(bookmark: BookmarkModel) -> Bookmark:
+    return Bookmark(
+        id=bookmark.id,
+        bookId=bookmark.book_id,
+        chapterIndex=bookmark.chapter_index,
+        position=bookmark.position,
+        note=bookmark.note,
+        createdAt=bookmark.created_at.isoformat() if bookmark.created_at else None,
+        locator=_decode_locator(getattr(bookmark, "locator_json", None)),
+    )
 
 
 class SqlAlchemyBooksRepository(BooksRepositoryPort):
@@ -20,17 +43,7 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
         if user_id:
             query = query.filter_by(user_id=user_id)
         bookmarks = query.order_by(BookmarkModel.created_at).all()
-        return [
-            Bookmark(
-                id=b.id,
-                bookId=b.book_id,
-                chapterIndex=b.chapter_index,
-                position=b.position,
-                note=b.note,
-                createdAt=b.created_at.isoformat() if b.created_at else None,
-            )
-            for b in bookmarks
-        ]
+        return [_to_bookmark(bookmark) for bookmark in bookmarks]
 
     def add_bookmark(
         self,
@@ -39,6 +52,7 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
         position: int,
         note: Optional[str] = None,
         user_id: Optional[str] = None,
+        locator: Optional[ReaderLocator] = None,
     ) -> Bookmark:
         """Create a bookmark."""
         require_identity(user_id)
@@ -48,17 +62,15 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
             chapter_index=chapter_index,
             position=position,
             note=note,
+            locator_json=(
+                json.dumps(locator.model_dump(mode="json"), ensure_ascii=False, separators=(",", ":"))
+                if locator is not None
+                else None
+            ),
         )
         self._session.add(bookmark)
         self._session.commit()
-        return Bookmark(
-            id=bookmark.id,
-            bookId=bookmark.book_id,
-            chapterIndex=bookmark.chapter_index,
-            position=bookmark.position,
-            note=bookmark.note,
-            createdAt=bookmark.created_at.isoformat() if bookmark.created_at else None,
-        )
+        return _to_bookmark(bookmark)
 
 
 __all__ = ["SqlAlchemyBooksRepository"]

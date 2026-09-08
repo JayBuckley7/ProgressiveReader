@@ -76,7 +76,7 @@ def test_repositories_fail_closed_without_http(secured):
             call()
 
 
-@pytest.mark.parametrize('path', ['/api/translate/chapter', '/api/grammar/validate-examples', '/api/grammar/teach-examples', '/api/mix/refine', '/api/ocr/process', '/api/ocr/layout/page'])
+@pytest.mark.parametrize('path', ['/api/translate/chapter', '/api/translate/segments', '/api/grammar/validate-examples', '/api/grammar/teach-examples', '/api/mix/refine', '/api/ocr/process', '/api/ocr/layout/page'])
 def test_server_funded_calls_never_invoke_providers(secured, path):
     client, container, _, _ = secured
     assert client.post(path, json={'content': 'test'}).status_code == 401

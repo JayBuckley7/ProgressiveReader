@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useClerk, useUser } from "@clerk/clerk-react";
 
 import type { BookMetadata, Folder, ReadingProgress } from "~/types";
+import type { ReaderLocator } from "~/types/api";
 
 import { createBookCacheService } from "@features/books/services/bookCache";
 import { createBookStorageService } from "@features/books/services/bookStorage";
@@ -462,7 +463,8 @@ function useStorageService() {
       totalPages?: number,
       fileType?: string,
       scrollHeight?: number,
-      viewportHeight?: number
+      viewportHeight?: number,
+      locator?: ReaderLocator
     ): Promise<void> => {
       try {
         await bookStorage.saveBookProgress(
@@ -473,7 +475,8 @@ function useStorageService() {
           totalPages,
           fileType,
           scrollHeight,
-          viewportHeight
+          viewportHeight,
+          locator
         );
       } catch (error) {
         appLog.error("[useStorageService] Error saving book progress", error);

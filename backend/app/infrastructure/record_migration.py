@@ -32,6 +32,10 @@ def export_sqlite(path, source):
                 else:
                     payload = dict(id=row['id'], bookId=row['book_id'], chapterIndex=row['chapter_index'],
                         position=row['position'], note=row['note'], createdAt=row['created_at'])
+                    if row.get('locator_json'):
+                        from ..domains.books.schemas import ReaderLocator
+                        # Stop on corrupt optional locations rather than silently dropping them.
+                        payload['locator'] = ReaderLocator.model_validate_json(row['locator_json']).model_dump(mode='json')
                 records.append({'owner': row['user_id'], 'kind': kind, 'id': row['id'], 'payload': payload})
     return {'schemaVersion': 1, 'source': source, 'count': len(records), 'checksum': checksum(records), 'records': records}
 

@@ -54,3 +54,17 @@ def test_sqlite_export_is_read_only_and_preserves_notes(tmp_path):
     assert result['count'] == 1 and result['records'][0]['payload']['id'] == 7
     assert result['records'][0]['payload']['note'] == 'private note'
     assert reconcile([result])['quarantine'] == []
+
+
+def test_export_preserves_precise_bookmark_location(tmp_path):
+    import json
+    path = tmp_path / 'located.db'
+    locator = {'version': 2, 'kind': 'pdf', 'pageNumber': 7}
+    with sqlite3.connect(path) as db:
+        db.execute('CREATE TABLE bookmark(id INTEGER, user_id TEXT, book_id TEXT, chapter_index INTEGER, position INTEGER, note TEXT, created_at TEXT, locator_json TEXT)')
+        db.execute('INSERT INTO bookmark VALUES (1, ?, ?, 6, 0, NULL, NULL, ?)', ('alice', 'book', json.dumps(locator)))
+    exported = export_sqlite(path, 'located')
+    assert exported['records'][0]['payload']['locator']['pageNumber'] == 7
+    drive = MemoryDrive()
+    assert import_records(reconcile([exported]), drive, apply=True)['readyOwners'] == ['alice']
+    assert drive.operations[0][2].payload['locator']['pageNumber'] == 7

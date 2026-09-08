@@ -25,7 +25,9 @@ class OpenAIProvider(TranslationProvider):
 
         system_prompt = (
             "You are a professional translator specializing in literary content. "
-            "Translate the provided chapter HTML into the target language. Preserve all HTML formatting, including headings, paragraphs, and emphasis. "
+            "Translate only text nodes in the provided chapter HTML into the target language. "
+            "Preserve every element, its order, and every attribute exactly, including custom "
+            "pr-translation-batch and pr-translation-segment boundaries and data-pr-index values. "
             "Do not add explanations or extra text beyond the translation."
         )
 
@@ -62,7 +64,9 @@ class OpenAIProvider(TranslationProvider):
 
         system_prompt = (
             "You are a professional translator specializing in literary content. "
-            "Translate the provided chapter HTML into the target language. Preserve all HTML formatting, including headings, paragraphs, and emphasis. "
+            "Translate only text nodes in the provided chapter HTML into the target language. "
+            "Preserve every element, its order, and every attribute exactly, including custom "
+            "pr-translation-batch and pr-translation-segment boundaries and data-pr-index values. "
             "Do not add explanations or extra text beyond the translation."
         )
 

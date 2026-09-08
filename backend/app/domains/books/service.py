@@ -5,7 +5,7 @@ from ...core.errors import require_identity
 from typing import List, Optional
 
 from .ports import BooksRepositoryPort, StorageProviderPort, CoverLookupPort
-from .schemas import Book, Bookmark
+from .schemas import Book, Bookmark, ReaderLocator
 
 
 class BooksService:
@@ -33,6 +33,7 @@ class BooksService:
         position: int,
         note: Optional[str] = None,
         user_id: Optional[str] = None,
+        locator: Optional[ReaderLocator] = None,
     ) -> Bookmark:
         """Create a bookmark."""
         require_identity(user_id)
@@ -42,4 +43,5 @@ class BooksService:
             position=position,
             note=note,
             user_id=user_id,
+            locator=locator,
         )

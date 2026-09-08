@@ -12,6 +12,7 @@ vi.mock('@features/reader/hooks/useBookContent', () => ({
       chapterTitles: [{ index: 0, title: 'Chapter 1', href: '' }],
     },
     currentChapterContent: '<p>Chapter 1</p>',
+    currentChapterContentChapter: 0,
     isLoading: false,
     error: null,
   }),
@@ -39,24 +40,26 @@ describe('BookReader (smoke)', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reader controls' }));
     });
-    const translateBtn = screen.getByRole('button', { name: /Translate current chapter|この章を翻訳/i });
+    const translateBtn = screen.getByRole('button', { name: /Translate current page|このページを翻訳/i });
     expect(translateBtn).toBeInTheDocument();
     expect(translateBtn).toHaveTextContent(/Translate/i);
     expect(screen.getByRole('button', { name: /Enable JPDB highlight/i })).toHaveTextContent(/JPDB highlight/i);
     expect(screen.getByRole('button', { name: /^(Table of contents and bookmarks|目次としおり)$/i })).toHaveTextContent(/Contents/i);
   });
 
-  it('keeps chapter navigation reachable and opens contents from the dock', async () => {
+  it('keeps page navigation reachable and opens chapter contents from the dock', async () => {
     renderWithProviders(
       <BookReader bookId="demo-1" currentChapter={0} setCurrentChapter={() => {}} onBack={() => {}} />
     );
 
     expect(screen.getByRole('navigation', { name: 'Reader navigation' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Previous chapter' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Next chapter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Table of contents and bookmarks: 1 / 1' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /Table of contents and bookmarks:/ })
+      );
     });
 
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeInTheDocument();

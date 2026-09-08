@@ -37,7 +37,7 @@ class JLPTTestService {
           const name = String(file?.name || "").toLowerCase();
           return name.endsWith(".json") && (name.includes("jlpt") || name.includes("test"));
         })
-        .map((file) => {
+        .map((file): JlptCatalogTest | null => {
           const name = String(file.name || "");
           const level = extractJlptLevel(name);
           if (!level) {
