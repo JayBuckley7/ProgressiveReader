@@ -20,6 +20,7 @@ describe("JLPTTestPage launch flow", () => {
   const scrollToMock = vi.fn();
 
   beforeEach(() => {
+    localStorage.clear();
     mockedGetAllTests.mockReset();
     mockedLoadTestData.mockReset();
     scrollToMock.mockReset();

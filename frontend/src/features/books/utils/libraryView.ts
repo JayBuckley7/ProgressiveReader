@@ -32,17 +32,14 @@ export function readingProgressRatio(book: BookMetadata, progress?: ReadingProgr
     progress.scrollHeight && progress.viewportHeight
       ? progress.scrollHeight - progress.viewportHeight
       : 0;
-  if (scrollableHeight > 0) {
-    return Math.min(1, Math.max(0, progress.currentPosition / scrollableHeight));
+  const withinChapter = scrollableHeight > 0
+    ? Math.min(1, Math.max(0, progress.currentPosition / scrollableHeight))
+    : 0;
+  if (book.totalChapters && book.totalChapters > 0) {
+    return Math.min(1, Math.max(0, (progress.currentChapter + withinChapter) / book.totalChapters));
   }
-
-  if (book.totalChapters && book.totalChapters > 1) {
-    return Math.min(1, Math.max(0, progress.currentChapter / book.totalChapters));
-  }
-
-  return progress.currentChapter > 0 || progress.currentPosition > 0 || Boolean(progress.currentPage)
-    ? 0.1
-    : null;
+  if (book.fileType === "txt" && scrollableHeight > 0) return withinChapter;
+  return null;
 }
 
 export function filterAndSortBooks(params: {

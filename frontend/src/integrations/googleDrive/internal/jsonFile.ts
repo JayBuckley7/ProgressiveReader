@@ -16,18 +16,18 @@ export class DriveJsonFile<T = any> {
     }
   ) {}
 
-  async load(): Promise<T | null> {
-    const result = await this.loadWithFileId();
+  async load(strict = false): Promise<T | null> {
+    const result = await this.loadWithFileId(strict);
     return result ? result.data : null;
   }
 
-  async loadWithFileId(): Promise<JsonFileResult<T> | null> {
+  async loadWithFileId(strict = false): Promise<JsonFileResult<T> | null> {
     const token = await this.deps.auth.getAccessToken();
     const folderId = await this.deps.appFolder.getAppFolderId();
-    if (!token || !folderId) return null;
+    if (!token || !folderId) { if (strict) throw new Error("Connect Google Drive to read saved data."); return null; }
 
     try {
-      const files = await this.deps.files.searchFileWithRetry(this.fileName, true);
+      const files = await this.deps.files.searchFileWithRetry(this.fileName, true, strict);
       if (files.length === 0) return null;
 
       const fileId = files[0].id;
@@ -42,6 +42,7 @@ export class DriveJsonFile<T = any> {
         if (fetchResponse.status === 401) {
           this.deps.auth.clearCachedTokens();
           this.deps.onSigninStatusChanged(false);
+          if (strict) throw new Error("Reconnect Google Drive to read saved data.");
           return null;
         }
         throw new Error(
@@ -55,6 +56,7 @@ export class DriveJsonFile<T = any> {
         return { fileId, data: content };
       } catch (parseError) {
         appLog.warn(`[DriveJsonFile] Invalid JSON in ${this.fileName}`, parseError);
+        if (strict) throw new Error(`${this.fileName} is unreadable. Existing data has been left untouched.`);
         return null;
       }
     } catch (error: any) {
@@ -63,6 +65,7 @@ export class DriveJsonFile<T = any> {
         this.deps.auth.clearCachedTokens();
         this.deps.onSigninStatusChanged(false);
       }
+      if (strict) throw error;
       return null;
     }
   }

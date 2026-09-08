@@ -200,3 +200,6 @@ userinput.py
 
 frontend/src/data/jlpt/kanjiapi_full.json.backup
 env_dev.json
+
+# Local verification logs, temporary configs, and recovery rehearsal artifacts
+/.tmp/

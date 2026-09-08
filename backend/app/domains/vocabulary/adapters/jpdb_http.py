@@ -34,6 +34,8 @@ class JpdbHttpProvider(JpdbApiProvider):
             "User-Agent": user_agent,
         }
 
+        if endpoint not in {"list-user-decks", "deck/list-vocabulary", "lookup-vocabulary"}:
+            retries = 1
         delay = 0.25
         last_exc: Exception | None = None
         for attempt in range(max(1, retries)):
@@ -177,7 +179,7 @@ class JpdbHttpProvider(JpdbApiProvider):
             "Accept": "application/json",
         }
         payload = {"vid": vid, "sid": sid, "grade": "okay" if rating == "good" else rating}
-        response = requests.post(review_url, headers=headers, json=payload)
+        response = requests.post(review_url, headers=headers, json=payload, timeout=(5, 30))
         response.raise_for_status()
         return {"success": True}
 

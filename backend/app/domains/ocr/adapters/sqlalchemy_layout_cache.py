@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+from sqlalchemy.exc import IntegrityError
 from typing import Any
 
 from ....infrastructure.sqlalchemy.models import OcrPageLayoutCache
@@ -58,5 +59,13 @@ class SqlAlchemyOcrLayoutCacheRepository:
         row.layout_json = json.dumps(layout, ensure_ascii=False)
 
         self._session.add(row)
-        self._session.commit()
+        try:
+            self._session.commit()
+        except IntegrityError:
+            self._session.rollback()
+            # A concurrent extraction can insert the unique hash/profile first.
+            existing = self.get(content_hash=content_hash, ocr_profile=ocr_profile)
+            if existing is None:
+                raise
+            return existing
         return layout

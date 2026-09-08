@@ -43,7 +43,7 @@ def test_reader_locator_requires_kind_specific_fields():
         ReaderLocator(version=2, kind="pdf")
 
 
-def test_bookmark_route_accepts_and_returns_locator():
+def test_bookmark_route_accepts_and_returns_locator(authenticated_client):
     app = Flask(__name__)
     app.config["TESTING"] = True
     container = Mock()
@@ -60,7 +60,7 @@ def test_bookmark_route_accepts_and_returns_locator():
     app.extensions["container"] = container
     app.register_blueprint(books_bp)
 
-    response = app.test_client().post("/api/bookmarks", json={
+    response = authenticated_client(app).post("/api/bookmarks", json={
         "bookId": "book-1",
         "chapterIndex": 3,
         "position": 120,
@@ -80,14 +80,14 @@ def test_bookmark_route_accepts_and_returns_locator():
     )
 
 
-def test_bookmark_route_rejects_incomplete_locator():
+def test_bookmark_route_rejects_incomplete_locator(authenticated_client):
     app = Flask(__name__)
     app.config["TESTING"] = True
     container = Mock()
     app.extensions["container"] = container
     app.register_blueprint(books_bp)
 
-    response = app.test_client().post("/api/bookmarks", json={
+    response = authenticated_client(app).post("/api/bookmarks", json={
         "bookId": "book-1",
         "chapterIndex": 3,
         "position": 120,

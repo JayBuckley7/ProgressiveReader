@@ -241,7 +241,7 @@ function createTestDriveAuthPort(): DriveAuthPort {
   };
 }
 
-function createTestDeps(overrides?: Partial<AppDeps>): AppDeps {
+export function createTestDeps(overrides?: Partial<AppDeps>): AppDeps {
   const auth: ClerkAuthPort = {
     async getToken() {
       return null;

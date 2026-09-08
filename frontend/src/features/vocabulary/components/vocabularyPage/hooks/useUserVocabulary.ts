@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
@@ -9,30 +9,27 @@ import type { FilterMastered, VocabularyStats, VocabularyWord } from "../types";
 
 export function useUserVocabulary(params: {
   isSignedIn: boolean;
+  userId?: string;
   selectedLanguage: string;
   filterMastered: FilterMastered;
   searchTerm: string;
 }) {
   const { isSignedIn, selectedLanguage, filterMastered, searchTerm } = params;
   const deps = useAppDeps();
+  const requestVersion = useRef(0);
 
   const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
   const [isLoadingVocabulary, setIsLoadingVocabulary] = useState(false);
   const [vocabError, setVocabError] = useState<string | null>(null);
 
   const loadVocabulary = useCallback(async () => {
+    const version = ++requestVersion.current;
+    const owner = deps.auth.getUserId?.();
     setIsLoadingVocabulary(true);
     setVocabError(null);
     try {
-      if (!isSignedIn) {
-        setVocabulary([]);
-        return;
-      }
-
-      const vocab = await deps.backend.vocabulary.getUserVocabulary({
-        language: selectedLanguage || undefined,
-        mastered: filterMastered === "all" ? undefined : filterMastered === "mastered",
-      });
+      const vocab = await deps.backend.vocabulary.getUserVocabulary({});
+      if (version !== requestVersion.current || owner !== deps.auth.getUserId?.()) return;
 
       const converted: VocabularyWord[] = vocab.map((v: ApiVocabularyWord) => ({
         _id: v.id,
@@ -47,6 +44,7 @@ export function useUserVocabulary(params: {
       }));
       setVocabulary(converted);
     } catch (error) {
+      if (version !== requestVersion.current || owner !== deps.auth.getUserId?.()) return;
       appLog.error("[VocabularyPage] Failed to load vocabulary", error);
       const message = error instanceof Error ? error.message : "Failed to load vocabulary";
       setVocabError(message);
@@ -54,12 +52,16 @@ export function useUserVocabulary(params: {
         notifyError("Sign in required to load vocabulary.");
       }
     } finally {
-      setIsLoadingVocabulary(false);
+      if (version === requestVersion.current) setIsLoadingVocabulary(false);
     }
-  }, [deps.backend.vocabulary, filterMastered, isSignedIn, selectedLanguage]);
+  }, [deps.backend.vocabulary, deps.auth, isSignedIn, params.userId]);
 
   useEffect(() => {
+    setVocabulary([]);
     void loadVocabulary();
+    const reload = () => { void loadVocabulary(); };
+    window.addEventListener("pr:saved-records-reload", reload);
+    return () => { requestVersion.current++; window.removeEventListener("pr:saved-records-reload", reload); };
   }, [loadVocabulary]);
 
   const handleToggleMastered = useCallback(
@@ -72,7 +74,7 @@ export function useUserVocabulary(params: {
         setVocabulary((prev) =>
           prev.map((w) => (w._id === wordId ? { ...w, mastered: updatedWord.mastered } : w))
         );
-        toast.success(`Word marked as ${updatedWord.mastered ? "mastered" : "learning"}`);
+        toast.success((updatedWord as { _localOnly?: boolean })._localOnly ? "Updated on this device; cloud sync pending." : `Word marked as ${updatedWord.mastered ? "mastered" : "learning"}`);
       } catch (error) {
         appLog.error("[VocabularyPage] Failed to update word status", error);
         notifyError(error, { title: "Failed to update word status" });

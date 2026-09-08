@@ -4,5 +4,7 @@ export interface ClerkAuthPort {
    * Returns null when unauthenticated or unavailable.
    */
   getToken(): Promise<string | null>;
+  /** Stable local-storage namespace; undefined means identity is still loading. */
+  getUserId?(): string | null | undefined;
 }
 

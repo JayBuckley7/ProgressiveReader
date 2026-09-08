@@ -7,6 +7,9 @@ export type BackendRequestArgs = {
 };
 
 export interface BackendFetchPort {
+  savedRecordsStatus?(): { pending: number; guest: boolean; message: string };
+  syncSavedRecords?(): Promise<void>;
+  discardSavedRecordDrafts?(): void;
   /**
    * Low-level request helper for backend calls.
    * - Adds auth (Authorization: Bearer) when available.

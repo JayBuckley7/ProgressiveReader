@@ -100,12 +100,12 @@ export function ContinueReading({
                     <span>{dateFormatter.format(new Date(progress.lastUpdated))}</span>
                     {percentage !== null && <span>{percentage}%</span>}
                   </div>
-                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--ui-border)]">
+                  {percentage !== null && <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--ui-border)]">
                     <div
                       className="h-full rounded-full bg-[var(--ui-accent)] transition-[width] duration-300"
-                      style={{ width: `${Math.max(percentage ?? 8, 4)}%` }}
+                      style={{ width: `${percentage}%` }}
                     />
-                  </div>
+                  </div>}
                 </div>
               </button>
               <button

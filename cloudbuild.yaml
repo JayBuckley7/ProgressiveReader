@@ -4,6 +4,7 @@ options:
   substitutionOption: ALLOW_LOOSE
 
 substitutions:
+  _DEPLOY: "false"
   _SERVICE_NAME: "progressive-reader"   # change if needed
   _ENVIRONMENT: "prod"
   _COMMIT_SHA: "$COMMIT_SHA"  # Default to built-in COMMIT_SHA if not provided
@@ -83,6 +84,7 @@ steps:
       - "PROJECT_ID=${PROJECT_ID}"
       - "_COMMIT_SHA=${_COMMIT_SHA}"
       - "_ENVIRONMENT=${_ENVIRONMENT}"
+      - "_DEPLOY=${_DEPLOY}"
 
   # 8) Post-deploy verification (non-blocking)
   - name: "gcr.io/cloud-builders/gcloud"
@@ -91,6 +93,7 @@ steps:
     entrypoint: "bash"
     args: ["ci/08-post-deploy-bvt.sh"]
     env:
+      - "_DEPLOY=${_DEPLOY}"
       - "_SERVICE_NAME=${_SERVICE_NAME}"
       - "PROJECT_ID=${PROJECT_ID}"
 

@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 
 import { migrateLegacyJlptDashboardState, normalizeJlptDashboardState } from "@features/jlpt/services/jlptMigrations";
 import { getLocalDateKey } from "@features/jlpt/services/jlptConfig";
-import { getAppliedDailyTarget, getCurrentStreak, getDerivedDailyTarget, getTodayGrammarProgress, getTodaySnapshotProgress, shouldShowLevel } from "@features/jlpt/services/jlptSelectors";
+import { isGoalExpired, getAppliedDailyTarget, getCurrentStreak, getDerivedDailyTarget, getTodayGrammarProgress, getTodaySnapshotProgress, shouldShowLevel } from "@features/jlpt/services/jlptSelectors";
 import type { JlptCatalogTest, JlptDashboardStateV2 } from "@features/jlpt/types";
 
 const catalogTests: JlptCatalogTest[] = [
@@ -16,6 +16,13 @@ const catalogTests: JlptCatalogTest[] = [
 ];
 
 describe("JLPT dashboard state", () => {
+  it("does not turn an expired exam into a one-day target", () => {
+    const goal = { examDate: "2000-01-01", targetMode: "override", dailyTargetOverride: 30 } as any;
+    expect(isGoalExpired(goal, "2000-01-02")).toBe(true);
+    expect(isGoalExpired(goal, "2000-01-01")).toBe(false);
+    expect(getDerivedDailyTarget(goal, {} as any)).toBe(0);
+    expect(getAppliedDailyTarget(goal, {} as any)).toBe(0);
+  });
   beforeEach(() => {
     localStorage.clear();
   });

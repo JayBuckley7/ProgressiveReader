@@ -1,3 +1,4 @@
+import { isGoalExpired } from "@features/jlpt/services/jlptSelectors";
 import { useState } from "react";
 
 import type { ActiveJlptGoal, JlptCatalogTest, JlptLevel, JlptResultV2 } from "@features/jlpt/types";
@@ -50,6 +51,7 @@ export function JlptDashboardSummary(props: {
   const [showGoalConfig, setShowGoalConfig] = useState(false);
   const [showPlanConfig, setShowPlanConfig] = useState(false);
 
+  const expired = isGoalExpired(activeGoal);
   const targetProgressPercent = appliedTarget > 0 ? Math.min(100, Math.round((todayVocabKnownGain / appliedTarget) * 100)) : 0;
   const configuredLevel = activeGoal?.level || "N5";
   const testsForLevel = availableTests.filter((test) => test.level === configuredLevel);
@@ -102,6 +104,7 @@ export function JlptDashboardSummary(props: {
           </div>
         </div>
 
+        {expired && <p role="status" className="mt-4 text-sm app-muted">This exam date has passed. Set a new goal to resume daily targets.</p>}
         <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[color:var(--ui-border)] pt-4 lg:grid-cols-6">
           <div>
             <div className={`text-xs font-medium ${mutedTextClass}`}>Exam date</div>
@@ -109,7 +112,7 @@ export function JlptDashboardSummary(props: {
           </div>
           <div>
             <div className={`text-xs font-medium ${mutedTextClass}`}>Days remaining</div>
-            <div className="mt-1 text-lg font-semibold text-[color:var(--ui-text)]">{activeGoal ? daysRemaining : 0}</div>
+            <div className="mt-1 text-lg font-semibold text-[color:var(--ui-text)]">{expired ? "Finished" : activeGoal ? daysRemaining : 0}</div>
           </div>
           <div>
             <div className={`text-xs font-medium ${mutedTextClass}`}>Vocab known today</div>
@@ -124,7 +127,7 @@ export function JlptDashboardSummary(props: {
           </div>
           <div>
             <div className={`text-xs font-medium ${mutedTextClass}`}>Exam pace</div>
-            <div className="mt-1 text-lg font-semibold text-[color:var(--ui-text)]">{derivedTarget}/day</div>
+            <div className="mt-1 text-lg font-semibold text-[color:var(--ui-text)]">{expired ? "—" : `${derivedTarget}/day`}</div>
           </div>
           <div>
             <div className={`text-xs font-medium ${mutedTextClass}`}>Streak</div>
@@ -270,7 +273,7 @@ export function JlptDashboardSummary(props: {
               <div className="text-sm font-medium text-[color:var(--ui-text)]">Current plan signals</div>
               <div className={`mt-3 space-y-2 text-sm ${mutedTextClass}`}>
                 <div>Daily JLPT target: {appliedTarget > 0 ? `${appliedTarget}/day` : "not set"}</div>
-                <div>Derived exam pace: {derivedTarget}/day</div>
+                <div>Derived exam pace: {expired ? "—" : `${derivedTarget}/day`}</div>
                 <div>Study-plan rows for reading, listening, grammar, and vocab are the next refactor slice.</div>
               </div>
             </div>

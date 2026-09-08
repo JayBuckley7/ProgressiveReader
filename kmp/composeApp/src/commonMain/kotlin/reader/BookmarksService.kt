@@ -1,5 +1,8 @@
 package com.progressivereader.kmp.reader
 
+import com.progressivereader.kmp.core.requireBackendSuccess
+import com.progressivereader.kmp.core.newSaveIdentifier
+
 import com.progressivereader.kmp.core.Config
 import com.progressivereader.kmp.core.createHttpClient
 import io.ktor.client.call.body
@@ -16,7 +19,7 @@ class BookmarksService(private val getSessionToken: () -> String?) {
 
     @Serializable
     data class Bookmark(
-        val id: String? = null,
+        @Serializable(with = RecordIdSerializer::class) val id: String? = null,
         val bookId: String,
         val chapterIndex: Int,
         val position: Int,
@@ -24,28 +27,28 @@ class BookmarksService(private val getSessionToken: () -> String?) {
         val createdAt: String? = null,
     )
 
+    @Serializable
+    data class AddBookmark(val bookId: String, val chapterIndex: Int, val position: Int, val note: String?)
+
     suspend fun list(bookId: String): List<Bookmark> {
         val token = getSessionToken() ?: return emptyList()
-        val res = http.get("${Config.baseUrl}/api/bookmarks?bookId=$bookId") {
+        val res = http.get("${Config.baseUrl}/api/bookmarks") {
+            url { parameters.append("bookId", bookId) }
             headers.append("Authorization", "Bearer $token")
         }
-        if (!res.status.isSuccess()) return emptyList()
+        res.requireBackendSuccess()
         return res.body()
     }
 
     suspend fun add(bookId: String, chapterIndex: Int, position: Int, note: String?): Bookmark? {
         val token = getSessionToken() ?: return null
         val res = http.post("${Config.baseUrl}/api/bookmarks") {
+            headers.append("Idempotency-Key", newSaveIdentifier())
             headers.append("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "bookId" to bookId,
-                "chapterIndex" to chapterIndex,
-                "position" to position,
-                "note" to note
-            ))
+            setBody(AddBookmark(bookId, chapterIndex, position, note))
         }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return res.body()
     }
 }

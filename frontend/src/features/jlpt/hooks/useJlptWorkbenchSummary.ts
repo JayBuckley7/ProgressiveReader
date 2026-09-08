@@ -1,3 +1,4 @@
+import { useUser } from "@clerk/clerk-react";
 import { useMemo } from "react";
 
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
@@ -22,6 +23,7 @@ function countStatuses(statuses: Array<GrammarScanStatus | undefined>) {
     },
     {
       idle: 0,
+      paused: 0,
       queued: 0,
       scanning: 0,
       complete: 0,
@@ -68,10 +70,11 @@ export function useJlptWorkbenchSummary(params: {
 }) {
   const { activeGoal, activeLevelState } = params;
   const grammar = useGrammar();
+  const { user } = useUser();
 
   return useMemo(() => {
-    const selectedDeck = loadSelectedJpdbDeck();
-    const cachedDue = selectedDeck ? getCachedDueSummary(selectedDeck.id) : null;
+    const selectedDeck = loadSelectedJpdbDeck(user?.id);
+    const cachedDue = selectedDeck ? getCachedDueSummary(selectedDeck.id, user?.id) : null;
     const readiness = activeLevelState ? getLevelReadinessSummary(activeLevelState, { enabledOnly: true }) : null;
     const grammarLevel = toGrammarLevel(activeGoal?.level || null);
 
@@ -129,6 +132,7 @@ export function useJlptWorkbenchSummary(params: {
   }, [
     activeGoal?.level,
     activeLevelState,
+    user?.id,
     grammar.activeMiningGrammarId,
     grammar.getExamples,
     grammar.getGrammarPoint,

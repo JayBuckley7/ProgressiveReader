@@ -762,7 +762,7 @@ export function JpdbPopupController() {
                     onClick={(e) => {
                       e.stopPropagation();
                       closePopup({ suppressSource: false, syncHistory: false, suppressActivation: false });
-                      navigate("/grammar");
+                      navigate("/stats?view=grammar");
                     }}
                   >
                     Open grammar page

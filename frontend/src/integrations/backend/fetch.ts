@@ -1,53 +1,30 @@
 import type { BackendFetchPort, BackendRequestArgs } from "@core/backend/fetchPort";
 import type { ClerkAuthPort } from "@core/auth/ports";
-
-function mergeHeaders(base: HeadersInit | undefined, extra: HeadersInit | undefined): Headers {
-  const h = new Headers(base || undefined);
-  if (extra) {
-    const e = new Headers(extra);
-    e.forEach((v, k) => h.set(k, v));
-  }
-  return h;
-}
-
-async function respToError(resp: Response): Promise<Error> {
-  const text = await resp.text().catch(() => "");
-  return new Error(text || `HTTP ${resp.status}`);
-}
+import { BackendError, backendResponseError } from "@core/backend/errors";
+import { createSavedRecords } from "./savedRecords";
 
 export function createBackendFetchPort(args: { auth: ClerkAuthPort }): BackendFetchPort {
+  const send = async (req: BackendRequestArgs): Promise<Response> => {
+    const identity = args.auth.getUserId?.();
+    const token = await args.auth.getToken();
+    if (identity !== args.auth.getUserId?.()) throw new BackendError("ACCOUNT_CHANGED", "Your account changed. Please try again.", 409);
+    const headers = new Headers(req.headers);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return fetch(req.path, { method: req.method, headers, body: req.body ?? undefined, signal: req.signal });
+  };
+  const records = createSavedRecords(args.auth, send);
+  const request = async (req: BackendRequestArgs): Promise<Response> => (await records.request(req)) ?? send(req);
   return {
-    async request(req: BackendRequestArgs): Promise<Response> {
-      const token = await args.auth.getToken();
-
-      const headers = mergeHeaders(req.headers, token ? { Authorization: `Bearer ${token}` } : undefined);
-
-      return fetch(req.path, {
-        method: req.method,
-        headers,
-        body: req.body ?? undefined,
-        signal: req.signal,
-      });
-    },
-
+    request,
+    savedRecordsStatus: () => records.status(),
+    syncSavedRecords: () => records.sync(),
+    discardSavedRecordDrafts: () => records.discard(),
     async requestJson<T>(req: Omit<BackendRequestArgs, "body"> & { body?: unknown }): Promise<T> {
-      const token = await args.auth.getToken();
-
-      const hasBody = req.body !== undefined;
-      const jsonHeaders = hasBody ? { "Content-Type": "application/json" } : undefined;
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
-      const headers = mergeHeaders(mergeHeaders(req.headers, jsonHeaders), authHeaders);
-
-      const resp = await fetch(req.path, {
-        method: req.method,
-        headers,
-        body: hasBody ? JSON.stringify(req.body) : undefined,
-        signal: req.signal,
-      });
-
-      if (!resp.ok) throw await respToError(resp);
-      return (await resp.json()) as T;
+      const headers = new Headers(req.headers);
+      if (req.body !== undefined) headers.set("Content-Type", "application/json");
+      const response = await request({ ...req, headers, body: req.body === undefined ? undefined : JSON.stringify(req.body) });
+      if (!response.ok) throw await backendResponseError(response);
+      return await response.json() as T;
     },
   };
 }
-

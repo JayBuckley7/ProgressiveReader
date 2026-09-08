@@ -12,8 +12,8 @@
       "journey": "Continue your language learning journey",
       "stats": {
         "books": "Books",
-        "wordsSaved": "Words Saved",
-        "wordsMastered": "Words Mastered"
+        "wordsSaved": "Reader words saved",
+        "wordsMastered": "Reader words mastered"
       }
     },
     "signedOut": {
@@ -282,10 +282,12 @@
     "appNameFull": "Progressive Reader",
     "appIconAlt": "App icon",
     "library": "Library",
+    "stats": "Stats",
+    "statsPageAria": "Stats page",
     "vocabulary": "Vocabulary",
     "grammar": "Grammar",
     "clipboard": "Clipboard",
-    "test": "Test",
+    "test": "JLPT",
     "signOut": "Sign out",
     "exitOffline": "Exit Offline Mode",
     "signIn": "Sign in",
@@ -293,7 +295,13 @@
     "libraryPageAria": "Library page",
     "vocabularyPageAria": "Vocabulary page",
     "grammarPageAria": "Grammar page",
-    "clipboardPageAria": "Clipboard page"
+    "clipboardPageAria": "Clipboard page",
+    "jlptTestsPageAria": "JLPT tests page"
+  },
+  "stats": {
+    "subtitle": "Your vocabulary and grammar progress, with tools to support your reading.",
+    "sections": "Stats sections",
+    "loading": "Loading stats…"
   },
   "grammar": {
     "header": {
@@ -391,8 +399,8 @@
   },
   "vocabulary": {
     "header": {
-      "title": "📝 Vocabulary",
-      "subtitle": "Track and review your language learning progress"
+      "title": "Vocabulary",
+      "subtitle": "Your vocabulary progress at a glance"
     },
     "stats": {
       "total": "Total Words",
@@ -400,14 +408,14 @@
       "learning": "Learning"
     },
     "dueCards": {
-      "title": "JPDB Due Cards",
+      "title": "JPDB Review Status",
       "none": "No due cards loaded.",
       "fetch": "Fetch Due Cards",
       "fetched": "Fetched {{count}} due cards"
     },
     "decks": {
-      "title": "📚 Vocabulary Decks",
-      "description": "Select a JPDB deck to view and manage your vocabulary cards."
+      "title": "JPDB Decks",
+      "description": "Select a JPDB deck to inspect its words and review status."
     },
     "controls": {
       "searchPlaceholder": "Search words...",
@@ -418,9 +426,9 @@
       "addWord": "+ Add Word"
     },
     "empty": {
-      "noneYet": "No vocabulary yet",
+      "noneYet": "No manual vocabulary yet",
       "noneFound": "No words found",
-      "promptAdd": "Start adding words as you read to build your vocabulary"
+      "promptAdd": "Add a word here, or browse your reader words and JPDB decks above."
     },
     "card": {
       "mastered": "✓ Mastered",
@@ -537,7 +545,8 @@
       "lyricsImported": "Imported the Japanese lyrics",
       "lyricsImportFailed": "Failed to import Japanese lyrics"
     },
-    "titleFrom": "Clipboard Paste"
+    "titleFrom": "Clipboard Paste",
+    "editorLabel": "Text to read"
   },
   "massUpload": {
     "title": "Mass Upload Books",

@@ -1,5 +1,8 @@
 package com.progressivereader.kmp.translate
 
+import com.progressivereader.kmp.core.requireBackendSuccess
+import com.progressivereader.kmp.core.newSaveIdentifier
+
 import com.progressivereader.kmp.core.Config
 import com.progressivereader.kmp.core.createHttpClient
 import io.ktor.client.call.body
@@ -36,7 +39,7 @@ class TranslateService(private val getSessionToken: () -> String?) {
             contentType(ContentType.Application.Json)
             setBody(req)
         }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return res.body()
     }
 }

@@ -12,6 +12,8 @@ function Harness(props: {
   useInternalEpubLinks({
     bookId: "book-links",
     isPdf: false,
+    currentChapter: 0,
+    renderedChapter: 0,
     contentRef,
     bookContent: {
       totalChapters: 2,

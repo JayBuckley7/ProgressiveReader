@@ -142,8 +142,8 @@ export const getQuestionKey = (sectionId: string, questionIndex: number) => `${s
 export const getQuestionPoints = (question: JlptRunnerQuestion): number =>
   parseNumericValue(question.points_per_question) ?? 1;
 
-export const questionHasAnswerKey = (question?: Pick<JlptRunnerQuestion, 'correct_choice_index'> | null) =>
-  question?.correct_choice_index !== null && question?.correct_choice_index !== undefined;
+export const questionHasAnswerKey = (question?: Pick<JlptRunnerQuestion, 'correct_choice_index'> & Partial<Pick<JlptRunnerQuestion, 'choices'>> | null) =>
+  Number.isInteger(question?.correct_choice_index) && Number(question?.correct_choice_index) >= 0 && (!question?.choices || Number(question.correct_choice_index) < question.choices.length);
 
 export const hasJlptAnswerKey = (
   questions: JlptRunnerQuestion[],
@@ -152,7 +152,7 @@ export const hasJlptAnswerKey = (
   if (meta?.answer_key_present === false) {
     return false;
   }
-  return questions.some((question) => questionHasAnswerKey(question));
+  return questions.length > 0 && questions.every((question) => questionHasAnswerKey(question));
 };
 
 export const addFuriganaMarkup = (content: string | null | undefined) => {
@@ -359,7 +359,7 @@ export const buildOverallSummary = (params: {
 };
 
 export const extractLevel = (name: string, meta?: JlptRunnerTestMeta | null) =>
-  extractCatalogLevel(name, meta) || 'N5';
+  extractCatalogLevel(name, meta ?? undefined) || 'N5';
 
 export const getReviewOutcome = (params: {
   question: JlptRunnerQuestion;

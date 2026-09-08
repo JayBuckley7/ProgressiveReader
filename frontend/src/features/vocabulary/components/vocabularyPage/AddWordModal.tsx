@@ -31,7 +31,7 @@ export function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
     }
     setIsSubmitting(true);
     try {
-      await deps.backend.vocabulary.addVocabularyWord({
+      const result = await deps.backend.vocabulary.addVocabularyWord({
         word: word.trim(),
         translation: translation.trim(),
         language,
@@ -39,7 +39,7 @@ export function AddWordModal({ onClose, onAdded, books }: AddWordModalProps) {
         context: context.trim() || undefined,
         difficulty: difficulty || undefined,
       });
-      toast.success("Word added successfully!");
+      toast.success((result as { _localOnly?: boolean })._localOnly ? "Word saved on this device; cloud sync pending." : "Word saved to Google Drive.");
       await onAdded();
     } catch (error) {
       appLog.error("[VocabularyPage] Failed to add word", error);

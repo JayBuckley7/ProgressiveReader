@@ -16,14 +16,4 @@ class DefaultApiKeyResolver(ApiKeyResolverPort):
         if user_api_key and user_api_key.strip():
             return user_api_key.strip()
 
-        if not use_server_key:
-            return None
-
-        key = self._pool.get_next_key()
-        if key:
-            return key
-        return self._fallback_key
-
-
-__all__ = ["DefaultApiKeyResolver"]
-
+        return None

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ...core.errors import require_identity
+
 from typing import List, Optional, Dict, Any
 
 from .config import JpdbConfig
@@ -457,6 +459,7 @@ class VocabularyService:
 
     def add_vocabulary_word(self, *, request: AddVocabularyWordRequest, user_id: Optional[str]) -> VocabularySchema:
         """Add a vocabulary word to the user's collection."""
+        require_identity(user_id)
         return self._require_repository().add_vocabulary_word(
             user_id=user_id,
             word=request.word,
@@ -469,6 +472,7 @@ class VocabularyService:
 
     def toggle_mastered(self, *, user_id: Optional[str], word_id: int, mastered: bool) -> Optional[VocabularySchema]:
         """Toggle mastered status for a vocabulary word."""
+        require_identity(user_id)
         return self._require_repository().toggle_mastered(user_id=user_id, word_id=word_id, mastered=mastered)
 
     def get_user_vocabulary(
@@ -480,6 +484,7 @@ class VocabularyService:
         book_id: Optional[str] = None,
     ) -> List[VocabularySchema]:
         """Get user's vocabulary words with optional filters."""
+        require_identity(user_id)
         return self._require_repository().get_user_vocabulary(
             user_id=user_id,
             language=language,

@@ -8,7 +8,7 @@ import { getGrammarPointById } from "@features/grammar/data/grammarCatalog";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 import type { GrammarExample, GrammarScanState, GrammarStateV2 } from "@features/grammar/types";
 import { mergeAndLimitExamples } from "@features/grammar/services/grammarExamples";
-import { loadGrammarStateV2FromLocalStorage, saveGrammarStateV2ToLocalStorage } from "@features/grammar/services/grammarStateStorage";
+import { emptyGrammarState, loadGrammarStateV2FromLocalStorage, saveGrammarStateV2ToLocalStorage } from "@features/grammar/services/grammarStateStorage";
 import { mineLibraryForGrammarExamples } from "@features/grammar/services/grammarLibraryMiner";
 import { mergeTeachingIntoExamples, teachGrammarExamples } from "@features/grammar/services/grammarTeachApi";
 import { boundaryAdvances, boundaryFromProgress } from "./grammarContext/boundary";
@@ -17,6 +17,10 @@ import { useGrammarMiningToggles } from "./grammarContext/toggles";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
 
 type GrammarContextValue = {
+  teachingByGrammarId: Record<string, { status: string; error?: string }>;
+  storageError: string | null;
+  syncStatus: string;
+  retrySync: () => void;
   state: GrammarStateV2;
   knownSet: ReadonlySet<string>;
   learningSet: ReadonlySet<string>;
@@ -40,16 +44,31 @@ type GrammarContextValue = {
 const GrammarContext = createContext<GrammarContextValue | undefined>(undefined);
 
 export function GrammarProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoaded } = useUser();
+  if (isLoaded === false) return null;
+  return <AccountGrammarProvider key={user?.id || "guest"}>{children}</AccountGrammarProvider>;
+}
+
+function AccountGrammarProvider({ children }: { children: React.ReactNode }) {
   const deps = useAppDeps();
   const { user, isSignedIn } = useUser();
   const { books, downloadBook } = useAppData();
 
   const allowDriveSync =
-    isSignedIn &&
+    Boolean(isSignedIn) &&
     (user?.externalAccounts?.some((acc) => String((acc as { provider?: unknown })?.provider || "").startsWith("google")) ?? false);
 
-  const [state, setState] = useState<GrammarStateV2>(() => loadGrammarStateV2FromLocalStorage());
+  const [initial] = useState(() => {
+    try { return { state: loadGrammarStateV2FromLocalStorage(user?.id), error: null as string | null }; }
+    catch { return { state: emptyGrammarState(), error: "Saved grammar progress could not be read. Existing data is preserved; changes are only in memory until recovery." }; }
+  });
+  const [state, setState] = useState<GrammarStateV2>(initial.state);
 
+  const [teachingByGrammarId, setTeachingByGrammarId] = useState<Record<string, { status: string; error?: string }>>({});
+  const [storageError, setStorageError] = useState<string | null>(initial.error);
+  const [workerEpoch, setWorkerEpoch] = useState(0);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
@@ -71,14 +90,16 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
   );
 
   const persistLocal = useCallback((next: GrammarStateV2) => {
-    saveGrammarStateV2ToLocalStorage(next);
-  }, []);
+    if (initial.error) return;
+    try { saveGrammarStateV2ToLocalStorage(next, user?.id); setStorageError(null); }
+    catch { setStorageError("Device storage failed. Grammar progress is only in memory until saving succeeds."); }
+  }, [user?.id, initial.error]);
 
   // Local storage persistence
   useEffect(() => {
     persistLocal(state);
   }, [persistLocal, state]);
-  useGrammarDriveSync({ allowDriveSync, userId: user?.id ?? null, state, setState });
+  const driveSync = useGrammarDriveSync({ allowDriveSync: allowDriveSync && !initial.error, userId: user?.id ?? null, state, setState });
 
   const setKnown = useCallback((grammarId: string, known: boolean) => {
     setState((prev) => {
@@ -135,7 +156,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         nextScanBy[grammarId] = {
           ...(cur || {}),
           // Don't enqueue auto-mining for ultra-common/ambiguous points.
-          status: point && point.hintQuality === "ok" ? "queued" : "idle",
+          status: point && point.hintQuality === "ok" && deps.prefs.getOpenAiKey()?.trim() ? "queued" : "idle",
           lastError: undefined,
         };
       }
@@ -147,9 +168,10 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         lastUpdatedMs: Date.now(),
       };
     });
-  }, []);
+  }, [deps.prefs]);
 
   const forceMine = useCallback((grammarId: string) => {
+    if (!deps.prefs.getOpenAiKey()?.trim()) { notifyError("Add your own AI key in Settings to generate book examples."); return; }
     setState((prev) => {
       const nextScanBy = { ...(prev.scanByGrammarId || {}) };
       const cur = nextScanBy[grammarId];
@@ -157,11 +179,11 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       nextScanBy[grammarId] = {
         ...(cur || {}),
         status: point && point.hintQuality === "ok" ? "queued" : "error",
-        lastError: point && point.hintQuality === "ok" ? undefined : "Grammar point too ambiguous for MVP mining.",
+        lastError: point && point.hintQuality === "ok" ? undefined : "This pattern is too ambiguous for automatic example matching.",
       };
       return { ...prev, scanByGrammarId: nextScanBy, lastUpdatedMs: Date.now() };
     });
-  }, []);
+  }, [deps.prefs]);
 
   // Background "teacher" (LLM teaching overlay). Keep this separate from mining so we can
   // generate breakdown/usage/contrast once examples exist.
@@ -177,7 +199,14 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       const missing = examples.filter((e) => !e.teaching);
       if (missing.length === 0) return;
 
-      const apiKey = deps.prefs.getOpenAiKey() || "";
+      const apiKey = (deps.prefs.getOpenAiKey() || "").trim();
+      if (!apiKey) {
+        setTeachingByGrammarId(prev => ({ ...prev, [grammarId]: { status: "error", error: "Add your own AI key in Settings. Server-funded AI is disabled." } }));
+        return;
+      }
+      if (teacherRunningRef.current) return;
+      teacherRunningRef.current = true;
+      setTeachingByGrammarId(prev => ({ ...prev, [grammarId]: { status: "running" } }));
       const model = deps.prefs.getOpenAiModel();
 
       try {
@@ -197,6 +226,9 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
           { llm: deps.llmChat, backend: deps.backend.grammar }
         );
 
+        if (!mounted.current) return;
+        if (!resp.teachings?.some(t => t.translation || t.breakdown || t.usageNote)) throw new Error("The provider returned no explanation. You can retry this request.");
+        setTeachingByGrammarId(prev => ({ ...prev, [grammarId]: { status: "complete" } }));
         autoTeachBlockedRef.current.delete(grammarId);
 
         setState((prev) => {
@@ -209,10 +241,12 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
           };
         });
       } catch (e: unknown) {
+        if (!mounted.current) return;
+        setTeachingByGrammarId(prev => ({ ...prev, [grammarId]: { status: "error", error: e instanceof Error ? e.message : "Explanation generation failed. Retry when ready." } }));
         // Prevent background auto-teach from retrying endlessly for this grammarId.
         autoTeachBlockedRef.current.add(grammarId);
         notifyError(e, { title: "Teaching failed" });
-      }
+      } finally { teacherRunningRef.current = false; }
     },
     [deps.backend.grammar, deps.llmChat, deps.prefs]
   );
@@ -267,11 +301,12 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
 
   const runMine = useCallback(
     async (grammarId: string) => {
+      if (!deps.prefs.getOpenAiKey()?.trim()) return;
       const point = getGrammarPointById(grammarId);
       if (!point || point.hintQuality !== "ok") {
         setState((prev) => {
           const scanBy = { ...(prev.scanByGrammarId || {}) };
-          scanBy[grammarId] = { ...(scanBy[grammarId] || {}), status: "error", lastError: "Grammar point too ambiguous for MVP mining." };
+          scanBy[grammarId] = { ...(scanBy[grammarId] || {}), status: "error", lastError: "This pattern is too ambiguous for automatic example matching." };
           return { ...prev, scanByGrammarId: scanBy, lastUpdatedMs: Date.now() };
         });
         return;
@@ -305,6 +340,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
           },
         });
 
+        if (!mounted.current) return;
         setState((prev) => {
           const nextExamples = mergeAndLimitExamples(prev.examplesByGrammarId[grammarId] || [], result.examples, 3);
           const scanBy = { ...(prev.scanByGrammarId || {}) };
@@ -329,16 +365,10 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         if (result.examples.length > 0) {
           toast.success(`Found grammar example${result.examples.length > 1 ? "s" : ""}: ${point.title}`);
 
-          // Kick off teaching immediately so examples land "taught" by default without user action.
-          // (Auto-teach effect will also pick this up, but this reduces perceived latency.)
-          if (!teacherRunningRef.current) {
-            teacherRunningRef.current = true;
-            void teachExamples(grammarId).finally(() => {
-              teacherRunningRef.current = false;
-            });
-          }
+
         }
       } catch (e: unknown) {
+        if (!mounted.current) return;
         if (e && typeof e === "object" && "name" in e && (e as { name?: unknown }).name === "AbortError") {
           // Ensure aborted jobs do not remain stuck in "scanning".
           setState((prev) => {
@@ -346,7 +376,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
             const cur = scanBy[grammarId] || { status: "idle" };
             scanBy[grammarId] = {
               ...cur,
-              status: "queued",
+              status: "paused",
               lastError: "Cancelled",
               lastScanAt: new Date().toISOString(),
             };
@@ -371,7 +401,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         setActiveMiningGrammarId(null);
       }
     },
-    [books, deps.backend.grammar, deps.llmChat, deps.prefs]
+    [books, deps.backend.grammar, deps.llmChat, deps.prefs, downloadBook]
   );
 
   const cancelMining = useCallback(() => {
@@ -382,7 +412,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       const scanBy = { ...(prev.scanByGrammarId || {}) };
       const cur = scanBy[gid] || { status: "idle" };
       if (cur.status === "scanning") {
-        scanBy[gid] = { ...cur, status: "queued", lastError: "Cancelled", lastScanAt: new Date().toISOString() };
+        scanBy[gid] = { ...cur, status: "paused", lastError: "Cancelled", lastScanAt: new Date().toISOString() };
       }
       return { ...prev, scanByGrammarId: scanBy, lastUpdatedMs: Date.now() };
     });
@@ -390,6 +420,7 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
 
   const runNow = useCallback(
     (grammarId: string) => {
+      if (!deps.prefs.getOpenAiKey()?.trim()) { notifyError("Add your own AI key in Settings to generate book examples."); return; }
       priorityNextGrammarIdRef.current = grammarId;
       // If we're currently scanning something else, abort it so the chosen job can run next.
       if (activeMiningGrammarId && activeMiningGrammarId !== grammarId) {
@@ -402,16 +433,17 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
         nextScanBy[grammarId] = {
           ...(cur || {}),
           status: point && point.hintQuality === "ok" ? "queued" : "error",
-          lastError: point && point.hintQuality === "ok" ? undefined : "Grammar point too ambiguous for MVP mining.",
+          lastError: point && point.hintQuality === "ok" ? undefined : "This pattern is too ambiguous for automatic example matching.",
         };
         return { ...prev, scanByGrammarId: nextScanBy, lastUpdatedMs: Date.now() };
       });
     },
-    [activeMiningGrammarId]
+    [activeMiningGrammarId, deps.prefs]
   );
 
   useEffect(() => {
-    if (!miningEnabled) return;
+    if (!deps.prefs.getOpenAiKey()?.trim()) return;
+    if (!miningEnabled && !priorityNextGrammarIdRef.current) return;
     if (!books || books.length === 0) return;
     if (minerRunningRef.current) return;
 
@@ -449,30 +481,10 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
     minerRunningRef.current = true;
     void runMine(next).finally(() => {
       minerRunningRef.current = false;
+      if (mounted.current) setWorkerEpoch(epoch => epoch + 1);
       if (priorityNextGrammarIdRef.current === next) priorityNextGrammarIdRef.current = null;
     });
-  }, [books, miningEnabled, runMine, state.examplesByGrammarId, state.learningIds, state.scanByGrammarId]);
-
-  // Auto-generate teaching overlays once examples exist (default experience).
-  useEffect(() => {
-    if (!miningEnabled) return;
-    if (!books || books.length === 0) return;
-    if (teacherRunningRef.current) return;
-
-    const next = state.learningIds.find((gid) => {
-      if (autoTeachBlockedRef.current.has(gid)) return false;
-      const ex = state.examplesByGrammarId[gid] || [];
-      if (ex.length === 0) return false;
-      if (ex.every((e) => Boolean(e.teaching))) return false;
-      return true;
-    });
-    if (!next) return;
-
-    teacherRunningRef.current = true;
-    void teachExamples(next).finally(() => {
-      teacherRunningRef.current = false;
-    });
-  }, [books, miningEnabled, state.examplesByGrammarId, state.learningIds, teachExamples]);
+  }, [workerEpoch, books, miningEnabled, runMine, state.examplesByGrammarId, state.learningIds, state.scanByGrammarId]);
 
   // Abort in-flight request on unmount.
   useEffect(() => {
@@ -483,6 +495,10 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
 
   const value: GrammarContextValue = useMemo(
     () => ({
+      teachingByGrammarId,
+      storageError,
+      syncStatus: driveSync.status,
+      retrySync: driveSync.retry,
       state,
       knownSet,
       learningSet,
@@ -503,6 +519,10 @@ export function GrammarProvider({ children }: { children: React.ReactNode }) {
       setUnderlinesEnabled,
     }),
     [
+      driveSync.status,
+      driveSync.retry,
+      teachingByGrammarId,
+      storageError,
       forceMine,
       getExamples,
       getGrammarPoint,

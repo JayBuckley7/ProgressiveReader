@@ -1,10 +1,12 @@
 """Translation domain routes."""
 from __future__ import annotations
 
+from ...utils.access_policy import require_user_ai_key
+
 from flask import Blueprint, request, jsonify, current_app, Response
 from pydantic import ValidationError
 
-from ...utils.clerk_auth import optional_auth
+from ...utils.clerk_auth import require_auth
 from ...utils.request_normalization import normalize_aliases
 from .http import stream_translate_chapter_sse, stream_translate_segments_sse
 from .schemas import TranslateRequest, TranslateSegmentsRequest
@@ -19,7 +21,8 @@ def _get_json_dict() -> dict:
     return data
 
 @translation_bp.route('/chapter', methods=['POST'])
-@optional_auth
+@require_auth
+@require_user_ai_key
 def translate_chapter():
     """Translate chapter HTML content with OpenAI, optimized for long-form content with streaming support."""
     try:
@@ -76,7 +79,8 @@ def translate_chapter():
 
 
 @translation_bp.route('/segments', methods=['POST'])
-@optional_auth
+@require_auth
+@require_user_ai_key
 def translate_segments():
     """Translate stable reader segments in one batched provider call."""
     try:

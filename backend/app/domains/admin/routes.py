@@ -1,75 +1,22 @@
-"""Admin domain routes for OpenAI key management and admin operations."""
-from flask import Blueprint, request, jsonify, current_app
-from pydantic import ValidationError
-from flask import g
-
-from ...utils.clerk_auth import require_auth, require_admin, is_progressive_reader_admin
-from .schemas import (
-    AddOpenAIKeyRequest,
-    RemoveOpenAIKeyRequest,
-)
-import logging
-
-logger = logging.getLogger(__name__)
+"""Deployment-managed credential status. Runtime mutations are intentionally disabled."""
+from flask import Blueprint, jsonify, current_app
+from ...utils.clerk_auth import require_admin
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api')
 
-
-@admin_bp.route('/openai-key-configured', methods=['GET'])
+@admin_bp.route('/openai-key-configured')
 def openai_key_configured():
-    """Return whether the server has at least one OpenAI API key."""
-    service = current_app.extensions["container"].admin_service
-    result = service.get_openai_key_status()
-    return jsonify(result.model_dump())
+    # A configured secret does not mean server-funded execution is enabled.
+    return jsonify(openai_key_configured=False, pool_size=0, server_funded_enabled=False)
 
-
-@admin_bp.route('/openai-keys/add', methods=['POST'])
-@require_admin
-def add_openai_key():
-    """Add an API key to the rotation pool."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Invalid JSON payload'}), 400
-        req = AddOpenAIKeyRequest(**data)
-    except ValidationError as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
-    
-    service = current_app.extensions["container"].admin_service
-    result = service.add_openai_key(req)
-    current_app.logger.info(f'Added OpenAI key. Pool size now {result.pool_size}')
-    return jsonify(result.model_dump())
-
-
-@admin_bp.route('/openai-keys/remove', methods=['POST'])
-@require_admin
-def remove_openai_key():
-    """Remove an API key from the rotation pool."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Invalid JSON payload'}), 400
-        req = RemoveOpenAIKeyRequest(**data)
-    except ValidationError as e:
-        return jsonify({'error': f'Invalid request: {str(e)}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
-    
-    try:
-        service = current_app.extensions["container"].admin_service
-        result = service.remove_openai_key(req)
-        current_app.logger.info(f'Removed OpenAI key. Pool size now {result.pool_size}')
-        return jsonify(result.model_dump())
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 404
-
-
-@admin_bp.route('/openai-keys', methods=['GET'])
+@admin_bp.route('/openai-keys')
 @require_admin
 def list_openai_keys():
-    """Return the list of stored OpenAI API keys."""
-    service = current_app.extensions["container"].admin_service
-    result = service.list_openai_keys()
-    return jsonify(result.model_dump())
+    result = current_app.extensions['container'].admin_service.list_openai_keys()
+    return jsonify(**result.model_dump(), deployment_managed=True, server_funded_enabled=False)
+
+@admin_bp.route('/openai-keys/add', methods=['POST'])
+@admin_bp.route('/openai-keys/remove', methods=['POST'])
+@require_admin
+def immutable_keys():
+    return jsonify(code='DEPLOYMENT_MANAGED', error='API credentials are managed through deployment secrets. Server-funded AI is disabled.'), 409

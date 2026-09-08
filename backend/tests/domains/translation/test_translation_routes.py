@@ -21,9 +21,9 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def client(app, authenticated_client):
     """Create test client."""
-    return app.test_client()
+    return authenticated_client(app)
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_translate_chapter_non_streaming(client, mock_provider):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test content</p>',
+        'api_key': 'test-key', 'content': '<p>Test content</p>',
         'target_lang': 'English',
         'stream': False
     })
@@ -58,7 +58,7 @@ def test_translate_chapter_accepts_targetLang_alias(client, mock_provider):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test content</p>',
+        'api_key': 'test-key', 'content': '<p>Test content</p>',
         'targetLang': 'English',
         'useCefr': True,
         'cefrLevel': 'B2',
@@ -76,7 +76,7 @@ def test_translate_chapter_streaming(client, mock_provider):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test content</p>',
+        'api_key': 'test-key', 'content': '<p>Test content</p>',
         'target_lang': 'English',
         'stream': True
     })
@@ -88,7 +88,7 @@ def test_translate_chapter_validation_error(client):
     """Test chapter translation with invalid input."""
     response = client.post('/api/translate/chapter', json={
         # Missing required 'content' field
-        'target_lang': 'English'
+        'target_lang': 'English', 'api_key': 'test-key'
     })
     assert response.status_code == 400
 
@@ -100,8 +100,8 @@ def test_translate_chapter_api_key_not_configured(client):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test</p>',
-        'target_lang': 'English'
+        'api_key': 'test-key', 'content': '<p>Test</p>',
+        'target_lang': 'English', 'api_key': 'test-key'
     })
     assert response.status_code == 400
     data = response.get_json()
@@ -118,6 +118,7 @@ def test_translate_segments_matches_camel_case_contract_and_batches_once(client,
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
         "segments": [
             {"id": "s-1", "html": "<p>one</p>", "sourceHash": "hash-1"},
             {"id": "s-2", "html": "<em>two</em>"},
@@ -161,6 +162,7 @@ def test_translate_segments_accepts_snake_case_and_target_lang_alias(client, moc
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
         "segments": [{"id": "s-1", "html": "<p>one</p>", "source_hash": "hash-1"}],
         "target_lang": "French",
         "use_cefr": False,
@@ -182,6 +184,7 @@ def test_translate_segments_streaming_sends_typed_segment_events(client, mock_pr
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
         "segments": [{"id": "s-1", "html": "<p>one</p>", "sourceHash": "hash-1"}],
         "targetLanguage": "English",
         "stream": True,
@@ -208,6 +211,7 @@ def test_translate_segments_returns_paid_subset_when_repair_cannot_restore_all_b
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
         "segments": [
             {"id": "s-1", "html": "<p>one</p>", "sourceHash": "hash-1"},
             {"id": "s-2", "html": "<p>two</p>", "sourceHash": "hash-2"},
@@ -238,6 +242,7 @@ def test_translate_segments_stream_marks_an_exhausted_partial_batch_incomplete(c
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
         "segments": [
             {"id": "s-1", "html": "<p>one</p>"},
             {"id": "s-2", "html": "<p>two</p>"},
@@ -260,6 +265,7 @@ def test_translate_segments_stream_marks_an_exhausted_partial_batch_incomplete(c
 )
 def test_translate_segments_rejects_empty_or_duplicate_segments(client, segments):
     response = client.post('/api/translate/segments', json={
+        'api_key': 'test-key',
         "segments": segments,
         "targetLanguage": "English",
     })

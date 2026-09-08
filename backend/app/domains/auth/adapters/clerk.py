@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import logging
+import time
+import requests
+import jwt
+from cryptography.hazmat.primitives import serialization
 from typing import Any, Dict, Optional, List
 
 from ..ports import AuthProviderPort
 from ..schemas import SessionInfo, UserInfo
 from ....utils.runtime_env import is_dev_env
-from ....utils.timeout import call_with_timeout, TimeoutExceededError
+from ....utils.timeout import TimeoutExceededError
 
 try:
     from clerk_backend_api import Clerk  # type: ignore
@@ -34,6 +38,8 @@ class ClerkAuthProvider(AuthProviderPort):
         # The container is responsible for reading env/config.
         key = (secret_key or "").strip() or None
         self._secret_key = key
+        self._jwks = {}
+        self._jwks_loaded_at = 0.0
         if not self._secret_key or Clerk is None:
             # In development, missing Clerk configuration is expected.
             if is_dev_env():
@@ -44,7 +50,7 @@ class ClerkAuthProvider(AuthProviderPort):
                 logger.warning("ClerkAuthProvider not initialized; missing secret_key or Clerk SDK")
             self.client = None
         else:
-            self.client = Clerk(bearer_auth=self._secret_key)
+            self.client = Clerk(bearer_auth=self._secret_key, timeout_ms=6000, retry_config=None)
 
     def verify_token(self, token: str) -> Optional[SessionInfo]:
         if not self._secret_key:
@@ -57,11 +63,7 @@ class ClerkAuthProvider(AuthProviderPort):
                 logger.warning("[auth] Clerk JWKS helpers not available; cannot verify token")
                 return None
 
-            claims = call_with_timeout(
-                label="Clerk token verification",
-                timeout_seconds=CLERK_VERIFY_TIMEOUT_SECONDS,
-                fn=lambda: verify_token(token, VerifyTokenOptions(secret_key=self._secret_key)),  # type: ignore[misc]
-            )
+            claims = verify_token(token, self._verification_options(token))
             session_id = claims.get("sid")
             user_id = claims.get("sub")
             logger.debug("[auth] Token verified user_id=%s session_id=%s", user_id, session_id)
@@ -79,6 +81,22 @@ class ClerkAuthProvider(AuthProviderPort):
                 return None
             logger.error("Error verifying Clerk session token: %s", exc, exc_info=True)
             return None
+
+    def _verification_options(self, token):
+        # Resolve only from Clerk's fixed backend URL, never from an untrusted token URL.
+        kid = jwt.get_unverified_header(token).get('kid')
+        now = time.monotonic()
+        if now - self._jwks_loaded_at > 300 or (kid not in self._jwks and now - self._jwks_loaded_at > 10):
+            response = requests.get('https://api.clerk.com/v1/jwks',
+                headers={'Authorization': f'Bearer {self._secret_key}'}, timeout=(5, 5))
+            response.raise_for_status()
+            self._jwks = {key['kid']: key for key in response.json()['keys'] if key.get('kty') == 'RSA'}
+            self._jwks_loaded_at = now
+        if kid not in self._jwks:
+            raise ValueError('Unknown signing key')
+        key = jwt.algorithms.RSAAlgorithm.from_jwk(self._jwks[kid])
+        pem = key.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo).decode()
+        return VerifyTokenOptions(jwt_key=pem)
 
     @staticmethod
     def _maybe_str(v: object) -> Optional[str]:
@@ -121,11 +139,7 @@ class ClerkAuthProvider(AuthProviderPort):
     def _get_clerk_user(self, user_id: str) -> Any:
         if not self.client:
             raise ValueError("Clerk client not configured")
-        return call_with_timeout(
-            label="Clerk user lookup",
-            timeout_seconds=CLERK_USER_LOOKUP_TIMEOUT_SECONDS,
-            fn=lambda: self.client.users.get(user_id=user_id),
-        )
+        return self.client.users.get(user_id=user_id)
 
     def _extract_bearer(self, headers: Dict[str, str]) -> Optional[str]:
         auth_header = headers.get("Authorization") or headers.get("authorization")

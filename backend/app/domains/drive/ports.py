@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Iterable
 
 
 class DriveProvider(ABC):
@@ -43,7 +43,7 @@ class DriveIntegrationPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def download_file(self, user_id: str, file_id: str) -> tuple[bytes, str]:
+    def download_file(self, user_id: str, file_id: str) -> tuple[Iterable[bytes], str]:
         raise NotImplementedError
 
     @abstractmethod

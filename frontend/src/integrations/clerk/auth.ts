@@ -69,6 +69,12 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
 
 export function createClerkAuthPort(): ClerkAuthPort {
   return {
+    getUserId() {
+      const clerk = getClerk();
+      if (!clerk?.loaded) return undefined;
+      const user = (clerk.user ?? clerk.client?.user) as { id?: string } | null;
+      return user?.id ?? null;
+    },
     async getToken(): Promise<string | null> {
       return await getClerkToken();
     },

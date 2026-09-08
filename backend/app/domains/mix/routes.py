@@ -1,17 +1,20 @@
 """Mix mode routes (LLM-assisted ambiguous swap refinement)."""
 from __future__ import annotations
 
+from ...utils.access_policy import require_user_ai_key
+
 from flask import Blueprint, jsonify, request, current_app
 from pydantic import ValidationError
 
-from ...utils.clerk_auth import optional_auth
+from ...utils.clerk_auth import require_auth
 from .controller import MixController
 
 mix_bp = Blueprint("mix", __name__, url_prefix="/api/mix")
 
 
 @mix_bp.route("/refine", methods=["POST"])
-@optional_auth
+@require_auth
+@require_user_ai_key
 def refine_swaps():
     try:
         data = request.get_json() or {}

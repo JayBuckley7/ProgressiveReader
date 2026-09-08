@@ -10,8 +10,9 @@ def wire_container(app, *, env: Mapping[str, str]) -> None:
     from ..settings import load_settings
     from ..infrastructure.sqlalchemy.db import db
 
+    from flask import request, has_request_context
     settings = load_settings(env=env, flask_config=app.config)
-    app.extensions["container"] = create_container(settings=settings, db_session=db.session)
+    app.extensions["container"] = create_container(settings=settings, db_session=db.session, operation_id=lambda: request.headers.get("Idempotency-Key") if has_request_context() else None)
 
 
 def register_domain_blueprints(app) -> None:

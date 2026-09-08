@@ -37,6 +37,8 @@ function sanitizeClipboardText(input: string): string {
 
 export default function ClipboardReader() {
   const { t } = useTranslation();
+  const editingEntry = useRef<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [rawText, setRawText] = useState<string>("");
   const [html, setHtml] = useState<string>("");
   const [entries, setEntries] = useState<Array<{ id: string; html: string; raw: string }>>([]);
@@ -91,19 +93,37 @@ export default function ClipboardReader() {
 
   const ingestText = useCallback((text: string): boolean => {
     const cleaned = sanitizeClipboardText(text);
-    if (cleaned === lastClipboardRef.current) {
+    if (!cleaned || cleaned === lastClipboardRef.current) {
       return false;
     }
     lastClipboardRef.current = cleaned;
     setRawText(cleaned);
     if (appendMode) {
-      setEntries(prev => [{ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, html: textToHtml(cleaned), raw: cleaned }, ...prev].slice(0, 100));
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      editingEntry.current = id;
+      setEntries(prev => [{ id, html: textToHtml(cleaned), raw: cleaned }, ...prev].slice(0, 100));
     } else {
       setHtml(textToHtml(cleaned));
     }
     setContentRevision(r => r + 1);
     return true;
   }, [appendMode]);
+
+  const editText = (text: string) => {
+    setRawText(text);
+    const cleaned = sanitizeClipboardText(text);
+    if (appendMode) {
+      const id = editingEntry.current || `edit-${Date.now()}`;
+      editingEntry.current = id;
+      setEntries(prev => {
+        const rest = prev.filter(entry => entry.id !== id);
+        return cleaned ? [{ id, raw: text, html: textToHtml(cleaned) }, ...rest].slice(0, 100) : rest;
+      });
+    } else {
+      setHtml(cleaned ? textToHtml(cleaned) : "");
+    }
+    setContentRevision(r => r + 1);
+  };
 
   const readClipboard = useCallback(async () => {
     try {
@@ -246,16 +266,22 @@ export default function ClipboardReader() {
     setAppendMode(checked);
     // Move current content into list when enabling
     if (checked) {
-      setEntries(prev => (html ? [{ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, html, raw: rawText }, ...prev] : prev));
+      const id = entries[0]?.id || `edit-${Date.now()}`;
+      editingEntry.current = id;
+      setEntries(prev => html ? [{ id, html, raw: rawText }, ...prev.filter(entry => entry.id !== id)] : prev);
       setHtml("");
     } else {
       // When disabling, keep the newest entry as the single view if present
       setHtml(entries[0]?.html || "");
+      setRawText(entries[0]?.raw || "");
+      editingEntry.current = null;
     }
     setContentRevision(r => r + 1);
   };
 
   const handleClearContent = () => {
+    lastClipboardRef.current = "";
+    editingEntry.current = null;
     setEntries([]);
     setHtml("");
     setRawText("");
@@ -263,6 +289,11 @@ export default function ClipboardReader() {
   };
 
   const handleRemoveEntry = (id: string) => {
+    if (editingEntry.current === id) {
+      editingEntry.current = null;
+      setRawText("");
+      lastClipboardRef.current = "";
+    }
     setEntries(prev => prev.filter(e => e.id !== id));
     setContentRevision(r => r + 1);
   };
@@ -278,6 +309,8 @@ export default function ClipboardReader() {
   };
 
   const saveToLibrary = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const text = appendMode ? (sortAscending ? [...entries].reverse() : entries).map(e => e.raw).join('\n\n') : rawText;
       const cleaned = sanitizeClipboardText(text);
@@ -304,6 +337,8 @@ export default function ClipboardReader() {
     } catch (e: any) {
       appLog.error("[ClipboardReader] Save to library failed", e);
       notifyError(e, { title: t('clipboard.toasts.saveFailed') });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -417,6 +452,7 @@ export default function ClipboardReader() {
           </button>
           <button
             onClick={saveToLibrary}
+            disabled={!hasAnyContent || isSaving}
             className={saveButtonClass}
             title={t('clipboard.saveTitle')}
           >
@@ -498,10 +534,14 @@ export default function ClipboardReader() {
             ref={pasteAreaRef}
             className="w-full mt-4 p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100"
             rows={3}
+            value={rawText}
+            aria-label={t('clipboard.editorLabel')}
+            onChange={event => editText(event.target.value)}
             placeholder={t('clipboard.blockedSteps.paste')}
             onPaste={(e) => {
               const text = e.clipboardData?.getData('text') || '';
               if (text) {
+                e.preventDefault();
                 ingestText(text);
               }
             }}

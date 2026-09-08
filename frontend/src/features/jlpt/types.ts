@@ -94,6 +94,7 @@ export type JlptResultV2 = {
 };
 
 export type JlptAttemptSummary = {
+  attemptId?: string;
   testRef: JlptTestRef | null;
   testName: string;
   level: JlptLevel;

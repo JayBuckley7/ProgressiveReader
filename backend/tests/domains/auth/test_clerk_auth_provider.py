@@ -29,10 +29,11 @@ class _DummyTokenVerificationError(Exception):
 
 
 def _install_clerk_stubs(monkeypatch, *, claims: dict[str, str], client: _DummyClient) -> None:
-    monkeypatch.setattr(clerk_module, "Clerk", lambda bearer_auth: client)
+    monkeypatch.setattr(clerk_module, "Clerk", lambda bearer_auth, **kwargs: client)
     monkeypatch.setattr(clerk_module, "VerifyTokenOptions", lambda secret_key: SimpleNamespace(secret_key=secret_key))
     monkeypatch.setattr(clerk_module, "TokenVerificationError", _DummyTokenVerificationError)
     monkeypatch.setattr(clerk_module, "verify_token", lambda token, options: claims)
+    monkeypatch.setattr(clerk_module.ClerkAuthProvider, "_verification_options", lambda self, token: SimpleNamespace())
 
 
 def test_get_current_user_from_headers_returns_profile_fields(monkeypatch):
@@ -72,12 +73,9 @@ def test_get_current_user_from_headers_falls_back_to_session_identity_on_lookup_
         client=_DummyClient(raw_user=None),
     )
 
-    def fake_call_with_timeout(label: str, timeout_seconds: float, fn):
-        if label == "Clerk user lookup":
-            raise clerk_module.TimeoutExceededError(label=label, timeout_seconds=timeout_seconds)
-        return fn()
-
-    monkeypatch.setattr(clerk_module, "call_with_timeout", fake_call_with_timeout)
+    def timeout(self, user_id):
+        raise TimeoutError("provider deadline")
+    monkeypatch.setattr(clerk_module.ClerkAuthProvider, "_get_clerk_user", timeout)
 
     provider = clerk_module.ClerkAuthProvider(secret_key="sk_test")
 
@@ -96,11 +94,36 @@ def test_verify_token_returns_none_when_verification_times_out(monkeypatch):
         client=_DummyClient(raw_user=None),
     )
 
-    def fake_call_with_timeout(label: str, timeout_seconds: float, fn):
-        raise clerk_module.TimeoutExceededError(label=label, timeout_seconds=timeout_seconds)
-
-    monkeypatch.setattr(clerk_module, "call_with_timeout", fake_call_with_timeout)
+    def timeout(token, options):
+        raise TimeoutError("provider deadline")
+    monkeypatch.setattr(clerk_module, "verify_token", timeout)
 
     provider = clerk_module.ClerkAuthProvider(secret_key="sk_test")
 
     assert provider.verify_token("token") is None
+
+
+def test_real_signature_and_expiry_validation_with_bounded_jwks_fetch(monkeypatch):
+    import time
+    import jwt
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from unittest.mock import Mock
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public = jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key(), as_dict=True)
+    public['kid'] = 'synthetic-key'
+    response = Mock()
+    response.json.return_value = {'keys': [public]}
+    get = Mock(return_value=response)
+    monkeypatch.setattr(clerk_module.requests, 'get', get)
+    monkeypatch.setattr(clerk_module, 'Clerk', lambda **kwargs: Mock())
+    provider = clerk_module.ClerkAuthProvider('synthetic-secret')
+    claims = dict(sub='alice', sid='session', exp=int(time.time()) + 60, iat=int(time.time()))
+    valid = jwt.encode(claims, key, algorithm='RS256', headers={'kid': 'synthetic-key'})
+    assert provider.verify_token(valid).user_id == 'alice'
+    expired = jwt.encode({**claims, 'exp': int(time.time()) - 60}, key, algorithm='RS256', headers={'kid': 'synthetic-key'})
+    assert provider.verify_token(expired) is None
+    parts = valid.split('.')
+    parts[2] = 'AAAA'
+    assert provider.verify_token('.'.join(parts)) is None
+    assert get.call_count == 1
+    assert get.call_args.kwargs['timeout'] == (5, 5)

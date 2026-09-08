@@ -22,7 +22,7 @@ class OpenAIProvider(GrammarProvider):
         self._api_key = api_key
 
     def _call_openai_json(self, *, model: str, messages: list[dict[str, str]], temperature: float = 0) -> Any:
-        client = OpenAI(api_key=self._api_key)
+        client = OpenAI(api_key=self._api_key, timeout=60.0, max_retries=0)
         completion = client.chat.completions.create(
             model=model,
             messages=messages,

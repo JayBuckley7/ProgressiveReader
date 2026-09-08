@@ -66,7 +66,7 @@ describe('ClipboardReader (smoke)', () => {
     await waitFor(() => {
       expect(importKanjiLyrics).toHaveBeenCalled();
       expect(screen.getByText('星の歌 — 試験バンド')).toBeInTheDocument();
-      expect(screen.getByText(/夜空を見上げる/)).toBeInTheDocument();
+      expect(screen.getByText(/夜空を見上げる/, { selector: 'p' })).toBeInTheDocument();
     });
   });
 });

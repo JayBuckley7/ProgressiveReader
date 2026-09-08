@@ -659,7 +659,7 @@
       "12 時(じ) から",
       "12 時(じ) まえに"
     ],
-    "correct_choice_index": null,
+    "correct_choice_index": 2,
     "correct_choice_text": "12<時(じ)>から",
     "explanation": "Take a break at 12 o'clock. Choose 12:00 as the starting time.",
     "is_audio": false,

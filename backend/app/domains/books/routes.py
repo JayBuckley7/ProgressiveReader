@@ -1,8 +1,9 @@
+from ...core.errors import AppError
 """Books domain routes."""
 from flask import Blueprint, Response, current_app, g, jsonify, request, session
 from pydantic import ValidationError
 
-from ...utils.clerk_auth import optional_auth
+from ...utils.clerk_auth import require_auth
 from .controller import BooksController
 
 books_bp = Blueprint('books', __name__, url_prefix='/api')
@@ -32,7 +33,7 @@ def cover_lookup():
 
 
 @books_bp.route('/bookmarks', methods=['GET'])
-@optional_auth
+@require_auth
 def get_bookmarks():
     """Return bookmarks for the given book"""
     book_id = request.args.get('bookId')
@@ -45,18 +46,22 @@ def get_bookmarks():
         return jsonify(controller.get_bookmarks(book_id=book_id, user_id=user_id))
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
 
 @books_bp.route('/bookmarks', methods=['POST'])
-@optional_auth
+@require_auth
 def add_bookmark():
     """Create a bookmark for the current user (if any)."""
     try:
         data = request.get_json() or {}
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
@@ -67,6 +72,8 @@ def add_bookmark():
         return jsonify(bookmark), 201
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
 
@@ -80,6 +87,8 @@ def toggle_jlpt():
             return jsonify({'error': 'Invalid JSON payload'}), 400
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400
 
@@ -90,5 +99,7 @@ def toggle_jlpt():
         return jsonify(response.model_dump())
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         return jsonify({'error': f'Invalid JSON payload: {str(e)}'}), 400

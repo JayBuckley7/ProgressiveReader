@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ....core.errors import require_identity
+
 import json
 from typing import List, Optional, Any
 
@@ -36,6 +38,7 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
 
     def get_bookmarks(self, book_id: str, user_id: Optional[str] = None) -> List[Bookmark]:
         """Get bookmarks for a book, optionally filtered by user."""
+        require_identity(user_id)
         query = self._session.query(BookmarkModel).filter_by(book_id=book_id)
         if user_id:
             query = query.filter_by(user_id=user_id)
@@ -52,6 +55,7 @@ class SqlAlchemyBooksRepository(BooksRepositoryPort):
         locator: Optional[ReaderLocator] = None,
     ) -> Bookmark:
         """Create a bookmark."""
+        require_identity(user_id)
         bookmark = BookmarkModel(
             user_id=user_id,
             book_id=book_id,

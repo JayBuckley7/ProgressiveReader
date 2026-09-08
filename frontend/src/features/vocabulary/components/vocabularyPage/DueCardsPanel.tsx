@@ -7,6 +7,7 @@ export function DueCardsPanel({
   selectedDeckId,
   selectedDeckName,
   dueVocabEntries,
+  hasLoadedDueVocab,
   dueVocabError,
   dueVocabProgress,
   isSignedIn,
@@ -17,6 +18,7 @@ export function DueCardsPanel({
   selectedDeckId: string;
   selectedDeckName: string;
   dueVocabEntries: JpdbLookupVocabularyEntry[];
+  hasLoadedDueVocab: boolean;
   dueVocabError: string | null;
   dueVocabProgress: DueVocabProgress | null;
   isSignedIn: boolean;
@@ -38,8 +40,16 @@ export function DueCardsPanel({
         </div>
       )}
 
+      <p className="mb-4 text-sm" role="status">
+        {isLoadingDueVocab
+          ? "Checking JPDB review status…"
+          : hasLoadedDueVocab
+            ? `${dueVocabEntries.length} words due at last check${dueVocabError ? "; refresh failed" : ""}.`
+            : selectedDeckId ? "Refresh to check how many words are due." : "Select a deck above to see its review status."}
+      </p>
       {dueVocabEntries.length > 0 ? (
-        <>
+        <details className="mb-4">
+          <summary className="cursor-pointer text-sm">Browse due words ({dueVocabEntries.length})</summary>
           <ul className="grid gap-2 mb-4">
             {dueVocabEntries.slice(0, 12).map((entry) => {
               const dueLabel = formatDueAt(entry.due_at);
@@ -72,13 +82,11 @@ export function DueCardsPanel({
               + {dueVocabEntries.length - 12} more
             </div>
           )}
-        </>
-      ) : (
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          {selectedDeckId ? t("vocabulary.dueCards.none") : "Select a deck below to compute due cards."}
-        </p>
-      )}
+        </details>
+      ) : null}
 
+      <p className="text-sm app-muted mb-3">This is a preview of JPDB's review queue. Complete reviews in JPDB to update its schedule.</p>
+      <a href="https://jpdb.io/review" target="_blank" rel="noopener noreferrer" className="app-button-primary inline-block rounded-md px-4 py-2 mb-4">Review in JPDB</a>
       <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={onRefresh}

@@ -35,7 +35,7 @@ import {
   hasTodayCheckIn,
 } from "@features/jlpt/services/jlptSelectors";
 import { jlptTestService } from "@features/jlpt/services/jlptTestService";
-import type { JlptAttemptSummary, JlptCatalogTest, JlptLevel, JlptTestData, JpdbDeckBinding, PracticeMode } from "@features/jlpt/types";
+import type { JlptAttemptSummary, JlptCatalogTest, JlptLevel, JlptTestData, JpdbDeckBinding, JpdbDeckSnapshot, PracticeMode } from "@features/jlpt/types";
 
 const readJpdbApiKeyFromCookies = () => {
   if (typeof document === "undefined") return "";
@@ -141,6 +141,9 @@ function TestPreview(props: {
               ))}
             </div>
 
+            {practiceMode === "exam" && !Number(testData.meta?.time) && <p className="mt-3 text-sm app-muted">Untimed exam: this file does not specify a total duration. Elapsed time will still be shown.</p>}
+            <p className="mt-3 text-sm app-muted">Answers are kept on this device. Reopen this test in the same mode to resume. Exam timers use the test file's total time and continue while you are away.</p>
+            {testData.questions.some(q => q.is_audio && !q.audio_url) && <p role="alert" className="mt-3 text-sm text-amber-700">Some listening questions have no audio file. Their transcript may help with practice, but this test is incomplete for listening assessment.</p>}
             <div className={`mt-4 rounded-md p-4 text-sm leading-6 text-[color:var(--ui-text)] ${subtleSurfaceClass}`}>
               {modeSummary}
             </div>
@@ -168,7 +171,7 @@ function TestPreview(props: {
                 <div className="mt-4 rounded-md border border-amber-500/35 bg-amber-500/10 p-4">
                   <div className="text-sm font-semibold text-[color:var(--ui-text)]">Start blocked</div>
                   <div className={`mt-2 text-sm leading-6 ${mutedTextClass}`}>
-                    Pick another test file with answer data to use this redesigned flow.
+                    Every question needs a valid answer index. This file has missing or invalid answers; repair the test data or choose another test.
                   </div>
                 </div>
               )}
@@ -223,6 +226,12 @@ function TestPreview(props: {
 }
 
 export function JLPTTestPage() {
+  const { user, isLoaded } = useUser();
+  if (isLoaded === false) return <p className="p-4">Loading account…</p>;
+  return <AccountJLPTTestPage key={user?.id || "guest"} />;
+}
+
+function AccountJLPTTestPage() {
   const deps = useAppDeps();
   const { t } = useTranslation();
   const { user, isLoaded: isClerkLoaded, isSignedIn } = useUser();
@@ -241,28 +250,60 @@ export function JLPTTestPage() {
   const [loadingProgressLevel, setLoadingProgressLevel] = useState<string | null>(null);
   const [readinessDrawerLevel, setReadinessDrawerLevel] = useState<JlptLevel | null>(null);
   const catalogScrollYRef = useRef(0);
+  const navigationKey = `pr:jlpt:active:v1:${encodeURIComponent(user?.id || "guest")}`;
+  useEffect(() => {
+    if (!isClerkLoaded) return;
+    setSelectedTest(null); setTestData(null); setStartedTest(false);
+    let cancelled = false;
+    try {
+      const raw = localStorage.getItem(navigationKey);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (!draft.test?.id || !["local", "library"].includes(draft.test.source) || !["exam", "practice"].includes(draft.mode)) throw new Error("Invalid saved test selection.");
+        setLoadingTest(true);
+        void (draft.retryData ? Promise.resolve(draft.retryData) : jlptTestService.loadTestData(deps.drive, draft.test)).then(data => {
+          if (!cancelled) { setSelectedTest(draft.test); setPracticeMode(draft.mode); setTestData(data); setStartedTest(true); }
+        }).catch(() => { if (!cancelled) setError("Your saved test could not be reopened. Its answers are retained; reconnect and select the same test to resume."); })
+          .finally(() => { if (!cancelled) setLoadingTest(false); });
+      }
+    } catch { setError("Saved test selection could not be read. Your attempt data has been left untouched."); }
+    return () => { cancelled = true; };
+  }, [navigationKey, isClerkLoaded, deps.drive]);
 
+  useEffect(() => {
+    if (!startedTest || !selectedTest || !testData) return;
+    try { localStorage.setItem(navigationKey, JSON.stringify({ test: selectedTest, mode: practiceMode, retryData: selectedTest.id.endsWith(":mistakes") ? testData : undefined })); }
+    catch { setError("The test cannot reopen automatically because device storage is full. Keep this page open."); }
+  }, [startedTest, selectedTest, testData, practiceMode, navigationKey]);
+
+  const catalogBusy = useRef(false);
+  const lastDriveStatus = useRef(deps.drive.isSignedIn());
   const loadTests = useCallback(async () => {
+    if (catalogBusy.current) return;
+    catalogBusy.current = true;
     try {
       setLoading(true);
       setError(null);
-      const availableTests = await jlptTestService.getAllTests(deps.drive);
+      const availableTests = await jlptTestService.getAllTests(deps.drive, localTests => { setTests(localTests); setLoading(false); });
       setTests(availableTests);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("jlptTest.page.failedToLoadTests"));
     } finally {
+      catalogBusy.current = false;
       setLoading(false);
     }
   }, [deps.drive, t]);
 
   useEffect(() => {
     void loadTests();
-    return deps.driveAuth.onAuthStateChange(() => {
+    return deps.driveAuth.onAuthStateChange(authenticated => {
+      if (authenticated === lastDriveStatus.current) return;
+      lastDriveStatus.current = authenticated;
       void loadTests();
     });
   }, [deps.driveAuth, loadTests]);
 
-  const { state, updateState } = useJlptDashboardState({
+  const { state, updateState, syncError } = useJlptDashboardState({
     userId: user?.id ?? null,
     allowDriveSync: isClerkLoaded && isSignedIn,
     drive: deps.drive,
@@ -395,6 +436,7 @@ export function JLPTTestPage() {
   };
 
   const handleBack = () => {
+    try { localStorage.removeItem(navigationKey); } catch { /* Keep the recoverable pointer if storage is unavailable. */ }
     setSelectedTest(null);
     setTestData(null);
     setStartedTest(false);
@@ -432,12 +474,12 @@ export function JLPTTestPage() {
     updateState((current) => ({
       ...current,
       results: [
-        ...current.results,
+        ...current.results.filter(result => result.id !== attempt.attemptId),
         {
           ...attempt.overall,
-          id: createJlptId("jlpt-result"),
+          id: attempt.attemptId || createJlptId("jlpt-result"),
           completedAt: new Date().toISOString(),
-          scope: "full_test",
+          scope: "full_test" as const,
           sectionBreakdown: attempt.sections,
         },
       ].slice(-JLPT_RESULT_LIMIT),
@@ -554,7 +596,7 @@ export function JLPTTestPage() {
     setLoadingProgressLevel(level);
     try {
       const checkedAt = new Date().toISOString();
-      const snapshots = [];
+      const snapshots: JpdbDeckSnapshot[] = [];
       const batchSize = 400;
       for (const binding of bindings) {
         const pairs = await deps.backend.vocabulary.listDeckVocabulary(binding.deckId);
@@ -609,7 +651,11 @@ export function JLPTTestPage() {
           >
             {t("jlptTest.page.backToSelection")}
           </button>
+          {(error || syncError) && <p role="alert" className="mb-3 text-sm text-amber-700">{error || syncError}</p>}
           <JLPTTestRunner
+            key={`${user?.id || "guest"}:${selectedTest.id}:${practiceMode}`}
+            storageKey={`pr:jlpt:attempt:v1:${encodeURIComponent(user?.id || "guest")}:${selectedTest.source}:${encodeURIComponent(selectedTest.id)}:${practiceMode}`}
+            onRetryMistakes={questions => { setPracticeMode("practice"); setSelectedTest({ ...selectedTest, id: selectedTest.id + ":mistakes", name: selectedTest.name + " mistakes" }); setTestData({ questions }); }}
             testData={testData.questions}
             testMeta={testData.meta}
             testName={formatJlptTestTitle(selectedTest.name)}
@@ -643,6 +689,7 @@ export function JLPTTestPage() {
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${mutedTextClass}`}>{t("jlptTest.page.noTestsHint")}</p>
         </div>
 
+        {syncError && <p role="alert" className="mb-4 text-sm text-amber-700">{syncError}</p>}
         <JlptDashboardSummary
           activeGoal={activeGoal}
           availableTests={tests}

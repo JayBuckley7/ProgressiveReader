@@ -1,3 +1,4 @@
+import { backendResponseError } from "@core/backend/errors";
 /**
  * OCR API adapter for processing PDFs with OCR.
  *
@@ -23,18 +24,7 @@ export function createOcrBackendPort(fetchPort: BackendFetchPort): OcrBackendPor
         signal: opts?.signal,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "OCR processing failed";
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error || errorMessage;
-        } catch {
-          // If response is not JSON, use the text
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
+      if (!response.ok) throw await backendResponseError(response);
 
       // Read Server-Sent Events stream
       const reader = response.body?.getReader();
@@ -200,10 +190,7 @@ export function createOcrBackendPort(fetchPort: BackendFetchPort): OcrBackendPor
         signal: args.signal,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to fetch OCR page layout");
-      }
+      if (!response.ok) throw await backendResponseError(response);
 
       return (await response.json()) as OcrPageLayoutResponse;
     },

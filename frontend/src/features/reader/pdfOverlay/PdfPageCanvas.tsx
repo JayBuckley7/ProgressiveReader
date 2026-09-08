@@ -1,3 +1,4 @@
+import { BackendError } from "@core/backend/errors";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
 import { showDefinitionPopup } from "@features/reader/components/JpdbPopupBridge";
 import { loadConfig as loadJpdbConfig, parseText } from "@features/reader/content/api-adapter";
@@ -124,6 +125,7 @@ export function PdfPageCanvas({
   const [overlayTokens, setOverlayTokens] = useState<PdfOverlayToken[]>([]);
   const [isPreparingLookup, setIsPreparingLookup] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
+  const [lookupRetryable, setLookupRetryable] = useState(true);
   const [ocrRetryNonce, setOcrRetryNonce] = useState(0);
   const renderedPageRef = useRef<PdfPageLike | null>(null);
   const preparedRenderVersionRef = useRef(0);
@@ -246,7 +248,8 @@ export function PdfPageCanvas({
       } catch (error) {
         if (controller.signal.aborted || stale) return;
         appLog.error("[PdfPageCanvas] Failed to prepare lookup overlay", { pageNumber, error });
-        setOcrError("Lookup unavailable on this page.");
+        setOcrError(error instanceof BackendError ? error.message : "Lookup unavailable on this page.");
+        setLookupRetryable(!(error instanceof BackendError && ["SERVER_AI_DISABLED", "AUTH_REQUIRED"].includes(error.code)));
       } finally {
         if (!stale) {
           setIsPreparingLookup(false);
@@ -380,7 +383,7 @@ export function PdfPageCanvas({
         {ocrError ? (
           <div className="pointer-events-auto rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white shadow-sm" aria-live="polite">
             <span>{ocrError}</span>
-            <button
+            {lookupRetryable && <button
               type="button"
               className="ml-2 rounded-full bg-white/15 px-2 py-0.5 font-medium hover:bg-white/25"
               onClick={() => {
@@ -389,7 +392,7 @@ export function PdfPageCanvas({
               }}
             >
               Retry lookup
-            </button>
+            </button>}
           </div>
         ) : null}
       </div>

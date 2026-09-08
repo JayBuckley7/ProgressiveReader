@@ -17,7 +17,6 @@ export function AdminPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [keys, setKeys] = useState<string[]>([]);
-  const [newKey, setNewKey] = useState("");
   const [unauthorized, setUnauthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,12 +24,13 @@ export function AdminPage() {
   const [kanjiQuery, setKanjiQuery] = useState("");
   const [kanjiResults, setKanjiResults] = useState<KanjiInfo[]>([]);
   const [selectedKanji, setSelectedKanji] = useState<KanjiInfo | null>(null);
-  const [newJlptLevel, setNewJlptLevel] = useState<number | null>(null);
   const [kanjiLoading, setKanjiLoading] = useState(false);
 
   async function loadKeys() {
     setIsLoading(true);
-    const data = await deps.backend.admin.listOpenAiKeys();
+    let data;
+    try { data = await deps.backend.admin.listOpenAiKeys(); }
+    catch { setUnauthorized(true); setIsLoading(false); return; }
     if (data === null) {
       setUnauthorized(true);
       setIsLoading(false);
@@ -77,19 +77,6 @@ export function AdminPage() {
     );
   }
 
-  async function addKey() {
-    const trimmed = newKey.trim();
-    if (!trimmed) return;
-    await deps.backend.admin.addOpenAiKey({ key: trimmed });
-    setNewKey("");
-    loadKeys();
-  }
-
-  async function removeKey(key: string) {
-    await deps.backend.admin.removeOpenAiKey({ key });
-    loadKeys();
-  }
-
   // Kanji management functions
   async function searchKanji() {
     if (!kanjiQuery.trim()) return;
@@ -107,28 +94,6 @@ export function AdminPage() {
     }
   }
 
-  async function updateKanjiJlpt() {
-    if (!selectedKanji) return;
-    
-    setKanjiLoading(true);
-    try {
-      const data = await deps.backend.admin.updateKanjiJlpt({
-        kanji: selectedKanji.kanji,
-        jlpt_level: newJlptLevel,
-      });
-      appLog.debug(`Updated ${data.kanji} from N${data.old_jlpt || 'None'} to N${data.new_jlpt || 'None'}`);
-
-      const updatedKanji = { ...selectedKanji, jlpt: newJlptLevel ?? undefined };
-      setSelectedKanji(updatedKanji);
-      setKanjiResults(prev => prev.map(k => k.kanji === selectedKanji.kanji ? updatedKanji : k));
-      setNewJlptLevel(null);
-    } catch (error) {
-      appLog.error("[AdminPage] Error updating kanji", error);
-    } finally {
-      setKanjiLoading(false);
-    }
-  }
-
   // Only render admin interface for authorized users
   return (
     <div className="p-4 max-w-4xl mx-auto">
@@ -139,23 +104,7 @@ export function AdminPage() {
         <div className="space-y-6">
           <h2 className="text-xl font-semibold">{t('admin.keys.title')}</h2>
           
-          <div>
-            <label className="block font-medium mb-2">{t('admin.keys.addLabel')}</label>
-            <input
-              type="text"
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              className="border rounded w-full p-2 mb-2 bg-white text-gray-900 border-gray-300"
-              placeholder="sk-..."
-            />
-            <button
-              onClick={addKey}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              {t('admin.keys.addButton')}
-            </button>
-          </div>
-          
+          <p role="status">API credentials are managed through deployment settings. Server-funded AI is disabled.</p>
           <div>
             <h3 className="font-medium mb-2">{t('admin.keys.current', { count: keys.length })}</h3>
             {keys.length === 0 ? (
@@ -167,13 +116,8 @@ export function AdminPage() {
                     key={k}
                     className="flex items-center justify-between border p-2 rounded"
                   >
-                    <span className="font-mono text-sm">{k.slice(0, 8)}...</span>
-                    <button
-                      onClick={() => removeKey(k)}
-                      className="text-red-600 text-sm hover:text-red-800 transition-colors"
-                    >
-                      {t('admin.keys.remove')}
-                    </button>
+                    <span className="font-mono text-sm">{k}</span>
+
                   </li>
                 ))}
               </ul>
@@ -220,7 +164,6 @@ export function AdminPage() {
                     }`}
                     onClick={() => {
                       setSelectedKanji(kanji);
-                      setNewJlptLevel(kanji.jlpt || null);
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -254,29 +197,7 @@ export function AdminPage() {
                 <div><strong>{t('admin.kanji.currentJlpt')}</strong> {selectedKanji.jlpt ? `N${selectedKanji.jlpt}` : t('admin.kanji.none')}</div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <label className="font-medium text-gray-900">{t('admin.kanji.newJlpt')}</label>
-                <select
-                  value={newJlptLevel || ''}
-                  onChange={(e) => setNewJlptLevel(e.target.value ? parseInt(e.target.value) : null)}
-                  className="border rounded p-1 bg-white text-gray-900 border-gray-300"
-                >
-                  <option value="">{t('admin.kanji.none')}</option>
-                  <option value="1">N1</option>
-                  <option value="2">N2</option>
-                  <option value="3">N3</option>
-                  <option value="4">N4</option>
-                  <option value="5">N5</option>
-                </select>
-                
-                <button
-                  onClick={updateKanjiJlpt}
-                  disabled={kanjiLoading || newJlptLevel === selectedKanji.jlpt}
-                  className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors disabled:opacity-50"
-                >
-                  {kanjiLoading ? "..." : t('admin.kanji.update')}
-                </button>
-              </div>
+              <p>Dictionary editing is unavailable until shared overrides are supported.</p>
             </div>
           )}
         </div>

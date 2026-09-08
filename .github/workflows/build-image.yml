@@ -3,7 +3,13 @@ name: Build Docker Image
 on:
   push:
     branches: [ main, dev ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy after migration and staging release gates have passed"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build-image:
@@ -53,10 +59,12 @@ jobs:
           fi
 
       - name: Submit build to Cloud Build
+        env:
+          DEPLOY: ${{ inputs.deploy || false }}
         run: |
           gcloud builds submit \
             --project=floofgg \
             --config=cloudbuild.yaml \
-            --substitutions=_COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }} \
+            --substitutions=_COMMIT_SHA=${{ github.sha }},_SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},_ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }},_DEPLOY=$DEPLOY \
             --gcs-log-dir=gs://floofgg_cloudbuild/logs \
             .

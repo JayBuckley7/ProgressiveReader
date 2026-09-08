@@ -149,7 +149,7 @@ class GoogleDriveIntegration(DriveIntegrationPort):
         response.raise_for_status()
         return response.json()
 
-    def download_file(self, user_id: str, file_id: str) -> tuple[bytes, str]:
+    def download_file(self, user_id: str, file_id: str) -> tuple[Any, str]:
         """Download a file from Google Drive."""
         headers = self._get_headers(user_id)
         response = requests.get(
@@ -161,7 +161,10 @@ class GoogleDriveIntegration(DriveIntegrationPort):
         )
         response.raise_for_status()
         content_type = response.headers.get("Content-Type", "application/octet-stream")
-        return response.content, content_type
+        def chunks():
+            with response:
+                yield from response.iter_content(chunk_size=65536)
+        return chunks(), content_type
 
     def delete_file(self, user_id: str, file_id: str) -> bool:
         """Delete a file from Google Drive."""

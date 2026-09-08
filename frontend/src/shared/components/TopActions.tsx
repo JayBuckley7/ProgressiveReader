@@ -3,7 +3,7 @@ import { SignOutButton } from "@clerk/clerk-react";
 import { useState } from "react";
 
 interface TopActionsProps {
-  currentPage: "library" | "vocabulary" | "grammar" | "stats" | "admin" | "jlpt";
+  currentPage: "library" | "clipboard" | "stats" | "admin" | "jlpt";
   onShowLogin?: () => void;
 }
 
@@ -73,25 +73,14 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                 </button>
                 <button
                   onClick={() => {
-                    navigate("/vocabulary");
+                    navigate("/stats");
                     setShowMobileMenu(false);
                   }}
                   className={`w-full text-left px-3 py-2 rounded text-sm app-nav-item ${
-                    currentPage === "vocabulary" ? "app-nav-active" : ""
+                    currentPage === "stats" ? "app-nav-active" : ""
                   }`}
                 >
-                  {t("nav.vocabulary")}
-                </button>
-                <button
-                  onClick={() => {
-                    navigate("/grammar");
-                    setShowMobileMenu(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded text-sm app-nav-item ${
-                    currentPage === "grammar" ? "app-nav-active" : ""
-                  }`}
-                >
-                  {t("nav.grammar")}
+                  {t("nav.stats")}
                 </button>
                 <button
                   onClick={() => {
@@ -99,7 +88,7 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     setShowMobileMenu(false);
                   }}
                   className={`w-full text-left px-3 py-2 rounded text-sm app-nav-item ${
-                    currentPage === "stats" ? "app-nav-active" : ""
+                    currentPage === "clipboard" ? "app-nav-active" : ""
                   }`}
                 >
                   {t("nav.clipboard")}
@@ -183,28 +172,19 @@ export function TopActions({ currentPage, onShowLogin }: TopActionsProps) {
                     {t("nav.library")}
                   </button>
                   <button
-                    onClick={() => navigate("/vocabulary")}
-                    aria-label={t("nav.vocabularyPageAria")}
+                    onClick={() => navigate("/stats")}
+                    aria-label={t("nav.statsPageAria")}
                     className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
-                      currentPage === "vocabulary" ? "app-nav-active" : ""
+                      currentPage === "stats" ? "app-nav-active" : ""
                     }`}
                   >
-                    {t("nav.vocabulary")}
-                  </button>
-                  <button
-                    onClick={() => navigate("/grammar")}
-                    aria-label={t("nav.grammarPageAria")}
-                    className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
-                      currentPage === "grammar" ? "app-nav-active" : ""
-                    }`}
-                  >
-                    {t("nav.grammar")}
+                    {t("nav.stats")}
                   </button>
                   <button
                     onClick={() => navigate("/clipboard")}
                     aria-label={t("nav.clipboardPageAria")}
                     className={`px-2.5 py-1 rounded-md text-sm font-medium transition-colors app-nav-item ${
-                      currentPage === "stats" ? "app-nav-active" : ""
+                      currentPage === "clipboard" ? "app-nav-active" : ""
                     }`}
                   >
                     {t("nav.clipboard")}

@@ -608,6 +608,8 @@ export function useBookReaderController({
     contentRef: flowRef as RefObject<HTMLElement>,
     bookContent,
     navigateToChapter: navigateInternalChapter,
+    currentChapter: chapter,
+    renderedChapter: currentChapterContentChapter,
     revealElement: revealInternalElement,
   });
 

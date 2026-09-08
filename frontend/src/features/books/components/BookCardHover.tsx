@@ -309,6 +309,15 @@ export function BookCardHover({
   return (
     <div
       className="book-item-link relative group cursor-pointer"
+      tabIndex={0}
+      role="link"
+      aria-label={book.title}
+      onKeyDown={event => {
+        if (event.target === event.currentTarget && event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.click();
+        }
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
@@ -698,7 +707,7 @@ export function BookCardHover({
           </h3>
           <div className="flex items-center justify-between text-xs app-muted">
             <span>{(book.fileType || "file").toUpperCase()}</span>
-            <span>{book.totalChapters || 1} ch</span>
+            <span>{book.fileType === "pdf" ? (book.totalPages ? `${book.totalPages} pages` : "") : (book.totalChapters ? `${book.totalChapters} ch` : "")}</span>
           </div>
           <div className="text-xs app-muted mt-1">
             {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}
