@@ -27,7 +27,7 @@ describe("useGrammarReadAlong", () => {
     localStorage.setItem("prGrammarMiningEnabled", "false");
     localStorage.setItem("prGrammarUnderlinesEnabled", "true");
     localStorage.setItem(
-      "grammar_state_v2",
+      "grammar_state_v2:test-user",
       JSON.stringify({
         version: 2,
         knownIds: [],
@@ -43,7 +43,7 @@ describe("useGrammarReadAlong", () => {
     vi.useRealTimers();
     localStorage.setItem("prGrammarMiningEnabled", "false");
     localStorage.setItem("prGrammarUnderlinesEnabled", "false");
-    localStorage.removeItem("grammar_state_v2");
+    localStorage.removeItem("grammar_state_v2:test-user");
   });
 
   it("adds underline class + data attribute for learning grammar hints", async () => {

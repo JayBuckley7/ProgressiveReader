@@ -20,7 +20,7 @@ class OpenAIProvider(TranslationProvider):
         cefr_level: Optional[str] = None,
         model: Optional[str] = None,
     ) -> str:
-        client = OpenAI(api_key=self._api_key)
+        client = OpenAI(api_key=self._api_key, timeout=60.0, max_retries=0)
         model = model or "gpt-5.6-luna"
 
         system_prompt = (
@@ -57,7 +57,7 @@ class OpenAIProvider(TranslationProvider):
         cefr_level: Optional[str] = None,
         model: Optional[str] = None,
     ) -> Iterator[str]:
-        client = OpenAI(api_key=self._api_key)
+        client = OpenAI(api_key=self._api_key, timeout=60.0, max_retries=0)
         model = model or "gpt-5.6-luna"
 
         system_prompt = (
@@ -95,7 +95,7 @@ class OpenAIProvider(TranslationProvider):
         target_lang: str,
         model: Optional[str] = None,
     ) -> str:
-        client = OpenAI(api_key=self._api_key)
+        client = OpenAI(api_key=self._api_key, timeout=60.0, max_retries=0)
         model = model or "gpt-5.6-luna"
 
         system_prompt = (

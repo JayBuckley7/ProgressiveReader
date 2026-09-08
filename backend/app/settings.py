@@ -43,6 +43,8 @@ class AppSettings:
     ocr_credentials_json: str | None
     ocr_gemini_api_key: str | None
     ocr_gemini_model: str
+    records_migration_manifest: str | None = None
+    records_writes_paused: bool = False
 
 
 def _get_str(flask_config: Mapping[str, Any] | None, env: Mapping[str, str], key: str) -> str | None:
@@ -165,6 +167,8 @@ def load_settings(*, env: Mapping[str, str], flask_config: Mapping[str, Any] | N
         ocr_credentials_json=ocr_credentials_json,
         ocr_gemini_api_key=ocr_gemini_api_key,
         ocr_gemini_model=ocr_gemini_model,
+        records_migration_manifest=_get_str(flask_config, env, "RECORDS_MIGRATION_MANIFEST"),
+        records_writes_paused=(_get_str(flask_config, env, "RECORDS_WRITES_PAUSED") or "false").lower() == "true",
     )
 
 

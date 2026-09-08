@@ -48,7 +48,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/run.py ./
 COPY backend/config.py ./
-RUN mkdir -p instance
+RUN mkdir -p instance /app/data
+COPY frontend/src/data/jlpt/kanjiapi_full.json /app/data/kanjiapi_full.json
+ENV KANJI_DATA_PATH=/app/data/kanjiapi_full.json
 
 # Copy built frontend assets into Flask static folder
 # Flask static_folder is set to './app/static'

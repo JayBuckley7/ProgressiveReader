@@ -50,7 +50,7 @@ class AdminService:
     def list_openai_keys(self) -> OpenAIKeyListResponse:
         """List all OpenAI API keys in the pool."""
         return OpenAIKeyListResponse(
-            keys=self._key_pool.get_all_keys()
+            keys=["configured-key-" + str(i + 1) for i, _ in enumerate(self._key_pool.get_all_keys() + ([self._fallback_key] if self._fallback_key else []))]
         )
 
     def get_openai_key_status(self) -> OpenAIKeyStatusResponse:

@@ -30,11 +30,13 @@ from .domains.drive.adapters.google_drive import GoogleDriveIntegration
 from .domains.drive.service import DriveService
 from .domains.books.service import BooksService
 from .domains.admin.service import AdminService
-from .domains.books.adapters.sqlalchemy_repository import SqlAlchemyBooksRepository
+from .domains.books.adapters.drive_repository import DriveBooksRepository
+from .domains.vocabulary.adapters.drive_repository import DriveVocabularyRepository
+from .infrastructure.drive_records import DriveOperationStorage
+from .infrastructure.saved_records import SavedRecords, MigrationGate
 from .domains.books.adapters.cover_lookup import PublicApiCoverLookup
 from .domains.books.adapters.local_demo_storage import LocalDemoStorageProvider
 from .domains.vocabulary.service import VocabularyService
-from .domains.vocabulary.adapters.sqlalchemy_repository import SqlAlchemyVocabularyRepository
 from .domains.vocabulary.adapters.jpdb_module import JpdbModuleProvider
 from .domains.vocabulary.adapters.jpdb_http import JpdbHttpProvider
 from .domains.kanji.service import KanjiService
@@ -66,7 +68,7 @@ class Container:
     lyrics_service: LyricsService
 
 
-def create_container(*, settings: AppSettings, db_session: Any) -> Container:
+def create_container(*, settings: AppSettings, db_session: Any, operation_id=lambda: None) -> Container:
     openai_key_pool = InMemoryApiKeyPool()
     for key in settings.openai_pool_keys:
         openai_key_pool.add_key(key)
@@ -89,8 +91,10 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
     drive_provider = ClerkDriveProvider(secret_key=settings.clerk_secret_key)
     drive_service = DriveService(GoogleDriveIntegration(drive_provider))
 
+    records = SavedRecords(DriveOperationStorage(drive_provider), MigrationGate(settings.records_migration_manifest, settings.records_writes_paused), operation_id)
+
     books_service = BooksService(
-        SqlAlchemyBooksRepository(db_session),
+        DriveBooksRepository(records),
         LocalDemoStorageProvider(None),
         PublicApiCoverLookup(google_books_api_key=settings.google_books_api_key),
     )
@@ -98,7 +102,7 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
         JpdbModuleProvider(deck_id=settings.jpdb_deck_id),
         settings.jpdb_config,
         JpdbHttpProvider(),
-        SqlAlchemyVocabularyRepository(db_session),
+        DriveVocabularyRepository(records),
     )
 
     def make_kanji_service() -> KanjiService:
@@ -106,34 +110,10 @@ def create_container(*, settings: AppSettings, db_session: Any) -> Container:
 
     lyrics_service = LyricsService(UtaNetPageProvider())
 
-    # Optional: OCR dependencies may not be installed in all environments.
+    # No paid OCR clients are constructed until funded execution has shared budgets.
     ocr_service = None
     ocr_layout_service = None
-    ocr_init_error = None
-    try:
-        from .domains.ocr.adapters.google_vision import GoogleVisionOcrProcessor
-        from .domains.ocr.adapters.google_vision_layout import GoogleVisionOcrLayoutExtractor
-        from .domains.ocr.adapters.hybrid_layout import HybridOcrLayoutExtractor
-        from .domains.ocr.adapters.sqlalchemy_layout_cache import SqlAlchemyOcrLayoutCacheRepository
-
-        ocr_service = OCRService(GoogleVisionOcrProcessor(credentials_json=settings.ocr_credentials_json))
-        base_layout_extractor = GoogleVisionOcrLayoutExtractor(credentials_json=settings.ocr_credentials_json)
-        layout_refiner = None
-        if settings.ocr_gemini_api_key:
-            from .domains.ocr.adapters.gemini_layout_refiner import GeminiOcrLayoutRefiner
-
-            layout_refiner = GeminiOcrLayoutRefiner(
-                api_key=settings.ocr_gemini_api_key,
-                model=settings.ocr_gemini_model,
-            )
-        ocr_layout_service = OcrLayoutService(
-            extractor=HybridOcrLayoutExtractor(base=base_layout_extractor, refiner=layout_refiner),
-            cache_repo=SqlAlchemyOcrLayoutCacheRepository(db_session),
-        )
-    except Exception as e:  # pragma: no cover - depends on optional vendor deps
-        ocr_service = None
-        ocr_layout_service = None
-        ocr_init_error = str(e)
+    ocr_init_error = "Server-funded OCR is disabled."
 
     return Container(
         openai_key_resolver=openai_key_resolver,

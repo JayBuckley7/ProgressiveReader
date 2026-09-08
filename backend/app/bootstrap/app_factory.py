@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from ..utils.runtime_env import is_dev_env, is_test_env
 from .logging_setup import configure_logging, configure_werkzeug_filtering
 from .secrets import find_secrets_path, load_secrets_json_into_environ, require_secrets_for_production
-from .web import configure_cors, register_spa_routes, register_health_route
+from .web import configure_cors, register_spa_routes, register_health_route, register_error_handlers
 from .db import configure_sqlalchemy, init_db, create_tables
 from .wiring import wire_container, register_domain_blueprints
 from ..infrastructure.sqlalchemy.db import db
@@ -72,6 +72,7 @@ def create_app(config_class=None) -> Flask:
     )
 
     configure_cors(app)
+    register_error_handlers(app)
 
     app.config.from_object(config_class)
     if is_test_env():

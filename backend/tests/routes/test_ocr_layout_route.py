@@ -20,8 +20,8 @@ def app():
 
 
 @pytest.fixture
-def client(app):
-    return app.test_client()
+def client(app, authenticated_client):
+    return authenticated_client(app)
 
 
 def test_ocr_layout_route_success(client):
@@ -50,10 +50,10 @@ def test_ocr_layout_route_success(client):
         content_type="multipart/form-data",
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 403
     data = response.get_json()
-    assert data["status"] == "ready"
-    assert data["contentHash"] == "abc123"
+    assert data["code"] == "SERVER_AI_DISABLED"
+    service.extract_or_get_cached.assert_not_called()
 
 
 def test_ocr_layout_route_requires_image(client):
@@ -68,4 +68,4 @@ def test_ocr_layout_route_requires_image(client):
         content_type="multipart/form-data",
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 403

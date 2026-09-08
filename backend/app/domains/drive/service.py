@@ -1,7 +1,7 @@
 """Drive service layer."""
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Iterable
 import logging
 
 from .ports import DriveIntegrationPort
@@ -43,7 +43,7 @@ class DriveService:
             logger.error(f"Error uploading file to Drive: {e}")
             raise
 
-    def download_file(self, user_id: str, file_id: str) -> tuple[bytes, str]:
+    def download_file(self, user_id: str, file_id: str) -> tuple[Iterable[bytes], str]:
         """Download a file from Google Drive."""
         try:
             return self.integration.download_file(user_id, file_id)

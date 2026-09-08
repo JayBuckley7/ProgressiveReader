@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ...core.errors import require_identity
+
 from typing import List, Optional
 
 from .ports import BooksRepositoryPort, StorageProviderPort, CoverLookupPort
@@ -21,6 +23,7 @@ class BooksService:
 
     def get_bookmarks(self, book_id: str, user_id: Optional[str] = None) -> List[Bookmark]:
         """Get bookmarks for a book."""
+        require_identity(user_id)
         return self._repo.get_bookmarks(book_id=book_id, user_id=user_id)
 
     def add_bookmark(
@@ -32,6 +35,7 @@ class BooksService:
         user_id: Optional[str] = None,
     ) -> Bookmark:
         """Create a bookmark."""
+        require_identity(user_id)
         return self._repo.add_bookmark(
             book_id=book_id,
             chapter_index=chapter_index,

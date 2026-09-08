@@ -1,5 +1,8 @@
 package com.progressivereader.kmp.vocabulary
 
+import com.progressivereader.kmp.core.requireBackendSuccess
+import com.progressivereader.kmp.core.newSaveIdentifier
+
 import com.progressivereader.kmp.core.Config
 import com.progressivereader.kmp.core.createHttpClient
 import io.ktor.client.call.body
@@ -210,29 +213,31 @@ class VocabularyService(
                 if (mastered != null) parameter("mastered", mastered.toString())
                 if (!bookId.isNullOrBlank()) parameter("bookId", bookId)
             }
-        if (!res.status.isSuccess()) return emptyList()
-        return runCatching { res.body<List<VocabularyWord>>() }.getOrElse { emptyList() }
+        res.requireBackendSuccess()
+        return res.body<List<VocabularyWord>>()
     }
 
     suspend fun addVocabularyWord(req: AddVocabularyWordRequest): AddVocabularyWordResponse? {
         val res =
             http.post("${Config.baseUrl}/api/vocabulary") {
+                headers.append("Idempotency-Key", newSaveIdentifier())
                 authHeader()?.let { headers.append("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
                 setBody(req)
             }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return res.body()
     }
 
     suspend fun toggleMastered(wordId: String, mastered: Boolean): VocabularyWord? {
         val res =
             http.patch("${Config.baseUrl}/api/vocabulary/$wordId/mastered") {
+                headers.append("Idempotency-Key", newSaveIdentifier())
                 authHeader()?.let { headers.append("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
                 setBody(ToggleMasteredRequest(mastered = mastered))
             }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return res.body()
     }
 }

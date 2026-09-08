@@ -13,8 +13,8 @@ def app():
 
 
 @pytest.fixture()
-def client(app):
-    return app.test_client()
+def client(app, authenticated_client):
+    return authenticated_client(app)
 
 
 def test_validate_examples_invalid_payload(client):

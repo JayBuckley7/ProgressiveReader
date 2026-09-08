@@ -1,3 +1,4 @@
+import { backendResponseError } from "@core/backend/errors";
 import type { BackendFetchPort } from "@core/backend/fetchPort";
 import type { TranslationBackendPort } from "@core/backend/ports";
 import type { TranslateRequest, TranslateResponse } from "~/types/api";
@@ -30,10 +31,7 @@ export function createTranslationBackendPort(fetchPort: BackendFetchPort): Trans
         signal: opts?.signal,
       });
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `HTTP ${res.status}`);
-      }
+      if (!res.ok) throw await backendResponseError(res);
 
       if (!res.body) {
         throw new Error("Response body is null");

@@ -25,6 +25,19 @@ def clean_text(s: str) -> str:
     # Replace multiple whitespace/newlines with single spaces and trim.
     return re.sub(r"\s+", " ", s).strip()
 
+def normalize_answer(text: str) -> str:
+    """Match export formatting only, without guessing from substrings."""
+    return re.sub(r"\s+", "", re.sub(r"<([^<>]+[（(][^<>]+[）)])>", r"\1", text))
+
+
+def resolve_answer_index(answer, choices):
+    if not isinstance(answer, str) or not normalize_answer(answer):
+        return None
+    matches = [i for i, choice in enumerate(choices)
+               if normalize_answer(choice) == normalize_answer(answer)]
+    return matches[0] if len(matches) == 1 else None
+
+
 def text_with_ruby(elem) -> str:
     """
     Convert ruby annotations to inline readable text: 漢字(読み)
@@ -185,32 +198,10 @@ def parse_question_entry(entry):
         else:
             explanation.append(clean_text(text_with_ruby(exp_block)))
 
-    # If we captured correct_text, try to resolve which choice index it maps to
     if correct_text and choices:
-        # Exact match first
-        try:
-            idx = choices.index(correct_text)
-            item["correct_choice_index"] = idx
-            item["correct_choice_text"] = choices[idx]
-        except ValueError:
-            # Some "Correct answer" show the surface with extra notes; try relaxed match.
-            norm = correct_text.replace(" ", "")
-            best_idx = None
-            for i, c in enumerate(choices):
-                if c.replace(" ", "") == norm:
-                    best_idx = i
-                    break
-            # Also try substring match if still not found
-            if best_idx is None:
-                for i, c in enumerate(choices):
-                    if norm in c.replace(" ", "") or c.replace(" ", "") in norm:
-                        best_idx = i
-                        break
-            if best_idx is not None:
-                item["correct_choice_index"] = best_idx
-                item["correct_choice_text"] = choices[best_idx]
-            else:
-                item["correct_choice_text"] = correct_text  # keep raw if not aligned
+        idx = resolve_answer_index(correct_text, choices)
+        item["correct_choice_index"] = idx
+        item["correct_choice_text"] = choices[idx] if idx is not None else correct_text
 
     # Explanation join
     item["explanation"] = " ".join(e for e in explanation if e).strip()

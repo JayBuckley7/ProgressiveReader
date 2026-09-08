@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { notifyError } from "@shared/utils/notify";
 
 type LinkableBookContent = {
@@ -6,122 +6,77 @@ type LinkableBookContent = {
   chapterTitles?: Array<{ index: number; href?: string }>;
 };
 
+function decode(value: string): string {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+
 export function useInternalEpubLinks(params: {
   bookId: string;
   isPdf: boolean;
   contentRef: React.RefObject<HTMLElement>;
   bookContent: LinkableBookContent | null;
+  currentChapter: number;
+  renderedChapter: number | null;
   navigateToChapter: (chapterIndex: number) => void;
 }) {
-  const { bookId, isPdf, contentRef, bookContent, navigateToChapter } = params;
+  const pendingAnchor = useRef<{ bookId: string; chapter: number; id: string } | null>(null);
 
-  // Refs for current values to avoid effect dependencies.
-  const bookContentRef = useRef(bookContent);
-  const navigateRef = useRef(navigateToChapter);
-
+  // The surface mounts after loading. Rebind after each commit, including that mount.
   useEffect(() => {
-    bookContentRef.current = bookContent;
-  }, [bookContent]);
-
-  useEffect(() => {
-    navigateRef.current = navigateToChapter;
-  }, [navigateToChapter]);
-
-  // Stable link click handler that doesn't change with chapter updates.
-  const handleLinkClick = useCallback((e: Event) => {
-    const target = e.target as HTMLElement;
-    const link = target.closest("a");
-    if (!link || !link.href) return;
-
-    // If the user is selecting text, don't treat this as a link click.
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-
-    // Check if this is an internal EPUB link.
-    const href = link.getAttribute("href") || "";
-    const isInternalLink =
-      href.startsWith("#") ||
-      href.endsWith(".xhtml") ||
-      href.endsWith(".html") ||
-      href.includes(".xhtml#") ||
-      href.includes(".html#");
-
-    if (!isInternalLink) {
-      return; // Let external links work normally.
-    }
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const currentBookContent = bookContentRef.current;
-    const contentEl = contentRef.current;
-    if (!currentBookContent || !contentEl) return;
-
-    // Try to find the target chapter.
-    let targetChapter = -1;
-
-    // Method 1: Look for chapter by href in chapterTitles.
-    if (currentBookContent.chapterTitles) {
-      const chapterMatch = currentBookContent.chapterTitles.find((ch) => {
-        const chapterHref = ch.href || "";
-        const linkBase = href.split("#")[0].split("/").pop() || "";
-        const chapterBase = chapterHref.split("#")[0].split("/").pop() || "";
-        return linkBase && chapterBase && linkBase === chapterBase;
-      });
-
-      if (chapterMatch) {
-        targetChapter = chapterMatch.index;
+    const { bookId, isPdf, contentRef, bookContent, currentChapter, renderedChapter, navigateToChapter } = params;
+    const surface = contentRef.current;
+    if (!surface || isPdf || !bookContent) return;
+    const scrollToAnchor = (id: string) => {
+      const anchor = Array.from(surface.querySelectorAll<HTMLElement>("[id], a[name]"))
+        .find(el => el.id === id || el.getAttribute("name") === id);
+      if (!anchor) return false;
+      anchor.scrollIntoView({ block: "start", inline: "start" });
+      return true;
+    };
+    const restoreAnchor = () => {
+      const pending = pendingAnchor.current;
+      if (pending && pending.bookId !== bookId) pendingAnchor.current = null;
+      if (pending?.bookId === bookId && pending.chapter === renderedChapter && scrollToAnchor(pending.id)) {
+        pendingAnchor.current = null;
       }
-    }
-
-    // Method 2: Try to parse chapter number from href.
-    if (targetChapter === -1) {
-      const chapterMatch =
-        href.match(/chapter[_-]?(\d+)/i) ||
-        href.match(/ch[_-]?(\d+)/i) ||
-        href.match(/(\d+)\.x?html/i);
-      if (chapterMatch) {
-        const chapterNum = parseInt(chapterMatch[1], 10);
-        if (chapterNum >= 1 && chapterNum <= currentBookContent.totalChapters) {
-          targetChapter = chapterNum - 1; // Convert to 0-based index.
-        }
+    };
+    restoreAnchor();
+    const observer = new MutationObserver(restoreAnchor);
+    observer.observe(surface, { childList: true, subtree: true });
+    const handleClick = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a") : null;
+      if (!link || !surface.contains(link)) return;
+      const href = link.getAttribute("href") || "";
+      // Publication references are relative. Never intercept web/mail/other external URLs.
+      if (!href || /^[a-z][a-z\d+.-]*:/i.test(href) || href.startsWith("//")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (window.getSelection()?.toString().trim()) return;
+      const [path, fragment = ""] = href.split("#");
+      const id = decode(fragment);
+      if (!path && scrollToAnchor(id)) return;
+      const titles = bookContent.chapterTitles || [];
+      const currentHref = titles.find(ch => ch.index === currentChapter)?.href || "";
+      const root = "https://epub.invalid/";
+      const resolved = decode(new URL(path || currentHref, new URL(currentHref, root)).pathname);
+      const matches = titles.filter(ch => ch.href && decode(new URL(ch.href, root).pathname) === resolved);
+      // Support parsers that strip directories, but never choose between ambiguous basenames.
+      const candidates = matches.length ? matches : titles.filter(ch =>
+        path && decode((ch.href || "").split("#")[0].split("/").pop() || "") === decode(path.split("/").pop() || "")
+      );
+      const match = candidates.find(ch => decode((ch.href || "").split("#")[1] || "") === id) || (candidates.length === 1 ? candidates[0] : undefined);
+      if (!match || match.index < 0 || match.index >= bookContent.totalChapters) {
+        notifyError("This link could not be found in this book.", { title: "Unable to navigate" });
+        return;
       }
-    }
-
-    // Method 3: Look for anchor in current chapter.
-    if (targetChapter === -1 && href.startsWith("#")) {
-      const anchorId = href.substring(1);
-      const currentContent = contentEl.innerHTML;
-      if (currentContent.includes(`id="${anchorId}"`)) {
-        const anchorEl = contentEl.querySelector(`#${anchorId}`);
-        if (anchorEl) {
-          anchorEl.scrollIntoView({ behavior: "smooth", block: "start" });
-          return;
-        }
-      }
-    }
-
-    // Navigate to the target chapter if found.
-    if (targetChapter >= 0 && targetChapter < currentBookContent.totalChapters) {
-      navigateRef.current(targetChapter);
-    } else {
-      notifyError(String(link.textContent || href), {
-        title: "Unable to navigate",
-        description: "This link could not be mapped to a chapter in the current book structure.",
-      });
-    }
-  }, []); // Stable handler.
-
-  // Handle internal EPUB links (bind once per book, not per chapter).
-  useEffect(() => {
-    const contentEl = contentRef.current;
-    if (!contentEl || isPdf) return;
-
-    contentEl.addEventListener("click", handleLinkClick);
-    return () => contentEl.removeEventListener("click", handleLinkClick);
-  }, [bookId, contentRef, handleLinkClick, isPdf]);
+      pendingAnchor.current = id ? { bookId, chapter: match.index, id } : null;
+      navigateToChapter(match.index);
+      if (match.index === renderedChapter) restoreAnchor();
+    };
+    surface.addEventListener("click", handleClick);
+    return () => {
+      surface.removeEventListener("click", handleClick);
+      observer.disconnect();
+    };
+  });
 }

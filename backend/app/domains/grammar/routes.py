@@ -1,10 +1,12 @@
 """Grammar domain routes (LLM validation for example mining)."""
 from __future__ import annotations
 
+from ...utils.access_policy import require_user_ai_key
+
 from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 
-from ...utils.clerk_auth import optional_auth
+from ...utils.clerk_auth import require_auth
 from .controller import GrammarController
 
 grammar_bp = Blueprint("grammar", __name__, url_prefix="/api/grammar")
@@ -16,7 +18,8 @@ def _get_json_dict() -> dict:
     return data
 
 @grammar_bp.route("/validate-examples", methods=["POST"])
-@optional_auth
+@require_auth
+@require_user_ai_key
 def validate_examples():
     try:
         data = _get_json_dict()
@@ -39,7 +42,8 @@ def validate_examples():
 
 
 @grammar_bp.route("/teach-examples", methods=["POST"])
-@optional_auth
+@require_auth
+@require_user_ai_key
 def teach_examples():
     try:
         data = _get_json_dict()

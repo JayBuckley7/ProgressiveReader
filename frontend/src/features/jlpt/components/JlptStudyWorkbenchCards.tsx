@@ -116,7 +116,7 @@ export function JlptStudyWorkbenchCards(props: {
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              to="/vocabulary"
+              to="/stats"
               className={buttonPrimaryClass}
             >
               Open vocabulary
@@ -211,7 +211,7 @@ export function JlptStudyWorkbenchCards(props: {
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              to="/grammar"
+              to="/stats?view=grammar"
               className={buttonPrimaryClass}
             >
               Open grammar

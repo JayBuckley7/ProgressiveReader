@@ -44,7 +44,7 @@ export type GrammarScanBoundary = {
   uptoPage?: number;
 };
 
-export type GrammarScanStatus = "idle" | "queued" | "scanning" | "complete" | "not_found_yet" | "error";
+export type GrammarScanStatus = "idle" | "queued" | "scanning" | "complete" | "paused" | "not_found_yet" | "error";
 
 export type GrammarScanState = {
   status: GrammarScanStatus;

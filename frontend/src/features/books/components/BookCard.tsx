@@ -245,7 +245,7 @@ export function BookCard({ book, onSelectBook, onDeleteBook, onUpdateCover, onBo
           </h3>
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>{book.fileType.toUpperCase()}</span>
-            <span>{book.totalChapters || 1} chapters</span>
+            <span>{book.fileType === "pdf" ? (book.totalPages ? `${book.totalPages} pages` : "") : (book.totalChapters ? `${book.totalChapters} chapters` : "")}</span>
           </div>
           <div className="text-xs text-gray-400 mt-1">
             {book.uploadedAt ? new Date(book.uploadedAt).toLocaleDateString() : 'Unknown date'}

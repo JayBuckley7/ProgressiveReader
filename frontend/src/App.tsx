@@ -1,8 +1,9 @@
-import { ClerkProvider, SignedIn, RedirectToSignIn, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, SignedIn, RedirectToSignIn, SignUp, useUser } from "@clerk/clerk-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Routes,
   Route,
+  Navigate,
   useParams,
   Outlet,
   useLocation,
@@ -26,9 +27,7 @@ const BookReader = lazy(() =>
 const TestReaderRoute = lazy(() =>
   import("@features/reader/testing/TestReaderRoute").then((module) => ({ default: module.TestReaderRoute }))
 );
-const VocabularyPage = lazy(() =>
-  import("./features/vocabulary/components/VocabularyPage").then((module) => ({ default: module.VocabularyPage }))
-);
+const StatsPage = lazy(() => import("./features/stats/components/StatsPage"));
 const AdminPage = lazy(() =>
   import("./features/admin/components/AdminPage").then((module) => ({ default: module.AdminPage }))
 );
@@ -36,7 +35,6 @@ const ClipboardReader = lazy(() => import("./features/clipboard/components/Clipb
 const JLPTTestPage = lazy(() =>
   import("./features/jlpt/components/JLPTTestPage").then((module) => ({ default: module.JLPTTestPage }))
 );
-const GrammarPage = lazy(() => import("./features/grammar/components/GrammarPage"));
 const JpdbPopupController = lazy(() =>
   import("./features/reader/components/JpdbPopup").then((module) => ({ default: module.JpdbPopupController }))
 );
@@ -44,10 +42,16 @@ const LazyGrammarProvider = lazy(() =>
   import("@features/grammar/contexts/GrammarContext").then((module) => ({ default: module.GrammarProvider }))
 );
 
-// Helper component to allow access if signed in OR has offline books
+// Wait for account identity before loading account-scoped statistics.
+function LocalStatsRoute() {
+  const { isLoaded } = useUser();
+  return isLoaded ? <StatsPage /> : <RouteFallback />;
+}
+
 function AuthOrOfflineGuard({ children }: { children: React.ReactNode }) {
-  const { isSignedIn } = useUser();
-  const { books } = useAppData();
+  const { isSignedIn, isLoaded } = useUser();
+  const { books, isLoading } = useAppData();
+  if (!isLoaded || isLoading) return <RouteFallback />;
 
   // Allow if signed in, OR if we have offline books (offline mode)
   if (isSignedIn || books.length > 0) {
@@ -116,11 +120,8 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<BookLibrary />} />
-              <Route path="vocabulary" element={
-                <AuthOrOfflineGuard>
-                  <VocabularyPage />
-                </AuthOrOfflineGuard>
-              } />
+              <Route path="vocabulary" element={<Navigate to="/stats" replace />} />
+              <Route path="grammar" element={<Navigate to="/stats?view=grammar" replace />} />
               <Route path="clipboard" element={
                 <AuthOrOfflineGuard>
                   <ClipboardReader />
@@ -130,17 +131,13 @@ function AppContent() {
                 <SignedIn><AdminPage /></SignedIn>
               } />
               <Route element={<GrammarRouteShell />}>
-                <Route path="grammar" element={
-                  <AuthOrOfflineGuard>
-                    <GrammarPage />
-                  </AuthOrOfflineGuard>
-                } />
+                <Route path="stats" element={<LocalStatsRoute />} />
                 <Route path="jlpt-tests" element={<JLPTTestPage />} />
               </Route>
             </Route>
 
             <Route path="sign-in/*" element={<SignedOutLayout />} />
-            <Route path="sign-up/*" element={<SignedOutLayout />} />
+            <Route path="sign-up/*" element={<SignedOutLayout signUp />} />
 
             <Route element={<ReaderRouteShell />}>
               <Route path="pdf" element={<TestReaderRoute kind="pdf" />} />
@@ -148,6 +145,7 @@ function AppContent() {
               <Route path="epub" element={<TestReaderRoute kind="epub" />} />
               <Route path="book/:bookId" element={<BookReaderRoute />} />
             </Route>
+            <Route path="*" element={<div className="p-8 text-center"><h1 className="text-xl font-semibold">Page not found</h1><a className="underline" href="/">Back to Library</a></div>} />
           </Routes>
         </Suspense>
         {!isReaderRoute && <Footer />}
@@ -228,9 +226,8 @@ function MainLayout() {
     <div>
       <TopActions
         currentPage={
-          location.pathname.startsWith('/vocabulary') ? 'vocabulary' :
-            location.pathname.startsWith('/grammar') ? 'grammar' :
-            location.pathname.startsWith('/clipboard') ? 'stats' :
+          location.pathname.startsWith('/stats') ? 'stats' :
+            location.pathname.startsWith('/clipboard') ? 'clipboard' :
               location.pathname.startsWith('/admin') ? 'admin' :
                 location.pathname.startsWith('/jlpt-tests') ? 'jlpt' : 'library'
         }
@@ -243,11 +240,11 @@ function MainLayout() {
   );
 }
 
-function SignedOutLayout() {
+function SignedOutLayout({ signUp = false }: { signUp?: boolean }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <SignInForm />
+        {signUp ? <SignUp /> : <SignInForm />}
       </div>
     </div>
   );

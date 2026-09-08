@@ -1,8 +1,9 @@
+from ...core.errors import AppError
 """Vocabulary domain routes."""
 from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
 
-from ...utils.clerk_auth import require_auth, optional_auth, get_user_id
+from ...utils.clerk_auth import require_auth, get_user_id
 from .controller import VocabularyController
 import logging
 
@@ -31,6 +32,8 @@ def due_cards():
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
     except PermissionError:
         return jsonify({"error": "Authentication required"}), 401
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error fetching due cards: {e}", exc_info=True)
         return jsonify({"error": "Failed to fetch cards"}), 500
@@ -54,6 +57,8 @@ def list_user_decks():
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
     except PermissionError as e:
         return jsonify({"error": str(e)}), 401
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error fetching user decks: {e}", exc_info=True)
         return jsonify({"error": "Failed to fetch decks from JPDB"}), 500
@@ -72,6 +77,8 @@ def jpdb_list_deck_vocabulary():
         return jsonify({"error": str(e)}), 401
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error listing deck vocabulary: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 502
@@ -93,12 +100,15 @@ def jpdb_lookup_vocabulary():
         return jsonify({"error": msg}), status
     except PermissionError as e:
         return jsonify({"error": str(e)}), 401
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error looking up vocabulary: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 502
 
 
 @vocabulary_bp.route('/get-jpdb-data', methods=['POST'])
+@require_auth
 def get_jpdb_data():
     """Fetch token and vocabulary data from JPDB for text segments via service."""
     try:
@@ -112,12 +122,15 @@ def get_jpdb_data():
         return jsonify(controller.get_jpdb_data(payload=data))
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"JPDB processing error: {e}", exc_info=True)
         return jsonify({"error": "Failed to process JPDB data"}), 500
 
 
 @vocabulary_bp.route('/mine-jpdb-word', methods=['POST'])
+@require_auth
 def mine_jpdb_word():
     """Add a vocabulary word to a JPDB deck via service."""
     try:
@@ -133,12 +146,15 @@ def mine_jpdb_word():
         return jsonify(result), status
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"JPDB mining failed: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 502
 
 
 @vocabulary_bp.route('/update-jpdb-word-state', methods=['POST'])
+@require_auth
 def update_jpdb_word_state():
     """Update the study state of a JPDB vocabulary entry via service."""
     try:
@@ -152,12 +168,15 @@ def update_jpdb_word_state():
         return jsonify(controller.update_jpdb_word_state(payload=data))
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"JPDB state update failed: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 502
 
 
 @vocabulary_bp.route('/review-jpdb-card', methods=['POST'])
+@require_auth
 def review_jpdb_card():
     """Record a review rating for a JPDB vocabulary card via service."""
     try:
@@ -171,6 +190,8 @@ def review_jpdb_card():
         result = controller.review_jpdb_card(payload=data)
     except ValidationError as e:
         return jsonify({"error": f"Invalid request: {str(e)}"}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"JPDB request failed: {e}", exc_info=True)
         return jsonify({'error': 'Failed to contact JPDB'}), 500
@@ -179,7 +200,7 @@ def review_jpdb_card():
 
 
 @vocabulary_bp.route('/vocabulary', methods=['POST'])
-@optional_auth
+@require_auth
 def add_vocabulary_word():
     """Add a vocabulary word to the user's collection."""
     try:
@@ -196,13 +217,15 @@ def add_vocabulary_word():
         return jsonify(body), status
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error adding vocabulary word: {e}", exc_info=True)
         return jsonify({'error': 'Failed to add vocabulary word'}), 500
 
 
 @vocabulary_bp.route('/vocabulary', methods=['GET'])
-@optional_auth
+@require_auth
 def get_user_vocabulary():
     """Get user's vocabulary words with optional filters."""
     user_id = get_user_id()
@@ -226,13 +249,15 @@ def get_user_vocabulary():
                 book_id=book_id,
             )
         )
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error fetching vocabulary: {e}", exc_info=True)
         return jsonify({'error': 'Failed to fetch vocabulary'}), 500
 
 
 @vocabulary_bp.route('/vocabulary/<int:word_id>/mastered', methods=['PATCH'])
-@optional_auth
+@require_auth
 def toggle_mastered(word_id: int):
     """Toggle mastered status for a vocabulary word."""
     try:
@@ -251,6 +276,8 @@ def toggle_mastered(word_id: int):
         return jsonify(vocab)
     except ValidationError as e:
         return jsonify({'error': f'Invalid request: {str(e)}'}), 400
+    except AppError:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error toggling mastered status: {e}", exc_info=True)
         return jsonify({'error': 'Failed to update vocabulary word'}), 500

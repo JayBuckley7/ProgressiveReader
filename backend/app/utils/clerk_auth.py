@@ -2,26 +2,16 @@
 Clerk authentication middleware for Flask (delegates to Auth domain).
 """
 from functools import wraps
-from types import SimpleNamespace
 from flask import request, jsonify, g, current_app
 import logging
 
 logger = logging.getLogger(__name__)
 
-def _testing_user():
-    # Minimal shape used by routes/tests.
-    return SimpleNamespace(
-        id="test-user",
-        email=None,
-        first_name=None,
-        last_name=None,
-        username=None,
-        image_url=None,
-        created_at=None,
-    )
-
 def get_auth_service():
     """Return the singleton AuthService instance used by auth decorators/routes."""
+    injected = current_app.extensions.get("auth_service")
+    if injected is not None:
+        return injected
     container = current_app.extensions.get("container")
     if container is None:
         raise RuntimeError("Auth container not initialized")
@@ -49,15 +39,12 @@ def require_auth(f):
     """Decorator to require authentication for a route"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_app.config.get("TESTING"):
-            g.user = _testing_user()
-            return f(*args, **kwargs)
 
         logger.debug("[auth] require_auth called for %s", f.__name__)
         user = get_current_user()
         if not user:
             logger.warning("[auth] Authentication failed for %s; returning 401", f.__name__)
-            return jsonify({"error": "Authentication required"}), 401
+            return jsonify({"code": "AUTH_REQUIRED", "error": "Sign in to continue."}), 401
         logger.debug("[auth] Authentication successful for %s; user=%s", f.__name__, user.id)
         g.user = user
         return f(*args, **kwargs)
@@ -73,13 +60,10 @@ def require_admin(f):
     """Decorator to require ProgressiveReader admin role."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_app.config.get("TESTING"):
-            g.user = _testing_user()
-            return f(*args, **kwargs)
 
         user = get_current_user()
         if not user:
-            return jsonify({"error": "Authentication required"}), 401
+            return jsonify({"code": "AUTH_REQUIRED", "error": "Sign in to continue."}), 401
         if not is_progressive_reader_admin(user.id):
             return jsonify({"error": "Forbidden"}), 403
         g.user = user
@@ -91,9 +75,6 @@ def optional_auth(f):
     """Decorator to optionally authenticate (user might be None)"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_app.config.get("TESTING"):
-            g.user = _testing_user()
-            return f(*args, **kwargs)
         g.user = get_current_user()
         return f(*args, **kwargs)
     return decorated_function

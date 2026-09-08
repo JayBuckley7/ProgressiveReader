@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { ConfirmAction } from "@shared/components/ConfirmAction";
+import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAppData } from "@shared/contexts/AppDataContext";
@@ -28,7 +30,7 @@ function loadOpenSections(): Set<GrammarLevel> {
   if (!parsed || !Array.isArray(parsed)) return new Set<GrammarLevel>(["n5"]);
   const allowed = new Set(GRAMMAR_LEVELS);
   const levels = parsed.filter((x) => allowed.has(x as GrammarLevel)) as GrammarLevel[];
-  return new Set<GrammarLevel>(levels.length ? levels : ["n5"]);
+  return new Set<GrammarLevel>(levels);
 }
 
 function saveOpenSections(open: Set<GrammarLevel>): void {
@@ -44,7 +46,7 @@ function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
 
-function renderHighlightedSentence(sentence: string, match: { start: number; end: number }): JSX.Element {
+function renderHighlightedSentence(sentence: string, match: { start: number; end: number }): ReactElement {
   const start = clamp(Number(match.start) || 0, 0, sentence.length);
   const end = clamp(Number(match.end) || start, start, sentence.length);
   return (
@@ -64,14 +66,14 @@ function ScanStatus({
 }: {
   scan: GrammarScanState | null;
   exampleCount: number;
-}): JSX.Element | null {
+}): ReactElement | null {
   if (!scan) return null;
 
   // Scan status can become stale (e.g. examples synced from Drive while status remains "queued").
   // If we already have our full quota, treat it as ready for UI purposes.
   const status = exampleCount >= 3 ? "complete" : scan.status;
   const label =
-    status === "queued"
+    status === "paused" ? "Paused" : status === "queued"
       ? "Queued"
       : status === "scanning"
         ? "Scanning"
@@ -108,7 +110,7 @@ function ExamplesList({
 }: {
   examples: GrammarExample[];
   bookTitleById: Map<string, string>;
-}): JSX.Element | null {
+}): ReactElement | null {
   if (!examples || examples.length === 0) return null;
   return (
     <div className="mt-3 space-y-3">
@@ -128,7 +130,7 @@ function ExamplesList({
 
             {!hasTeaching ? (
               <div className="mt-3 text-xs app-muted">
-                Generating teaching…
+                AI explanation not generated. Use Generate explanations when a personal AI key is configured.
               </div>
             ) : null}
 
@@ -173,6 +175,9 @@ function GrammarCard({
   onToggleKnown,
   onToggleLearning,
   onForceMine,
+  onTeach,
+  aiAvailable,
+  teachingStatus,
   scan,
   examples,
   bookTitleById,
@@ -183,10 +188,13 @@ function GrammarCard({
   onToggleKnown: (next: boolean) => void;
   onToggleLearning: (next: boolean) => void;
   onForceMine: () => void;
+  onTeach: () => void;
+  aiAvailable: boolean;
+  teachingStatus?: { status: string; error?: string };
   scan: GrammarScanState | null;
   examples: GrammarExample[];
   bookTitleById: Map<string, string>;
-}): JSX.Element {
+}): ReactElement {
   const canMine = point.hintQuality === "ok";
   const [expanded, setExpanded] = useState<boolean>(() => isLearning);
   useEffect(() => {
@@ -213,6 +221,7 @@ function GrammarCard({
           toggleExpanded();
         }}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
           if (!isLearning) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -265,8 +274,8 @@ function GrammarCard({
               e.stopPropagation();
               onForceMine();
             }}
-            disabled={!isLearning || !canMine}
-            title={!canMine ? "Too ambiguous for MVP mining" : "Find examples now"}
+            disabled={!isLearning || !canMine || !aiAvailable}
+            title={!canMine ? "Automatic examples are unavailable for this pattern" : "Find examples now"}
           >
             Find examples
           </button>
@@ -275,7 +284,13 @@ function GrammarCard({
 
       {isLearning ? (
         <div className="px-4 pb-4">
-          <ScanStatus scan={scan} exampleCount={examples.length} />
+          {aiAvailable ? <ScanStatus scan={scan} exampleCount={examples.length} /> : <p className="text-xs app-muted">Finding new book examples needs a personal AI key. Pattern meanings and progress tracking work without one.</p>}
+          {examples.some(ex => !ex.teaching) && <div className="mt-3">
+            <button className="app-button-muted rounded-md px-3 py-2 text-sm" disabled={!aiAvailable || teachingStatus?.status === "running"} onClick={onTeach}>
+              {teachingStatus?.status === "running" ? "Generating explanations…" : "Generate explanations"}
+            </button>
+            {teachingStatus?.error && <p role="alert" className="text-sm text-red-600 mt-2">{teachingStatus.error}</p>}
+          </div>}
           <div
             className={
               expanded
@@ -289,7 +304,7 @@ function GrammarCard({
           </div>
           {point.hintQuality !== "ok" ? (
             <div className="mt-3 text-xs app-muted">
-              This grammar point is very common/ambiguous, so automatic mining and underlines are limited in the MVP.
+              This pattern is too ambiguous for automatic matching. You can still study its meaning and track your progress.
             </div>
           ) : null}
         </div>
@@ -298,8 +313,12 @@ function GrammarCard({
   );
 }
 
-export default function GrammarPage() {
+export default function GrammarPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
+  const deps = useAppDeps();
+  const aiAvailable = Boolean(deps.prefs.getOpenAiKey()?.trim());
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
   const { books } = useAppData();
   const {
     knownSet,
@@ -315,6 +334,11 @@ export default function GrammarPage() {
     getExamples,
     getScanState,
     getGrammarPoint,
+    teachExamples,
+    teachingByGrammarId,
+    storageError,
+    syncStatus,
+    retrySync,
   } = useGrammar();
 
   const [openLevels, setOpenLevels] = useState<Set<GrammarLevel>>(() => loadOpenSections());
@@ -358,6 +382,12 @@ export default function GrammarPage() {
     return { active, queueOnly, all: queued };
   }, [activeMiningGrammarId, getExamples, getGrammarPoint, getScanState, learningSet]);
 
+  const matches = (point: GrammarPoint) => {
+    const text = `${point.title} ${point.meaning}`.toLowerCase();
+    return text.includes(query.trim().toLowerCase()) && (filter === "all" || (filter === "learning" && learningSet.has(point.id)) || (filter === "known" && knownSet.has(point.id)) || (filter === "new" && !knownSet.has(point.id) && !learningSet.has(point.id)));
+  };
+  const visiblePoints = GRAMMAR_LEVELS.flatMap(level => GRAMMAR_CATALOG[level]).filter(matches);
+
   const toggleOpen = (level: GrammarLevel) => {
     setOpenLevels((prev) => {
       const next = new Set(prev);
@@ -368,13 +398,11 @@ export default function GrammarPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-3 sm:px-4 md:px-6 py-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className={embedded ? "w-full" : "max-w-5xl mx-auto w-full px-3 sm:px-4 md:px-6 py-6"}>
+      {!embedded && <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Grammar</h1>
-          <div className="mt-1 text-sm app-muted">
-            Known: {totals.known} · Learning: {totals.learning} · Examples found: {totals.examples}
-          </div>
+          <p className="mt-1 text-sm app-muted">Track your grammar knowledge and explore patterns in your reading.</p>
         </div>
         <button
           className="app-button-muted px-3 py-2 rounded-md text-sm"
@@ -382,14 +410,40 @@ export default function GrammarPage() {
         >
           Back
         </button>
-      </div>
+      </div>}
 
+      <dl aria-label="Grammar progress" className="mt-6 grid grid-cols-3 gap-4">
+        <div className="app-card p-3 text-center">
+          <dt className="text-xs app-muted">Known patterns</dt>
+          <dd className="mt-1 text-xl font-semibold">{totals.known}</dd>
+        </div>
+        <div className="app-card p-3 text-center">
+          <dt className="text-xs app-muted">Learning patterns</dt>
+          <dd className="mt-1 text-xl font-semibold">{totals.learning}</dd>
+        </div>
+        <div className="app-card p-3 text-center">
+          <dt className="text-xs app-muted">Examples for learning patterns</dt>
+          <dd className="mt-1 text-xl font-semibold">{totals.examples}</dd>
+        </div>
+      </dl>
+      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><p role="status" className="app-muted">{syncStatus}</p><button className="app-button-muted rounded-md px-3 py-2" onClick={retrySync}>Retry grammar sync</button></div>
+      {storageError && <p role="alert" className="text-sm text-amber-700 mt-4">{storageError}</p>}
+      <p className="mt-4 text-sm app-muted">Mark patterns you know and choose patterns to learn. Learning patterns guide grammar highlighting in the reader when enabled, and can collect examples and explanations from your books.</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <input aria-label="Search grammar" placeholder="Search a pattern or meaning" className="app-input rounded-md px-3 py-2 flex-1 min-w-48" value={query} onChange={e => setQuery(e.target.value)} />
+        <select aria-label="Grammar progress filter" className="app-input rounded-md px-3 py-2" value={filter} onChange={e => setFilter(e.target.value)}>
+          <option value="all">All patterns</option><option value="learning">Learning</option><option value="new">Not started</option><option value="known">Known</option>
+        </select>
+      </div>
+      {!aiAvailable && <p className="text-sm app-muted" role="status">Book example generation is unavailable until you add your own AI key in Settings. Server-funded AI is disabled.</p>}
+      {visiblePoints.length === 0 && <p className="mt-4">No grammar patterns match these filters.</p>}
       <div className="mt-6 space-y-4">
         {GRAMMAR_LEVELS.map((level) => {
-          const points = GRAMMAR_CATALOG[level] || [];
+          const points = (GRAMMAR_CATALOG[level] || []).filter(matches);
+          if (!points.length) return null;
           const knownCount = points.reduce((acc, p) => acc + (knownSet.has(p.id) ? 1 : 0), 0);
           const learningCount = points.reduce((acc, p) => acc + (learningSet.has(p.id) ? 1 : 0), 0);
-          const isOpen = openLevels.has(level);
+          const isOpen = Boolean(query.trim()) || filter !== "all" || openLevels.has(level);
           const allIds = points.map((p) => p.id);
           const canMarkAllKnown = knownCount < points.length;
 
@@ -401,6 +455,7 @@ export default function GrammarPage() {
                 tabIndex={0}
                 onClick={() => toggleOpen(level)}
                 onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     toggleOpen(level);
@@ -415,18 +470,9 @@ export default function GrammarPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    className="app-button-muted px-2.5 py-1.5 rounded-md text-xs"
-                    disabled={!canMarkAllKnown}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setKnownMany(allIds, true);
-                    }}
-                    title={canMarkAllKnown ? `Mark all ${levelLabel(level)} points as known` : "All known"}
-                  >
-                    {canMarkAllKnown ? "Mark all known" : "All known"}
-                  </button>
+                  <ConfirmAction className="app-button-muted px-2.5 py-1.5 rounded-md text-xs"
+                    disabled={!canMarkAllKnown} message={`Mark these ${allIds.length} visible ${levelLabel(level)} patterns as known?`}
+                    onConfirm={() => setKnownMany(allIds, true)}>{canMarkAllKnown ? "Mark all known" : "All known"}</ConfirmAction>
                   <div className="text-lg leading-none font-medium app-muted select-none">{isOpen ? "–" : "+"}</div>
                 </div>
               </div>
@@ -441,7 +487,10 @@ export default function GrammarPage() {
                       isLearning={learningSet.has(point.id)}
                       onToggleKnown={(next) => setKnown(point.id, next)}
                       onToggleLearning={(next) => setLearning(point.id, next)}
-                      onForceMine={() => forceMine(point.id)}
+                      onForceMine={() => runNow(point.id)}
+                      onTeach={() => void teachExamples(point.id)}
+                      aiAvailable={aiAvailable}
+                      teachingStatus={teachingByGrammarId?.[point.id]}
                       scan={getScanState(point.id)}
                       examples={getExamples(point.id)}
                       bookTitleById={bookTitleById}
@@ -457,9 +506,9 @@ export default function GrammarPage() {
       <div className="mt-8 app-card p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold">Background Miner</div>
+            <div className="text-sm font-semibold">Examples from your books</div>
             <div className="mt-1 text-xs app-muted">
-              Manage the current grammar example mining task. Use “Run now” to prioritize a queued item.
+              Optional AI validation searches passages you have read. Use “Run now” to prioritize a pattern.
             </div>
           </div>
           <div className="flex flex-wrap gap-2 justify-end">
@@ -507,12 +556,14 @@ export default function GrammarPage() {
                     <div className="shrink-0 flex gap-2">
                       <button
                         className="app-button-muted px-3 py-1.5 rounded-md text-xs"
+                        disabled={!aiAvailable}
                         onClick={() => runNow(q.id)}
                       >
                         Run now
                       </button>
                       <button
                         className="app-button-muted px-3 py-1.5 rounded-md text-xs"
+                        disabled={!aiAvailable}
                         onClick={() => forceMine(q.id)}
                         title="Re-queue (if needed)"
                       >

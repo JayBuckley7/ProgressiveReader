@@ -13,7 +13,8 @@ except Exception:
 
 from ..ports import DriveProvider
 from ....utils.runtime_env import is_dev_env
-from ....utils.timeout import call_with_timeout, TimeoutExceededError
+from ....core.errors import AppError
+from ....utils.timeout import TimeoutExceededError
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class ClerkDriveProvider(DriveProvider):
                 logger.warning("ClerkDriveProvider not initialized; missing secret_key or Clerk SDK")
             self.client = None
         else:
-            self.client = Clerk(bearer_auth=key)
+            self.client = Clerk(bearer_auth=key, timeout_ms=15000, retry_config=None)
 
     def is_configured(self) -> bool:
         return bool(self.client)
@@ -58,6 +59,7 @@ class ClerkDriveProvider(DriveProvider):
             return exp_ts
 
         tokens = None
+        provider_failed = False
         for provider in GOOGLE_PROVIDER_CANDIDATES:
             try:
                 logger.debug(
@@ -65,12 +67,9 @@ class ClerkDriveProvider(DriveProvider):
                     user_id,
                     provider,
                 )
-                candidate_tokens = call_with_timeout(
-                    label=f"Clerk oauth token fetch ({provider})",
-                    timeout_seconds=CLERK_TIMEOUT_SECONDS,
-                    fn=lambda provider=provider: self.client.users.get_o_auth_access_token(user_id=user_id, provider=provider),
-                )
+                candidate_tokens = self.client.users.get_o_auth_access_token(user_id=user_id, provider=provider)
             except TimeoutExceededError:
+                provider_failed = True
                 logger.warning(
                     "[clerk-token] Timeout fetching token from Clerk after %ss for provider=%s",
                     CLERK_TIMEOUT_SECONDS,
@@ -78,6 +77,7 @@ class ClerkDriveProvider(DriveProvider):
                 )
                 continue
             except Exception as e:
+                provider_failed = True
                 logger.warning(
                     "[clerk-token] Failed to retrieve Google token from Clerk for provider=%s: %s",
                     provider,
@@ -92,6 +92,8 @@ class ClerkDriveProvider(DriveProvider):
 
         # The Clerk SDK typically returns a list of token objects; normalize defensively.
         if tokens is None:
+            if provider_failed:
+                raise AppError('DRIVE_UNAVAILABLE', 'Google account credentials are temporarily unavailable. Try again shortly.')
             logger.warning("[clerk-token] No Google oauth tokens returned from Clerk for providers=%s", GOOGLE_PROVIDER_CANDIDATES)
             return None
 

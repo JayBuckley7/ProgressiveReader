@@ -78,6 +78,11 @@ describe("library view helpers", () => {
     expect(continueReadingBooks(books, progress).map(({ book }) => book.id)).toEqual(["older", "newer"]);
   });
 
+  it("uses whole-book progress and does not invent progress for unknown EPUB lengths", () => {
+    const scrolling = { ...progress.older, currentPosition: 50, scrollHeight: 200, viewportHeight: 100 };
+    expect(readingProgressRatio(books[0], scrolling)).toBe(0.55);
+    expect(readingProgressRatio({ ...books[0], totalChapters: undefined }, scrolling)).toBeNull();
+  });
   it("calculates chapter and PDF progress", () => {
     expect(readingProgressRatio(books[0], progress.older)).toBe(0.5);
     expect(readingProgressRatio(books[1], progress.newer)).toBe(0.2);

@@ -19,9 +19,9 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def client(app, authenticated_client):
     """Create test client."""
-    return app.test_client()
+    return authenticated_client(app)
 
 
 @pytest.fixture
@@ -64,46 +64,10 @@ def test_search_kanji_validation_error(client):
     assert response.status_code == 400
 
 
-def test_update_kanji_jlpt_success(client):
-    """Test updating kanji JLPT level successfully."""
-    mock_service = Mock(spec=KanjiService)
-    mock_service.update_jlpt_level.return_value = UpdateKanjiJlptResponse(
-        success=True,
-        kanji="漢",
-        old_jlpt=2,
-        new_jlpt=1,
-    )
-
+def test_update_kanji_is_disabled_without_calling_service(client):
     container = Mock()
-    container.make_kanji_service.return_value = mock_service
     client.application.extensions["container"] = container
-
-    response = client.post('/api/kanji/update', json={
-        'kanji': '漢',
-        'jlpt_level': 1
-    })
-    assert response.status_code == 200
-    data = response.get_json()
-    assert data['success'] is True
-
-
-def test_update_kanji_jlpt_validation_error(client):
-    """Test update kanji with invalid input."""
-    # Invalid kanji (multiple characters)
-    response = client.post('/api/kanji/update', json={
-        'kanji': '漢字',  # Should be single character
-        'jlpt_level': 1
-    })
-    assert response.status_code == 400
-    
-    # Invalid JLPT level
-    response = client.post('/api/kanji/update', json={
-        'kanji': '漢',
-        'jlpt_level': 6  # Should be 1-5
-    })
-    assert response.status_code == 400
-
-
-#
-# NOTE: `/api/kanji/info/<kanji_char>` was removed (unused by the frontend).
-#
+    response = client.post('/api/kanji/update', json={'kanji': '漢', 'jlpt_level': 2})
+    assert response.status_code == 409
+    assert response.json['code'] == 'DEPLOYMENT_MANAGED'
+    container.make_kanji_service.assert_not_called()

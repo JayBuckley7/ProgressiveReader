@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ....core.errors import require_identity
+
 from typing import List, Optional, Any
 
 from ....infrastructure.sqlalchemy.models import Vocabulary as VocabularyModel
@@ -22,6 +24,7 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
         difficulty: Optional[str] = None,
     ) -> VocabularySchema:
         """Add a vocabulary word to the user's collection."""
+        require_identity(user_id)
         vocab = VocabularyModel(
             user_id=user_id,
             word=word,
@@ -53,6 +56,7 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
         book_id: Optional[str] = None,
     ) -> List[VocabularySchema]:
         """Get user's vocabulary words with optional filters."""
+        require_identity(user_id)
         query = self._session.query(VocabularyModel)
         if user_id:
             query = query.filter_by(user_id=user_id)
@@ -81,6 +85,7 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
 
     def toggle_mastered(self, user_id: Optional[str], word_id: int, mastered: bool) -> Optional[VocabularySchema]:
         """Toggle mastered status for a vocabulary word."""
+        require_identity(user_id)
         vocab = self._session.query(VocabularyModel).filter_by(id=word_id).first()
         if not vocab:
             return None
@@ -103,6 +108,7 @@ class SqlAlchemyVocabularyRepository(VocabularyRepositoryPort):
 
     def delete_vocabulary_word(self, user_id: Optional[str], word_id: int) -> bool:
         """Delete a vocabulary word."""
+        require_identity(user_id)
         vocab = self._session.query(VocabularyModel).filter_by(id=word_id).first()
         if not vocab:
             return False

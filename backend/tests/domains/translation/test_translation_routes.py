@@ -21,9 +21,9 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def client(app, authenticated_client):
     """Create test client."""
-    return app.test_client()
+    return authenticated_client(app)
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_translate_chapter_non_streaming(client, mock_provider):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test content</p>',
+        'api_key': 'test-key', 'content': '<p>Test content</p>',
         'target_lang': 'English',
         'stream': False
     })
@@ -58,7 +58,7 @@ def test_translate_chapter_accepts_targetLang_alias(client, mock_provider):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test content</p>',
+        'api_key': 'test-key', 'content': '<p>Test content</p>',
         'targetLang': 'English',
         'useCefr': True,
         'cefrLevel': 'B2',
@@ -76,7 +76,7 @@ def test_translate_chapter_streaming(client, mock_provider):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test content</p>',
+        'api_key': 'test-key', 'content': '<p>Test content</p>',
         'target_lang': 'English',
         'stream': True
     })
@@ -88,7 +88,7 @@ def test_translate_chapter_validation_error(client):
     """Test chapter translation with invalid input."""
     response = client.post('/api/translate/chapter', json={
         # Missing required 'content' field
-        'target_lang': 'English'
+        'target_lang': 'English', 'api_key': 'test-key'
     })
     assert response.status_code == 400
 
@@ -100,8 +100,8 @@ def test_translate_chapter_api_key_not_configured(client):
     client.application.extensions["container"] = container
 
     response = client.post('/api/translate/chapter', json={
-        'content': '<p>Test</p>',
-        'target_lang': 'English'
+        'api_key': 'test-key', 'content': '<p>Test</p>',
+        'target_lang': 'English', 'api_key': 'test-key'
     })
     assert response.status_code == 400
     data = response.get_json()

@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useUser } from "@clerk/clerk-react";
 import ContentsDrawer from "./ContentsDrawer";
 import type { ChapterTitle } from "~/types";
 import type { Bookmark } from "~/types/api";
 import { appLog } from "@shared/appLog";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { notifyError } from "@shared/utils/notify";
 
 interface ReaderControlsProps {
   visible: boolean;
@@ -71,7 +73,9 @@ function ReaderControlsComponent({
     return max;
   }, [chapterTitles]);
 
+  const { user } = useUser();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  useEffect(() => { setBookmarks([]); }, [user?.id]);
   const [, setIsLoadingBookmarks] = useState(true);
   const [isAddingBookmark, setIsAddingBookmark] = useState(false);
 
@@ -100,7 +104,7 @@ function ReaderControlsComponent({
     return () => {
       cancelled = true;
     };
-  }, [bookId, contentsVisible, deps.backend.bookmarks]);
+  }, [bookId, contentsVisible, deps.backend.bookmarks, user?.id]);
 
   useEffect(() => {
     if (!visible) return;
@@ -148,6 +152,7 @@ function ReaderControlsComponent({
         setBookmarks((prev) => [...prev, newBookmark]);
       } catch (err) {
         appLog.error("[ReaderControls] Failed to add bookmark", err);
+        notifyError(err, { title: "Bookmark was not saved" });
       } finally {
         setIsAddingBookmark(false);
       }

@@ -12,8 +12,8 @@
       "journey": "言語学習の旅を続けましょう",
       "stats": {
         "books": "蔵書",
-        "wordsSaved": "保存した単語",
-        "wordsMastered": "習得した単語"
+        "wordsSaved": "リーダーで保存した語彙",
+        "wordsMastered": "リーダーで習得した語彙"
       }
     },
     "signedOut": {
@@ -278,10 +278,12 @@
     "appNameFull": "Progressive Reader",
     "appIconAlt": "アプリのアイコン",
     "library": "ライブラリ",
+    "stats": "学習状況",
+    "statsPageAria": "学習状況ページ",
     "vocabulary": "語彙",
     "grammar": "文法",
     "clipboard": "クリップボード",
-    "test": "テスト",
+    "test": "JLPT",
     "signOut": "サインアウト",
     "exitOffline": "オフラインモードを終了",
     "signIn": "サインイン",
@@ -289,7 +291,13 @@
     "libraryPageAria": "ライブラリページ",
     "vocabularyPageAria": "語彙ページ",
     "grammarPageAria": "文法ページ",
-    "clipboardPageAria": "クリップボードページ"
+    "clipboardPageAria": "クリップボードページ",
+    "jlptTestsPageAria": "JLPTテスト"
+  },
+  "stats": {
+    "subtitle": "語彙と文法の進捗を確認し、読書に役立てましょう。",
+    "sections": "学習状況の項目",
+    "loading": "学習状況を読み込み中…"
   },
   "grammar": {
     "header": {
@@ -385,8 +393,8 @@
   },
   "vocabulary": {
     "header": {
-      "title": "📝 語彙",
-      "subtitle": "学習の進捗を記録・復習しましょう"
+      "title": "語彙",
+      "subtitle": "語彙学習の進捗をひと目で確認"
     },
     "stats": {
       "total": "総単語数",
@@ -394,14 +402,14 @@
       "learning": "学習中"
     },
     "dueCards": {
-      "title": "JPDB 期限カード",
+      "title": "JPDB 復習状況",
       "none": "期限カードは読み込まれていません。",
       "fetch": "期限カードを取得",
       "fetched": "{{count}} 件の期限カードを取得"
     },
     "decks": {
-      "title": "📚 語彙デッキ",
-      "description": "JPDB のデッキを選択してカードを管理します。"
+      "title": "JPDB デッキ",
+      "description": "JPDB のデッキを選択して単語と復習状況を確認します。"
     },
     "controls": {
       "searchPlaceholder": "単語を検索...",
@@ -412,9 +420,9 @@
       "addWord": "+ 単語を追加"
     },
     "empty": {
-      "noneYet": "まだ語彙がありません",
+      "noneYet": "手動で追加した語彙はまだありません",
       "noneFound": "単語が見つかりません",
-      "promptAdd": "読書しながら単語を追加して語彙を増やしましょう"
+      "promptAdd": "単語を追加するか、上のリーダー語彙とJPDBデッキを確認してください。"
     },
     "card": {
       "mastered": "✓ 習得",
@@ -525,7 +533,8 @@
       "saved": "ライブラリに保存しました",
       "saveFailed": "ライブラリへの保存に失敗しました"
     },
-    "titleFrom": "クリップボード貼り付け"
+    "titleFrom": "クリップボード貼り付け",
+    "editorLabel": "読むテキスト"
   },
   "massUpload": {
     "title": "一括アップロード",

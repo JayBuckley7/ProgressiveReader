@@ -608,13 +608,13 @@ def test_is_vertical():
 
 @pytest.fixture(scope="module")
 @pytest.mark.skipif(not HAS_VISION or not HAS_PYMUPDF, reason="Missing dependencies")
-def generate_ocr_processed_pdf():
+def generate_ocr_processed_pdf(tmp_path_factory):
     """
     Fixture that runs the full OCR flow and generates the processed PDF.
     Returns the path to the generated PDF file.
     """
     # Clean up any existing PDF before running the flow
-    output_path = r"C:\Users\TheJ\Documents\Code\ProgressiveReader\backend\test_outputs\ocr_processed_output.pdf"
+    output_path = str(tmp_path_factory.mktemp("ocr-output") / "ocr_processed_output.pdf")
     if os.path.exists(output_path):
         os.remove(output_path)
     
@@ -690,9 +690,9 @@ def generate_ocr_processed_pdf():
 
 
 @pytest.mark.skipif(not HAS_VISION or not HAS_PYMUPDF, reason="Missing dependencies")
-def test_ocr_cleanup_old_pdf():
+def test_ocr_cleanup_old_pdf(tmp_path_factory):
     """Clean up any existing OCR processed PDF before running full process flow."""
-    output_path = r"C:\Users\TheJ\Documents\Code\ProgressiveReader\backend\test_outputs\ocr_processed_output.pdf"
+    output_path = str(tmp_path_factory.mktemp("ocr-output") / "ocr_processed_output.pdf")
     
     # Delete old PDF if it exists
     if os.path.exists(output_path):

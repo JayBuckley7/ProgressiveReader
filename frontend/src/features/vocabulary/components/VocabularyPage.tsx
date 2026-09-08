@@ -1,3 +1,4 @@
+import { ReaderVocabularyPanel } from "./ReaderVocabularyPanel";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@clerk/clerk-react";
@@ -13,9 +14,15 @@ import { useJpdbDeckVocabulary } from "./vocabularyPage/hooks/useJpdbDeckVocabul
 import { useUserVocabulary } from "./vocabularyPage/hooks/useUserVocabulary";
 import type { FilterMastered } from "./vocabularyPage/types";
 
-export function VocabularyPage() {
+export function VocabularyPage({ embedded = false }: { embedded?: boolean }) {
+  const { user, isLoaded } = useUser();
+  if (isLoaded === false) return <p className="p-4">Loading account…</p>;
+  return <AccountVocabularyPage key={user?.id || "guest"} embedded={embedded} />;
+}
+
+function AccountVocabularyPage({ embedded }: { embedded: boolean }) {
   const { t } = useTranslation();
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const { books } = useAppData();
 
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
@@ -25,38 +32,29 @@ export function VocabularyPage() {
 
   const userVocab = useUserVocabulary({
     isSignedIn: Boolean(isSignedIn),
+    userId: user?.id,
     selectedLanguage,
     filterMastered,
     searchTerm,
   });
 
   const deckVocab = useJpdbDeckVocabulary({
+    userId: user?.id,
     isSignedIn: Boolean(isSignedIn),
     searchTerm,
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 dark:text-gray-200">
-      <div className="mb-8">
+    <div className={embedded ? "dark:text-gray-200" : "max-w-6xl mx-auto px-4 py-8 dark:text-gray-200"}>
+      {!embedded && <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {t("vocabulary.header.title")}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">{t("vocabulary.header.subtitle")}</p>
-      </div>
+      </div>}
 
-      <VocabularyStatsCards t={t} stats={userVocab.stats} />
-
-      <DueCardsPanel
-        t={t}
-        selectedDeckId={deckVocab.selectedDeckId}
-        selectedDeckName={deckVocab.selectedDeckName}
-        dueVocabEntries={deckVocab.dueVocabEntries}
-        dueVocabError={deckVocab.dueVocabError}
-        dueVocabProgress={deckVocab.dueVocabProgress}
-        isSignedIn={Boolean(isSignedIn)}
-        isLoadingDueVocab={deckVocab.isLoadingDueVocab}
-        onRefresh={deckVocab.refreshDueCards}
-      />
+      <p className="text-sm app-muted mb-4">See your progress from reading, JPDB, and manually saved words. Use Anki or JPDB for reviews; each collection keeps its own progress.</p>
+      <ReaderVocabularyPanel key={user?.id || "guest"} />
 
       <DeckPanel
         t={t}
@@ -72,6 +70,22 @@ export function VocabularyPage() {
         groupedDeckVocabulary={deckVocab.groupedDeckVocabulary}
       />
 
+      <DueCardsPanel
+        t={t}
+        selectedDeckId={deckVocab.selectedDeckId}
+        selectedDeckName={deckVocab.selectedDeckName}
+        dueVocabEntries={deckVocab.dueVocabEntries}
+        hasLoadedDueVocab={deckVocab.hasLoadedDueVocab}
+        dueVocabError={deckVocab.dueVocabError}
+        dueVocabProgress={deckVocab.dueVocabProgress}
+        isSignedIn={Boolean(isSignedIn)}
+        isLoadingDueVocab={deckVocab.isLoadingDueVocab}
+        onRefresh={deckVocab.refreshDueCards}
+      />
+
+      <h2 className="text-lg font-semibold mb-2">Manual vocabulary</h2>
+      <p className="text-sm app-muted mb-4">Words added with Add Word. JPDB deck progress and reader vocabulary are shown separately above.</p>
+      <VocabularyStatsCards t={t} stats={userVocab.stats} />
       <VocabularyControlsBar
         t={t}
         searchTerm={searchTerm}
@@ -82,7 +96,7 @@ export function VocabularyPage() {
         filterMastered={filterMastered}
         setFilterMastered={setFilterMastered}
         onAddWord={() => setShowAddForm(true)}
-        canAdd={Boolean(isSignedIn)}
+        canAdd={true}
       />
 
       <UserVocabularyList

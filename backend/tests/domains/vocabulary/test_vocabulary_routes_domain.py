@@ -24,9 +24,9 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def client(app, authenticated_client):
     """Create test client."""
-    return app.test_client()
+    return authenticated_client(app)
 
 
 @pytest.fixture

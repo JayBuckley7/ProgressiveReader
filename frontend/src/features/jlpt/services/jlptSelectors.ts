@@ -80,8 +80,12 @@ export function getBindingOverrideTarget(bindings: JpdbDeckBinding[]): number {
   }, 0);
 }
 
+export function isGoalExpired(goal: ActiveJlptGoal | null, today = getLocalDateKey()): boolean {
+  return Boolean(goal && goal.examDate.slice(0, 10) < today);
+}
+
 export function getDerivedDailyTarget(goal: ActiveJlptGoal | null, levelState: LevelReadinessState): number {
-  if (!goal) return 0;
+  if (!goal || isGoalExpired(goal)) return 0;
   const summary = getLevelReadinessSummary(levelState, { enabledOnly: true });
   if (summary.remaining <= 0) return 0;
   const days = Math.max(1, getDaysUntilDate(goal.examDate));
@@ -89,7 +93,7 @@ export function getDerivedDailyTarget(goal: ActiveJlptGoal | null, levelState: L
 }
 
 export function getAppliedDailyTarget(goal: ActiveJlptGoal | null, levelState: LevelReadinessState): number {
-  if (!goal) return 0;
+  if (!goal || isGoalExpired(goal)) return 0;
   if (goal.targetMode === "override" && goal.dailyTargetOverride && goal.dailyTargetOverride > 0) {
     return goal.dailyTargetOverride;
   }

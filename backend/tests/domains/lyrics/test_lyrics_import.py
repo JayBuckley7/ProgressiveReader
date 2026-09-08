@@ -60,7 +60,7 @@ def test_service_strips_tracking_query_before_fetching():
     assert result.source_url == canonical
 
 
-def test_import_route_returns_kanji_lyrics():
+def test_import_route_returns_kanji_lyrics(authenticated_client):
     app = Flask(__name__)
     app.config["TESTING"] = True
     service = Mock(spec=LyricsService)
@@ -75,7 +75,7 @@ def test_import_route_returns_kanji_lyrics():
     app.extensions["container"] = container
     app.register_blueprint(lyrics_bp)
 
-    response = app.test_client().post(
+    response = authenticated_client(app).post(
         "/api/lyrics/import",
         json={"url": "https://www.uta-net.com/global/en/lyric/335761/"},
     )

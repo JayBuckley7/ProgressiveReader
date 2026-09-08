@@ -515,7 +515,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
                       
                       {book.fileType === 'pdf' ? (
                         <div className="md:col-span-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">
-                          PDF lookup is generated on demand in the reader. Upload-time OCR has been removed.
+                          PDFs can be read normally. Server-funded OCR and page lookup are currently unavailable.
                         </div>
                       ) : null}
                     </div>

@@ -165,13 +165,13 @@ export class DriveFiles {
     window.open(folderUrl, "_blank");
   }
 
-  async searchFileWithRetry(fileName: string, retryOnEmpty: boolean = true): Promise<DriveFile[]> {
+  async searchFileWithRetry(fileName: string, retryOnEmpty: boolean = true, strict = false): Promise<DriveFile[]> {
     const attemptSearch = async (): Promise<DriveFile[]> => {
       const currentAppFolderId = await this.appFolder.getAppFolderId();
       const token = await this.auth.getAccessToken();
       const drive = this.gapi.getDrive();
 
-      if (!token || !currentAppFolderId || !drive) return [];
+      if (!token || !currentAppFolderId || !drive) { if (strict) throw new Error("Google Drive is not ready."); return []; }
 
       const response = await drive.files.list({
         q: `'${currentAppFolderId}' in parents and name='${fileName}' and trashed=false`,

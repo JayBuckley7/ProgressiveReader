@@ -311,7 +311,7 @@ class GDriveService {
   } | null> {
     if (!this.auth.isClerkUserAuthenticated()) return null;
 
-    const content = await this.grammarStore.load();
+    const content = await this.grammarStore.load(true);
     if (!content) {
       return { knownIds: [], learningIds: [], examplesByGrammarId: {} };
     }
@@ -328,8 +328,10 @@ class GDriveService {
       };
     }
 
+    if (Array.isArray(content)) return { knownIds: content, learningIds: [], examplesByGrammarId: {} };
+
     // v1 format (object with `known` only)
-    if (typeof content === "object") {
+    if (typeof content === "object" && Array.isArray((content as any).known)) {
       return {
         knownIds: Array.isArray((content as any).known) ? (content as any).known : [],
         learningIds: [],
@@ -342,7 +344,7 @@ class GDriveService {
       return { knownIds: content, learningIds: [], examplesByGrammarId: {} };
     }
 
-    return { knownIds: [], learningIds: [], examplesByGrammarId: {} };
+    throw new Error("Saved grammar data is unreadable. Existing data has been left untouched.");
   }
 
   /**

@@ -1,132 +1,60 @@
 import type { Dispatch, SetStateAction } from "react";
-import { useEffect, useRef } from "react";
-
-import type { GrammarExample } from "@features/grammar/types";
+import { useEffect, useRef, useState } from "react";
 import type { GrammarStateV2 } from "@features/grammar/types";
 import { mergeAndLimitExamples } from "@features/grammar/services/grammarExamples";
-import { toUniqueSorted } from "./boundary";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
 
-type DriveGrammarState = {
-  knownIds: string[];
-  learningIds: string[];
-  examplesByGrammarId: Record<string, GrammarExample[]>;
-};
+type Payload = Pick<GrammarStateV2, "knownIds" | "learningIds" | "examplesByGrammarId">;
+const payloadOf = (state: GrammarStateV2): Payload => ({ knownIds: state.knownIds, learningIds: state.learningIds, examplesByGrammarId: state.examplesByGrammarId });
 
-const DRIVE_RETRY_BACKOFF_MS = 60_000;
-
-const driveCacheByUserId = new Map<string, DriveGrammarState>();
-const driveLoadPromiseByUserId = new Map<string, Promise<DriveGrammarState | null>>();
-const driveLastAttemptAtMsByUserId = new Map<string, number>();
-
-function isDriveGrammarState(value: unknown): value is DriveGrammarState {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return Array.isArray(v.knownIds) && Array.isArray(v.learningIds) && typeof v.examplesByGrammarId === "object";
-}
-
-export function useGrammarDriveSync(params: {
-  allowDriveSync: boolean;
-  userId: string | null;
-  state: GrammarStateV2;
-  setState: Dispatch<SetStateAction<GrammarStateV2>>;
+export function useGrammarDriveSync({ allowDriveSync, userId, state, setState }: {
+  allowDriveSync: boolean; userId: string | null; state: GrammarStateV2; setState: Dispatch<SetStateAction<GrammarStateV2>>;
 }) {
   const deps = useAppDeps();
-  const { allowDriveSync, userId, state, setState } = params;
-
-  // Drive load merge (cached per-user to avoid cross-user leakage).
+  const [ready, setReady] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [status, setStatus] = useState("Progress stays on this device. Connect Drive to sync.");
+  const lastSaved = useRef("");
+  const writes = useRef(Promise.resolve());
   useEffect(() => {
-    if (!allowDriveSync || !userId) return;
-
+    setReady(false);
+    if (!allowDriveSync || !userId) { setStatus("Progress stays on this device. Connect Drive to sync."); return; }
     let cancelled = false;
-
-    const mergeFromDrive = (drive: DriveGrammarState) => {
+    setStatus("Loading grammar progress from Drive…");
+    void deps.drive.loadGrammarStateV2().then(remote => {
       if (cancelled) return;
-      setState((prev) => {
-        const mergedKnown = toUniqueSorted([...prev.knownIds, ...(drive.knownIds || [])]);
-
-        // Remove anything that is known from learning.
-        const mergedLearningRaw = toUniqueSorted([...prev.learningIds, ...(drive.learningIds || [])]);
-        const mergedLearning = mergedLearningRaw.filter((id) => !mergedKnown.includes(id));
-
-        const mergedExamples: Record<string, GrammarExample[]> = { ...(prev.examplesByGrammarId || {}) };
-        for (const [gid, driveExamples] of Object.entries(drive.examplesByGrammarId || {})) {
-          mergedExamples[gid] = mergeAndLimitExamples(mergedExamples[gid] || [], driveExamples || [], 3);
-        }
-
-        return {
-          ...prev,
-          knownIds: mergedKnown,
-          learningIds: mergedLearning,
-          examplesByGrammarId: mergedExamples,
-          lastUpdatedMs: Date.now(),
-        };
+      if (!remote || !Array.isArray(remote.knownIds) || !Array.isArray(remote.learningIds) || !remote.examplesByGrammarId) throw new Error("Drive progress could not be read safely.");
+      lastSaved.current = JSON.stringify(remote);
+      setState(local => {
+        const knownIds = [...new Set<string>([...local.knownIds, ...remote.knownIds])];
+        const learningIds = [...new Set<string>([...local.learningIds, ...remote.learningIds])].filter(id => !knownIds.includes(id));
+        const examplesByGrammarId = { ...local.examplesByGrammarId };
+        for (const [id, examples] of Object.entries(remote.examplesByGrammarId)) examplesByGrammarId[id] = mergeAndLimitExamples(examplesByGrammarId[id] || [], examples as any, 3);
+        return { ...local, knownIds, learningIds, examplesByGrammarId };
       });
-    };
+      setReady(true); setStatus("Grammar progress loaded from Drive.");
+    }).catch(error => { if (!cancelled) setStatus(`${error instanceof Error ? error.message : "Drive read failed."} Local progress is retained; cloud saves are paused.`); });
+    return () => { cancelled = true; };
+  }, [allowDriveSync, userId, retry, deps.drive, setState]);
 
-    const cached = driveCacheByUserId.get(userId);
-    if (cached) {
-      mergeFromDrive(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const now = Date.now();
-    const lastAttempt = driveLastAttemptAtMsByUserId.get(userId);
-    if (lastAttempt !== undefined && now - lastAttempt < DRIVE_RETRY_BACKOFF_MS) {
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (!driveLoadPromiseByUserId.has(userId)) {
-      driveLastAttemptAtMsByUserId.set(userId, now);
-      const p = deps.drive
-        .loadGrammarStateV2()
-        .then((drive) => {
-          if (!isDriveGrammarState(drive)) return null;
-          driveCacheByUserId.set(userId, drive);
-          return drive;
-        })
-        .catch(() => null)
-        .finally(() => {
-          driveLoadPromiseByUserId.delete(userId);
-        });
-      driveLoadPromiseByUserId.set(userId, p);
-    }
-
-    driveLoadPromiseByUserId.get(userId)!.then((drive) => {
-      if (!drive) return;
-      mergeFromDrive(drive);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [allowDriveSync, setState, userId]);
-
-  // Drive save debounce.
-  const driveSaveTimeoutRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!allowDriveSync || !userId) return;
-    if (driveSaveTimeoutRef.current !== null) window.clearTimeout(driveSaveTimeoutRef.current);
-
-    const payload: DriveGrammarState = {
-      knownIds: state.knownIds,
-      learningIds: state.learningIds,
-      examplesByGrammarId: state.examplesByGrammarId,
-    };
-
-    driveSaveTimeoutRef.current = window.setTimeout(() => {
-      driveSaveTimeoutRef.current = null;
-      void deps.drive.saveGrammarStateV2(payload).catch(() => {
-        // ignore save errors
+    if (!ready || !allowDriveSync || !userId) return;
+    const payload = payloadOf(state);
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastSaved.current) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      writes.current = writes.current.then(async () => {
+        if (cancelled) return;
+        setStatus("Saving grammar progress to Drive…");
+        try {
+          const result = await deps.drive.saveGrammarStateV2(payload);
+          if ((result as unknown) === false) throw new Error("Drive did not confirm the save.");
+          if (!cancelled) { lastSaved.current = serialized; setStatus("Grammar progress saved to Drive."); }
+        } catch (error) { if (!cancelled) setStatus(`${error instanceof Error ? error.message : "Drive save failed."} Progress is kept on this device. Retry sync when ready.`); }
       });
     }, 800);
-
-    return () => {
-      if (driveSaveTimeoutRef.current !== null) window.clearTimeout(driveSaveTimeoutRef.current);
-    };
-  }, [allowDriveSync, state.examplesByGrammarId, state.knownIds, state.learningIds, userId]);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [ready, allowDriveSync, userId, state, deps.drive]);
+  return { status, retry: () => setRetry(value => value + 1) };
 }

@@ -25,7 +25,7 @@ export function UserVocabularyList({
     <>
       {!isSignedIn && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
-          Sign in to view and manage vocabulary. JPDB features also require your JPDB API key (Settings → Highlight).
+          Guest vocabulary stays on this device. Sign in and connect Google Drive for account saves. Guest saves are not uploaded automatically.
         </div>
       )}
 

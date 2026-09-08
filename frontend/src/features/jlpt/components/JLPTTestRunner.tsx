@@ -1,3 +1,5 @@
+import { ConfirmAction } from "@shared/components/ConfirmAction";
+import { attemptSignature, readAttempt } from "@features/jlpt/services/jlptAttempts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -41,6 +43,8 @@ interface JLPTTestRunnerProps {
   testName: string;
   testRef?: JlptTestRef | null;
   mode?: "exam" | "practice";
+  storageKey?: string;
+  onRetryMistakes?: (questions: JlptRunnerQuestion[]) => void;
   onComplete?: (result: JlptAttemptSummary) => void;
 }
 
@@ -189,6 +193,8 @@ export function JLPTTestRunner({
   testRef = null,
   mode = "practice",
   onComplete,
+  storageKey,
+  onRetryMistakes,
 }: JLPTTestRunnerProps) {
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -208,6 +214,18 @@ export function JLPTTestRunner({
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [mobileTimelineOpen, setMobileTimelineOpen] = useState(false);
   const [mobileContextOpen, setMobileContextOpen] = useState(false);
+
+  const signature = useMemo(() => attemptSignature([questionsArray, testMeta, mode]), [questionsArray, testMeta, mode]);
+  const checkpointIdentity = `${storageKey || "temporary"}:${signature}`;
+  const [hydratedIdentity, setHydratedIdentity] = useState("");
+  const hydrated = hydratedIdentity === checkpointIdentity;
+  const [saveError, setSaveError] = useState("");
+  const [blockedDraft, setBlockedDraft] = useState(false);
+  const [resumed, setResumed] = useState(false);
+  const [startedAt, setStartedAt] = useState(0);
+  const [deadline, setDeadline] = useState(0);
+  const [clock, setClock] = useState(Date.now());
+  const attemptId = useRef<string>(crypto.randomUUID());
 
   const currentSection = sections[currentSectionIndex] ?? null;
   const currentQuestion = currentSection?.questions[currentQuestionIndex] ?? null;
@@ -235,7 +253,37 @@ export function JLPTTestRunner({
     setMobileTimelineOpen(false);
     setMobileContextOpen(false);
     completedRef.current = false;
-  }, [mode, sections, testName]);
+    setStartedAt(0); setDeadline(0); setSaveError(""); setBlockedDraft(false); setResumed(false);
+    if (storageKey) {
+      try {
+        const draft = readAttempt(storageKey, signature, sections);
+        if (draft) {
+          setCurrentSectionIndex(draft.section); setCurrentQuestionIndex(draft.question);
+          setCurrentQueue(draft.queue); setCurrentView(draft.view); setAnswers(draft.answers);
+          setSkipped(draft.skipped); setAudioPositions(draft.audio);
+          setStartedAt(draft.startedAt); setDeadline(draft.deadline);
+          completedRef.current = draft.completed; attemptId.current = draft.id; setResumed(true);
+        }
+      } catch (error) { setBlockedDraft(true); setSaveError(error instanceof Error ? error.message : "Saved attempt could not be read."); }
+    }
+    setHydratedIdentity(checkpointIdentity);
+  }, [mode, sections, testName, storageKey, signature]);
+
+  useEffect(() => {
+    if (!hydrated || !storageKey || blockedDraft || !currentQueue.length) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ version: 1, signature, id: attemptId.current,
+        section: currentSectionIndex, question: currentQuestionIndex, queue: currentQueue, view: currentView,
+        answers, skipped, audio: audioPositions, startedAt, deadline, completed: completedRef.current }));
+      setSaveError("");
+    } catch { setSaveError("Device storage failed. Your attempt is only in memory and may be lost if you leave."); }
+  }, [hydrated, storageKey, blockedDraft, signature, currentSectionIndex, currentQuestionIndex, currentQueue, currentView, answers, skipped, audioPositions, startedAt, deadline]);
+
+  useEffect(() => {
+    if (!startedAt || currentView === "examReview" || currentView === "practiceComplete") return;
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt, currentView]);
 
   useEffect(() => {
     return () => {
@@ -367,20 +415,35 @@ export function JLPTTestRunner({
     const nextQuestionIndex =
       findFirstPendingIndex(currentSection.sectionId, currentQueue, answers, skipped) ?? currentQueue[0] ?? 0;
     setCurrentQuestionIndex(nextQuestionIndex);
+    if (!startedAt) {
+      const now = Date.now(); setStartedAt(now); setClock(now);
+      const minutes = Number(testMeta?.time);
+      if (mode === "exam" && Number.isFinite(minutes) && minutes > 0) setDeadline(now + minutes * 60000);
+    }
     setCurrentView("question");
   };
 
   const finalizeExam = () => {
+    stopSpeech(); audioRef.current?.pause();
+    const finalSkipped = { ...skipped };
+    for (const section of sections) section.questions.forEach((_, i) => {
+      const key = getQuestionKey(section.sectionId, i);
+      if (answers[key] === undefined) finalSkipped[key] = true;
+    });
+    setSkipped(finalSkipped);
+    const finalSections = sections.map(section => buildSectionSummary(section, answers, finalSkipped, hasAnswerKey));
+    const finalOverall = buildOverallSummary({ displayTestName, mode, sectionSummaries: finalSections, testMeta, testName, testRef });
     setCurrentView("examReview");
     if (!completedRef.current) {
       completedRef.current = true;
       onComplete?.({
+        attemptId: attemptId.current,
         testRef,
         testName: overallSummary.testName,
         level: overallSummary.level,
         mode,
-        sections: sectionSummaries,
-        overall: overallSummary,
+        sections: finalSections,
+        overall: finalOverall,
       });
     }
   };
@@ -554,27 +617,49 @@ export function JLPTTestRunner({
     ? getReviewOutcome({ question: currentQuestion, answer: selectedAnswer, skipped: isSkipped })
     : "unseen";
 
+  const resetAttempt = () => {
+    try { if (storageKey) localStorage.removeItem(storageKey); }
+    catch { setSaveError("The saved attempt could not be removed. Try again when device storage is available."); return; }
+    setCurrentSectionIndex(0); setCurrentQuestionIndex(0); setCurrentQueue(getFullQueue(sections[0]));
+    setCurrentView("sectionIntro"); setAnswers({}); setSkipped({}); setAudioPositions({});
+    setStartedAt(0); setDeadline(0); setResumed(false); setBlockedDraft(false); setSaveError("");
+    attemptId.current = crypto.randomUUID(); completedRef.current = false;
+  };
+
+  useEffect(() => {
+    if (hydrated && !blockedDraft && deadline > 0 && clock >= deadline && mode === "exam" && !completedRef.current) finalizeExam();
+  }, [clock, deadline, hydrated, blockedDraft]);
+
   if (!questionsArray.length) {
     return (
       <div className={`${surfaceCardClass} p-8 text-center ${mutedTextClass}`}>
-        {t("jlptTest.runner.loadingQuestions")}
+        This test contains no questions. Choose another test or repair its data.
       </div>
     );
   }
 
-  if (!hasAnswerKey) {
+  if (!hasAnswerKey || blockedDraft) {
     return (
       <div className={`${surfaceCardClass} p-8`}>
-        <div className="text-xl font-semibold text-[color:var(--ui-text)]">Answer key required</div>
+        <div className="text-xl font-semibold text-[color:var(--ui-text)]">{blockedDraft ? "Saved attempt needs attention" : "Complete answer key required"}</div>
         <div className={`mt-3 text-sm leading-6 ${mutedTextClass}`}>
-          This redesigned runner expects scored answer data. Go back and choose another imported test.
+          {blockedDraft ? saveError : "Every question needs a valid answer index before this test can be graded. Choose another test or repair its answer data."}
         </div>
+        {blockedDraft && <ConfirmAction className={secondaryButtonClass} onConfirm={resetAttempt} message="Discard the incompatible saved attempt?">Discard saved attempt</ConfirmAction>}
       </div>
     );
   }
 
   return (
     <div className="jlpt-runner mx-auto max-w-7xl text-[color:var(--ui-text)]">
+      {saveError && <p role="alert" className="mb-3 text-sm text-amber-700">{saveError}</p>}
+      {resumed && <p role="status" className="mb-3 text-sm app-muted">Resumed your saved attempt on this device.</p>}
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+        <span>{storageKey ? "Answers kept on this device for this account." : "Temporary practice session."}</span>
+        {startedAt > 0 && <span role="timer">{deadline > 0 ? "Time remaining" : "Elapsed"}: {Math.floor(Math.max(0, deadline ? deadline - clock : clock - startedAt) / 60000)}:{String(Math.floor(Math.max(0, deadline ? deadline - clock : clock - startedAt) / 1000) % 60).padStart(2, "0")}</span>}
+        {deadline > 0 && currentView !== "examReview" && <span className="app-muted">The timer continues if you leave. Unanswered questions are submitted when time expires.</span>}
+        {storageKey && <ConfirmAction className={secondaryButtonClass} onConfirm={resetAttempt} message="Discard the answers for this attempt and start again?">Restart attempt</ConfirmAction>}
+      </div>
       <div className="border-b border-[color:var(--ui-border)] pb-5">
         <div className={`mb-2 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>
           {testMeta?.level || testMeta?.type ? <span>{testMeta.level || testMeta.type}</span> : null}
@@ -601,10 +686,10 @@ export function JLPTTestRunner({
             </div>
             <div className={`${subtleSurfaceClass} rounded-md px-3 py-3`}>
               <div className="text-xl font-semibold text-[color:var(--ui-text)]">
-                {mode === "exam" && currentView !== "examReview" ? remainingCount : `${overallSummary.percent}%`}
+                {mode === "exam" && currentView !== "examReview" ? remainingCount : mode === "practice" ? (overallSummary.answered ? `${Math.round(overallSummary.correct / overallSummary.answered * 100)}%` : "—") : `${overallSummary.percent}%`}
               </div>
               <div className={`text-xs ${mutedTextClass}`}>
-                {mode === "exam" && currentView !== "examReview" ? "Remaining" : "Score"}
+                {mode === "exam" && currentView !== "examReview" ? "Remaining" : mode === "practice" ? "Recall accuracy" : "Score"}
               </div>
             </div>
           </div>
@@ -747,7 +832,7 @@ export function JLPTTestRunner({
                     : "This retry pass only contains the questions you missed or skipped in the last recap."}
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                {currentSectionIndex > 0 && currentView !== "examReview" ? (
+                {currentSectionIndex > 0 ? (
                   <button
                     type="button"
                     onClick={() => prepareSection(currentSectionIndex - 1)}
@@ -800,7 +885,7 @@ export function JLPTTestRunner({
                     {currentQuestion.is_audio && currentQuestion.audio_url ? (
                       <div className={currentQuestion.parent_content?.trim() ? "mt-5 border-t border-[color:var(--ui-border)] pt-5" : ""}>
                         <div className="mb-2 text-sm font-semibold text-[color:var(--ui-text)]">{t("jlptTest.runner.audioQuestion")}</div>
-                        <audio
+                        <audio onError={() => notifyError("This listening audio could not be loaded. Check your connection or flag this test for repair.")}
                           ref={audioRef}
                           className="w-full"
                           controls
@@ -1071,7 +1156,7 @@ export function JLPTTestRunner({
               <div className={`text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>Practice complete</div>
               <div className="mt-3 text-2xl font-semibold text-[color:var(--ui-text)]">{displayTestName}</div>
               <div className={`mt-3 max-w-3xl text-sm leading-6 ${mutedTextClass}`}>
-                Practice runs stay out of the saved JLPT history. Use Exam Mode when you want a scored result entry.
+                This practice recap is kept with your device attempt. Coached retries stay separate from exam history.
               </div>
               <div className="mt-6 grid gap-3 md:grid-cols-4">
                 <div className={`${subtleSurfaceClass} rounded-md p-4`}>
@@ -1112,6 +1197,8 @@ export function JLPTTestRunner({
             <section className={`${surfaceCardClass} p-6`}>
               <div className={`text-xs font-semibold uppercase tracking-normal ${mutedTextClass}`}>Final review</div>
               <div className="mt-3 text-2xl font-semibold text-[color:var(--ui-text)]">Exam results</div>
+              <p className="mt-2 text-sm app-muted">Practice score from this answer key; not an official JLPT scaled score.</p>
+              {onRetryMistakes && allReviewItems.some(item => item.outcome === "wrong" || item.outcome === "skipped") && <button className={`${primaryButtonClass} mt-4`} onClick={() => onRetryMistakes(allReviewItems.filter(item => item.outcome === "wrong" || item.outcome === "skipped").map(item => item.question))}>Practice exam mistakes</button>}
               <div className="mt-6 grid gap-3 md:grid-cols-4">
                 <div className={`${subtleSurfaceClass} rounded-md p-4`}>
                   <div className="text-2xl font-semibold text-[color:var(--ui-text)]">{overallSummary.percent}%</div>

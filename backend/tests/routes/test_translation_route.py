@@ -13,8 +13,8 @@ def app():
 
 
 @pytest.fixture()
-def client(app):
-    return app.test_client()
+def client(app, authenticated_client):
+    return authenticated_client(app)
 
 
 def test_translate_chapter_invalid_payload(client):
@@ -36,7 +36,7 @@ def test_translate_chapter_non_stream_success(client, monkeypatch):
     monkeypatch.setattr(OpenAIProvider, 'translate_chapter', _mock_translate)
 
     payload = {
-        'content': '<p>hello</p>',
+        'api_key': 'test-key', 'content': '<p>hello</p>',
         'target_lang': 'English',
         'stream': False,
     }

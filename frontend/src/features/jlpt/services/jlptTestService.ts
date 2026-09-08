@@ -2,6 +2,7 @@ import { appLog } from "@shared/appLog";
 import type { DrivePort } from "@core/drive/ports";
 import type { JlptCatalogTest, JlptTestData, LocalJlptManifest } from "@features/jlpt/types";
 import { JLPT_LEVELS, extractJlptLevel } from "@features/jlpt/services/jlptConfig";
+import { repairJlptAnswerIndices } from "./jlptAnswerKey";
 
 export type TestFile = JlptCatalogTest;
 
@@ -102,8 +103,8 @@ class JLPTTestService {
     }
   }
 
-  async getAllTests(drive: DrivePort): Promise<JlptCatalogTest[]> {
-    const [libraryTests, localTests] = await Promise.all([this.scanLibraryForTests(drive), this.scanLocalTests()]);
+  async getAllTests(drive: DrivePort, onLocalReady?: (tests: JlptCatalogTest[]) => void): Promise<JlptCatalogTest[]> {
+    const [libraryTests, localTests] = await Promise.all([this.scanLibraryForTests(drive), this.scanLocalTests().then(tests => { onLocalReady?.(tests); return tests; })]);
     return [...libraryTests, ...localTests].sort(compareTests);
   }
 
@@ -123,14 +124,14 @@ class JLPTTestService {
 
       if (data && typeof data === "object" && !Array.isArray(data) && data.questions) {
         return {
-          questions: Array.isArray(data.questions) ? data.questions : [],
+          questions: Array.isArray(data.questions) ? repairJlptAnswerIndices(data.questions) : [],
           meta: data.meta || null,
         };
       }
 
       if (Array.isArray(data)) {
         return {
-          questions: data,
+          questions: repairJlptAnswerIndices(data),
           meta: null,
         };
       }

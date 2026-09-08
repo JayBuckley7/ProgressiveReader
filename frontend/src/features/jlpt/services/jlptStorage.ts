@@ -48,9 +48,5 @@ export function saveJlptDashboardStateToLocalStorage(params: {
   state: JlptDashboardStateV2;
 }): void {
   if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(getJlptStorageKey(params.userId), JSON.stringify(params.state));
-  } catch {
-    // ignore storage failures
-  }
+  window.localStorage.setItem(getJlptStorageKey(params.userId), JSON.stringify(params.state));
 }

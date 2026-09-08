@@ -50,9 +50,11 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
   return (
     <div className="relative">
       {/* Deck Selector Box */}
-      <div 
+      <button type="button"
+        disabled={isLoading}
+        aria-expanded={isOpen}
         onClick={fetchDecks}
-        className="bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+        className="w-full bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
       >
         <div className="flex items-center justify-center space-x-3">
           <div className="text-2xl">🗂️</div>
@@ -81,7 +83,7 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
           )}
         </div>
-      </div>
+      </button>
 
       {/* Deck List Dropdown */}
       {isOpen && (
@@ -107,10 +109,10 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
           ) : (
             <div className="p-2">
               {decks.map((deck) => (
-                <div
+                <button type="button"
                   key={deck.id}
                   onClick={() => handleDeckSelect(deck)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  className={`w-full text-left p-3 rounded-lg cursor-pointer transition-colors ${
                     deck.id === selectedDeckId
                       ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -134,7 +136,7 @@ export function DeckSelector({ onDeckSelect, selectedDeckId }: DeckSelectorProps
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

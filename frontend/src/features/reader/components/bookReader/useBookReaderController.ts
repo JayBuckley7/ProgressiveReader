@@ -171,6 +171,8 @@ export function useBookReaderController({
     isPdf,
     contentRef: contentRef as RefObject<HTMLElement>,
     bookContent,
+    currentChapter: chapter,
+    renderedChapter: currentChapterContentChapter,
     navigateToChapter: updateChapter,
   });
 

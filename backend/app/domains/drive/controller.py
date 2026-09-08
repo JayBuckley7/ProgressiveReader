@@ -74,7 +74,7 @@ class DriveController:
             folder_id=folder_id,
         )
 
-    def download_file(self, *, user_id: str, file_id: str) -> Tuple[bytes, str]:
+    def download_file(self, *, user_id: str, file_id: str) -> Tuple[Any, str]:
         return self.drive_service.download_file(user_id, file_id)
 
     def get_thumbnail(self, *, user_id: str, file_id: str, size: int) -> Tuple[bytes | None, str | None]:
