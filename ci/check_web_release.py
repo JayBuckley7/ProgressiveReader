@@ -20,6 +20,7 @@ def check(base):
     health = get('/health').json()
     assert health['status'] == 'healthy' and health['clerk_overall_healthy'], health
     drive = get('/drive/health').json()
+    assert drive['clerk_secret_key_configured'] and drive['clerk_client_initialized'], drive
     html = get('/').text
     script = re.search(r'<script[^>]+src="([^"]+)"', html)
     assert script, 'Missing web entry script'
