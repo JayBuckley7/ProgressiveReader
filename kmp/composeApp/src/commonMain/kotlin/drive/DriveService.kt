@@ -1,5 +1,7 @@
 package com.progressivereader.kmp.drive
 
+import com.progressivereader.kmp.core.BackendFailure
+import com.progressivereader.kmp.core.requireBackendSuccess
 import com.progressivereader.kmp.core.Config
 import com.progressivereader.kmp.core.createHttpClient
 import io.ktor.client.call.body
@@ -53,17 +55,17 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
     )
 
     suspend fun listFiles(folderId: String?): List<DriveFile> {
-        val token = currentSessionToken() ?: return emptyList()
+        val token = currentSessionToken() ?: throw BackendFailure("AUTH_REQUIRED", "Sign in again to access Drive.")
         val targetFolderId =
             when {
                 folderId.isNullOrBlank() -> ensureAppFolderId()
                 else -> folderId
-            } ?: return emptyList()
+            } ?: throw BackendFailure("DRIVE_DISCONNECTED", "Connect Google Drive to access cloud files.")
         val res = http.get("${Config.baseUrl}/drive/files") {
             headers.append("Authorization", "Bearer $token")
             parameter("folderId", targetFolderId)
         }
-        if (!res.status.isSuccess()) return emptyList()
+        res.requireBackendSuccess()
         return res.body()
     }
 
@@ -91,7 +93,7 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
         val res = http.post("${Config.baseUrl}/drive/token") {
             headers.append("Authorization", "Bearer $token")
         }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return res.body()
     }
 
@@ -111,7 +113,7 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
         val res = http.get("${Config.baseUrl}/drive/download/$fileId") {
             headers.append("Authorization", "Bearer $token")
         }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         val channel = res.bodyAsChannel()
         return withContext(Dispatchers.IO) { channel.readRemaining().readBytes() }
     }
@@ -146,7 +148,7 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
             headers.append("Authorization", "Bearer $token")
             setBody(MultiPartFormDataContent(form))
         }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return runCatching { res.body<UploadResponse>() }.getOrNull()
     }
 
@@ -160,6 +162,8 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
         val name: String,
         val mimeType: String,
     )
+
+    internal suspend fun sessionCacheKey(): String? = currentSessionToken()
 
     private suspend fun currentSessionToken(): String? = getSessionToken()?.trim()?.takeIf { it.isNotBlank() }
 
@@ -178,12 +182,11 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
                 parameter("pageSize", 10)
                 parameter("spaces", "drive")
             }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
 
-        return runCatching { res.body<GoogleDriveFilesResponse>() }.getOrNull()
-            ?.files
-            ?.sortedWith(compareByDescending<DriveFile> { it.name.equals(PREFERRED_APP_FOLDER_NAME, ignoreCase = true) }.thenBy { it.name.lowercase() })
-            ?.firstOrNull()
+        return res.body<GoogleDriveFilesResponse>().files
+            .sortedWith(compareByDescending<DriveFile> { it.name.equals(PREFERRED_APP_FOLDER_NAME, ignoreCase = true) }.thenBy { it.name.lowercase() })
+            .firstOrNull()
     }
 
     private suspend fun createAppFolder(accessToken: String): DriveFile? {
@@ -199,7 +202,7 @@ class DriveService(private val getSessionToken: suspend () -> String?) {
                     ),
                 )
             }
-        if (!res.status.isSuccess()) return null
+        res.requireBackendSuccess()
         return runCatching { res.body<DriveFile>() }.getOrNull()
     }
 

@@ -65,10 +65,13 @@ fun AppRoot(
                 bottomBar = { ShellBottomBar(current = Screen.Library, onSelect = { navigator.reset(it) }) },
             )
 
-        Screen.Vocabulary ->
-            VocabularyScreen(
+        Screen.Vocabulary, Screen.Grammar ->
+            StatsScreen(
                 settings = settings,
                 sessionJwt = sessionJwt,
+                bookCache = bookCache,
+                epubRepository = epubRepository,
+                initialGrammar = s == Screen.Grammar,
                 onOpenLogin = { navigator.push(Screen.Login(autoStartSignIn = true)) },
                 bottomBar = { ShellBottomBar(current = Screen.Vocabulary, onSelect = { navigator.reset(it) }) },
             )
@@ -83,17 +86,6 @@ fun AppRoot(
                     } else {
                         { ShellBottomBar(current = Screen.Clipboard, onSelect = { navigator.reset(it) }) }
                     },
-            )
-
-        Screen.Grammar ->
-            GrammarScreen(
-                settings = settings,
-                sessionJwt = sessionJwt,
-                bookCache = bookCache,
-                epubRepository = epubRepository,
-                showBack = false,
-                onBack = { navigator.pop() },
-                bottomBar = { ShellBottomBar(current = Screen.Grammar, onSelect = { navigator.reset(it) }) },
             )
 
         Screen.More ->

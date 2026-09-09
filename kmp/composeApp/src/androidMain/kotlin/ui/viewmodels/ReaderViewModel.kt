@@ -502,8 +502,18 @@ class ReaderViewModel(
                 current.copy(bookmarks = current.bookmarks + Bookmark(chapterIndex = chapterIndex, createdAt = now))
             }
 
-        _state.update { it.copy(bookState = updated) }
-        viewModelScope.launch { runCatching { saveBookStateUseCase(bookId, updated) } }
+        viewModelScope.launch {
+            try {
+                saveBookStateUseCase(bookId, updated)
+                _state.update { state ->
+                    if (state.bookId == bookId) state.copy(bookState = state.bookState.copy(bookmarks = updated.bookmarks)) else state
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _events.emit(ReaderEvent.Snackbar("Bookmark could not be saved on this device. Please retry."))
+            }
+        }
     }
 
     fun toggleTranslate() {

@@ -6,13 +6,14 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.progressivereader.kmp.session.AccountStorage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore by preferencesDataStore(name = "app_settings")
+
 
 class AppSettingsStore(private val context: Context) {
+    private val dataStore = AccountStorage.preferences(context, "app_settings")
     private object Keys {
         val backendBaseUrl = stringPreferencesKey("backend_base_url")
         val driveFolderId = stringPreferencesKey("drive_folder_id")
@@ -37,20 +38,20 @@ class AppSettingsStore(private val context: Context) {
     }
 
     val settingsFlow: Flow<AppSettings> =
-        context.dataStore.data.map { prefs -> prefs.toAppSettings() }
+        dataStore.data.map { prefs -> prefs.toAppSettings() }
 
     suspend fun setBackendBaseUrl(url: String) {
-        context.dataStore.edit { it[Keys.backendBaseUrl] = url }
+        dataStore.edit { it[Keys.backendBaseUrl] = url }
     }
 
     suspend fun setDriveFolderId(folderId: String?) {
-        context.dataStore.edit {
+        dataStore.edit {
             if (folderId.isNullOrBlank()) it.remove(Keys.driveFolderId) else it[Keys.driveFolderId] = folderId
         }
     }
 
     suspend fun setDebugMode(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.debugMode] = enabled }
+        dataStore.edit { it[Keys.debugMode] = enabled }
     }
 
     suspend fun setReaderTheme(theme: String) {
@@ -64,7 +65,7 @@ class AppSettingsStore(private val context: Context) {
                 "space" -> "dark"
                 else -> "dark"
             }
-        context.dataStore.edit {
+        dataStore.edit {
             it[Keys.theme] = normalized
             // Maintain legacy boolean for older builds and as a sensible fallback.
             it[Keys.darkMode] = normalized != "light"
@@ -72,66 +73,66 @@ class AppSettingsStore(private val context: Context) {
     }
 
     suspend fun setReaderFontSizeSp(fontSizeSp: Float) {
-        context.dataStore.edit { it[Keys.fontSizeSp] = fontSizeSp }
+        dataStore.edit { it[Keys.fontSizeSp] = fontSizeSp }
     }
 
     suspend fun setReaderTtsRate(rate: Float) {
-        context.dataStore.edit { it[Keys.ttsRate] = rate.coerceIn(0.5f, 2.0f) }
+        dataStore.edit { it[Keys.ttsRate] = rate.coerceIn(0.5f, 2.0f) }
     }
 
     suspend fun setReaderOpenAiApiKey(apiKey: String?) {
-        context.dataStore.edit {
+        dataStore.edit {
             if (apiKey.isNullOrBlank()) it.remove(Keys.openAiApiKey) else it[Keys.openAiApiKey] = apiKey
         }
     }
 
     suspend fun setReaderOpenAiModel(model: String) {
         val normalized = model.trim().ifBlank { "gpt-4o-mini" }
-        context.dataStore.edit { it[Keys.openAiModel] = normalized }
+        dataStore.edit { it[Keys.openAiModel] = normalized }
     }
 
     suspend fun setReaderCacheTranslations(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.cacheTranslations] = enabled }
+        dataStore.edit { it[Keys.cacheTranslations] = enabled }
     }
 
     suspend fun setReaderUiLanguage(lang: String) {
         val normalized = lang.trim().lowercase().ifBlank { "en" }
-        context.dataStore.edit { it[Keys.uiLanguage] = normalized }
+        dataStore.edit { it[Keys.uiLanguage] = normalized }
     }
 
     suspend fun setReaderJpdbApiKey(apiKey: String?) {
-        context.dataStore.edit {
+        dataStore.edit {
             if (apiKey.isNullOrBlank()) it.remove(Keys.jpdbApiKey) else it[Keys.jpdbApiKey] = apiKey
         }
     }
 
     suspend fun setReaderCefrLevel(level: String) {
-        context.dataStore.edit { it[Keys.cefrLevel] = level.trim().ifBlank { "B1" } }
+        dataStore.edit { it[Keys.cefrLevel] = level.trim().ifBlank { "B1" } }
     }
 
     suspend fun setReaderJpdbHighlightEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.jpdbHighlightEnabled] = enabled }
+        dataStore.edit { it[Keys.jpdbHighlightEnabled] = enabled }
     }
 
     suspend fun setReaderTranslationTargetLang(lang: String) {
-        context.dataStore.edit { it[Keys.translationTargetLang] = lang.trim().ifBlank { "English" } }
+        dataStore.edit { it[Keys.translationTargetLang] = lang.trim().ifBlank { "English" } }
     }
 
     suspend fun setReaderMixEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.mixEnabled] = enabled }
+        dataStore.edit { it[Keys.mixEnabled] = enabled }
     }
 
     suspend fun setReaderMixAggression(value: Float) {
         val clamped = value.coerceIn(0f, 1f)
-        context.dataStore.edit { it[Keys.mixAggression] = clamped }
+        dataStore.edit { it[Keys.mixAggression] = clamped }
     }
 
     suspend fun setReaderMixAutoEnableHighlight(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.mixAutoEnableHighlight] = enabled }
+        dataStore.edit { it[Keys.mixAutoEnableHighlight] = enabled }
     }
 
     suspend fun setReaderMixBackupMirrorToDrive(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.mixBackupMirrorToDrive] = enabled }
+        dataStore.edit { it[Keys.mixBackupMirrorToDrive] = enabled }
     }
 
     private fun Preferences.toAppSettings(): AppSettings {

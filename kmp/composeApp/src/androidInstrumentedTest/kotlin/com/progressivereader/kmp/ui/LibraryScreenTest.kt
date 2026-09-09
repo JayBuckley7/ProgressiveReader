@@ -17,10 +17,26 @@ import com.progressivereader.kmp.ui.viewmodels.LibraryUiState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
+import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
+import android.graphics.Bitmap
 
 class LibraryScreenTest {
     @get:Rule
     val rule = createComposeRule()
+
+    @get:Rule val failureScreenshot = object : TestWatcher() {
+        override fun failed(error: Throwable, description: Description) {
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            val image = instrumentation.uiAutomation.takeScreenshot() ?: return
+            File(instrumentation.targetContext.cacheDir, "${description.methodName}.png").outputStream().use {
+                image.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            image.recycle()
+        }
+    }
 
     @Test
     fun guestModeShowsBannerInsteadOfSignedOutLandingWhenCachedBooksExist() {
@@ -96,7 +112,7 @@ class LibraryScreenTest {
         )
 
         rule.onNodeWithText("Download failed \u2022 EPUB \u2022 2 KB").assertIsDisplayed()
-        rule.onNodeWithTag(UiTestTags.libraryCoverStatus("remote")).assertIsDisplayed()
+        rule.onNodeWithTag(UiTestTags.libraryCoverStatus("remote"), useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithText("Tap to retry").assertIsDisplayed()
         rule.onNodeWithTag(UiTestTags.libraryCover("remote")).performClick()
         rule.onNodeWithTag(UiTestTags.libraryOverflowMenu("remote")).performClick()
@@ -117,7 +133,7 @@ class LibraryScreenTest {
                 ),
         )
 
-        rule.onNodeWithTag(UiTestTags.libraryCoverStatus("remote")).assertIsDisplayed()
+        rule.onNodeWithTag(UiTestTags.libraryCoverStatus("remote"), useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithText("Getting ready…").assertIsDisplayed()
         rule.onNodeWithText("Getting ready \u2022 EPUB \u2022 2 KB").assertIsDisplayed()
     }

@@ -353,42 +353,7 @@ suspend fun mineLibraryForGrammarExamples(
             apiKey = openAiApiKey?.trim()?.takeIf { it.isNotBlank() },
         )
 
-    val resp =
-        try {
-            api.validateExamples(validateReq)
-        } catch (err: Throwable) {
-            // Fallback: if OpenAI isn't configured, surface naive hint matches so the UI isn't empty.
-            val msg = err.message.orEmpty()
-            if (msg.contains("OpenAI API key", ignoreCase = true)) {
-                val now = GrammarMiningStore.isoNowUtc()
-                val naive =
-                    allCandidates.take(safeMaxExamples).map { c ->
-                        val span = c.hintSpan ?: GrammarApiService.Span(0, 0, "")
-                        val start = span.start.coerceIn(0, c.sentence.length)
-                        val end = span.end.coerceIn(start, c.sentence.length)
-                        val text = (span.text ?: c.sentence.substring(start, end)).ifBlank { c.sentence.substring(start, end) }
-                        val idSeed = "${grammar.id}|${c.id}|${c.sentence}|$start|$end"
-                        val id = stableHashHex(idSeed)
-                        GrammarExample(
-                            id = id,
-                            grammarId = grammar.id,
-                            grammarTitle = grammar.title,
-                            grammarMeaning = grammar.meaning,
-                            grammarLevel = grammar.level.id,
-                            bookId = c.id.split(":").getOrNull(0).orEmpty(),
-                            chapterIndex = c.id.split(":").getOrNull(1)?.toIntOrNull() ?: 0,
-                            sentence = c.sentence,
-                            before = c.before,
-                            after = c.after,
-                            match = GrammarExampleMatchSpan(start = start, end = end, text = text),
-                            confidence = 0.35,
-                            createdAt = now,
-                        )
-                    }
-                return naive to scannedBoundaries
-            }
-            throw err
-        }
+    val resp = api.validateExamples(validateReq)
 
     val byId = allCandidates.associateBy { it.id }
     val now = GrammarMiningStore.isoNowUtc()

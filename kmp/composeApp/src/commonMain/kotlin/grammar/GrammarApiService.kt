@@ -2,6 +2,8 @@ package com.progressivereader.kmp.grammar
 
 import com.progressivereader.kmp.core.Config
 import com.progressivereader.kmp.core.createHttpClient
+import com.progressivereader.kmp.core.BackendFailure
+import com.progressivereader.kmp.core.requireBackendSuccess
 import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -103,14 +105,17 @@ class GrammarApiService(
     private fun authHeader(): String? = getSessionToken()?.trim()?.takeIf { it.isNotBlank() }
 
     private suspend inline fun <reified T> requireOk(res: HttpResponse): T {
-        if (!res.status.isSuccess()) {
-            val text = runCatching { res.bodyAsText() }.getOrNull().orEmpty()
-            throw IllegalStateException(text.ifBlank { "HTTP ${res.status.value}" })
-        }
+        res.requireBackendSuccess()
         return res.body()
     }
 
+    private fun requireUserKey(apiKey: String?) {
+        if (authHeader() == null) throw BackendFailure("AUTH_REQUIRED", "Sign in to use grammar reading support.")
+        if (apiKey.isNullOrBlank()) throw BackendFailure("SERVER_AI_DISABLED", "Server-funded AI is disabled. Add your own OpenAI key in Settings to find and explain book examples.")
+    }
+
     suspend fun validateExamples(req: ValidateExamplesRequest): ValidateExamplesResponse {
+        requireUserKey(req.apiKey)
         val res =
             http.post("${Config.baseUrl}/api/grammar/validate-examples") {
                 authHeader()?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
@@ -121,6 +126,7 @@ class GrammarApiService(
     }
 
     suspend fun teachExamples(req: TeachExamplesRequest): TeachExamplesResponse {
+        requireUserKey(req.apiKey)
         val res =
             http.post("${Config.baseUrl}/api/grammar/teach-examples") {
                 authHeader()?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }

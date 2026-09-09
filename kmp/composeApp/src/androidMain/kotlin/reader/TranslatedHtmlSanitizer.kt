@@ -20,6 +20,7 @@ object TranslatedHtmlSanitizer {
                 Jsoup.parseBodyFragment(html)
             }
         doc.outputSettings().prettyPrint(false)
+        ReaderHtmlSanitizer.sanitize(doc)
 
         // Remove potentially-dangerous / layout-breaking tags from model output.
         doc.select("script, iframe, object, embed, form, style, link, meta").remove()

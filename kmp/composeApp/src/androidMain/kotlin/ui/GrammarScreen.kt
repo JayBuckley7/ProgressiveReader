@@ -101,12 +101,13 @@ fun GrammarScreen(
     showBack: Boolean,
     onBack: () -> Unit,
     bottomBar: (@Composable () -> Unit)? = null,
+    embedded: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     val isOnline = rememberIsOnline()
     val signedIn = !sessionJwt.isNullOrBlank()
 
-    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val appContext = com.progressivereader.kmp.session.LocalStorageContext.current ?: androidx.compose.ui.platform.LocalContext.current.applicationContext
     val store = remember { GrammarStore(appContext) }
     val state by store.stateFlow.collectAsState(initial = com.progressivereader.kmp.grammar.GrammarState())
 
@@ -115,25 +116,34 @@ fun GrammarScreen(
 
     var cachedIndex by remember { mutableStateOf<BooksIndex?>(null) }
 
-    val driveService = remember(sessionJwt) { DriveService(getSessionToken = { sessionJwt }) }
+    val tokenState = androidx.compose.runtime.rememberUpdatedState(sessionJwt)
+    val driveService = remember { DriveService(getSessionToken = { tokenState.value }) }
     val driveJsonService =
-        remember(sessionJwt, settings.driveFolderId) {
+        remember(settings.driveFolderId) {
             DriveJsonFileService(
                 driveService = driveService,
                 getDriveFolderOverride = { settings.driveFolderId },
             )
         }
 
-    val api = remember(sessionJwt) { GrammarApiService(getSessionToken = { sessionJwt }) }
+    val api = remember { GrammarApiService(getSessionToken = { tokenState.value }) }
     val openAiModel = settings.reader.openAiModel.trim().ifBlank { "gpt-4o-mini" }
     val openAiKey = settings.reader.openAiApiKey?.trim()?.takeIf { it.isNotBlank() }
+    val aiAvailable = signedIn && isOnline && openAiKey != null
+    val aiUnavailable = when {
+        !signedIn -> "Sign in to find and explain book examples. Grammar tracking and underlines work locally."
+        !isOnline -> "Offline: example mining and explanations are paused."
+        openAiKey == null -> "Server-funded AI is disabled. Add your own OpenAI key in Settings to find and explain book examples."
+        else -> null
+    }
 
     var localLoaded by remember { mutableStateOf(false) }
-    var driveRestoreAttempted by remember(sessionJwt) { mutableStateOf(false) }
-    var driveRestoreComplete by remember(sessionJwt) { mutableStateOf(false) }
-    var driveRestoreSucceeded by remember(sessionJwt) { mutableStateOf(false) }
-    var driveSaveJob by remember(sessionJwt) { mutableStateOf<Job?>(null) }
-    var driveSyncStatus by remember(sessionJwt) { mutableStateOf<String?>(null) }
+    var driveRestoreComplete by remember { mutableStateOf(false) }
+    var driveRestoreSucceeded by remember { mutableStateOf(false) }
+    var syncRetry by remember { mutableStateOf(0) }
+    var syncError by remember { mutableStateOf(false) }
+    var lastSyncedExamples by remember { mutableStateOf<Map<String, List<GrammarExample>>?>(null) }
+    var driveSyncStatus by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         mining = miningStore.loadSnapshot()
@@ -143,82 +153,56 @@ fun GrammarScreen(
         localLoaded = true
     }
 
-    // Restore grammar progress + mined examples from Drive's grammar.json (web parity).
-    LaunchedEffect(localLoaded, signedIn, isOnline, sessionJwt, settings.driveFolderId) {
-        if (!localLoaded) return@LaunchedEffect
-        if (!signedIn || !isOnline) return@LaunchedEffect
-        if (driveRestoreAttempted) return@LaunchedEffect
-
-        driveRestoreAttempted = true
+    // Failed reads never become empty cloud state. Pending edits stay on disk until acknowledged.
+    LaunchedEffect(localLoaded, signedIn, isOnline, settings.driveFolderId, syncRetry) {
+        if (!localLoaded || !signedIn || !isOnline) return@LaunchedEffect
         driveRestoreComplete = false
         driveRestoreSucceeded = false
-        driveSyncStatus = "Drive sync: loading grammar.json…"
-
-        val drive =
-            runCatching { loadGrammarFromDrive(driveJsonService) }
-                .getOrNull()
-                ?: run {
-                    driveSyncStatus = "Drive sync: couldn't load grammar.json (not found or not connected)."
-                    driveRestoreComplete = true
-                    return@LaunchedEffect
-                }
-
-        driveRestoreSucceeded = true
-        val importedExamples = drive.examplesByGrammarId.values.sumOf { it.size }
-        driveSyncStatus = "Drive sync: imported ${drive.knownIds.size} known, ${drive.learningIds.size} learning, $importedExamples examples."
-
-        val localGrammar = store.stateFlow.first()
-        val mergedKnown = (localGrammar.knownIds + drive.knownIds).toSet()
-        val mergedLearning =
-            (localGrammar.learningIds + drive.learningIds)
-                .filter { !mergedKnown.contains(it) }
-                .toSet()
-
-        runCatching { store.replaceProgress(knownIds = mergedKnown, learningIds = mergedLearning) }
-
-        val localMining = runCatching { miningStore.loadSnapshot() }.getOrNull() ?: mining
-        val mergedExamplesBy = localMining.examplesByGrammarId.toMutableMap()
-        for ((gid, driveExamples) in drive.examplesByGrammarId) {
-            mergedExamplesBy[gid] =
-                mergeAndLimitExamples(
-                    existing = mergedExamplesBy[gid].orEmpty(),
-                    incoming = driveExamples,
-                    limit = 3,
-                )
-        }
-        val nextMining = localMining.copy(updatedAt = GrammarMiningStore.isoNowUtc(), examplesByGrammarId = mergedExamplesBy)
-        mining = nextMining
-        runCatching { miningStore.saveSnapshot(nextMining) }
-
-        driveRestoreComplete = true
+        syncError = false
+        driveSyncStatus = "Loading grammar from Drive…"
+        try {
+            val drive = loadGrammarFromDrive(driveJsonService)
+            store.mergeCloudProgress(drive?.knownIds.orEmpty(), drive?.learningIds.orEmpty())
+            val localMining = miningStore.loadSnapshot()
+            val mergedExamples = localMining.examplesByGrammarId.toMutableMap()
+            for ((id, examples) in drive?.examplesByGrammarId.orEmpty()) {
+                mergedExamples[id] = mergeAndLimitExamples(mergedExamples[id].orEmpty(), examples, 3)
+            }
+            val next = localMining.copy(updatedAt = GrammarMiningStore.isoNowUtc(), examplesByGrammarId = mergedExamples)
+            miningStore.saveSnapshot(next)
+            mining = next
+            lastSyncedExamples = drive?.examplesByGrammarId
+            driveRestoreSucceeded = true
+            driveSyncStatus = if (drive == null) "Ready to create grammar backup in Drive." else "Grammar loaded from Drive."
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) {
+            syncError = true
+            driveSyncStatus = "Saved on this device. Drive sync failed: ${failure.message ?: "Please retry."}"
+        } finally { driveRestoreComplete = true }
     }
 
-    // Drive save (debounced) once we've successfully restored at least once (prevents overwriting Drive with empty state).
-    LaunchedEffect(
-        signedIn,
-        isOnline,
-        driveRestoreComplete,
-        driveRestoreSucceeded,
-        state.knownIds,
-        state.learningIds,
-        mining.examplesByGrammarId,
-    ) {
-        if (!signedIn || !isOnline) return@LaunchedEffect
-        if (!driveRestoreComplete || !driveRestoreSucceeded) return@LaunchedEffect
-
-        driveSaveJob?.cancel()
-        driveSaveJob =
-            scope.launch {
-                delay(800)
-                runCatching {
-                    saveGrammarToDrive(
-                        driveJsonService = driveJsonService,
-                        knownIds = state.knownIds,
-                        learningIds = state.learningIds,
-                        examplesByGrammarId = mining.examplesByGrammarId,
-                    )
+    LaunchedEffect(signedIn, isOnline, driveRestoreComplete, driveRestoreSucceeded, state.pendingChanges, mining.examplesByGrammarId) {
+        if (!signedIn || !isOnline || !driveRestoreComplete || !driveRestoreSucceeded) return@LaunchedEffect
+        if (state.pendingChanges.isEmpty() && lastSyncedExamples == mining.examplesByGrammarId) return@LaunchedEffect
+        delay(800)
+        val pending = store.stateFlow.first().pendingChanges
+        val examples = mining.examplesByGrammarId
+        // Once a write starts, finish its acknowledgement even if the UI changes or closes.
+        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+            try {
+                driveSyncStatus = "Saving grammar to Drive…"
+                check(saveGrammarToDrive(driveJsonService, state.knownIds, state.learningIds, examples, pending)) {
+                    "The cloud write was not confirmed."
                 }
+                store.acknowledge(pending)
+                lastSyncedExamples = examples
+                syncError = false
+                driveSyncStatus = "Grammar saved to Drive."
+            } catch (failure: Exception) {
+                syncError = true
+                driveSyncStatus = "Saved on this device. Drive sync failed: ${failure.message ?: "Please retry."}"
             }
+        }
     }
 
     val bookTitleById =
@@ -429,13 +413,14 @@ fun GrammarScreen(
         state.miningEnabled,
         isOnline,
         state.learningIds,
+        aiAvailable,
         mining.examplesByGrammarId,
         mining.scanByGrammarId,
         priorityNextGrammarId,
         activeMiningGrammarId,
         cachedIndex,
     ) {
-        if (!state.miningEnabled) return@LaunchedEffect
+        if (!state.miningEnabled || !aiAvailable) { activeMineJob?.cancel(); return@LaunchedEffect }
         if (!isOnline) return@LaunchedEffect
         if (cachedIndex?.books.isNullOrEmpty()) return@LaunchedEffect
         if (activeMineJob?.isActive == true) return@LaunchedEffect
@@ -548,7 +533,7 @@ fun GrammarScreen(
 
     Scaffold(
         topBar = {
-            AppShellTopBar(
+            if (!embedded) AppShellTopBar(
                 title = "Grammar",
                 subtitle = "Track grammar points and mined examples from your library.",
                 navigationIcon =
@@ -578,6 +563,7 @@ fun GrammarScreen(
             )
         },
         bottomBar = { bottomBar?.invoke() },
+        contentWindowInsets = if (embedded) androidx.compose.foundation.layout.WindowInsets(0) else androidx.compose.material3.ScaffoldDefaults.contentWindowInsets,
     ) { padding ->
         androidx.compose.foundation.lazy.LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -633,6 +619,10 @@ fun GrammarScreen(
                             )
                         }
 
+                        aiUnavailable?.let { AppMutedText(it) }
+                        if (syncError && signedIn && isOnline) {
+                            TextButton(onClick = { syncRetry += 1 }) { Text("Retry Drive sync") }
+                        }
                         if (!signedIn) {
                             AppMutedText("Sign in to sync grammar progress from Drive.")
                         } else if (!isOnline) {
@@ -715,7 +705,7 @@ fun GrammarScreen(
                         point = point,
                         isKnown = isKnown,
                         isLearning = isLearning,
-                        miningEnabled = state.miningEnabled,
+                        miningEnabled = state.miningEnabled && aiAvailable,
                         scan = scan,
                         examples = examples,
                         bookTitleById = bookTitleById,
@@ -751,8 +741,12 @@ fun GrammarScreen(
                         onRunNow = { runNow(point.id) },
                         onTeach = {
                             scope.launch {
-                                if (!isOnline) return@launch
-                                runCatching { teachExamples(point.id) }
+                                if (!aiAvailable) return@launch
+                                try { teachExamples(point.id) }
+                                catch (cancelled: CancellationException) { throw cancelled }
+                                catch (failure: Exception) {
+                                    setScanState(point.id, (scanFor(point.id) ?: GrammarScanState()).copy(lastError = failure.message ?: "Explanation failed"))
+                                }
                             }
                         },
                     )

@@ -31,18 +31,11 @@ internal val shellDestinations =
             matches = { it is Screen.Library },
         ),
         ShellDestinationSpec(
-            label = "Vocabulary",
-            shortLabel = "Vocab",
+            label = "Stats",
+            shortLabel = "Stats",
             icon = Icons.Outlined.Style,
             target = Screen.Vocabulary,
-            matches = { it is Screen.Vocabulary },
-        ),
-        ShellDestinationSpec(
-            label = "Grammar",
-            shortLabel = "Grammar",
-            icon = Icons.Outlined.AutoFixHigh,
-            target = Screen.Grammar,
-            matches = { it is Screen.Grammar },
+            matches = { it is Screen.Vocabulary || it is Screen.Grammar },
         ),
         ShellDestinationSpec(
             label = "More",

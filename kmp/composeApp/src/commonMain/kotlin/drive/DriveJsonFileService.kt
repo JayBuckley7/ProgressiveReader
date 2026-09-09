@@ -1,5 +1,6 @@
 package com.progressivereader.kmp.drive
 
+import com.progressivereader.kmp.core.BackendFailure
 import com.progressivereader.kmp.core.createHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.request.patch
@@ -57,16 +58,17 @@ class DriveJsonFileService(
     private val writeMutex = Mutex()
 
     private var cachedGoogleAccessToken: String? = null
+    private var cachedSessionKey: String? = null
     private var cachedGoogleAccessTokenExpiresAtMs: Long = 0L
 
     suspend fun resolveAppFolderId(): String? {
         val override = getDriveFolderOverride()?.trim()?.takeIf { it.isNotBlank() }
         if (override != null) return override
-        return runCatching { driveService.ensureAppFolderId() }.getOrNull()
+        return driveService.ensureAppFolderId() ?: throw BackendFailure("DRIVE_DISCONNECTED", "Connect Google Drive before syncing.")
     }
 
     private suspend fun listFilesInAppFolder(folderId: String?): List<DriveService.DriveFile> =
-        runCatching { driveService.listFiles(folderId = folderId) }.getOrDefault(emptyList())
+        driveService.listFiles(folderId = folderId)
 
     suspend fun locateByName(fileName: String): LocatedFile? {
         val folderId = resolveAppFolderId()
@@ -85,14 +87,14 @@ class DriveJsonFileService(
 
     suspend fun loadJson(fileName: String): LoadedJsonFile? {
         val located = locateByName(fileName) ?: return null
-        val bytes = runCatching { driveService.download(located.file.id) }.getOrNull() ?: return null
+        val bytes = driveService.download(located.file.id) ?: throw BackendFailure("DRIVE_READ_FAILED", "Could not read the existing cloud file. No changes were saved.")
         val text = runCatching { bytes.toString(Charsets.UTF_8) }.getOrNull().orEmpty()
 
         val parsed: JsonObject =
             runCatching {
                 val element = json.parseToJsonElement(text)
-                (element as? JsonObject) ?: JsonObject(emptyMap())
-            }.getOrElse { JsonObject(emptyMap()) }
+                (element as? JsonObject) ?: error("Expected a JSON object")
+            }.getOrElse { throw BackendFailure("DRIVE_DATA_CORRUPT", "The existing cloud file is unreadable. It has been left unchanged.") }
 
         return LoadedJsonFile(folderId = located.folderId, fileId = located.file.id, json = parsed)
     }
@@ -130,6 +132,12 @@ class DriveJsonFileService(
         }
 
     private suspend fun getGoogleAccessToken(): String? {
+        val sessionKey = driveService.sessionCacheKey() ?: throw BackendFailure("AUTH_REQUIRED", "Sign in again to save cloud changes.")
+        if (cachedSessionKey != sessionKey) {
+            cachedSessionKey = sessionKey
+            cachedGoogleAccessToken = null
+            cachedGoogleAccessTokenExpiresAtMs = 0L
+        }
         val now = System.currentTimeMillis()
         val cached = cachedGoogleAccessToken
         if (!cached.isNullOrBlank() && now + 30_000 < cachedGoogleAccessTokenExpiresAtMs) return cached
@@ -155,7 +163,8 @@ class DriveJsonFileService(
     }
 
     private suspend fun updateFileContentWithRetry(fileId: String, content: String): Boolean {
-        val maxAttempts = 5
+        // A timed-out mutation may have committed. Let the user retry after refreshing.
+        val maxAttempts = 1
 
         for (attempt in 1..maxAttempts) {
             val token = getGoogleAccessToken() ?: return false

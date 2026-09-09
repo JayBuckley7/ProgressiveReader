@@ -118,8 +118,8 @@ class VocabularyService(
                 contentType(ContentType.Application.Json)
                 setBody(ListUserDecksRequest(jpdbApiKey = jpdbApiKey))
             }
-        if (!res.status.isSuccess()) return emptyList()
-        return runCatching { res.body<List<Deck>>() }.getOrElse { emptyList() }
+        res.requireBackendSuccess()
+        return res.body<List<Deck>>()
     }
 
     suspend fun listDeckVocabulary(deckId: String, jpdbApiKey: String): List<JpdbVocabPair> {
@@ -129,8 +129,8 @@ class VocabularyService(
                 contentType(ContentType.Application.Json)
                 setBody(ListDeckVocabularyRequest(id = deckId, jpdbApiKey = jpdbApiKey))
             }
-        if (!res.status.isSuccess()) return emptyList()
-        val payload = runCatching { res.body<ListDeckVocabularyResponse>() }.getOrNull() ?: return emptyList()
+        res.requireBackendSuccess()
+        val payload = res.body<ListDeckVocabularyResponse>()
         return payload.vocabulary.mapNotNull { row ->
             val vid = row.getOrNull(0) ?: return@mapNotNull null
             val sid = row.getOrNull(1) ?: return@mapNotNull null
@@ -160,9 +160,10 @@ class VocabularyService(
                     )
                 )
             }
-        if (!res.status.isSuccess()) return emptyList()
-        val payload = runCatching { res.body<LookupVocabularyResponse>() }.getOrNull() ?: return emptyList()
+        res.requireBackendSuccess()
+        val payload = res.body<LookupVocabularyResponse>()
         val rows = payload.vocabularyInfo
+        check(rows.size == pairs.size) { "JPDB returned an incomplete vocabulary page. Previous knowledge has been kept." }
 
         fun JsonElement?.asStringOrNull(): String? = (this as? JsonPrimitive)?.content?.trim()?.takeIf { it.isNotBlank() }
 

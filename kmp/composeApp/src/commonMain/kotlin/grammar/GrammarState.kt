@@ -7,5 +7,6 @@ data class GrammarState(
     val openLevels: Set<String> = setOf(GrammarLevel.N5.id),
     val learningIds: Set<String> = emptySet(),
     val knownIds: Set<String> = emptySet(),
+    val pendingChanges: Map<String, GrammarProgressChange> = emptyMap(),
 )
 

@@ -39,6 +39,8 @@ class ShellChromeModelTest {
     fun `more and clipboard select the utility destination`() {
         assertEquals("More", shellChromeFor(Screen.More).selectedDestination?.label)
         assertEquals("More", shellChromeFor(Screen.Clipboard).selectedDestination?.label)
-        assertEquals(4, shellDestinations.size)
+        assertEquals(3, shellDestinations.size)
+        assertEquals("Stats", shellChromeFor(Screen.Vocabulary).selectedDestination?.label)
+        assertEquals("Stats", shellChromeFor(Screen.Grammar).selectedDestination?.label)
     }
 }

@@ -80,6 +80,20 @@ import com.progressivereader.kmp.usecases.reader.UnderlineGrammarUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateCachedTokenStateUseCase
 import com.progressivereader.kmp.usecases.reader.UpdateWordStateUseCase
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.progressivereader.kmp.session.AccountStorage
+import com.progressivereader.kmp.session.LocalStorageContext
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+
+private data class RestoredSession(val jwt: String?)
 
 @Composable
 actual fun App() {
@@ -89,20 +103,19 @@ actual fun App() {
         AppLog.i("App", "Compose app started.")
     }
 
-    val settingsStore = remember { AppSettingsStore(appContext) }
     val sessionStore = remember { SessionStore(appContext) }
-    val bookCache = remember { BookCache(appContext) }
-    val epubRepository = remember { EpubRepository() }
-
-    val settings by settingsStore.settingsFlow.collectAsState(initial = AppSettings())
-    val storedJwt by sessionStore.jwtFlow.collectAsState(initial = null)
+    val restoredSession by remember { sessionStore.jwtFlow.map { RestoredSession(it) } }.collectAsState(initial = null)
+    val storedJwt = restoredSession?.jwt
     val autoSignInEnabled by sessionStore.autoSignInEnabledFlow.collectAsState(initial = true)
 
     var hasJwtOverride by remember { mutableStateOf(false) }
     var jwtOverride by remember { mutableStateOf<String?>(null) }
-    val sessionJwt =
-        (if (hasJwtOverride) jwtOverride else storedJwt)
-            ?.takeIf { ClerkAndroid.isSessionTokenUsable(it) }
+    val rawJwt = if (hasJwtOverride) jwtOverride else storedJwt
+    // An expired session retains its offline profile. Only explicit sign-out changes it to guest.
+    val ownerId = ClerkAndroid.subject(rawJwt)
+    val ownerState = rememberUpdatedState(ownerId)
+    val sessionJwt = rawJwt?.takeIf { ClerkAndroid.isSessionTokenUsable(it) }
+    var authGeneration by remember { mutableStateOf(0) }
     val sessionJwtState = rememberUpdatedState(sessionJwt)
     val storedJwtState = rememberUpdatedState(storedJwt)
     val autoSignInEnabledState = rememberUpdatedState(autoSignInEnabled)
@@ -114,12 +127,8 @@ actual fun App() {
         }
     }
 
-    LaunchedEffect(settings.backendBaseUrl) {
-        Config.baseUrl = settings.backendBaseUrl
-        AppLog.i("App", "Using backend base URL: ${Config.baseUrl}")
-    }
-
-    suspend fun setSessionJwt(jwt: String?) {
+    suspend fun setSessionJwt(jwt: String?) = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+        authGeneration += 1
         hasJwtOverride = true
         jwtOverride = jwt
         AppLog.i("Auth", if (jwt.isNullOrBlank()) "Clearing session JWT." else "Persisting session JWT.")
@@ -130,6 +139,7 @@ actual fun App() {
 
     suspend fun refreshSessionJwtFromClerk(reason: String): String? {
         if (!ClerkAndroid.isConfigured) return null
+        val generation = authGeneration
 
         ClerkAndroid.initialize(appContext).onFailure {
             AppLog.e("Auth", "Failed to initialize Clerk while refreshing session token for $reason.", it)
@@ -137,6 +147,7 @@ actual fun App() {
         }
 
         val freshJwt = ClerkAndroid.fetchSessionToken(appContext)
+        if (generation != authGeneration || !autoSignInEnabledState.value) return null
         if (freshJwt.isNullOrBlank()) {
             AppLog.w("Auth", "No usable Clerk session token available for $reason.")
             return null
@@ -182,7 +193,41 @@ actual fun App() {
         }
     }
 
-    ProgressiveReaderTheme(theme = settings.reader.theme) {
+    if (restoredSession == null) return
+    var storageRevision by remember { mutableStateOf(0) }
+    val needsClaim = remember(storageRevision) { AccountStorage.needsLegacyClaim(appContext) }
+    if (needsClaim) {
+        ProgressiveReaderTheme(theme = "system") {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Keep your existing library") },
+                text = { Text("Choose where the books, progress and settings already on this device belong. Other accounts will have separate storage. Your files will be preserved.") },
+                confirmButton = {
+                    if (ownerId != null) TextButton(onClick = {
+                        AccountStorage.claimLegacy(appContext, ownerId)
+                        storageRevision += 1
+                    }) { Text("Attach to signed-in account") }
+                },
+                dismissButton = { TextButton(onClick = {
+                    AccountStorage.claimLegacy(appContext, null)
+                    storageRevision += 1
+                }) { Text("Keep device-only") } },
+            )
+        }
+        return
+    }
+    key(ownerId, storageRevision) {
+      val profileContext = remember { AccountStorage.context(appContext, ownerId) }
+      val profileSessionJwtState = rememberUpdatedState(sessionJwt)
+      val settingsStore = remember { AppSettingsStore(profileContext) }
+      val bookCache = remember { BookCache(profileContext) }
+      val epubRepository = remember { EpubRepository() }
+      val settings by settingsStore.settingsFlow.collectAsState(initial = AppSettings())
+      val viewModelOwner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
+      DisposableEffect(viewModelOwner) { onDispose { viewModelOwner.viewModelStore.clear() } }
+      LaunchedEffect(settings.backendBaseUrl) { Config.baseUrl = settings.backendBaseUrl }
+      CompositionLocalProvider(LocalStorageContext provides profileContext, com.progressivereader.kmp.session.LocalStorageOwner provides ownerId, LocalViewModelStoreOwner provides viewModelOwner) {
+      ProgressiveReaderTheme(theme = settings.reader.theme) {
         val debugLaunch = DebugLaunchBridge.pendingRequest
         val navigator = rememberNavigator(start = debugLaunch?.startScreen ?: Screen.Library)
 
@@ -197,13 +242,14 @@ actual fun App() {
 
         val timePort = remember { AndroidTimePort() }
         val documentPort = remember { AndroidDocumentPort(appContext) }
-        val coverCachePort = remember { AndroidCoverCachePort(appContext) }
+        val coverCachePort = remember { AndroidCoverCachePort(profileContext) }
         val http = remember { createHttpClient() }
 
         val driveService =
             remember {
                 DriveService {
-                    currentBackendSessionJwt(reason = "Drive request")
+                    if (ownerState.value != ownerId) null else currentBackendSessionJwt(reason = "Drive request")
+                        ?.takeIf { ClerkAndroid.subject(it) == ownerId && ownerState.value == ownerId }
                 }
             }
         val driveJsonFileService =
@@ -234,7 +280,7 @@ actual fun App() {
             remember {
                 AndroidDrivePort(
                     http = http,
-                    getSessionJwt = { sessionJwtState.value },
+                    getSessionJwt = { profileSessionJwtState.value },
                     driveService = driveService,
                     driveJsonFileService = driveJsonFileService,
                 )
@@ -280,15 +326,15 @@ actual fun App() {
         val cryptoPort = remember { AndroidCryptoPort() }
         val readerPort = remember { AndroidReaderPort(bookCache = bookCache, epubRepository = epubRepository, cryptoPort = cryptoPort) }
         val translationCachePort = remember { AndroidTranslationCachePort(bookCache = bookCache) }
-        val translationPort = remember { AndroidTranslationPort(getSessionJwt = { sessionJwtState.value }) }
+        val translationPort = remember { AndroidTranslationPort(getSessionJwt = { profileSessionJwtState.value }) }
         val mixRefinePort = remember { AndroidMixRefinePort(bookCache = bookCache) }
         val mixApplyPort = remember { AndroidMixApplyPort() }
         val aiPort = remember { AndroidAiPort() }
 
-        val jpdbMirrorPort = remember { AndroidJpdbMirrorPort(appContext) }
+        val jpdbMirrorPort = remember { AndroidJpdbMirrorPort(profileContext) }
         val jpdbHighlightPort = remember { AndroidJpdbHighlightPort(bookCache = bookCache, timePort = timePort) }
-        val jpdbActionsPort = remember { AndroidJpdbActionsPort(getSessionJwt = { sessionJwtState.value }) }
-        val grammarPort = remember { AndroidGrammarPort(appContext) }
+        val jpdbActionsPort = remember { AndroidJpdbActionsPort(getSessionJwt = { profileSessionJwtState.value }) }
+        val grammarPort = remember { AndroidGrammarPort(profileContext) }
         val grammarUnderlinePort = remember { AndroidGrammarUnderlinePort() }
 
         val openBook = remember { OpenBookUseCase(readerPort) }
@@ -342,7 +388,10 @@ actual fun App() {
             navigator = navigator,
             settings = settings,
             sessionJwt = sessionJwt,
-            requestSessionJwt = { currentBackendSessionJwt(reason = "Settings request") },
+            requestSessionJwt = {
+                if (ownerState.value != ownerId) null else currentBackendSessionJwt(reason = "Settings request")
+                    ?.takeIf { ClerkAndroid.subject(it) == ownerId && ownerState.value == ownerId }
+            },
             libraryViewModelFactory = libraryViewModelFactory,
             readerViewModelFactory = readerViewModelFactory,
             bookCache = bookCache,
@@ -369,5 +418,7 @@ actual fun App() {
                 settingsStore.setBackendBaseUrl("https://progressivereader.net")
             },
         )
+      }
+      }
     }
 }

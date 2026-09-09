@@ -33,6 +33,12 @@ internal fun cssForPresentation(presentation: HtmlPresentationSpec): String =
         --pr-bg: ${if (presentation.darkMode) "#0B0E12" else "#F4F1EB"};
         --pr-text: ${if (presentation.darkMode) "rgba(255,255,255,0.92)" else "#14181F"};
         --pr-muted: ${if (presentation.darkMode) "rgba(229,231,235,0.9)" else "rgba(55,65,81,0.95)"};
+        --pr-word-new: ${if (presentation.darkMode) "#91BFFF" else "#245B9C"};
+        --pr-word-known: ${if (presentation.darkMode) "#B0D77C" else "#386318"};
+        --pr-word-learning: ${if (presentation.darkMode) "#80C9B4" else "#276B53"};
+        --pr-word-due: ${if (presentation.darkMode) "#FFC078" else "#94420C"};
+        --pr-word-failed: ${if (presentation.darkMode) "#FF9B9B" else "#AF2938"};
+        --pr-word-muted: ${if (presentation.darkMode) "#BAC2CD" else "#5B626C"};
         --pr-surface: ${if (presentation.darkMode) "#12161B" else "#FCFBF8"};
         --pr-accent: rgba(75, 141, 255, 0.35);
         --pr-font-size: ${presentation.fontSizeSp}pt;
@@ -73,32 +79,22 @@ internal fun cssForPresentation(presentation: HtmlPresentationSpec): String =
         text-underline-offset: 0.18em;
     }
 
-    .jpdb-word.locked { color: rgb(119, 119, 119); }
-    .jpdb-word.suspended { color: rgb(119, 119, 119); }
-    .jpdb-word.blacklisted { color: rgb(119, 119, 119); }
-    .jpdb-word.never-forget { color: rgb(112, 192, 0); }
-
-    .jpdb-word.not-in-deck { color: rgba(75, 141, 255, 0.5); }
-    .jpdb-word.unknown { color: rgba(75, 141, 255, 0.5); }
-    .jpdb-word.new { color: rgb(75, 141, 255); }
-    .jpdb-word.learning { color: rgb(94, 167, 128); }
-    .jpdb-word.known { color: rgb(112, 192, 0); }
-    .jpdb-word.due { color: rgb(255, 69, 0); }
-    .jpdb-word.failed { color: rgb(255, 0, 0); }
-
-    .jpdb-word.common-word { color: inherit; }
-    .jpdb-word.jlpt-n5 { color: rgb(34, 197, 94); }
-    .jpdb-word.jlpt-n4 { color: rgb(59, 130, 246); }
-    .jpdb-word.jlpt-n3 { color: rgb(245, 158, 11); }
-    .jpdb-word.jlpt-n2 { color: rgb(147, 51, 234); }
-    .jpdb-word.jlpt-n1 { color: rgb(239, 68, 68); }
-
-    .jpdb-word.jlpt-unknown {
-        color: rgba(119, 119, 119, 1);
-        background-color: rgba(119, 119, 119, 0.15);
-        border-radius: 2px;
-        padding: 1px 2px;
-    }
+    #pr-reader-body { color: var(--pr-text) !important; background-color: var(--pr-bg) !important; }
+    #pr-reader-body * { color: inherit !important; background-color: transparent !important; -webkit-text-fill-color: currentColor !important; }
+    #pr-reader-body .jpdb-word { color: var(--pr-word-new) !important; }
+    #pr-reader-body .jpdb-word.locked,
+    #pr-reader-body .jpdb-word.suspended,
+    #pr-reader-body .jpdb-word.blacklisted,
+    #pr-reader-body .jpdb-word.jlpt-unknown { color: var(--pr-word-muted) !important; }
+    #pr-reader-body .jpdb-word.not-in-deck,
+    #pr-reader-body .jpdb-word.unknown,
+    #pr-reader-body .jpdb-word.new { color: var(--pr-word-new) !important; }
+    #pr-reader-body .jpdb-word.learning { color: var(--pr-word-learning) !important; }
+    #pr-reader-body .jpdb-word.known,
+    #pr-reader-body .jpdb-word.never-forget { color: var(--pr-word-known) !important; }
+    #pr-reader-body .jpdb-word.due { color: var(--pr-word-due) !important; }
+    #pr-reader-body .jpdb-word.failed { color: var(--pr-word-failed) !important; }
+    #pr-reader-body .pr-translation { color: var(--pr-muted) !important; }
     """.trimIndent()
 
 internal fun buildDocumentHtml(
@@ -109,10 +105,10 @@ internal fun buildDocumentHtml(
     <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <style id="pr-base-style">${cssForPresentation(presentation)}</style>
         ${document.headHtml}
+        <style id="pr-base-style">${cssForPresentation(presentation)}</style>
       </head>
-      <body>${document.bodyHtml}</body>
+      <body id="pr-reader-body">${ReaderHtmlSanitizer.body(document.bodyHtml)}</body>
     </html>
     """.trimIndent()
 
@@ -125,6 +121,7 @@ private fun ReaderWebView.applyPresentation(presentation: HtmlPresentationSpec) 
         (function() {
           var style = document.getElementById('pr-base-style');
           if (!style) return;
+          style.textContent = ${org.json.JSONObject.quote(cssForPresentation(presentation))};
           document.documentElement.style.setProperty('--pr-bg', '$bg');
           document.documentElement.style.setProperty('--pr-text', '$text');
           document.documentElement.style.setProperty('--pr-muted', '$muted');

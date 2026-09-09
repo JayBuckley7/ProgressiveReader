@@ -1088,7 +1088,7 @@ private fun DrawerContents(
         }
 
         HorizontalDivider()
-        AppSectionHeader(title = "Bookmarks", subtitle = "${bookmarks.distinctBy { it.chapterIndex }.size} saved")
+        AppSectionHeader(title = "Bookmarks", subtitle = "${bookmarks.distinctBy { it.chapterIndex }.size} saved on this device")
 
         val unique = bookmarks.distinctBy { it.chapterIndex }.sortedBy { it.chapterIndex }
         if (unique.isEmpty()) {

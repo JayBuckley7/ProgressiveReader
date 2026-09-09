@@ -70,6 +70,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
 
 private enum class SettingsTab(val label: String) {
@@ -164,8 +166,9 @@ fun SettingsScreen(
 
     val driveService = remember(requestSessionJwt) { DriveService(getSessionToken = requestSessionJwt) }
     val signedIn = !sessionJwt.isNullOrBlank()
+    val hasAccount = com.progressivereader.kmp.session.LocalStorageOwner.current != null
     val isOnline = rememberIsOnline()
-    val appContext = LocalContext.current.applicationContext
+    val appContext = com.progressivereader.kmp.session.LocalStorageContext.current ?: LocalContext.current.applicationContext
     val logEntries by AppLog.entries.collectAsState()
 
     val driveJsonService =
@@ -431,10 +434,6 @@ fun SettingsScreen(
                 return
             }
             val folderId = cloudFolderId
-            val existingId = findSettingsJsonFileId(folderId = folderId)
-            if (!existingId.isNullOrBlank()) {
-                runCatching { driveService.deleteFile(existingId) }
-            }
 
             val payload =
                 CloudSettingsJsonOut(
@@ -453,8 +452,10 @@ fun SettingsScreen(
                     mixBackupMirrorToDrive = mixBackupMirrorToDrive,
                     lastUpdated = TranslationCache.isoNowUtc(),
                 )
-            val bytes = json.encodeToString(CloudSettingsJsonOut.serializer(), payload).toByteArray(Charsets.UTF_8)
-            val res = driveService.upload(filename = "settings.json", bytes = bytes, mimeType = "application/json", folderId = folderId)
+            val changes = json.parseToJsonElement(json.encodeToString(CloudSettingsJsonOut.serializer(), payload)).jsonObject
+            val res = driveJsonService.upsertJson(fileName = "settings.json") { existing ->
+                JsonObject(existing + changes)
+            }
             if (res != null) {
                 cloudLastSync = "Saved to Drive"
                 cloudStatus = "Saved settings to Drive."
@@ -465,6 +466,11 @@ fun SettingsScreen(
                 cloudStatus = "Failed to save settings to Drive."
                 if (manual) snackbarHostState.showSnackbar("Failed to save settings to Drive.")
             }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            cloudStatus = error.message ?: "Settings could not be saved. The previous cloud copy has been kept."
+            if (manual) snackbarHostState.showSnackbar(cloudStatus!!)
         } finally {
             cloudBusy = false
         }
@@ -480,10 +486,16 @@ fun SettingsScreen(
             return@LaunchedEffect
         }
         if (!isOnline) return@LaunchedEffect
-        ensureCloudFolderInfo()
-        if (!autoLoadedFromCloud) {
-            autoLoadedFromCloud = true
-            runCatching { loadFromCloudAndApply(manual = false) }
+        try {
+            ensureCloudFolderInfo()
+            if (!autoLoadedFromCloud) {
+                loadFromCloudAndApply(manual = false)
+                autoLoadedFromCloud = true
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            cloudStatus = error.message ?: "Drive is unavailable. Local settings have been kept."
         }
     }
 
@@ -535,8 +547,9 @@ fun SettingsScreen(
                             }
 
                             if (!signedIn) {
-                                Text("Status: Guest", style = MaterialTheme.typography.bodyMedium)
+                                Text(if (hasAccount) "Status: Session expired. Your account's local data is still available." else "Status: Guest", style = MaterialTheme.typography.bodyMedium)
                                 AppPrimaryButton(text = "Sign in", onClick = onOpenLogin)
+                                if (hasAccount) AppTonalButton(text = "Sign out", onClick = onSignOut)
                             } else {
                                 Text("Status: Signed in", style = MaterialTheme.typography.bodyMedium)
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

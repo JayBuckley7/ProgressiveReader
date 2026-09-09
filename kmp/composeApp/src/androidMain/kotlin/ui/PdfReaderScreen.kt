@@ -93,13 +93,19 @@ fun PdfReaderScreen(
     var fileDescriptor by remember(pdfFile) { mutableStateOf<ParcelFileDescriptor?>(null) }
     var pageCount by remember(pdfFile) { mutableStateOf(0) }
 
+    var openError by remember(pdfFile) { mutableStateOf<String?>(null) }
     DisposableEffect(pdfFile) {
-        if (pdfFile.exists()) {
+        try {
+            check(pdfFile.isFile) { "PDF is not available on this device." }
             val fd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
             fileDescriptor = fd
             val r = PdfRenderer(fd)
             renderer = r
             pageCount = r.pageCount
+        } catch (error: Exception) {
+            runCatching { fileDescriptor?.close() }
+            fileDescriptor = null
+            openError = "This PDF could not be opened. It may be damaged or password protected."
         }
         onDispose {
             runCatching { renderer?.close() }
@@ -166,6 +172,7 @@ fun PdfReaderScreen(
 
     LaunchedEffect(pageIndex, renderer) {
         val r = renderer ?: return@LaunchedEffect
+        if (pageIndex !in 0 until r.pageCount) { setPage(pageIndex); return@LaunchedEffect }
         renderError = null
         bitmap = null
         isRendering = true
@@ -283,8 +290,8 @@ fun PdfReaderScreen(
         ) {
             when {
                 !pdfFile.exists() -> Text("PDF is not cached.", color = MaterialTheme.colorScheme.error)
+                (openError ?: renderError) != null -> Text((openError ?: renderError)!!, color = MaterialTheme.colorScheme.error)
                 renderer == null -> CircularProgressIndicator()
-                renderError != null -> Text(renderError!!, color = MaterialTheme.colorScheme.error)
                 isRendering -> CircularProgressIndicator()
                 bitmap == null -> CircularProgressIndicator()
                 else -> {

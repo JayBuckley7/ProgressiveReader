@@ -60,23 +60,15 @@ object ClerkAndroid {
     fun secondsUntilExpiry(jwt: String): Long? =
         decodeJwtExpSeconds(jwt)?.minus(System.currentTimeMillis() / 1000L)
 
-    private fun decodeJwtExpSeconds(jwt: String): Long? {
-        val payload =
-            jwt.split('.')
-                .getOrNull(1)
-                ?.let { segment ->
-                    runCatching {
-                        val normalized =
-                            segment
-                                .replace('-', '+')
-                                .replace('_', '/')
-                                .let { value -> value + "=".repeat((4 - (value.length % 4)) % 4) }
-                        String(Base64.decode(normalized, Base64.DEFAULT), Charsets.UTF_8)
-                    }.getOrNull()
-                } ?: return null
+    fun subject(jwt: String?): String? = jwt?.let { decodePayload(it)?.get("sub")?.jsonPrimitive?.content?.takeIf { id -> id.isNotBlank() } }
 
+    private fun decodeJwtExpSeconds(jwt: String): Long? = decodePayload(jwt)?.get("exp")?.jsonPrimitive?.content?.toLongOrNull()
+
+    private fun decodePayload(jwt: String): kotlinx.serialization.json.JsonObject? {
         return runCatching {
-            Json.parseToJsonElement(payload).jsonObject["exp"]?.jsonPrimitive?.content?.toLong()
+            val segment = jwt.split('.').getOrNull(1) ?: return null
+            val payload = String(Base64.decode(segment, Base64.URL_SAFE or Base64.NO_WRAP), Charsets.UTF_8)
+            Json.parseToJsonElement(payload).jsonObject
         }.getOrNull()
     }
 }

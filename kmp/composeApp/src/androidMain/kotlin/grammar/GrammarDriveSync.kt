@@ -1,6 +1,7 @@
 package com.progressivereader.kmp.grammar
 
 import com.progressivereader.kmp.drive.DriveJsonFileService
+import com.progressivereader.kmp.core.BackendFailure
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -30,13 +31,14 @@ private fun JsonElement?.asStringList(): List<String> =
         .orEmpty()
 
 private fun parseExamplesMap(value: JsonElement?): Map<String, List<GrammarExample>> {
-    val obj = (value as? JsonObject) ?: return emptyMap()
+    if (value == null) return emptyMap()
+    val obj = value as? JsonObject ?: throw BackendFailure("DRIVE_DATA_CORRUPT", "Grammar examples are unreadable. The cloud file has been left unchanged.")
     val out = LinkedHashMap<String, List<GrammarExample>>()
     for ((gid, raw) in obj) {
-        val arr = (raw as? JsonArray) ?: continue
+        val arr = raw as? JsonArray ?: throw BackendFailure("DRIVE_DATA_CORRUPT", "Grammar examples are unreadable. The cloud file has been left unchanged.")
         val parsed =
-            arr.mapNotNull { el ->
-                decodeExampleLenient(el)
+            arr.map { el ->
+                decodeExampleLenient(el) ?: throw BackendFailure("DRIVE_DATA_CORRUPT", "A grammar example is unreadable. The cloud file has been left unchanged.")
             }
         if (parsed.isNotEmpty()) out[gid] = parsed
     }
@@ -111,6 +113,12 @@ private fun decodeExampleLenient(el: JsonElement): GrammarExample? {
 }
 
 fun parseGrammarJsonFile(json: JsonObject): DriveGrammarState {
+    for (key in listOf("known", "knownIds", "known_ids", "learning", "learningIds", "learning_ids")) {
+        val value = json[key] ?: continue
+        if (value !is JsonArray || value.any { it !is JsonPrimitive || !it.isString }) {
+            throw BackendFailure("DRIVE_DATA_CORRUPT", "Grammar progress is unreadable. The cloud file has been left unchanged.")
+        }
+    }
     val version = (json["version"] as? JsonPrimitive)?.content?.trim().orEmpty()
 
     val known =
@@ -154,8 +162,10 @@ fun parseGrammarJsonFile(json: JsonObject): DriveGrammarState {
 
 suspend fun loadGrammarFromDrive(driveJsonService: DriveJsonFileService): DriveGrammarState? {
     val loaded = driveJsonService.loadJson("grammar.json") ?: return null
-    if (loaded.json.isEmpty()) return null
-    return runCatching { parseGrammarJsonFile(loaded.json) }.getOrNull()
+    if (loaded.json.keys.none { it in setOf("known", "knownIds", "known_ids", "learning", "learningIds", "learning_ids", "examples", "examplesByGrammarId", "examples_by_grammar_id") }) {
+        throw BackendFailure("DRIVE_DATA_CORRUPT", "The grammar file has an unsupported format. It has been left unchanged.")
+    }
+    return parseGrammarJsonFile(loaded.json)
 }
 
 suspend fun saveGrammarToDrive(
@@ -163,6 +173,7 @@ suspend fun saveGrammarToDrive(
     knownIds: Set<String>,
     learningIds: Set<String>,
     examplesByGrammarId: Map<String, List<GrammarExample>>,
+    pendingChanges: Map<String, GrammarProgressChange>,
 ): Boolean {
     val known = knownIds.map { it.trim() }.filter { it.isNotBlank() }.distinct()
     val knownSet = known.toSet()
@@ -197,6 +208,20 @@ suspend fun saveGrammarToDrive(
         driveJsonService.upsertJson(
             fileName = "grammar.json",
             defaultJson = JsonObject(emptyMap()),
-        ) { _ -> payload }
+        ) { existing ->
+            val remote = parseGrammarJsonFile(existing)
+            val merged = mergeGrammarProgress(remote.knownIds, remote.learningIds, pendingChanges)
+            val mergedExamples = remote.examplesByGrammarId.toMutableMap()
+            for ((id, incoming) in examplesByGrammarId) {
+                mergedExamples[id] = mergeAndLimitExamples(mergedExamples[id].orEmpty(), incoming, 3)
+            }
+            JsonObject(existing + payload + mapOf(
+                "known" to JsonArray(merged.first.map { JsonPrimitive(it) }),
+                "learning" to JsonArray(merged.second.map { JsonPrimitive(it) }),
+                "examples" to buildJsonObject {
+                    for ((id, examples) in mergedExamples) put(id, driveJson.encodeToJsonElement(examples))
+                },
+            ) - setOf("knownIds", "known_ids", "learningIds", "learning_ids", "examplesByGrammarId", "examples_by_grammar_id"))
+        }
     return res != null
 }

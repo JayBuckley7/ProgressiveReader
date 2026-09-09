@@ -339,8 +339,8 @@ fun LibraryScreen(
                         InfoBanner(
                             tag = UiTestTags.libraryBannerGuest,
                             icon = Icons.AutoMirrored.Outlined.Login,
-                            title = "Guest mode",
-                            body = "Sign in to sync books from Drive.",
+                            title = if (com.progressivereader.kmp.session.LocalStorageOwner.current != null) "Session expired" else "Guest mode",
+                            body = if (com.progressivereader.kmp.session.LocalStorageOwner.current != null) "Your account's downloaded books remain available. Sign in again to sync." else "Sign in to sync books from Drive.",
                             actionLabel = "Sign in",
                             onAction = onOpenLogin,
                         )

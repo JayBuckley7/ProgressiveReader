@@ -19,7 +19,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 
 private const val READER_PART_MARKER = "#pr-reader-part="
 private const val MAX_READER_PART_TEXT_CHARS = 16_000
-private const val PREPARED_BOOK_VERSION = 1
+private const val PREPARED_BOOK_VERSION = 2
 private const val PREPARED_CACHE_DIR = ".progressive-reader"
 private const val PREPARED_BOOK_FILE = "book-v1.json"
 
@@ -38,25 +38,72 @@ class EpubRepository {
             encodeDefaults = true
         }
 
+    private val extractionMutex = kotlinx.coroutines.sync.Mutex()
+
     suspend fun extractIfNeeded(epubFile: File, extractedDir: File) =
         withContext(Dispatchers.IO) {
-            val containerFile = File(extractedDir, "META-INF/container.xml")
-            if (containerFile.exists()) return@withContext
-
-            if (extractedDir.exists()) extractedDir.deleteRecursively()
-            extractedDir.mkdirs()
-
-            ZipInputStream(FileInputStream(epubFile)).use { zis ->
-                var entry = zis.nextEntry
-                while (entry != null) {
-                    if (!entry.isDirectory) {
-                        val outFile = File(extractedDir, entry.name)
-                        ensureWithinDir(extractedDir, outFile)
-                        outFile.parentFile?.mkdirs()
-                        outFile.outputStream().use { os -> zis.copyTo(os) }
+            extractionMutex.lock()
+            try {
+                val digest = MessageDigest.getInstance("SHA-256")
+                epubFile.inputStream().use { input ->
+                    val buffer = ByteArray(65536)
+                    var count = input.read(buffer)
+                    while (count >= 0) {
+                        digest.update(buffer, 0, count)
+                        count = input.read(buffer)
                     }
-                    entry = zis.nextEntry
                 }
+                val fingerprint = digest.digest().joinToString("") { "%02x".format(it) }
+                val marker = File(extractedDir, ".extraction-complete")
+                if (marker.isFile && marker.readText() == fingerprint && File(extractedDir, "META-INF/container.xml").isFile) return@withContext
+
+                val pending = File(extractedDir.parentFile, "${extractedDir.name}.extracting")
+                val previous = File(extractedDir.parentFile, "${extractedDir.name}.previous")
+                // These are app-owned derived caches; the source EPUB is never removed.
+                if (!extractedDir.exists() && previous.exists()) check(previous.renameTo(extractedDir))
+                pending.deleteRecursively()
+                pending.mkdirs()
+                try {
+                    ZipInputStream(FileInputStream(epubFile)).use { zis ->
+                        var entry = zis.nextEntry
+                        var totalBytes = 0L
+                        var entries = 0
+                        val buffer = ByteArray(65536)
+                        while (entry != null) {
+                            check(++entries <= 50_000) { "EPUB contains too many entries." }
+                            if (!entry.isDirectory) {
+                                val outFile = File(pending, entry.name)
+                                ensureWithinDir(pending, outFile)
+                                outFile.parentFile?.mkdirs()
+                                outFile.outputStream().use { output ->
+                                    var count = zis.read(buffer)
+                                    while (count >= 0) {
+                                        totalBytes += count
+                                        check(totalBytes <= 1_000_000_000L) { "Expanded EPUB is too large." }
+                                        output.write(buffer, 0, count)
+                                        count = zis.read(buffer)
+                                    }
+                                }
+                            }
+                            entry = zis.nextEntry
+                        }
+                    }
+                    val opf = File(pending, readOpfPath(pending))
+                    ensureWithinDir(pending, opf)
+                    check(opf.isFile) { "EPUB is missing its package file." }
+                    File(pending, ".extraction-complete").writeText(fingerprint)
+                    previous.deleteRecursively()
+                    if (extractedDir.exists()) check(extractedDir.renameTo(previous)) { "Could not preserve the previous extraction." }
+                    if (!pending.renameTo(extractedDir)) {
+                        previous.renameTo(extractedDir)
+                        error("Could not finish extracting the book. Please retry.")
+                    }
+                    previous.deleteRecursively()
+                } finally {
+                    pending.deleteRecursively()
+                }
+            } finally {
+                extractionMutex.unlock()
             }
         }
 
@@ -341,7 +388,7 @@ class EpubRepository {
         val decoded = decodeWithDetectedCharset(bytes)
 
         val doc = Jsoup.parse(decoded).apply { outputSettings().prettyPrint(false) }
-        doc.select("script, iframe, object, embed, form").remove()
+        ReaderHtmlSanitizer.sanitize(doc)
 
         val headExtras =
             buildString {
