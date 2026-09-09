@@ -27,8 +27,9 @@ def _reflow_locator() -> ReaderLocator:
     )
 
 
-def test_reader_locator_requires_kind_specific_fields():
-    assert ReaderLocator(version=2, kind="pdf", pageNumber=7).pageNumber == 7
+@pytest.mark.parametrize("kind", ["pdf", "cbz"])
+def test_reader_locator_requires_kind_specific_fields(kind):
+    assert ReaderLocator(version=2, kind=kind, pageNumber=7).pageNumber == 7
 
     with pytest.raises(ValidationError, match="segmentId"):
         ReaderLocator(
@@ -40,14 +41,14 @@ def test_reader_locator_requires_kind_specific_fields():
         )
 
     with pytest.raises(ValidationError, match="pageNumber"):
-        ReaderLocator(version=2, kind="pdf")
+        ReaderLocator(version=2, kind=kind)
 
 
-def test_bookmark_route_accepts_and_returns_locator(authenticated_client):
+@pytest.mark.parametrize("locator", [_reflow_locator(), ReaderLocator(version=2, kind="cbz", pageNumber=3)])
+def test_bookmark_route_accepts_and_returns_locator(authenticated_client, locator):
     app = Flask(__name__)
     app.config["TESTING"] = True
     container = Mock()
-    locator = _reflow_locator()
     container.books_service.add_bookmark.return_value = Bookmark(
         id=10,
         bookId="book-1",

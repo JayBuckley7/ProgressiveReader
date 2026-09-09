@@ -240,3 +240,41 @@ def delete_file(file_id: str):
     except Exception as e:
         logger.error("[drive-delete] Unexpected error: %s", e, exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
+
+
+@drive_bp.route('/ocr/pages/<image_hash>', methods=['GET', 'PUT'])
+@require_auth
+def ocr_page(image_hash):
+    """Save device-generated OCR; never invokes an OCR/AI provider."""
+    from ...core.errors import AppError
+    import json
+    try:
+        if request.headers.get('X-OCR-Account') != get_user_id():
+            raise AppError('ACCOUNT_CHANGED', 'Your account changed. Reopen the page to sync OCR.', 409)
+        container = current_app.extensions['container']
+        storage = getattr(container, 'drive_ocr', None)
+        if storage is None:
+            # Additive web releases can use the serving backend's Drive provider
+            # without switching its book/vocabulary repositories during migration.
+            from ...infrastructure.drive_ocr import DriveOcrStorage
+            storage = current_app.extensions.get('drive_ocr')
+            if storage is None:
+                provider = container.drive_service.integration.provider
+                storage = DriveOcrStorage(provider)
+                current_app.extensions['drive_ocr'] = storage
+        payload = None
+        if request.method == 'PUT':
+            content = request.stream.read(512001)
+            if len(content) > 512000:
+                raise AppError('OCR_TOO_LARGE', 'OCR page is too large.', 413)
+            payload = json.loads(content)
+            if not isinstance(payload, dict):
+                raise AppError('INVALID_OCR', 'Invalid OCR page.', 400)
+        result = storage.page(get_user_id(), image_hash, payload)
+        return jsonify({'page': result})
+    except AppError as exc:
+        return jsonify({'code': exc.code, 'error': exc.message}), exc.status
+    except ValidationError:
+        return jsonify({'code': 'OCR_INVALID', 'error': 'OCR page could not be validated.'}), 422
+    except (ValueError, KeyError):
+        return jsonify({'code': 'OCR_SYNC_UNAVAILABLE', 'error': 'OCR is local; Drive sync could not be confirmed.'}), 503

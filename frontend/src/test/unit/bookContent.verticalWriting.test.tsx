@@ -15,7 +15,19 @@ const metadata: BookMetadata = {
   cloudProvider: "local",
 };
 
+vi.mock('@features/reader/comic/CbzViewer', () => ({
+  CbzViewer: ({ currentPage }: { currentPage: number }) => <div>Comic reader page {currentPage}</div>,
+}));
+
 describe("BookContent vertical writing", () => {
+  it('routes original CBZ bytes to the comic reader instead of the PDF or text renderer', async () => {
+    renderWithProviders(<BookContent bookMetadata={{ ...metadata, fileType: 'cbz' }} contentRef={createRef()} flowRef={createRef()}
+      jsxContent={<p>Wrong renderer</p>} error={null} isLoading={false} pdfData={new ArrayBuffer(4)}
+      pdfViewerRef={createRef()} pdfCurrentPage={3} setPdfCurrentPage={vi.fn()} setPdfPageCount={vi.fn()}
+      settings={{ verticalWriting: true }} />);
+    expect(await screen.findByText('Comic reader page 3')).toBeInTheDocument();
+    expect(screen.queryByText('Wrong renderer')).toBeNull();
+  });
   it("lays out Japanese text top-to-bottom and leaves wheel navigation to the reader controller", () => {
     const contentRef = createRef<HTMLDivElement>();
     const flowRef = createRef<HTMLDivElement>();
@@ -51,9 +63,9 @@ describe("BookContent vertical writing", () => {
     expect(readingSurface!.scrollLeft).toBe(600);
   });
 
-  it("shows a retry action when loading PDF bytes fails", () => {
+  it.each(['pdf', 'cbz'])("shows a retry action when loading %s bytes fails", (fileType) => {
     const retry = vi.fn();
-    const pdfMetadata: BookMetadata = { ...metadata, fileType: "pdf" };
+    const pdfMetadata: BookMetadata = { ...metadata, fileType };
 
     renderWithProviders(
       <BookContent

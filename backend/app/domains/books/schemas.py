@@ -13,12 +13,12 @@ class Book(BaseModel):
 
 
 class ReaderLocator(BaseModel):
-    """Versioned, stable reading location for reflowable books and PDFs."""
+    """Versioned reading location for reflowable books, PDFs, and CBZ comics."""
 
     model_config = ConfigDict(extra="ignore")
 
     version: Literal[2]
-    kind: Literal["reflow", "pdf"]
+    kind: Literal["reflow", "pdf", "cbz"]
     chapterIndex: Optional[int] = None
     segmentId: Optional[str] = Field(default=None, min_length=1)
     textOffset: Optional[int] = None

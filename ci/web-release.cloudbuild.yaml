@@ -1,0 +1,20 @@
+timeout: "1200s"
+substitutions:
+  _RELEASE: "web-ocr-candidate"
+steps:
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: bash
+    args: ["ci/01-load-frontend-env.sh"]
+    env: ["PROJECT_ID=${PROJECT_ID}"]
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        docker build \
+          --build-arg VITE_CLERK_PUBLISHABLE_KEY="$$(cat /workspace/vite_clerk_key.txt)" \
+          --build-arg VITE_GDRIVE_CLIENT_ID="$$(cat /workspace/vite_gdrive_client.txt)" \
+          --build-arg VITE_GAPI_KEY="$$(cat /workspace/vite_gapi_key.txt)" \
+          -t us-central1-docker.pkg.dev/${PROJECT_ID}/progressive-reader/progressive-reader:${_RELEASE} .
+images:
+  - "us-central1-docker.pkg.dev/${PROJECT_ID}/progressive-reader/progressive-reader:${_RELEASE}"

@@ -26,6 +26,7 @@ def register_domain_blueprints(app) -> None:
     from ..domains.drive import drive_bp as drive_domain_bp
     from ..domains.ocr.routes import ocr_bp
     from ..domains.lyrics.routes import lyrics_bp
+    from ..domains.comics.routes import comic_library_bp
 
     app.register_blueprint(translation_bp)
     app.register_blueprint(vocabulary_bp)
@@ -37,6 +38,7 @@ def register_domain_blueprints(app) -> None:
     app.register_blueprint(drive_domain_bp)
     app.register_blueprint(ocr_bp)
     app.register_blueprint(lyrics_bp)
+    app.register_blueprint(comic_library_bp)
 
 
 __all__ = ["wire_container", "register_domain_blueprints"]

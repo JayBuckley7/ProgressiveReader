@@ -218,7 +218,7 @@ export interface ProcessedToken {
 
 export interface ReaderLocator {
   version: 2;
-  kind: 'reflow' | 'pdf';
+  kind: 'reflow' | 'pdf' | 'cbz';
   chapterIndex?: number | null;
   segmentId?: string | null;
   textOffset?: number | null;

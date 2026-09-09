@@ -47,7 +47,7 @@ export function useBookReaderController({
   const [searchParams, setSearchParams] = useSearchParams();
 
   const bookMetadata = useMemo(() => books.find((b) => b.id === bookId) ?? null, [books, bookId]);
-  const isPdf = bookMetadata?.fileType === "pdf";
+  const isFixedLayout = bookMetadata?.fileType === "pdf" || bookMetadata?.fileType === "cbz";
 
   const handleBack = useCallback(() => {
     if (onBack) {
@@ -125,12 +125,12 @@ export function useBookReaderController({
   const flowRef = useRef<HTMLDivElement>(null);
 
   const annotatedChapter = useMemo(() => {
-    if (!activeChapterContent || isPdf) return null;
+    if (!activeChapterContent || isFixedLayout) return null;
     return annotateChapterHtml(activeChapterContent, {
       bookId,
       chapter,
     });
-  }, [activeChapterContent, bookId, chapter, isPdf]);
+  }, [activeChapterContent, bookId, chapter, isFixedLayout]);
 
   const pageTranslationOptions = useMemo(
     () =>
@@ -155,8 +155,8 @@ export function useBookReaderController({
   const translation = useTranslation(
     bookId,
     chapter,
-    isPdf ? null : activeChapterContent,
-    isPdf ? undefined : pageTranslationOptions
+    isFixedLayout ? null : activeChapterContent,
+    isFixedLayout ? undefined : pageTranslationOptions
   );
   const {
     translateCurrent,
@@ -175,7 +175,7 @@ export function useBookReaderController({
   const mix = useMixModeContent({
     bookId,
     chapter,
-    isPdf,
+    isPdf: isFixedLayout,
     settings,
     currentChapterContent: annotatedChapter?.html ?? activeChapterContent,
     translatedContent,
@@ -193,7 +193,7 @@ export function useBookReaderController({
     viewportRef: contentRef as RefObject<HTMLElement>,
     contentRef: flowRef as RefObject<HTMLElement>,
     mode: settings?.verticalWriting ? "vertical-rl" : "horizontal-columns",
-    enabled: !isPdf && Boolean(annotatedChapter),
+    enabled: !isFixedLayout && Boolean(annotatedChapter),
     columnGap: 28,
     contentVersion: `${bookId}:${chapter}:${mix.contentVersion}:${settings?.fontSize || 16}:${settings?.fontFamily || "Inter"}`,
   });
@@ -257,7 +257,7 @@ export function useBookReaderController({
     visibleSegmentIds: pagination.currentSegmentIds,
     pageIdentity: pagination.pageIndex,
     jpdbHighlighted: highlighting.jpdbHighlighted,
-    isPdf,
+    isPdf: isFixedLayout,
     isTranslated,
     contentVersion: mix.contentVersion,
   });
@@ -286,10 +286,10 @@ export function useBookReaderController({
           0,
           newPage,
           pdfPageCount,
-          "pdf",
+          bookMetadata.fileType,
           undefined,
           undefined,
-          { version: 2, kind: "pdf", pageNumber: newPage }
+          { version: 2, kind: bookMetadata?.fileType === "cbz" ? "cbz" : "pdf", pageNumber: newPage }
         );
       }
     },
@@ -309,7 +309,7 @@ export function useBookReaderController({
   }, [goToPdfPage, pdfCurrentPage]);
 
   useEffect(() => {
-    if (!isPdf) return;
+    if (!isFixedLayout) return;
     const pageParam = searchParams.get("page");
     if (!pageParam) return;
     const requestedPage = Number.parseInt(pageParam, 10);
@@ -320,11 +320,11 @@ export function useBookReaderController({
     setPdfCurrentPage((currentPage) =>
       currentPage === boundedPage ? currentPage : boundedPage
     );
-  }, [isPdf, pdfPageCount, searchParams]);
+  }, [isFixedLayout, pdfPageCount, searchParams]);
 
   const getCurrentReadingPosition = useCallback(() => {
     const readingSurface = contentRef.current;
-    if (!readingSurface || isPdf) return 0;
+    if (!readingSurface || isFixedLayout) return 0;
     if (!pagination.isLayoutReady) {
       return Math.round(
         Math.max(
@@ -339,11 +339,11 @@ export function useBookReaderController({
     }
     const legacyStride = readingSurface.clientWidth;
     return Math.round(Math.max(0, pagination.pageIndex * Math.max(1, legacyStride)));
-  }, [isPdf, pagination.isLayoutReady, pagination.pageIndex, settings?.verticalWriting]);
+  }, [isFixedLayout, pagination.isLayoutReady, pagination.pageIndex, settings?.verticalWriting]);
 
   const getCurrentReadingLocator = useCallback((): ReaderLocator | undefined => {
-    if (isPdf) {
-      return { version: 2, kind: "pdf", pageNumber: pdfCurrentPage };
+    if (isFixedLayout) {
+      return { version: 2, kind: bookMetadata?.fileType === "cbz" ? "cbz" : "pdf", pageNumber: pdfCurrentPage };
     }
     const anchor = pagination.captureAnchor();
     if (!anchor || !annotatedChapter) return undefined;
@@ -378,11 +378,11 @@ export function useBookReaderController({
       quote,
       progression,
     };
-  }, [annotatedChapter, chapter, isPdf, pagination, pdfCurrentPage]);
+  }, [annotatedChapter, chapter, isFixedLayout, pagination, pdfCurrentPage, bookMetadata?.fileType]);
 
   const restoreReadingLocator = useCallback(
     (locator: ReaderLocator): boolean => {
-      if (locator.kind === "pdf" && locator.pageNumber) {
+      if ((locator.kind === "pdf" || locator.kind === "cbz") && locator.pageNumber) {
         goToPdfPage(locator.pageNumber);
         return true;
       }
@@ -456,7 +456,7 @@ export function useBookReaderController({
     bookId,
     bookMetadata,
     chapter,
-    verticalWriting: Boolean(settings?.verticalWriting && !isPdf),
+    verticalWriting: Boolean(settings?.verticalWriting && !isFixedLayout),
     contentRef: contentRef as RefObject<HTMLDivElement>,
     getReadingProgress,
     saveBookProgress,
@@ -466,7 +466,7 @@ export function useBookReaderController({
     setSearchParams,
     currentChapter,
     setCurrentChapter,
-    paginationReady: isPdf || pagination.isLayoutReady,
+    paginationReady: isFixedLayout || pagination.isLayoutReady,
     contentChapter: currentChapterContentChapter,
     getCurrentPosition: getCurrentReadingPosition,
     getCurrentLocator: getCurrentReadingLocator,
@@ -476,7 +476,7 @@ export function useBookReaderController({
   const { progressLoaded } = progress;
 
   const pdfByteIdentity = useMemo(() => {
-    if (!bookMetadata || bookMetadata.fileType !== "pdf") return null;
+    if (!bookMetadata || !["pdf", "cbz"].includes(bookMetadata.fileType)) return null;
     return JSON.stringify([
       bookId,
       bookMetadata.cloudProvider,
@@ -503,10 +503,10 @@ export function useBookReaderController({
     let activeLoad = inFlightPdfLoadRef.current;
     if (!activeLoad || activeLoad.identity !== pdfByteIdentity) {
       const metadataForDownload = latestBookMetadataRef.current;
-      if (!metadataForDownload || metadataForDownload.fileType !== "pdf") return;
+      if (!metadataForDownload || !["pdf", "cbz"].includes(metadataForDownload.fileType)) return;
       const promise = (async () => {
         const blob = await downloadBook(bookId, metadataForDownload);
-        if (!blob) throw new Error("The PDF could not be downloaded.");
+        if (!blob) throw new Error(`The ${metadataForDownload.fileType === 'pdf' ? 'PDF' : 'comic'} could not be downloaded.`);
         return blob.arrayBuffer();
       })();
       activeLoad = { identity: pdfByteIdentity, promise };
@@ -527,7 +527,7 @@ export function useBookReaderController({
         setPdfLoadError(
           error instanceof Error && error.message.trim()
             ? error.message
-            : "The PDF could not be loaded."
+            : "The book could not be loaded."
         );
       } finally {
         if (inFlightPdfLoadRef.current === load) inFlightPdfLoadRef.current = null;
@@ -604,7 +604,7 @@ export function useBookReaderController({
 
   useInternalEpubLinks({
     bookId,
-    isPdf,
+    isPdf: isFixedLayout,
     contentRef: flowRef as RefObject<HTMLElement>,
     bookContent,
     navigateToChapter: navigateInternalChapter,
@@ -625,7 +625,7 @@ export function useBookReaderController({
 
   useEffect(() => {
     if (
-      isPdf ||
+      isFixedLayout ||
       !pagination.isLayoutReady ||
       currentChapterContentChapter !== chapter ||
       !pendingChapterLandingRef.current
@@ -639,7 +639,7 @@ export function useBookReaderController({
   }, [
     chapter,
     currentChapterContentChapter,
-    isPdf,
+    isFixedLayout,
     pagination.goToPage,
     pagination.isLayoutReady,
     pagination.pageCount,
@@ -650,7 +650,7 @@ export function useBookReaderController({
     const content = flowRef.current;
     if (
       !fragmentId ||
-      isPdf ||
+      isFixedLayout ||
       !pagination.isLayoutReady ||
       currentChapterContentChapter !== chapter ||
       !content
@@ -664,7 +664,7 @@ export function useBookReaderController({
   }, [
     chapter,
     currentChapterContentChapter,
-    isPdf,
+    isFixedLayout,
     pagination.isLayoutReady,
     revealInternalElement,
   ]);
@@ -672,7 +672,7 @@ export function useBookReaderController({
   const navigateToBookmark = useCallback(
     (chapterIndex: number, position: number, locator?: ReaderLocator) => {
       pendingInternalFragmentRef.current = null;
-      if (isPdf) {
+      if (isFixedLayout) {
         if (!locator || !restoreReadingLocator(locator)) goToPdfPage(chapterIndex + 1);
         return;
       }
@@ -691,7 +691,7 @@ export function useBookReaderController({
       bookContent?.totalChapters,
       chapter,
       goToPdfPage,
-      isPdf,
+      isFixedLayout,
       progress.navigateToChapter,
       restoreReadingLocator,
     ]
@@ -700,7 +700,7 @@ export function useBookReaderController({
   useEffect(() => {
     if (
       !pendingBookmark ||
-      isPdf ||
+      isFixedLayout ||
       !pagination.isLayoutReady ||
       pendingBookmark.chapterIndex !== chapter ||
       currentChapterContentChapter !== chapter
@@ -724,7 +724,7 @@ export function useBookReaderController({
     chapter,
     contentRef,
     currentChapterContentChapter,
-    isPdf,
+    isFixedLayout,
     mix.contentVersion,
     pagination.isLayoutReady,
     pendingBookmark,
@@ -744,27 +744,27 @@ export function useBookReaderController({
     else nextChapter();
   }, [nextChapter, pagination.canGoNext, pagination.isLayoutReady, pagination.nextPage]);
 
-  const rightToLeftPageTurning = Boolean(settings?.verticalWriting && !isPdf);
-  const previousPage = isPdf ? prevPdfPage : previousReflowPage;
-  const nextPage = isPdf ? nextPdfPage : nextReflowPage;
-  const canPrevious = isPdf
+  const rightToLeftPageTurning = Boolean(settings?.verticalWriting && !isFixedLayout);
+  const previousPage = isFixedLayout ? prevPdfPage : previousReflowPage;
+  const nextPage = isFixedLayout ? nextPdfPage : nextReflowPage;
+  const canPrevious = isFixedLayout
     ? pdfCurrentPage > 1
     : pagination.isLayoutReady && (pagination.canGoPrevious || chapter > 0);
-  const canNext = isPdf
+  const canNext = isFixedLayout
     ? Boolean(pdfPageCount && pdfCurrentPage < pdfPageCount)
     : pagination.isLayoutReady && (
         pagination.canGoNext || Boolean(bookContent && chapter < bookContent.totalChapters - 1)
       );
   const paginationState: PaginationState = {
-    pageIndex: isPdf ? Math.max(0, pdfCurrentPage - 1) : pagination.pageIndex,
-    pageCount: isPdf ? Math.max(1, pdfPageCount) : pagination.pageCount,
+    pageIndex: isFixedLayout ? Math.max(0, pdfCurrentPage - 1) : pagination.pageIndex,
+    pageCount: isFixedLayout ? Math.max(1, pdfPageCount) : pagination.pageCount,
     chapterIndex: chapter,
     chapterCount: Math.max(1, bookContent?.totalChapters || 1),
-    isLayoutReady: isPdf ? Boolean(pdfPageCount) : pagination.isLayoutReady,
+    isLayoutReady: isFixedLayout ? Boolean(pdfPageCount) : pagination.isLayoutReady,
     canPrevious,
     canNext,
-    currentSegmentIds: isPdf ? [] : pagination.currentSegmentIds,
-    nextSegmentIds: isPdf ? [] : pagination.nextSegmentIds,
+    currentSegmentIds: isFixedLayout ? [] : pagination.currentSegmentIds,
+    nextSegmentIds: isFixedLayout ? [] : pagination.nextSegmentIds,
   };
 
   useSwipe(
@@ -772,14 +772,14 @@ export function useBookReaderController({
     rightToLeftPageTurning ? previousPage : nextPage,
     rightToLeftPageTurning ? nextPage : previousPage,
     72,
-    !isPdf && pagination.isLayoutReady
+    !isFixedLayout && pagination.isLayoutReady
   );
 
   // Trackpads and mouse wheels turn a complete page, using the same boundary
   // behavior as buttons, keys, and swipes.
   useEffect(() => {
     const surface = contentRef.current;
-    if (!surface || isPdf) return;
+    if (!surface || isFixedLayout) return;
     let locked = false;
     let unlockTimer: number | undefined;
     const handleWheel = (event: WheelEvent) => {
@@ -822,7 +822,7 @@ export function useBookReaderController({
       surface.removeEventListener("wheel", handleWheel);
       if (unlockTimer !== undefined) window.clearTimeout(unlockTimer);
     };
-  }, [contentRef, isPdf, nextPage, previousPage]);
+  }, [contentRef, isFixedLayout, nextPage, previousPage]);
 
   useEffect(() => {
     if (!keyboardNavigationEnabled) return;
@@ -862,8 +862,8 @@ export function useBookReaderController({
   }, [keyboardNavigationEnabled, nextPage, previousPage, rightToLeftPageTurning]);
 
   const tts = useTextToSpeech(
-    isPdf ? contentRef : flowRef,
-    isPdf
+    isFixedLayout ? contentRef : flowRef,
+    isFixedLayout
       ? undefined
       : {
           visibleSegmentIds: pagination.currentSegmentIds,
@@ -882,7 +882,7 @@ export function useBookReaderController({
     handleBack,
     settings,
     bookMetadata,
-    isPdf,
+    isFixedLayout,
     chapter,
     bookContent,
     isLoading,

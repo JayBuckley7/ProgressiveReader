@@ -23,6 +23,8 @@ import { isGoogleLinkedClerkUser } from "@features/books/services/bookLibrary/pr
 import { appLog } from "@shared/appLog";
 import { notifyError } from "@shared/utils/notify";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { useComicLibrary } from '../comics/useComicLibrary';
+import { adoptComicInfo } from '../comics/comicInfo';
 
 import { applyBooksUpdate } from "./storageService/books";
 import { useOnlineStatus } from "./storageService/connectivity";
@@ -34,6 +36,7 @@ import { readLibrarySnapshot, writeLibrarySnapshot } from "../utils/librarySnaps
 
 function useStorageService() {
   const deps = useAppDeps();
+  const comics = useComicLibrary();
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser();
   const clerk = useClerk();
 
@@ -323,6 +326,14 @@ function useStorageService() {
           clerkUser,
           onOCRProgress,
         });
+        if (meta.fileType === 'cbz') {
+          try {
+            const { openCbz } = await import('@features/reader/comic/cbzArchive');
+            const archive = await openCbz(await file.arrayBuffer());
+            try { await adoptComicInfo(comics.store, book.id, archive.comicInfo, meta.title); }
+            finally { await archive.close(); }
+          } catch { toast.warning('The comic was uploaded. Its chapter details could not be read; you can organize it manually.'); }
+        }
         await connectToGoogleDriveAndLoad();
         toast.success("Book uploaded successfully to your cloud storage!");
         return book;
@@ -331,7 +342,7 @@ function useStorageService() {
         throw error;
       }
     },
-    [bookCache, bookStorage, clerkUser, connectToGoogleDriveAndLoad, covers, deps.backend.ocr, deps.drive, deps.driveAuth]
+    [bookCache, bookStorage, clerkUser, connectToGoogleDriveAndLoad, covers, deps.backend.ocr, deps.drive, deps.driveAuth, comics.store]
   );
 
   const downloadBook = useCallback(async (bookId: string, metadata: BookMetadata): Promise<Blob | null> => {

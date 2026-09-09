@@ -128,7 +128,7 @@ export function useBookContent(bookId: string, currentChapter: number = 0): UseB
         // TextProcessor: that duplicate path delays first paint and creates
         // invisible chapter HTML that language tools could accidentally spend
         // against.
-        if (bookMetadata.fileType === 'pdf') {
+        if (['pdf', 'cbz'].includes(bookMetadata.fileType)) {
           if (activeLoadRef.current?.requestId !== requestId) return;
           processorRef.current = null;
           setCurrentChapterContent(null);

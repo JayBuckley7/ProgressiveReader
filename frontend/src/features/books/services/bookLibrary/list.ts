@@ -52,7 +52,7 @@ export async function listUserBooksFromDrive(params: {
   try {
     if (!drive.isSignedIn()) {
       appLog.debug("[BookLibrary] User not signed in to Google Drive");
-      return [];
+      throw new Error("Connect Google Drive to load your library.");
     }
 
     const cachedBooks = bookCache.getBookListCache();
@@ -74,34 +74,29 @@ export async function listUserBooksFromDrive(params: {
     }
 
     const metadataInfo = await drive.getMetadataFile();
-    if (!metadataInfo) return [];
-
-    const metadata = coerceMetadataFile(metadataInfo.data);
+    const metadata = coerceMetadataFile(metadataInfo?.data);
     const bookEntries = metadata.books || {};
     const coverEntries = metadata.covers || {};
 
     const driveFiles = await drive.listFiles();
-    const driveFileIds = new Set(driveFiles.map((file) => file.id));
+    const driveFileIds = new Set(driveFiles.map(file => file.id));
 
     const books: BookMetadata[] = [];
 
-    for (const [bookFileId, rawBookData] of Object.entries(bookEntries)) {
-      const bookMeta = coerceBookEntry(rawBookData);
-      const extFromMeta = (bookMeta.fileType || bookMeta.fileName?.split(".").pop() || "").toLowerCase();
-
-      if (!BOOK_FILE_EXTENSIONS.includes(extFromMeta)) continue;
-      if (isJsonFileType(extFromMeta)) continue;
-      if (!driveFileIds.has(bookFileId)) continue;
-
-      const driveFile = driveFiles.find((file) => file.id === bookFileId);
-      if (!driveFile) continue;
+    // Android source downloads and files added directly to Drive need no metadata
+    // registration before they can be read. Metadata only enriches an existing file.
+    for (const driveFile of driveFiles) {
+      const bookFileId = driveFile.id;
+      const bookMeta = coerceBookEntry(bookEntries[bookFileId]);
+      const extFromMeta = (bookMeta.fileType || bookMeta.fileName?.split(".").pop() || driveFile.name.split(".").pop() || "").toLowerCase();
+      if (!(BOOK_FILE_EXTENSIONS as readonly string[]).includes(extFromMeta) || isJsonFileType(extFromMeta)) continue;
 
       const coverImageId = coverEntries[bookFileId];
       const cachedCoverUrl = bookCache.getCachedCoverUrl(bookFileId);
 
       const book: BookMetadata = {
         id: bookFileId,
-        title: bookMeta.title || driveFile.name.replace(/\\.[^/.]+$/, ""),
+        title: bookMeta.title || driveFile.name.replace(/\.[^/.]+$/, ""),
         fileType: bookMeta.fileType || driveFile.name.split(".").pop()?.toLowerCase() || "unknown",
         driveFileId: bookFileId,
         coverImageId,
@@ -127,6 +122,6 @@ export async function listUserBooksFromDrive(params: {
     return books;
   } catch (error) {
     appLog.error("[BookLibrary] Error fetching books from Google Drive", error);
-    return [];
+    throw error;
   }
 }

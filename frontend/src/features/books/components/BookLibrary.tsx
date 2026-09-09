@@ -6,6 +6,8 @@ import { useAppData } from "@shared/contexts/AppDataContext";
 import { useUser } from "@clerk/clerk-react";
 import { useSettings } from "@shared/contexts/SettingsContext";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
+import { useComicLibrary } from '../comics/useComicLibrary';
+import { ComicSeriesLibrary, collapseComicSeries } from '../comics/ComicSeriesLibrary';
 import { isGoogleLinkedClerkUser } from "@features/books/services/bookLibrary/provider";
 
 import { useNavigate } from "react-router-dom";
@@ -45,6 +47,8 @@ interface BookLibraryProps {
 
 function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   const deps = useAppDeps();
+  const comics = useComicLibrary();
+  const [selectedSeries, setSelectedSeries] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user: clerkUser, isSignedIn, isLoaded } = useUser();
   const { t } = useTranslation();
@@ -237,8 +241,8 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
   }, [bookIdSignature, getReadingProgresses, isDriveConnected, lastLibrarySyncAt]);
 
   const visibleBooks = useMemo(
-    () => filterAndSortBooks({ books, folders, progressByBookId, query, sort }),
-    [books, folders, progressByBookId, query, sort]
+    () => filterAndSortBooks({ books: collapseComicSeries(books, comics.state), folders, progressByBookId, query, sort }),
+    [books, folders, progressByBookId, query, sort, comics.state]
   );
 
   const continueItems = useMemo(
@@ -486,12 +490,13 @@ function BookLibrary({ onSelectBook }: BookLibraryProps = {}) {
             </div>
           </div>
 
-          {visibleBooks.length > 0 ? (
+          <ComicSeriesLibrary books={books} folders={folders} selected={selectedSeries} onSelect={setSelectedSeries} onOpen={handleSelectBook} onDelete={deleteBook} />
+          {selectedSeries ? null : visibleBooks.length > 0 ? (
             <FolderView
               books={visibleBooks}
               folders={folders}
-              onSelectBook={handleSelectBook}
-              onDeleteBook={deleteBook}
+              onSelectBook={id => id.startsWith('comic-series:') ? setSelectedSeries(id.slice(13)) : handleSelectBook(id)}
+              onDeleteBook={async id => { if (id.startsWith('comic-series:')) setSelectedSeries(id.slice(13)); else await deleteBook(id); }}
               onUpdateCover={updateBookCover}
               onMoveBookToFolder={moveBookToFolder}
               density={density}

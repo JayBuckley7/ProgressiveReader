@@ -7,8 +7,8 @@ interface FolderViewProps {
   books: BookMetadata[];
   folders: Folder[];
   onSelectBook: (bookId: string) => void;
-  onDeleteBook: (bookId: string) => void;
-  onUpdateCover: (bookId: string, coverFile: File) => void;
+  onDeleteBook: (bookId: string) => Promise<void>;
+  onUpdateCover: (bookId: string, coverFile: File) => Promise<string | undefined>;
   onMoveBookToFolder: (bookId: string, folderId: string | null) => void;
   density?: "comfortable" | "compact";
   hideEmptySections?: boolean;
@@ -148,7 +148,10 @@ export function FolderView({
                      >
                        {shelf.books.map((book) => (
                          <div key={book.id} className="group">
-                           <BookCardHover
+                           {book.id.startsWith('comic-series:') ? <button className="w-full text-left" onClick={() => onSelectBook(book.id)}>
+                             <div className="aspect-[2/3] overflow-hidden rounded-lg app-surface">{book.coverUrl ? <img src={book.coverUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center p-4 text-center">{book.title}</div>}</div>
+                             <strong className="mt-2 block">{book.title}</strong><span className="text-sm app-muted">Series · Open chapters</span>
+                           </button> : <BookCardHover
                              book={book}
                              onSelectBook={onSelectBook}
                              onDeleteBook={onDeleteBook}
@@ -157,7 +160,7 @@ export function FolderView({
                              availableFolders={folders}
                              currentFolderId={book.folderId || null}
                              density={density}
-                           />
+                           />}
                          </div>
                        ))}
                      </div>

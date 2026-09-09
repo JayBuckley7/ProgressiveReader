@@ -20,8 +20,10 @@ TIMEOUT = (5, 30)
 
 
 class DriveOperationStorage:
-    def __init__(self, provider):
+    def __init__(self, provider, operation_model=RecordOperation, materializer=materialize):
         self.provider = provider
+        self.operation_model = operation_model
+        self.materializer = materializer
         self._cache = OrderedDict()
         self._cache_bytes = 0
         self._cache_owner = None
@@ -56,7 +58,7 @@ class DriveOperationStorage:
         while True:
             response = requests.get(BASE, headers=headers, params={
                 'q': query, 'spaces': 'drive', 'pageSize': 1000,
-                'fields': 'nextPageToken,incompleteSearch,files(id,createdTime,mimeType,modifiedTime,md5Checksum)', **({'pageToken': token} if token else {}),
+                'fields': 'nextPageToken,incompleteSearch,files(id,createdTime,mimeType,modifiedTime,md5Checksum,appProperties)', **({'pageToken': token} if token else {}),
             }, timeout=TIMEOUT)
             self._check(response)
             data = response.json()
@@ -90,7 +92,7 @@ class DriveOperationStorage:
                         content.extend(chunk)
                         if len(content) > 262144:
                             raise AppError('RECORDS_CORRUPT', 'A saved operation exceeds the supported size.')
-                op = RecordOperation.model_validate_json(content.decode('utf-8'))
+                op = self.operation_model.model_validate_json(content.decode('utf-8'))
                 if not item.get('createdTime'):
                     raise AppError('RECORDS_CORRUPT', 'A saved operation has no creation time.')
                 # Always list Drive metadata first. Only unchanged content can hit this bounded,
@@ -102,7 +104,7 @@ class DriveOperationStorage:
                         _, (_, size) = self._cache.popitem(last=False)
                         self._cache_bytes -= size
                 operations.append((item['createdTime'], item['id'], op))
-            materialize(operations, owner, kind)  # Validate before returning even for migration callers.
+            self.materializer(operations, owner, kind)  # Validate before returning even for migration callers.
             return operations
         except (requests.RequestException, ValueError, KeyError, ValidationError) as exc:
             raise AppError('RECORDS_UNREADABLE', 'Saved records could not be read safely. No changes were made.') from exc

@@ -24,7 +24,7 @@ def configure_cors(app) -> None:
             r"/*": {
                 "origins": "*",
                 "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-                "allow_headers": ["Content-Type", "Authorization", "Idempotency-Key"],
+                "allow_headers": ["Content-Type", "Authorization", "Idempotency-Key", "X-OCR-Account", "X-Comic-Account"],
             }
         },
     )
@@ -32,6 +32,12 @@ def configure_cors(app) -> None:
 
 def register_spa_routes(app) -> None:
     from flask import send_from_directory, request
+
+    @app.route("/ocr-runtime/<path:asset>")
+    def ocr_runtime_asset(asset):
+        # More specific than Flask's root static route (static_url_path="").
+        return send_from_directory(os.path.join(app.static_folder, "ocr-runtime"), asset,
+                                   mimetype="application/gzip" if asset.endswith(".gz") else None)
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
@@ -41,7 +47,9 @@ def register_spa_routes(app) -> None:
             return "API endpoint not found", 404
 
         if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
+            # Dictionary loaders decompress these files themselves. Explicit MIME
+            # prevents Werkzeug from adding Content-Encoding and browser decoding.
+            return send_from_directory(app.static_folder, path, mimetype="application/gzip" if path.endswith(".gz") else None)
         return send_from_directory(app.static_folder, "index.html")
 
     @app.errorhandler(404)

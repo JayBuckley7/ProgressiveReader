@@ -23,6 +23,8 @@
     /* Import paths */
     "paths": {
       "~/*": ["./src/*"],
+      "@app/*": ["./src/app/*"],
+      "@core/*": ["./src/core/*"],
       "@features/*": ["./src/features/*"],
       "@shared/*": ["./src/shared/*"],
       "@integrations/*": ["./src/integrations/*"]

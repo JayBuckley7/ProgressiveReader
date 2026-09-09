@@ -48,17 +48,17 @@ describe("useReadingProgress", () => {
     );
   });
 
-  it("puts a restored PDF page in the URL", async () => {
+  it.each(['pdf', 'cbz'])("puts a restored %s page in the URL", async (fileType) => {
     const setPdfCurrentPage = vi.fn();
     const setSearchParams = vi.fn();
 
     const { result } = renderHook(() =>
       useReadingProgress({
         bookId: "pdf-book",
-        bookMetadata: { fileType: "pdf" },
+        bookMetadata: { fileType },
         chapter: 0,
         contentRef: { current: document.createElement("div") },
-        getReadingProgress: vi.fn().mockResolvedValue({ currentPage: 12 }),
+        getReadingProgress: vi.fn().mockResolvedValue({ currentPage: 4, locator: { version: 2, kind: fileType, pageNumber: 12 } }),
         saveBookProgress: vi.fn().mockResolvedValue(undefined),
         setLocalChapter: vi.fn(),
         setPdfCurrentPage,
