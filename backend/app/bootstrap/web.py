@@ -41,7 +41,9 @@ def register_spa_routes(app) -> None:
             return "API endpoint not found", 404
 
         if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
+            # Dictionary loaders decompress these files themselves. Explicit MIME
+            # prevents Werkzeug from adding Content-Encoding and browser decoding.
+            return send_from_directory(app.static_folder, path, mimetype="application/gzip" if path.endswith(".gz") else None)
         return send_from_directory(app.static_folder, "index.html")
 
     @app.errorhandler(404)

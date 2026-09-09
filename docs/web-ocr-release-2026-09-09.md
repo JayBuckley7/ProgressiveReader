@@ -15,7 +15,8 @@ web release.
 `ci/prepare_web_release.py` creates an allowlisted build context under `.tmp`.
 It builds the web assets with production public configuration from Secret
 Manager and overlays the OCR route, its dependencies, CBZ bookmark schema,
-authentication decorator without test bypasses, and CORS headers on the exact
+authentication decorator without test bypasses, CORS headers, and raw gzip
+dictionary delivery on the exact
 serving image digest. The original container wiring and existing repositories
 remain in place. The shared operation-storage module is an OCR dependency;
 copying it does not select it as the book/vocabulary repository.
@@ -47,6 +48,12 @@ and library files use each authenticated user's Google Drive.
   backend has no `/ready` endpoint; do not mistake its SPA fallback for readiness.
 - Verify authenticated library/CBZ/OCR behavior on `progressivereader.net`
   after promotion. Clerk production origin restrictions apply to candidate URLs.
+
+The first candidate exposed Werkzeug's automatic `Content-Encoding: gzip` on
+dictionary files. Kuromoji decompresses the downloaded bytes itself, so browser
+HTTP decoding would break word selection. Explicit `application/gzip` delivery
+prevents the extra decoding. A Flask regression test covers the actual response
+bytes and headers, and the release check downloads a real dictionary file.
 
 ## Recovery
 

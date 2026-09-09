@@ -203,3 +203,4 @@ env_dev.json
 
 # Local verification logs, temporary configs, and recovery rehearsal artifacts
 /.tmp/
+/frontend/.tmp/

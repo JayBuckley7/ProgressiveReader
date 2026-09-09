@@ -45,8 +45,8 @@ def prepare(destination, base_commit, base_image):
         target = destination / 'overlay' / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / 'backend' / name, target)
-    # CORS is the only bootstrap change. Preserve the serving backend's health
-    # and factory behavior until its separate migration release is verified.
+    # Preserve the serving backend's health and factory behavior. Change only
+    # CORS and raw gzip asset delivery needed by the browser dictionary loader.
     web = subprocess.check_output(['git', 'show', f'{base_commit}:backend/app/bootstrap/web.py'], cwd=ROOT).decode()
     methods = '"methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]'
     headers = '"allow_headers": ["Content-Type", "Authorization"]'
@@ -54,6 +54,10 @@ def prepare(destination, base_commit, base_image):
         raise ValueError('Serving CORS configuration changed; review the overlay before releasing.')
     web = web.replace(methods, '"methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]')
     web = web.replace(headers, '"allow_headers": ["Content-Type", "Authorization", "Idempotency-Key", "X-OCR-Account"]')
+    asset = 'return send_from_directory(app.static_folder, path)'
+    if web.count(asset) != 1:
+        raise ValueError('Serving static-file configuration changed; review before releasing.')
+    web = web.replace(asset, 'return send_from_directory(app.static_folder, path, mimetype="application/gzip" if path.endswith(".gz") else None)')
     target = destination / 'overlay/app/bootstrap/web.py'
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(web, encoding='utf-8')
