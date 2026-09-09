@@ -33,6 +33,12 @@ def configure_cors(app) -> None:
 def register_spa_routes(app) -> None:
     from flask import send_from_directory, request
 
+    @app.route("/ocr-runtime/<path:asset>")
+    def ocr_runtime_asset(asset):
+        # More specific than Flask's root static route (static_url_path="").
+        return send_from_directory(os.path.join(app.static_folder, "ocr-runtime"), asset,
+                                   mimetype="application/gzip" if asset.endswith(".gz") else None)
+
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def spa(path):

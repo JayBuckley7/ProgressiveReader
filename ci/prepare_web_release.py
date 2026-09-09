@@ -58,6 +58,15 @@ def prepare(destination, base_commit, base_image):
     if web.count(asset) != 1:
         raise ValueError('Serving static-file configuration changed; review before releasing.')
     web = web.replace(asset, 'return send_from_directory(app.static_folder, path, mimetype="application/gzip" if path.endswith(".gz") else None)')
+    # The actual app uses static_url_path="", so its root static handler wins
+    # over the SPA fallback. Copy the explicit runtime route as well.
+    current_web = (ROOT / 'backend/app/bootstrap/web.py').read_text(encoding='utf-8')
+    start = current_web.index('    @app.route("/ocr-runtime/')
+    end = current_web.index('    @app.route("/",', start)
+    marker = '    from flask import send_from_directory, request\n'
+    if web.count(marker) != 1:
+        raise ValueError('Serving SPA configuration changed; review before releasing.')
+    web = web.replace(marker, marker + '\n' + current_web[start:end])
     target = destination / 'overlay/app/bootstrap/web.py'
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(web, encoding='utf-8')
