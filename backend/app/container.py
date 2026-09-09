@@ -33,6 +33,7 @@ from .domains.admin.service import AdminService
 from .domains.books.adapters.drive_repository import DriveBooksRepository
 from .domains.vocabulary.adapters.drive_repository import DriveVocabularyRepository
 from .infrastructure.drive_records import DriveOperationStorage
+from .infrastructure.drive_ocr import DriveOcrStorage
 from .infrastructure.saved_records import SavedRecords, MigrationGate
 from .domains.books.adapters.cover_lookup import PublicApiCoverLookup
 from .domains.books.adapters.local_demo_storage import LocalDemoStorageProvider
@@ -66,6 +67,7 @@ class Container:
     ocr_layout_service: OcrLayoutService | None
     ocr_init_error: str | None
     lyrics_service: LyricsService
+    drive_ocr: DriveOcrStorage | None = None
 
 
 def create_container(*, settings: AppSettings, db_session: Any, operation_id=lambda: None) -> Container:
@@ -131,6 +133,7 @@ def create_container(*, settings: AppSettings, db_session: Any, operation_id=lam
         ocr_layout_service=ocr_layout_service,
         ocr_init_error=ocr_init_error,
         lyrics_service=lyrics_service,
+        drive_ocr=DriveOcrStorage(drive_provider),
     )
 
 

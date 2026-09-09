@@ -3,21 +3,23 @@ import { useTranslation } from "react-i18next";
 import type { PdfViewerHandle } from "@shared/components/PdfViewer";
 import type { BookMetadata } from "~/types";
 
+const CbzViewer = lazy(() => import("../comic/CbzViewer").then(module => ({ default: module.CbzViewer })));
+
 const PdfViewer = lazy(() =>
   import("@shared/components/PdfViewer").then((module) => ({ default: module.PdfViewer }))
 );
 
 interface BookContentProps {
   bookMetadata: BookMetadata | null;
-  contentRef: React.RefObject<HTMLDivElement>;
-  flowRef: React.RefObject<HTMLDivElement>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
+  flowRef: React.RefObject<HTMLDivElement | null>;
   jsxContent: React.ReactNode | null;
   error: string | null;
   isLoading: boolean;
   pdfData: ArrayBuffer | null;
   pdfLoadError?: string | null;
   onRetryPdfLoad?: () => void;
-  pdfViewerRef: React.RefObject<PdfViewerHandle>;
+  pdfViewerRef: React.RefObject<PdfViewerHandle | null>;
   pdfCurrentPage: number;
   setPdfCurrentPage: (page: number) => void;
   setPdfPageCount: (count: number) => void;
@@ -43,11 +45,11 @@ export function BookContent({
 }: BookContentProps) {
   const { t } = useTranslation();
   const verticalWriting = Boolean(
-    bookMetadata && bookMetadata.fileType !== "pdf" && settings?.verticalWriting
+    bookMetadata && !["pdf", "cbz"].includes(bookMetadata.fileType) && settings?.verticalWriting
   );
 
   useEffect(() => {
-    if (bookMetadata?.fileType !== "pdf") return;
+    if (!["pdf", "cbz"].includes(bookMetadata?.fileType || "")) return;
     if (!contentRef.current) return;
     contentRef.current.scrollTop = 0;
     contentRef.current.scrollLeft = verticalWriting
@@ -55,15 +57,17 @@ export function BookContent({
       : 0;
   }, [bookMetadata?.fileType, contentRef, pdfCurrentPage, verticalWriting]);
 
-  if (bookMetadata?.fileType === "pdf") {
+  if (bookMetadata && ["pdf", "cbz"].includes(bookMetadata.fileType)) {
+    const Viewer = bookMetadata.fileType === "cbz" ? CbzViewer : PdfViewer;
+    const loadingLabel = bookMetadata.fileType === 'cbz' ? 'Opening comic…' : t('reader.pdf.loading');
     return (
       <div
         ref={contentRef}
         className="reader-content-transition flex-1 min-h-0 overflow-y-auto px-3 pb-24 sm:px-4 md:px-8 lg:px-16"
       >
         {pdfData ? (
-          <Suspense fallback={<div className="py-8 text-center">{t('reader.pdf.loading')}</div>}>
-            <PdfViewer
+          <Suspense fallback={<div className="py-8 text-center">{loadingLabel}</div>}>
+            <Viewer
               ref={pdfViewerRef}
               data={pdfData}
               currentPage={pdfCurrentPage}
@@ -80,7 +84,7 @@ export function BookContent({
             className="mx-auto flex max-w-lg flex-col items-center gap-3 py-10 text-center"
           >
             <p className="font-medium text-red-600 dark:text-red-400">
-              {t("reader.pdf.loadFailed")}
+              {bookMetadata.fileType === 'cbz' ? 'Could not open comic' : t("reader.pdf.loadFailed")}
             </p>
             <p className="text-sm text-[color:var(--ui-text-muted)]">{pdfLoadError}</p>
             {onRetryPdfLoad && (
@@ -94,7 +98,7 @@ export function BookContent({
             )}
           </div>
         ) : (
-          <div className="py-8 text-center">{t('reader.pdf.loading')}</div>
+          <div className="py-8 text-center">{loadingLabel}</div>
         )}
       </div>
     );

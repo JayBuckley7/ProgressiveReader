@@ -55,6 +55,10 @@ export async function uploadBookToDrive(params: {
   } else if (!coverBlob && meta.fileType === "pdf") {
     const extracted = await bookStorage.extractCoverFromPdf(file);
     if (extracted) coverBlob = extracted;
+  } else if (!coverBlob && meta.fileType === "cbz") {
+    const { openCbz } = await import('@features/reader/comic/cbzArchive');
+    const comic = await openCbz(await file.arrayBuffer());
+    try { coverBlob = await comic.page(0); } finally { await comic.close(); }
   }
 
   if (!coverBlob) {
@@ -83,7 +87,7 @@ export async function uploadBookToDrive(params: {
   const bookResult = await drive.uploadFile(
     fileToUpload.name,
     fileToUpload,
-    fileToUpload.type || "application/epub+zip"
+    meta.fileType === 'cbz' ? 'application/vnd.comicbook+zip' : fileToUpload.type || "application/epub+zip"
   );
   if (!bookResult) {
     throw new Error("Failed to upload book to Google Drive");

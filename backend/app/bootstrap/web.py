@@ -24,7 +24,7 @@ def configure_cors(app) -> None:
             r"/*": {
                 "origins": "*",
                 "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-                "allow_headers": ["Content-Type", "Authorization", "Idempotency-Key"],
+                "allow_headers": ["Content-Type", "Authorization", "Idempotency-Key", "X-OCR-Account"],
             }
         },
     )

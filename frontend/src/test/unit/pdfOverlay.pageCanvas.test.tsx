@@ -34,6 +34,22 @@ vi.mock("@features/reader/content/api-adapter", () => ({
 }));
 
 describe("PdfPageCanvas", () => {
+  it('uses local recognition, exposes retryable errors, and makes zero backend OCR calls', async () => {
+    const backendOcr = vi.fn();
+    const recognizePage = vi.fn()
+      .mockRejectedValueOnce(new Error('Could not download Japanese OCR model.'))
+      .mockResolvedValue({ status: 'ready', image: { width: 200, height: 100 }, lines: [], atoms: [] });
+    const pdf = { getPage: vi.fn(async () => ({ getViewport: () => ({ width: 200, height: 100 }), render: () => ({ promise: Promise.resolve() }) })) };
+    renderWithProviders(<PdfPageCanvas pdf={pdf} pageNumber={1} recognizePage={recognizePage} />, {
+      depsOverride: { backend: { ocr: { processPageLayout: backendOcr } } as any },
+    });
+    expect(await screen.findByText('Could not download Japanese OCR model.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry lookup' }));
+    expect(await screen.findByText(/No text detected/)).toBeInTheDocument();
+    expect(recognizePage).toHaveBeenCalledTimes(2);
+    expect(backendOcr).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     showDefinitionPopupMock.mockClear();
 

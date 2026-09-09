@@ -56,7 +56,7 @@ class DriveOperationStorage:
         while True:
             response = requests.get(BASE, headers=headers, params={
                 'q': query, 'spaces': 'drive', 'pageSize': 1000,
-                'fields': 'nextPageToken,incompleteSearch,files(id,createdTime,mimeType,modifiedTime,md5Checksum)', **({'pageToken': token} if token else {}),
+                'fields': 'nextPageToken,incompleteSearch,files(id,createdTime,mimeType,modifiedTime,md5Checksum,appProperties)', **({'pageToken': token} if token else {}),
             }, timeout=TIMEOUT)
             self._check(response)
             data = response.json()

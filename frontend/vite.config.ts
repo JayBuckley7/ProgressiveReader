@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { ocrRuntimePlugin } from './ocrRuntimePlugin';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -27,10 +28,11 @@ export default defineConfig(({ mode }) => {
   const needsProxy = backendUrl && backendUrl !== '';
 
   return {
-    plugins: [react()],
+    plugins: [react(), ocrRuntimePlugin()],
     envDir: '../', // Load .env from project root instead of frontend directory
     resolve: {
       alias: {
+        "kuromoji": path.resolve(__dirname, "node_modules/kuromoji/build/kuromoji.js"),
         "~": path.resolve(__dirname, "./src"),
         "@app": path.resolve(__dirname, "./src/app"),
         "@core": path.resolve(__dirname, "./src/core"),

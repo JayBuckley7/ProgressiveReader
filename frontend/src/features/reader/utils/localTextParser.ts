@@ -10,7 +10,7 @@ import { getJlptLevel, getWordKanjiInfo } from '@shared/services/jlptService';
 const segmenter = new TinySegmenter();
 const KUROMOJI_DICT_PATH = import.meta.env.MODE === 'test' || typeof window === 'undefined'
   ? 'node_modules/kuromoji/dict/'
-  : '/node_modules/kuromoji/dict/';
+  : '/ocr-runtime/dict/';
 
 type KuromojiToken = {
   surface_form: string;

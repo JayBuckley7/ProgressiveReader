@@ -32,23 +32,23 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
     keyboardNavigationEnabled:
       !showSettings && !showMixSettings && !showReaderControls && !showContents,
   });
-  const readerIndex = c.isPdf ? c.pdf.currentPage - 1 : c.pagination.pageIndex;
-  const readerTotal = c.isPdf ? c.pdf.pageCount : c.pagination.pageCount;
+  const readerIndex = c.isFixedLayout ? c.pdf.currentPage - 1 : c.pagination.pageIndex;
+  const readerTotal = c.isFixedLayout ? c.pdf.pageCount : c.pagination.pageCount;
   const previous = c.nav.previousPage;
   const next = c.nav.nextPage;
   const canPrevious = c.nav.canPrevious;
   const canNext = c.nav.canNext;
-  const rightToLeftPageTurning = Boolean(c.settings?.verticalWriting && !c.isPdf);
-  const chapterTitles = c.isPdf
+  const rightToLeftPageTurning = Boolean(c.settings?.verticalWriting && !c.isFixedLayout);
+  const chapterTitles = c.isFixedLayout
     ? Array.from({ length: c.pdf.pageCount }, (_, i) => ({ index: i, title: `Page ${i + 1}`, href: "" }))
     : c.bookContent?.chapterTitles || [];
-  const selectChapter = c.isPdf
+  const selectChapter = c.isFixedLayout
     ? (index: number) => c.pdf.setCurrentPage(index + 1)
     : c.nav.updateChapter;
   const chapterTitle = c.bookContent?.chapterTitles?.find(
     (item) => item.index === c.chapter
   )?.title;
-  const pageStatus = c.isPdf
+  const pageStatus = c.isFixedLayout
     ? `Page ${c.pdf.currentPage} of ${Math.max(1, c.pdf.pageCount)}`
     : c.pagination.isLayoutReady
       ? `${chapterTitle || `Chapter ${c.chapter + 1}`} · Page ${c.pagination.pageIndex + 1} of ${Math.max(1, c.pagination.pageCount)}`
@@ -97,10 +97,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         setPdfCurrentPage={c.pdf.setCurrentPage}
         setPdfPageCount={c.pdf.setPageCount}
         settings={c.settings || undefined}
-        showPdfTokenHighlights={c.isPdf && c.highlighting.jpdbHighlighted}
+        showPdfTokenHighlights={c.isFixedLayout && c.highlighting.jpdbHighlighted}
       />
 
-      {!c.isPdf && c.translation.pageTranslationError && (
+      {!c.isFixedLayout && c.translation.pageTranslationError && (
         <div
           role="alert"
           className="fixed bottom-24 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-amber-300/70 bg-[color:var(--ui-surface)] px-4 py-2 text-sm text-[color:var(--ui-text)] shadow-lg dark:border-amber-700/70"
@@ -142,8 +142,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
           setShowContents(true);
         }}
         onCloseContents={() => setShowContents(false)}
-        currentChapter={c.isPdf ? readerIndex : c.chapter}
-        totalChapters={c.isPdf ? Math.max(1, readerTotal) : c.bookContent?.totalChapters || 1}
+        currentChapter={c.isFixedLayout ? readerIndex : c.chapter}
+        totalChapters={c.isFixedLayout ? Math.max(1, readerTotal) : c.bookContent?.totalChapters || 1}
         navigationIndex={readerIndex}
         navigationTotal={readerTotal}
         navigationStatus={pageStatus}
@@ -166,9 +166,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onToggleHighlight={c.highlighting.toggleJpdbHighlight}
         jpdbHighlighted={c.highlighting.jpdbHighlighted}
         onTranslate={() => c.translation.translateCurrent(c.translation.lastUseCefr)}
-        translationAvailable={!c.isPdf}
+        translationAvailable={!c.isFixedLayout}
         translating={c.translation.isTranslating}
-        ttsAvailable={!c.isPdf}
+        ttsAvailable={!c.isFixedLayout}
         mixEnabled={Boolean(c.settings?.mixEnabled)}
         onShowMixSettings={() => setShowMixSettings(true)}
       />
@@ -192,7 +192,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onTranslate={c.isPdf ? undefined : (useCefr) => {
+          onTranslate={c.isFixedLayout ? undefined : (useCefr) => {
             setShowSettings(false);
             c.translation.setLastUseCefr(useCefr);
             void c.translation.translateCurrent(useCefr);
@@ -205,7 +205,7 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         visible={showMixSettings}
         onClose={() => setShowMixSettings(false)}
         mirrorMeta={c.mix.mirrorMeta}
-        isPdf={c.isPdf}
+        isPdf={c.isFixedLayout}
         isTranslated={c.translation.isTranslated}
         onReloadMirror={c.mix.reloadMirror}
         onRequestRefine={c.mix.hasOpenAiKey ? c.mix.requestRefine : undefined}

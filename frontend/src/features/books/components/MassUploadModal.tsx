@@ -35,7 +35,7 @@ export function MassUploadModal({ onClose, onUploadComplete }: MassUploadModalPr
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const supportedFormats = ['epub', 'txt', 'docx', 'pdf', 'mobi', 'json'];
+  const supportedFormats = ['epub', 'txt', 'docx', 'pdf', 'cbz', 'mobi', 'json'];
   const languageOptions = [
     'English', 'Spanish', 'French', 'German', 'Italian', 
     'Portuguese', 'Japanese', 'Korean', 'Chinese', 'Other'

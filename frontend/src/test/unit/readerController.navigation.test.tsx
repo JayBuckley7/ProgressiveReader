@@ -529,8 +529,8 @@ describe("useBookReaderController navigation", () => {
     expect(fakes.navigateToChapter).not.toHaveBeenCalled();
   });
 
-  it("turns rejected and empty PDF downloads into retryable errors", async () => {
-    fakes.bookFileType = "pdf";
+  it.each(['pdf', 'cbz'])("turns rejected and empty %s downloads into retryable errors", async (fileType) => {
+    fakes.bookFileType = fileType;
     const loadedBytes = new Uint8Array([37, 80, 68, 70]).buffer;
     fakes.downloadBook
       .mockRejectedValueOnce(new Error("PDF network failure"))
@@ -546,7 +546,7 @@ describe("useBookReaderController navigation", () => {
 
     act(() => result.current.pdf.retryLoad());
     await waitFor(() =>
-      expect(result.current.pdf.loadError).toBe("The PDF could not be downloaded.")
+      expect(result.current.pdf.loadError).toBe(`The ${fileType === 'pdf' ? 'PDF' : 'comic'} could not be downloaded.`)
     );
     expect(result.current.pdf.data).toBeNull();
 

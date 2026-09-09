@@ -20,7 +20,7 @@ type PdfPageLike = {
   render: (opts: { canvasContext: CanvasRenderingContext2D | null; viewport: PdfViewportLike }) => { promise: Promise<unknown> };
 };
 
-type PdfDocumentLike = {
+export type PdfDocumentLike = {
   getPage: (pageNumber: number) => Promise<PdfPageLike>;
 };
 
@@ -30,6 +30,8 @@ interface PdfPageCanvasProps {
   documentId?: string;
   documentVersion?: string;
   showTokenHighlights?: boolean;
+  lookupEnabled?: boolean;
+  recognizePage?: (image: Blob, signal: AbortSignal, progress: (message: string) => void) => Promise<PdfOverlayLayout>;
 }
 
 const LOOKUP_SCALE = 2;
@@ -109,6 +111,8 @@ export function PdfPageCanvas({
   documentId,
   documentVersion,
   showTokenHighlights = false,
+  lookupEnabled = true,
+  recognizePage,
 }: PdfPageCanvasProps) {
   const deps = useAppDeps();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,6 +131,7 @@ export function PdfPageCanvas({
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [lookupRetryable, setLookupRetryable] = useState(true);
   const [ocrRetryNonce, setOcrRetryNonce] = useState(0);
+  const [ocrStatus, setOcrStatus] = useState('Preparing lookup...');
   const renderedPageRef = useRef<PdfPageLike | null>(null);
   const preparedRenderVersionRef = useRef(0);
   const debug = useMemo(() => getDebugEnabled(), []);
@@ -203,7 +208,7 @@ export function PdfPageCanvas({
   }, [page, pageNumber, viewport]);
 
   useEffect(() => {
-    if (!viewport || !canvasRef.current || renderVersion <= 0) return;
+    if (!lookupEnabled || !viewport || !canvasRef.current || renderVersion <= 0) return;
     if (preparedRenderVersionRef.current === renderVersion) return;
 
     const controller = new AbortController();
@@ -218,7 +223,7 @@ export function PdfPageCanvas({
         loadJpdbConfig();
         const blob = await canvasToBlob(canvasRef.current!);
         const contentHash = await computeSha256Hex(blob);
-        const layout = await deps.backend.ocr.processPageLayout({
+        const layout = recognizePage ? await recognizePage(blob, controller.signal, message => { if (!stale) setOcrStatus(message); }) : await deps.backend.ocr.processPageLayout({
           image: blob,
           pageIndex: pageNumber - 1,
           ...(contentHash ? { contentHash } : {}),
@@ -233,7 +238,9 @@ export function PdfPageCanvas({
         let tokens: Awaited<ReturnType<typeof parseText>> = [];
         if (textSegments.length > 0) {
           try {
-            tokens = await parseText(deps.backend.vocabulary, textSegments, { notifyOnError: false });
+            tokens = recognizePage
+              ? await parseWithLocalLookup(textSegments.join(''))
+              : await parseText(deps.backend.vocabulary, textSegments, { notifyOnError: false });
           } catch (error) {
             appLog.warn("[PdfPageCanvas] JPDB parse failed; falling back to local lookup", { pageNumber, error });
             tokens = await parseWithLocalLookup(textSegments.join(""));
@@ -248,7 +255,7 @@ export function PdfPageCanvas({
       } catch (error) {
         if (controller.signal.aborted || stale) return;
         appLog.error("[PdfPageCanvas] Failed to prepare lookup overlay", { pageNumber, error });
-        setOcrError(error instanceof BackendError ? error.message : "Lookup unavailable on this page.");
+        setOcrError(error instanceof BackendError || (recognizePage && error instanceof Error) ? error.message : "Lookup unavailable on this page.");
         setLookupRetryable(!(error instanceof BackendError && ["SERVER_AI_DISABLED", "AUTH_REQUIRED"].includes(error.code)));
       } finally {
         if (!stale) {
@@ -262,7 +269,7 @@ export function PdfPageCanvas({
       stale = true;
       controller.abort();
     };
-  }, [deps.backend.ocr, deps.backend.vocabulary, documentId, documentVersion, ocrRetryNonce, pageNumber, renderVersion, viewport]);
+  }, [deps.backend.ocr, deps.backend.vocabulary, documentId, documentVersion, ocrRetryNonce, pageNumber, renderVersion, viewport, recognizePage, lookupEnabled]);
 
   const handleTokenClick = (overlayToken: PdfOverlayToken, event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -364,7 +371,7 @@ export function PdfPageCanvas({
       <div className="sticky top-3 z-20 mx-auto mb-2 flex w-full justify-end px-1 pointer-events-none" style={statusMaxWidth}>
         {isPreparingLookup ? (
           <div className="rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white shadow-sm" aria-live="polite">
-            Preparing lookup...
+            {ocrStatus}
           </div>
         ) : null}
         {hasLookupReady ? (
@@ -380,6 +387,7 @@ export function PdfPageCanvas({
             <span>Tap words to look up</span>
           </div>
         ) : null}
+        {lookupEnabled && ocrLayout && !isPreparingLookup && !ocrError && !ocrLayout.lines.length ? <span className="rounded bg-black/70 px-3 py-1 text-xs text-white">No text detected. Try the other text layout or a clearer page.</span> : null}
         {ocrError ? (
           <div className="pointer-events-auto rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white shadow-sm" aria-live="polite">
             <span>{ocrError}</span>
@@ -396,6 +404,7 @@ export function PdfPageCanvas({
           </div>
         ) : null}
       </div>
+      {recognizePage && ocrLayout?.lines.length ? <details className="my-2 rounded border p-2"><summary>Recognized text</summary><p className="whitespace-pre-wrap select-text py-2">{ocrLayout.lines.map(line => line.text).join('\n')}</p></details> : null}
       <div
         ref={zoomSurfaceRef}
         className="overflow-hidden"
@@ -408,8 +417,9 @@ export function PdfPageCanvas({
       >
         <div className="flex justify-center">
           <div
-            className="will-change-transform"
+            className="min-w-0 max-w-full will-change-transform"
             style={{
+              width: viewport?.width,
               transform: `translate3d(${contentZoom.x}px, ${contentZoom.y}px, 0) scale(${contentZoom.scale})`,
               transformOrigin: "0 0",
             }}
@@ -417,7 +427,7 @@ export function PdfPageCanvas({
             <div
               ref={containerRef}
               className="relative w-full"
-              style={viewport ? { width: `${viewport.width}px`, maxWidth: "100vw", aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
+              style={viewport ? { aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
             >
               <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-sm shadow-sm" />
               {overlayTokens.length > 0 ? (

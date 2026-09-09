@@ -121,9 +121,9 @@ export function useReadingProgress({
 
         appLog.debug("[useReadingProgress] Restoring reading progress:", saved);
         const params = searchParamsRef.current;
-        if (bookMetadata.fileType === "pdf") {
+        if (bookMetadata.fileType === 'pdf' || bookMetadata.fileType === 'cbz') {
           const savedPdfPage =
-            saved.locator?.kind === "pdf" ? saved.locator.pageNumber : saved.currentPage;
+            (saved.locator?.kind === "pdf" || saved.locator?.kind === "cbz") ? saved.locator.pageNumber : saved.currentPage;
           if (!params.get("page") && savedPdfPage) {
             setPdfCurrentPage(savedPdfPage);
             const nextParams = new URLSearchParams(params);
@@ -141,7 +141,7 @@ export function useReadingProgress({
           saved.locator?.kind === "reflow" && saved.locator.chapterIndex !== undefined
             ? saved.locator.chapterIndex
             : saved.currentChapter;
-        if (savedChapter !== undefined) {
+        if (savedChapter != null) {
           setLocalChapter(savedChapter);
           const nextParams = new URLSearchParams(params);
           nextParams.set("ch", String(savedChapter));
@@ -184,7 +184,7 @@ export function useReadingProgress({
 
   const fileType = bookMetadata?.fileType;
   const saveProgress = useCallback(() => {
-    if (!fileType || !progressLoaded || pendingRestore || fileType === "pdf") return;
+    if (!fileType || !progressLoaded || pendingRestore || ["pdf", "cbz"].includes(fileType)) return;
     const element = contentRef.current;
     const position = capturePositionRef.current?.() ?? scrollPositionRef.current;
     scrollPositionRef.current = position;
