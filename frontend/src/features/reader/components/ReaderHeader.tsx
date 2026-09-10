@@ -1,3 +1,4 @@
+import type { Ref, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppDeps } from "@app/deps/AppDepsProvider";
@@ -5,6 +6,8 @@ import { isTranslationCacheValid } from "@core/translation/cache";
 import { useSettings } from "@shared/contexts/SettingsContext";
 
 interface ReaderHeaderProps {
+  navigation?: ReactNode;
+  ocrToolsRef?: Ref<HTMLDivElement>;
   bookContent: { title?: string; chapterTitles?: Array<{ title: string }>; totalChapters?: number } | null;
   chapter: number;
   progressLabel?: string;
@@ -20,6 +23,8 @@ interface ReaderHeaderProps {
 }
 
 export function ReaderHeader({
+  navigation,
+  ocrToolsRef,
   bookContent,
   chapter,
   progressLabel,
@@ -111,6 +116,8 @@ export function ReaderHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5" aria-label={t("reader.header.tools")}>
+        {navigation}
+        <div ref={ocrToolsRef} />
         {onShowReaderControls && (
           <button
             type="button"

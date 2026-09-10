@@ -10,6 +10,7 @@ const PdfViewer = lazy(() =>
 );
 
 interface BookContentProps {
+  ocrToolsHost?: HTMLElement | null;
   bookMetadata: BookMetadata | null;
   contentRef: React.RefObject<HTMLDivElement | null>;
   flowRef: React.RefObject<HTMLDivElement | null>;
@@ -28,6 +29,7 @@ interface BookContentProps {
 }
 
 export function BookContent({
+  ocrToolsHost,
   bookMetadata,
   contentRef,
   flowRef,
@@ -68,6 +70,7 @@ export function BookContent({
         {pdfData ? (
           <Suspense fallback={<div className="py-8 text-center">{loadingLabel}</div>}>
             <Viewer
+              {...(bookMetadata.fileType === "cbz" ? { ocrToolsHost } : {})}
               ref={pdfViewerRef}
               data={pdfData}
               currentPage={pdfCurrentPage}

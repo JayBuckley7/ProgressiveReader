@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface ReaderDockProps {
+  inline?: boolean;
   currentIndex: number;
   totalItems: number;
   onPrevious: () => void;
@@ -14,6 +16,7 @@ interface ReaderDockProps {
 }
 
 export function ReaderDock({
+  inline = false,
   currentIndex,
   totalItems,
   onPrevious,
@@ -26,6 +29,23 @@ export function ReaderDock({
   onShowContents,
 }: ReaderDockProps) {
   const { t } = useTranslation();
+  const [recentScroll, setRecentScroll] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    const reveal = () => {
+      setRecentScroll(true);
+      clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setRecentScroll(false), 2200);
+    };
+    // Capture scrolls from the reader's nested scrolling surface as well as the window.
+    window.addEventListener("scroll", reveal, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener("scroll", reveal, true);
+      clearTimeout(hideTimer.current);
+    };
+  }, []);
+  const visible = inline || recentScroll || focused;
   const safeTotal = Math.max(1, totalItems);
   const currentPosition = Math.min(Math.max(1, currentIndex + 1), safeTotal);
   const progress = Math.min(100, Math.max(0, (currentPosition / safeTotal) * 100));
@@ -85,12 +105,19 @@ export function ReaderDock({
 
   return (
     <nav
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)_+_0.5rem)] left-1/2 z-30 w-[calc(100%_-_1rem)] max-w-[26rem] -translate-x-1/2 sm:bottom-[calc(env(safe-area-inset-bottom)_+_0.75rem)]"
+      data-visible={visible}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
+      }}
+      style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none' }}
+      className={inline ? "shrink-0" : "transition-opacity duration-200 motion-reduce:transition-none fixed bottom-[calc(env(safe-area-inset-bottom)_+_0.5rem)] left-1/2 z-30 w-[calc(100%_-_1rem)] max-w-[26rem] -translate-x-1/2 sm:bottom-[calc(env(safe-area-inset-bottom)_+_0.75rem)]"}
       aria-label={t("reader.dock.label")}
       data-page-turn-direction={rightToLeftPageTurning ? "rtl" : "ltr"}
     >
-      <div className="relative grid h-14 grid-cols-[1fr_auto_1fr] items-center overflow-hidden rounded-full border border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] px-1 shadow-[0_12px_36px_rgba(15,23,42,0.2)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
+      <div className={inline ? "grid h-11 grid-cols-[auto_auto_auto] items-center gap-1 [&_button]:h-9 [&_button]:rounded-none [&_button]:border-0 [&_button]:bg-transparent [&_button]:text-xs" : "relative grid h-14 grid-cols-[1fr_auto_1fr] items-center overflow-hidden rounded-full border border-[color:var(--ui-border)] bg-[color:var(--ui-surface)] px-1 shadow-[0_12px_36px_rgba(15,23,42,0.2)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.5)]"}>
         <div
+          hidden={inline}
           className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[color:var(--ui-border)]"
           aria-hidden="true"
         >

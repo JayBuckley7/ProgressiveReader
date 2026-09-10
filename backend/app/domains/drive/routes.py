@@ -271,7 +271,7 @@ def ocr_page(image_hash):
             if not isinstance(payload, dict):
                 raise AppError('INVALID_OCR', 'Invalid OCR page.', 400)
         result = storage.page(get_user_id(), image_hash, payload)
-        return jsonify({'page': result})
+        return jsonify({'page': result, 'format': 2})
     except AppError as exc:
         return jsonify({'code': exc.code, 'error': exc.message}), exc.status
     except ValidationError:

@@ -9,7 +9,7 @@ describe("ReaderDock", () => {
     vi.useRealTimers();
   });
 
-  it("stays visible and turns a page with one click after reader inactivity", () => {
+  it("reveals on nested scroll, fades after inactivity, and remains keyboard accessible", () => {
     vi.useFakeTimers();
     const onNext = vi.fn();
 
@@ -24,12 +24,16 @@ describe("ReaderDock", () => {
     );
 
     const dock = screen.getByRole("navigation", { name: "Reader navigation" });
-    expect(dock).toBeVisible();
+    expect(dock).toHaveAttribute("data-visible", "false");
+    fireEvent.scroll(document.body);
+    expect(dock).toHaveAttribute("data-visible", "true");
 
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
-    expect(dock).not.toHaveClass("opacity-0", "pointer-events-none");
+    expect(dock).toHaveAttribute("data-visible", "false");
+    fireEvent.focus(screen.getByRole("button", { name: "Next chapter" }));
+    expect(dock).toHaveAttribute("data-visible", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Next chapter" }));
     expect(onNext).toHaveBeenCalledOnce();

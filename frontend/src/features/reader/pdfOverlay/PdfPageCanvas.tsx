@@ -4,7 +4,7 @@ import { showDefinitionPopup } from "@features/reader/components/JpdbPopupBridge
 import { loadConfig as loadJpdbConfig, parseText } from "@features/reader/content/api-adapter";
 import { parseWithLocalLookup } from "@features/reader/utils/localTextParser";
 import { appLog } from "@shared/appLog";
-import { startTransition, useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState, type ReactNode, type MouseEvent, type PointerEvent } from "react";
 
 import { PdfTokenOverlay } from "./PdfTokenOverlay";
 import { alignTokensToOverlayByLine } from "./tokenAlignment";
@@ -31,6 +31,8 @@ interface PdfPageCanvasProps {
   documentVersion?: string;
   showTokenHighlights?: boolean;
   lookupEnabled?: boolean;
+  inspectArea?: boolean;
+  renderLookupStatus?: (status: ReactNode) => ReactNode;
   recognizePage?: (image: Blob, signal: AbortSignal, progress: (message: string) => void) => Promise<PdfOverlayLayout>;
 }
 
@@ -112,9 +114,14 @@ export function PdfPageCanvas({
   documentVersion,
   showTokenHighlights = false,
   lookupEnabled = true,
+  inspectArea = false,
+  renderLookupStatus,
   recognizePage,
 }: PdfPageCanvasProps) {
   const deps = useAppDeps();
+  const [area, setArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [dragBox, setDragBox] = useState<typeof area>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const zoomSurfaceRef = useRef<HTMLDivElement>(null);
@@ -209,6 +216,7 @@ export function PdfPageCanvas({
 
   useEffect(() => {
     if (!lookupEnabled || !viewport || !canvasRef.current || renderVersion <= 0) return;
+    if (inspectArea && !area) return;
     if (preparedRenderVersionRef.current === renderVersion) return;
 
     const controller = new AbortController();
@@ -221,9 +229,21 @@ export function PdfPageCanvas({
 
       try {
         loadJpdbConfig();
-        const blob = await canvasToBlob(canvasRef.current!);
+        let source = canvasRef.current!;
+        if (inspectArea && area) {
+          const crop = document.createElement('canvas');
+          const scale = Math.min(1, 1200 / Math.max(source.width * area.width, source.height * area.height));
+          crop.width = Math.max(1, Math.round(source.width * area.width * scale));
+          crop.height = Math.max(1, Math.round(source.height * area.height * scale));
+          const context = crop.getContext('2d');
+          if (!context) throw new Error('Canvas is unavailable.');
+          context.drawImage(source, area.x * source.width, area.y * source.height,
+            area.width * source.width, area.height * source.height, 0, 0, crop.width, crop.height);
+          source = crop;
+        }
+        const blob = await canvasToBlob(source);
         const contentHash = await computeSha256Hex(blob);
-        const layout = recognizePage ? await recognizePage(blob, controller.signal, message => { if (!stale) setOcrStatus(message); }) : await deps.backend.ocr.processPageLayout({
+        let layout = recognizePage ? await recognizePage(blob, controller.signal, message => { if (!stale) setOcrStatus(message); }) : await deps.backend.ocr.processPageLayout({
           image: blob,
           pageIndex: pageNumber - 1,
           ...(contentHash ? { contentHash } : {}),
@@ -233,17 +253,36 @@ export function PdfPageCanvas({
         });
         if (stale) return;
 
+        if (inspectArea && area) {
+          const mapBox = (box: { x: number; y: number; width: number; height: number }) => ({
+            x: area.x + box.x * area.width, y: area.y + box.y * area.height,
+            width: box.width * area.width, height: box.height * area.height,
+          });
+          layout = { ...layout, image: { width: viewport.width, height: viewport.height },
+            lines: layout.lines.map(line => ({ ...line, bboxNorm: mapBox(line.bboxNorm), polygonNorm: [] })),
+            atoms: layout.atoms.map(atom => ({ ...atom, bboxNorm: mapBox(atom.bboxNorm), polygonNorm: [] })),
+          };
+        }
         const parsedLines = layout.lines.filter((line) => line.text.trim().length > 0);
         const textSegments = parsedLines.map((line) => line.text);
+        const parseLocalLines = async () => {
+          const batches = await Promise.all(textSegments.map(text => parseWithLocalLookup(text)));
+          let offset = 0;
+          return batches.flatMap((batch, index) => {
+            const shifted = batch.map(token => ({ ...token, start: token.start + offset, end: token.end + offset }));
+            offset += textSegments[index].length;
+            return shifted;
+          });
+        };
         let tokens: Awaited<ReturnType<typeof parseText>> = [];
         if (textSegments.length > 0) {
           try {
             tokens = recognizePage
-              ? await parseWithLocalLookup(textSegments.join(''))
+              ? await parseLocalLines()
               : await parseText(deps.backend.vocabulary, textSegments, { notifyOnError: false });
           } catch (error) {
             appLog.warn("[PdfPageCanvas] JPDB parse failed; falling back to local lookup", { pageNumber, error });
-            tokens = await parseWithLocalLookup(textSegments.join(""));
+            tokens = await parseLocalLines();
           }
         }
         if (stale) return;
@@ -269,7 +308,7 @@ export function PdfPageCanvas({
       stale = true;
       controller.abort();
     };
-  }, [deps.backend.ocr, deps.backend.vocabulary, documentId, documentVersion, ocrRetryNonce, pageNumber, renderVersion, viewport, recognizePage, lookupEnabled]);
+  }, [deps.backend.ocr, deps.backend.vocabulary, documentId, documentVersion, ocrRetryNonce, pageNumber, renderVersion, viewport, recognizePage, lookupEnabled, inspectArea, area]);
 
   const handleTokenClick = (overlayToken: PdfOverlayToken, event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -363,12 +402,44 @@ export function PdfPageCanvas({
     }
   };
 
+  const selectionPoint = (event: PointerEvent<HTMLDivElement>) => {
+    const rect = containerRef.current!.getBoundingClientRect();
+    return { x: clamp((event.clientX - rect.left) / rect.width, 0, 1), y: clamp((event.clientY - rect.top) / rect.height, 0, 1) };
+  };
+  const selectionBox = (point: { x: number; y: number }) => {
+    const start = dragStart.current!;
+    return { x: Math.min(start.x, point.x), y: Math.min(start.y, point.y), width: Math.abs(point.x - start.x), height: Math.abs(point.y - start.y) };
+  };
+  const beginSelection = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
+    event.preventDefault(); event.stopPropagation();
+    dragStart.current = selectionPoint(event);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragBox(null);
+  };
+  const moveSelection = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragStart.current) setDragBox(selectionBox(selectionPoint(event)));
+  };
+  const endSelection = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragStart.current) return;
+    const box = selectionBox(selectionPoint(event));
+    dragStart.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    setDragBox(null);
+    const rect = containerRef.current!.getBoundingClientRect();
+    if (box.width * rect.width < 8 || box.height * rect.height < 8) return;
+    // A click or cancelled drag must not discard the existing region or lookup.
+    setOverlayTokens([]); setOcrLayout(null); setOcrError(null);
+    preparedRenderVersionRef.current = 0;
+    setArea(box);
+  };
+
   const hasLookupReady = !isPreparingLookup && !ocrError && overlayTokens.length > 0;
   const statusMaxWidth = viewport ? { maxWidth: `${viewport.width}px` } : undefined;
 
-  return (
-    <div className="pdf-page mb-4">
-      <div className="sticky top-3 z-20 mx-auto mb-2 flex w-full justify-end px-1 pointer-events-none" style={statusMaxWidth}>
+  const lookupStatus = <>
+      {inspectArea && !area && <p className="text-xs text-[color:var(--ui-muted)]">Drag over the text you want to inspect.</p>}
+      <div className={renderLookupStatus ? "space-y-2 [&>div]:rounded [&>span]:block" : "sticky top-3 z-20 mx-auto mb-2 flex w-full justify-end px-1 pointer-events-none"} style={renderLookupStatus ? undefined : statusMaxWidth}>
         {isPreparingLookup ? (
           <div className="rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white shadow-sm" aria-live="polite">
             {ocrStatus}
@@ -405,15 +476,20 @@ export function PdfPageCanvas({
         ) : null}
       </div>
       {recognizePage && ocrLayout?.lines.length ? <details className="my-2 rounded border p-2"><summary>Recognized text</summary><p className="whitespace-pre-wrap select-text py-2">{ocrLayout.lines.map(line => line.text).join('\n')}</p></details> : null}
+  </>;
+
+  return (
+    <div className="pdf-page mb-4">
+      {renderLookupStatus ? renderLookupStatus(lookupStatus) : lookupStatus}
       <div
         ref={zoomSurfaceRef}
         className="overflow-hidden"
-        style={{ touchAction: contentZoom.scale > 1 ? "none" : "pan-y" }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={clearPointer}
-        onPointerCancel={clearPointer}
-        onPointerLeave={clearPointer}
+        style={{ touchAction: inspectArea || contentZoom.scale > 1 ? "none" : "pan-y", cursor: inspectArea ? "crosshair" : undefined }}
+        onPointerDown={inspectArea ? beginSelection : handlePointerDown}
+        onPointerMove={inspectArea ? moveSelection : handlePointerMove}
+        onPointerUp={inspectArea ? endSelection : clearPointer}
+        onPointerCancel={inspectArea ? () => { dragStart.current = null; setDragBox(null); } : clearPointer}
+        onPointerLeave={inspectArea ? undefined : clearPointer}
       >
         <div className="flex justify-center">
           <div
@@ -430,6 +506,7 @@ export function PdfPageCanvas({
               style={viewport ? { aspectRatio: `${viewport.width} / ${viewport.height}` } : undefined}
             >
               <canvas ref={canvasRef} className="absolute inset-0 h-full w-full rounded-sm shadow-sm" />
+              {(dragBox || (inspectArea && area)) && <div aria-label="Selected OCR area" className="pointer-events-none absolute z-10 border-2 border-sky-400 bg-sky-400/10" style={{ left: `${(dragBox || area)!.x * 100}%`, top: `${(dragBox || area)!.y * 100}%`, width: `${(dragBox || area)!.width * 100}%`, height: `${(dragBox || area)!.height * 100}%` }} />}
               {overlayTokens.length > 0 ? (
                 <PdfTokenOverlay
                   tokens={overlayTokens}

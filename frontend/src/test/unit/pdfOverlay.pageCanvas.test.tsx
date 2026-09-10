@@ -2,12 +2,18 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PdfPageCanvas } from "@features/reader/pdfOverlay/PdfPageCanvas";
+import { parseWithLocalLookup } from "@features/reader/utils/localTextParser";
+import { sidecarLayout } from "@features/reader/comic/cloudOcr";
 import { renderWithProviders } from "../test-utils";
 
 const showDefinitionPopupMock = vi.fn();
 
 vi.mock("@features/reader/components/JpdbPopupBridge", () => ({
   showDefinitionPopup: (...args: unknown[]) => showDefinitionPopupMock(...args),
+}));
+
+vi.mock("@features/reader/utils/localTextParser", () => ({
+  parseWithLocalLookup: vi.fn(async (text: string) => [{ start: 0, end: text.length, card: { spelling: text } }]),
 }));
 
 vi.mock("@features/reader/content/api-adapter", () => ({
@@ -48,6 +54,58 @@ describe("PdfPageCanvas", () => {
     expect(await screen.findByText(/No text detected/)).toBeInTheDocument();
     expect(recognizePage).toHaveBeenCalledTimes(2);
     expect(backendOcr).not.toHaveBeenCalled();
+  });
+
+  it('only recognizes a selected crop and places words in page coordinates', async () => {
+    const drawImage = vi.fn();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage })) as any;
+    vi.stubGlobal('PointerEvent', MouseEvent);
+    const recognizePage = vi.fn(async () => sidecarLayout({ version: 1, regions: [
+      { text: '首都', x: 0, y: 0, width: 1, height: 1 },
+    ] }, 'crop'));
+    const pdf = { getPage: vi.fn(async () => ({ getViewport: () => ({ width: 200, height: 100 }), render: () => ({ promise: Promise.resolve() }) })) };
+    const { container } = renderWithProviders(<PdfPageCanvas pdf={pdf} pageNumber={1} recognizePage={recognizePage} inspectArea />);
+    await waitFor(() => expect(container.querySelector('canvas')?.width).toBe(200));
+    expect(recognizePage).not.toHaveBeenCalled();
+    const surface = container.querySelector('.overflow-hidden') as HTMLDivElement;
+    container.querySelector('canvas')!.parentElement!.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 }) as DOMRect;
+    surface.setPointerCapture = vi.fn(); surface.releasePointerCapture = vi.fn();
+    fireEvent.pointerDown(surface, { clientX: 50, clientY: 20, button: 0 });
+    fireEvent.pointerUp(surface, { clientX: 150, clientY: 80 });
+    const word = await screen.findByRole('button', { name: 'Lookup 首都' });
+    expect(drawImage).toHaveBeenCalledWith(container.querySelector('canvas'), 50, 20, 100, 60.00000000000001, 0, 0, 100, 60);
+    expect(word.style.left).toBe('25%');
+    expect(word.style.top).toBe('20%');
+    expect(recognizePage).toHaveBeenCalledOnce();
+    // Clicking away to dismiss a word popup preserves the region and its words.
+    fireEvent.pointerDown(surface, { clientX: 180, clientY: 90, button: 0 });
+    fireEvent.pointerUp(surface, { clientX: 180, clientY: 90 });
+    expect(screen.getByLabelText('Selected OCR area')).toBeInTheDocument();
+    expect(word).toBeInTheDocument();
+    expect(recognizePage).toHaveBeenCalledOnce();
+    fireEvent.pointerDown(surface, { clientX: 10, clientY: 10, button: 0 });
+    fireEvent.pointerMove(surface, { clientX: 30, clientY: 40 });
+    fireEvent.pointerCancel(surface);
+    expect(word).toBeInTheDocument();
+    // A deliberate replacement still recognizes a new crop.
+    fireEvent.pointerDown(surface, { clientX: 10, clientY: 10, button: 0 });
+    fireEvent.pointerUp(surface, { clientX: 40, clientY: 50 });
+    await waitFor(() => expect(recognizePage).toHaveBeenCalledTimes(2));
+    vi.unstubAllGlobals();
+  });
+
+  it('parses saved Android columns separately and keeps each lookup on its own box', async () => {
+    const layout = sidecarLayout({ version: 1, engine: 'mlkit-japanese-v2', regions: [
+      { text: '首都', x: .7, y: .1, width: .1, height: .3, direction: 'vertical' },
+      { text: '人民', x: .85, y: .1, width: .1, height: .3, direction: 'vertical' },
+    ] }, 'hash');
+    const pdf = { getPage: vi.fn(async () => ({ getViewport: () => ({ width: 200, height: 300 }), render: () => ({ promise: Promise.resolve() }) })) };
+    renderWithProviders(<PdfPageCanvas pdf={pdf} pageNumber={1} recognizePage={async () => layout} />);
+    const second = await screen.findByRole('button', { name: 'Lookup 人民' });
+    expect(second.style.left).toBe('85%');
+    expect(vi.mocked(parseWithLocalLookup).mock.calls.map(([text]) => text)).toEqual(['首都', '人民']);
+    fireEvent.click(second);
+    expect(showDefinitionPopupMock.mock.calls[0][0]).toBe('人民');
   });
 
   beforeEach(() => {

@@ -725,3 +725,32 @@ html {
 .dark .pitch {
   border-color: #555;
 }
+
+/* Desktop-only manga edge targets leave touch reading and the header alone. */
+.reader-edge-navigation { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .reader-edge-navigation { display: contents; }
+  .reader-page-edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    width: clamp(20px, 3vw, 40px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    padding: 0;
+    opacity: 0;
+    color: rgba(255, 255, 255, .65);
+    cursor: pointer;
+    transition: opacity 140ms ease;
+  }
+  .reader-page-edge-left { left: 0; background: linear-gradient(to right, rgba(0, 0, 0, .18), transparent); }
+  .reader-page-edge-right { right: 12px; background: linear-gradient(to left, rgba(0, 0, 0, .18), transparent); }
+  .reader-page-edge:hover, .reader-page-edge:focus-visible { opacity: 1; }
+  .reader-page-edge:focus-visible { outline: 1px solid currentColor; outline-offset: -2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reader-page-edge { transition: none; }
+}

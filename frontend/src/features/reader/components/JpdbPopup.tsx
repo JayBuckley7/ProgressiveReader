@@ -1,8 +1,10 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { getKanjiComponents } from '../utils/kanjiComponents';
+import { wholeWordDefinition } from '../utils/wholeWordLookup';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { mineWord, updateWordState, reviewCard, getCurrentConfig, parseDeckId } from "@features/reader/content/api-adapter";
+import { mineWord, updateWordState, reviewCard, parseText, getCurrentConfig, parseDeckId } from "@features/reader/content/api-adapter";
 import { Token } from "~/types";
-import { getJlptLevel, getWordKanjiInfo } from "@shared/services/jlptService";
+import { getWordKanjiInfo } from "@shared/services/jlptService";
 import { useGrammar } from "@features/grammar/contexts/GrammarContext";
 import type { GrammarPoint } from "@features/grammar/data/grammarCatalog";
 import { useAppDeps } from "@app/deps/AppDepsProvider";
@@ -341,7 +343,44 @@ function getInitialCompactPopup(): boolean {
 
 export function JpdbPopupController() {
   const deps = useAppDeps();
-  const [popup, _setPopup] = useState<PopupState>(null);
+  const [rootPopup, _setPopup] = useState<PopupState>(null);
+  const [dig, setDig] = useState<{ root: PopupState; page: NonNullable<PopupState>; parents: NonNullable<PopupState>[] } | null>(null);
+  const isDigging = !!rootPopup && dig?.root === rootPopup;
+  const popup = isDigging ? dig!.page : rootPopup;
+  const popupBodyRef = useRef<HTMLDivElement>(null);
+  const wordLinkRef = useRef<HTMLAnchorElement>(null);
+  const digIntoKanji = (kanji: string) => {
+    if (!rootPopup) return;
+    cancelPopupSpeech();
+    setDig({ root: rootPopup, page: { ...rootPopup, word: kanji, wordData: undefined }, parents: isDigging ? [...dig!.parents, dig!.page] : [rootPopup] });
+  };
+  useEffect(() => {
+    if (!popup) return;
+    popupBodyRef.current?.scrollTo?.({ top: 0 });
+    if (isDigging) wordLinkRef.current?.focus({ preventScroll: true });
+  }, [popup, isDigging]);
+  const [wordLookup, setWordLookup] = useState<{ source: PopupState; token?: Token; message?: string } | null>(null);
+  useEffect(() => {
+    if (!popup || (popup.wordData?.token?.card?.vid || 0) > 0) return;
+    let stale = false;
+    const word = popup.wordData?.token?.card?.spelling || popup.word;
+    const config = getCurrentConfig();
+    if (!config.apiKey || !navigator.onLine) {
+      setWordLookup({ source: popup, message: 'Word definition unavailable. Connect JPDB in settings to look up whole words.' });
+      return;
+    }
+    setWordLookup({ source: popup, message: 'Looking up word meaning…' });
+    void parseText(deps.backend.vocabulary, [word], { notifyOnError: false }).then(tokens => {
+      if (stale) return;
+      const match = wholeWordDefinition(tokens, word);
+      setWordLookup({ source: popup, token: match, message: match ? undefined : 'No whole-word definition found. Kanji details below are not a translation of this word.' });
+    }).catch(() => {
+      if (!stale) setWordLookup({ source: popup, message: 'Could not load the word definition. Check your connection and JPDB settings.' });
+    });
+    return () => { stale = true; };
+  }, [popup, deps.backend.vocabulary]);
+  const [meaningSource, setMeaningSource] = useState<PopupState>(null);
+  const meaningVisible = !!popup && meaningSource === popup;
   const [isLoading, setIsLoading] = useState(false);
   const [isCompactPopup, setIsCompactPopup] = useState(getInitialCompactPopup);
   const [visualViewportMetrics, setVisualViewportMetrics] = useState(getVisualViewportMetrics);
@@ -482,8 +521,9 @@ export function JpdbPopupController() {
 
   if (!popup) return null;
 
-  const card = popup.wordData?.token?.card;
-  const token = popup.wordData?.token;
+  const token = (wordLookup?.source === popup ? wordLookup.token : undefined) || popup.wordData?.token;
+  const card = token?.card;
+  const hasWordDefinition = (card?.vid || 0) > 0;
   const config = getCurrentConfig();
 
   const isOfflineMode = !config.apiKey || !navigator.onLine;
@@ -492,7 +532,8 @@ export function JpdbPopupController() {
   const reading = token?.card?.reading || "";
   const popupRubyParts = buildPopupRubyParts(surfaceWord, token?.rubies);
   const hasPopupRuby = popupRubyParts.some((part) => Boolean(part.ruby));
-  const fallbackReading = reading && reading !== surfaceWord && !hasPopupRuby ? reading : "";
+  const displayedPitch = card?.pitchAccent?.find(pitch => /^[HL]+$/.test(pitch) && pitch.length === reading.length + 1);
+  const fallbackReading = !displayedPitch && reading && reading !== surfaceWord && !hasPopupRuby ? reading : "";
   const speechText = reading || surfaceWord;
   const canSpeak = canUsePopupSpeech() && speechText.length > 0;
   const miningDeckId = parseDeckId(config.miningDeckId);
@@ -502,37 +543,13 @@ export function JpdbPopupController() {
   const hasNeverForget = states.includes('never-forget');
   const hasBlacklisted = states.includes('blacklisted');
 
-  const posText = token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0
+  const posText = token && hasWordDefinition && token.card?.meanings && token.card.meanings.length > 0
     ? Array.from(new Set(token.card.meanings.flatMap((m) => m.partOfSpeech || []))).join(', ')
     : "";
-  const localKanjiInfo = isOfflineMode ? getWordKanjiInfo(surfaceWord) : [];
-  const localJlptLevel = isOfflineMode ? getJlptLevel(surfaceWord) : null;
+  const localKanjiInfo = getWordKanjiInfo(surfaceWord);
   const hasLocalKanjiInfo = localKanjiInfo.length > 0;
-
-  const rubySegments = (() => {
-    const rubies = token?.rubies || [];
-    if (!rubies.length) return [];
-    return rubies
-      .filter((r) => typeof r.text === 'string' && r.text.length > 0 && Number.isFinite(r.start) && Number.isFinite(r.length) && r.length > 0)
-      .slice()
-      .sort((a, b) => a.start - b.start)
-      .map((r) => {
-        const base = surfaceWord.slice(r.start, r.start + r.length);
-        const definitions = getWordKanjiInfo(base)
-          .map((entry) => {
-            const meanings = entry.meanings.slice(0, 3).join(', ');
-            return meanings ? `${entry.kanji}: ${meanings}` : "";
-          })
-          .filter(Boolean);
-
-        return {
-          base,
-          ruby: r.text as string,
-          definitions,
-        };
-      })
-      .filter((seg) => seg.base.length > 0);
-  })();
+  const componentCharacters = isDigging ? getKanjiComponents(popup.word, dig!.parents.map(page => page.word)) : [];
+  const parentPage = isDigging ? dig!.parents[dig!.parents.length - 1] : null;
 
   const handleSpeak = () => {
     if (!canSpeak) return;
@@ -545,19 +562,6 @@ export function JpdbPopupController() {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   };
-
-  const handleCloseButtonPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closePopup();
-  };
-
-  const handleCloseButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closePopup();
-  };
-
 
   const handleMineWord = async () => {
     if (!card || !config.apiKey || !canMine) return;
@@ -594,21 +598,7 @@ export function JpdbPopupController() {
     : `https://jpdb.io/search?q=${encodeURIComponent(popup.word)}`;
 
 
-  const handlePopupClick = () => {
-    window.open(jpdbUrl, '_blank');
-  };
-
-  // Flatter JPDB-style buttons (no neon "glow" shadows).
-  const flatBtnBase = isCompactPopup
-    ? "rounded-full border bg-neutral-900/60 px-2 py-0.5 text-[10px] hover:bg-neutral-800/70 active:bg-neutral-800 disabled:opacity-50 whitespace-nowrap transition-colors"
-    : "rounded-full border bg-neutral-900/60 px-2.5 py-1 text-[11px] hover:bg-neutral-800/70 active:bg-neutral-800 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-sm whitespace-nowrap transition-colors";
-  const flatBlue = `${flatBtnBase} border-sky-700 text-sky-300`;
-  const flatGreen = `${flatBtnBase} border-emerald-700 text-emerald-300`;
-  const flatLime = `${flatBtnBase} border-lime-700 text-lime-300`;
-  const flatNeutral = `${flatBtnBase} border-neutral-700 text-neutral-200`;
-  const flatRed = `${flatBtnBase} border-red-700 text-red-300`;
-  const flatRose = `${flatBtnBase} border-rose-700 text-rose-200`;
-  const flatOrange = `${flatBtnBase} border-orange-700 text-orange-200`;
+  const flatBtnBase = `rounded-none border border-neutral-600 bg-transparent text-neutral-200 hover:bg-neutral-800 active:bg-neutral-700 aria-pressed:bg-neutral-700 aria-pressed:border-neutral-300 disabled:opacity-50 whitespace-nowrap focus-visible:outline focus-visible:outline-1 focus-visible:outline-neutral-300 ${isCompactPopup ? "px-2 py-1 text-[11px]" : "px-2.5 py-1 text-xs sm:text-sm"}`;
   const addButtonTitle = canMine ? "Add word to mining deck" : "Set a mining deck ID in settings to add words.";
   const compactMargin = 8;
   const compactScale = isCompactPopup ? Math.min(1, 1 / Math.max(1, visualViewportMetrics.scale)) : 1;
@@ -636,117 +626,18 @@ export function JpdbPopupController() {
   return (
     <div
       data-jpdb-popup
-      className="fixed z-50 flex cursor-default flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 text-neutral-100 shadow-lg sm:rounded-2xl"
+      className="fixed z-50 flex cursor-default flex-col overflow-hidden rounded-none border border-neutral-700 bg-neutral-900 text-neutral-100 shadow-none"
       style={popupStyle}
       onMouseEnter={handlePopupMouseEnter}
       onMouseLeave={handlePopupMouseLeave}
     >
-      <div className="shrink-0 border-b border-neutral-700 bg-neutral-950/30 px-2 py-1.5 sm:px-3 sm:pt-3 sm:pb-2">
-        <div className="flex items-start justify-between gap-2 sm:gap-3">
-          <div className="min-w-0 flex-1" onClick={(e) => e.stopPropagation()}>
-            {!isOfflineMode && card && config.apiKey ? (
-              <div className="flex flex-col gap-1 sm:gap-2">
-                <div className="grid grid-cols-3 gap-1 sm:flex sm:flex-wrap sm:gap-2">
-                  <button
-                    onClick={handleMineWord}
-                    disabled={isLoading || !canMine}
-                    className={flatBlue}
-                    title={addButtonTitle}
-                  >
-                    Add
-                  </button>
-                  <button
-                    onClick={() => handleUpdateWordState('never-forget', hasNeverForget)}
-                    disabled={isLoading}
-                    className={`${flatLime} col-span-2`}
-                    title={hasNeverForget ? 'Remove never-forget' : 'Mark never-forget'}
-                  >
-                    Never forget
-                  </button>
-                  <button
-                    onClick={() => handleUpdateWordState('blacklist', hasBlacklisted)}
-                    disabled={isLoading}
-                    className={hasBlacklisted ? flatRed : flatNeutral}
-                    title={hasBlacklisted ? 'Remove blacklist' : 'Add to blacklist'}
-                  >
-                    Blacklist
-                  </button>
-                </div>
+      <div ref={popupBodyRef} className="min-h-0 overflow-y-auto p-2 sm:p-3">
+        {isDigging && <button type="button" className="mb-2 text-xs text-neutral-300 hover:text-white" onClick={event => { event.stopPropagation(); cancelPopupSpeech(); setDig(current => current && current.parents.length > 1 ? { ...current, page: current.parents[current.parents.length - 1], parents: current.parents.slice(0, -1) } : null); }}>← Back to {parentPage?.wordData?.token?.card?.spelling || parentPage?.word}</button>}
 
-                {!canMine && (
-                  <div className="text-xs text-neutral-400">{addButtonTitle}</div>
-                )}
-
-                <div className="grid grid-cols-5 gap-1 sm:flex sm:flex-wrap sm:gap-2">
-                  <button
-                    onClick={() => handleReviewCard('nothing')}
-                    disabled={isLoading}
-                    className={flatRed}
-                    title="I don't know this word at all"
-                  >
-                    nothing
-                  </button>
-                  <button
-                    onClick={() => handleReviewCard('something')}
-                    disabled={isLoading}
-                    className={flatRose}
-                    title="I recognize this word but don't know the meaning"
-                  >
-                    something
-                  </button>
-                  <button
-                    onClick={() => handleReviewCard('hard')}
-                    disabled={isLoading}
-                    className={flatOrange}
-                    title="I know this word but it was difficult"
-                  >
-                    hard
-                  </button>
-                  <button
-                    onClick={() => handleReviewCard('good')}
-                    disabled={isLoading}
-                    className={flatGreen}
-                    title="I know this word well"
-                  >
-                    okay
-                  </button>
-                  <button
-                    onClick={() => handleReviewCard('easy')}
-                    disabled={isLoading}
-                    className={flatBlue}
-                    title="This word is very easy for me"
-                  >
-                    easy
-                  </button>
-                </div>
-
-                {isLoading && (
-                  <div className="text-xs text-neutral-400">Processing…</div>
-                )}
-              </div>
-            ) : (
-              <div />
-            )}
-          </div>
-
-          <button
-            onPointerDown={handleCloseButtonPointerDown}
-            onClick={handleCloseButtonClick}
-            className="h-8 w-8 shrink-0 rounded-lg border border-neutral-700 bg-neutral-900/60 text-red-400 transition-colors hover:bg-neutral-800/70 hover:text-red-300 sm:h-9 sm:w-9 sm:rounded-xl"
-            aria-label="Close popup"
-            title="Close"
-          >
-            <span className="text-xl leading-none">×</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="min-h-0 overflow-y-auto p-2 sm:p-3">
-
-        <div className="flex gap-3 sm:mt-3 sm:gap-4">
+        <div className="w-full">
           <div className="flex-1 min-w-0">
             {learningGrammarPoints.length > 0 ? (
-              <div className="mb-4 p-3 rounded-xl border border-neutral-700 bg-neutral-950/25">
+              <div className="mb-4 p-3 rounded-none border border-neutral-700 bg-neutral-950/25">
                 <div className="text-xs text-neutral-400 uppercase tracking-wide">Learning grammar</div>
                 <div className="mt-2 space-y-2">
                   {learningGrammarPoints.map((p) => (
@@ -772,22 +663,22 @@ export function JpdbPopupController() {
             ) : null}
 
             {fallbackReading && (
-              <div className="text-blue-300 text-sm leading-tight">{fallbackReading}</div>
+              <div className="text-neutral-300 text-sm leading-tight">{fallbackReading}</div>
             )}
-            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <div className="max-w-full overflow-x-auto pb-1 text-2xl font-semibold leading-[1.3] tracking-wide text-blue-400 sm:text-3xl sm:leading-[1.35]">
-                <span className="inline-block whitespace-nowrap">
-                  {popupRubyParts.map((part, idx) => part.ruby ? (
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <div className="min-w-0 max-w-full overflow-x-auto pb-1 text-2xl font-semibold leading-[1.3] tracking-wide text-neutral-100 sm:text-2xl sm:leading-[1.35]">
+                <a ref={wordLinkRef} href={jpdbUrl} target="_blank" rel="noopener noreferrer" title="Open on JPDB" aria-label={`${surfaceWord} — open on JPDB`} onClick={event => event.stopPropagation()} className="inline-block whitespace-nowrap text-inherit no-underline hover:underline underline-offset-4 focus-visible:outline focus-visible:outline-1">
+                  {displayedPitch ? <ruby>{surfaceWord}<rt className="text-neutral-300 text-[0.42em] font-medium tracking-normal [&_.pitch]:border-0 [&_.pitch]:p-0 [&_.pitch]:text-[1em]">{renderPitchReact(reading, displayedPitch)}</rt></ruby> : popupRubyParts.map((part, idx) => part.ruby ? (
                     <ruby key={`${part.base}-${idx}`} className="whitespace-nowrap">
                       {part.base}
-                      <rt className="text-blue-300 text-[0.42em] font-medium leading-none tracking-normal">
+                      <rt className="text-neutral-300 text-[0.42em] font-medium leading-none tracking-normal">
                         {part.ruby}
                       </rt>
                     </ruby>
                   ) : (
                     <span key={`${part.base}-${idx}`}>{part.base}</span>
                   ))}
-                </span>
+                </a>
               </div>
               <button
                 onClick={(e) => {
@@ -795,160 +686,98 @@ export function JpdbPopupController() {
                   handleSpeak();
                 }}
                 disabled={!canSpeak}
-                className="px-2.5 py-1 rounded-md border border-neutral-700 bg-neutral-900/60 text-xs text-neutral-200 hover:bg-neutral-800/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2.5 py-1 rounded-none border border-neutral-700 bg-neutral-900/60 text-xs text-neutral-200 hover:bg-neutral-800/70 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={canSpeak ? "Speak Japanese" : "Speech is not available in this browser"}
               >
                 Speak
               </button>
+              <button type="button" aria-expanded={meaningVisible} aria-controls="popup-word-meaning" onClick={event => { event.stopPropagation(); setMeaningSource(meaningVisible ? null : popup); }} className="text-xs font-medium text-neutral-200 hover:text-white"><span aria-hidden="true">{meaningVisible ? '▾' : '▸'}</span> {meaningVisible ? 'Hide meaning' : 'Show meaning'}</button>
+              <span className="ml-auto text-xs text-neutral-400">{card?.frequencyRank ? `Top ${card.frequencyRank.toLocaleString()}` : ''}</span>
             </div>
 
-            {rubySegments.length > 0 && (
-              <div className="mt-3">
-                <div className="border-b border-dashed border-neutral-600/70 mb-3" />
-                <div className="flex flex-wrap gap-x-4 gap-y-3">
-                  {rubySegments.map((seg, idx) => (
-                    <div key={`${seg.base}-${idx}`} className="flex w-36 flex-col items-center">
-                      <ruby className="px-2.5 pt-3 pb-1 rounded-md bg-neutral-900/50 border border-neutral-700 text-lg leading-[1.15]">
-                        {seg.base}
-                        <rt className="text-sky-300 text-[0.62em] font-medium leading-none tracking-normal">
-                          {seg.ruby}
-                        </rt>
-                      </ruby>
-                      {seg.definitions.length > 0 && (
-                        <div className="mt-1 w-full text-center text-[11px] leading-snug text-neutral-400">
-                          {seg.definitions.join(' | ')}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {token && !isOfflineMode && token.card?.pitchAccent && token.card.pitchAccent.length > 0 && (
-              <div className="mt-3 text-sm text-neutral-200">
-                {token.card.pitchAccent.map((pitch, index) => (
-                  <span key={index}>{renderPitchReact(reading || surfaceWord, pitch)}</span>
-                ))}
-              </div>
-            )}
-
             {posText && (
-              <div className="mt-3 text-sm text-neutral-200 underline underline-offset-4">
+              <div className="mt-1 text-xs text-neutral-400">
                 {posText}
               </div>
             )}
 
-            {/* Meanings */}
-            {token && !isOfflineMode && token.card?.meanings && token.card.meanings.length > 0 && (
-              <ol className="mt-3 text-base text-neutral-100 list-decimal list-inside space-y-1">
+            <div id="popup-word-meaning" hidden={!meaningVisible}>
+            {token && hasWordDefinition && token.card?.meanings && token.card.meanings.length > 0 && (
+              <ol className={`mt-3 text-base text-neutral-100 space-y-1 ${token.card.meanings.reduce((count, meaning) => count + (meaning.glosses?.length || 0), 0) > 1 ? "list-decimal list-inside" : "list-none"}`}>
                 {token.card.meanings.flatMap((meaning, meaningIndex) =>
                   (meaning.glosses || []).map((gloss, glossIndex) => (
                     <li key={`m${meaningIndex}-g${glossIndex}`} className="font-serif font-medium">
-                      {gloss}
+                      {gloss.startsWith(`${surfaceWord}: `) ? gloss.slice(surfaceWord.length + 2) : gloss}
                     </li>
                   ))
                 )}
               </ol>
             )}
 
-            {token && isOfflineMode && (
-              <div className="mt-3 space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  {localJlptLevel && (
-                    <span className="rounded-md border border-amber-700 bg-amber-950/30 px-2 py-1 text-amber-200">
-                      JLPT {localJlptLevel}
-                    </span>
-                  )}
-                  {card?.frequencyRank && (
-                    <span className="rounded-md border border-neutral-700 bg-neutral-950/30 px-2 py-1 text-neutral-300">
-                      Top {card.frequencyRank.toLocaleString()}
-                    </span>
-                  )}
+            {!hasWordDefinition && isDigging && hasLocalKanjiInfo && <p className="mt-2 text-sm">{localKanjiInfo.flatMap(entry => entry.meanings).join(', ')}</p>}
+            {!hasWordDefinition && isDigging && !hasLocalKanjiInfo && <p className="mt-2 text-sm text-neutral-400">No dictionary meaning is available for this component.</p>}
+            {!hasWordDefinition && !isDigging && <p role="status" className="mt-3 text-sm text-neutral-300">{wordLookup?.source === popup ? wordLookup.message : 'Looking up word meaning…'}</p>}
+            </div>
+            {isDigging && hasLocalKanjiInfo && <p className="mt-2 text-xs text-neutral-400">{localKanjiInfo.map(entry => [entry.level && `JLPT ${entry.level}`, `${entry.stroke_count} strokes`].filter(Boolean).join(' · ')).join(' · ')}</p>}
+            {isDigging && <section aria-label="Kanji components" className="mt-2 border-t border-neutral-700 pt-2">
+              <h3 className="text-xs text-neutral-400">Components</h3>
+              {componentCharacters.length ? <div className="divide-y divide-neutral-800">{componentCharacters.map(component => {
+                const info = getWordKanjiInfo(component)[0];
+                return <button type="button" key={component} aria-label={`Explore component ${component}`} onClick={event => { event.stopPropagation(); digIntoKanji(component); }} className="flex w-full items-start gap-2 py-2 text-left hover:bg-neutral-800">
+                  <span className="w-6 shrink-0 text-xl">{component}</span>
+                  <span className="text-sm">{info?.meanings.slice(0, 4).join(', ') || 'Explore component'}</span>
+                </button>;
+              })}</div> : <p className="mt-1 text-xs text-neutral-400">No further component breakdown is available.</p>}
+              <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener noreferrer" className="text-[10px] text-neutral-500">Components adapted from KanjiVG · Ulrich Apel &amp; contributors · CC BY-SA 3.0</a>
+            </section>}
+            {!isDigging && hasLocalKanjiInfo && (
+              <section aria-label="Kanji breakdown" className="mt-2 border-t border-neutral-700 pt-2">
+                <h3 className="mb-1 text-xs font-medium text-neutral-400">Kanji breakdown</h3>
+                <div className="divide-y divide-neutral-800">
+                  {localKanjiInfo.map(entry => <button type="button" key={entry.kanji} aria-label={`Explore kanji ${entry.kanji}`} onClick={event => { event.stopPropagation(); digIntoKanji(entry.kanji); }} className="flex w-full items-start gap-2 py-1.5 text-left hover:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-neutral-400">
+                    <span className="w-6 shrink-0 text-xl leading-tight">{entry.kanji}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-snug">{entry.meanings.slice(0, 5).join(', ') || 'Definition not found'}</p>
+                      <p className="text-[11px] leading-snug text-neutral-500">{[entry.level && `JLPT ${entry.level}`, `${entry.stroke_count} strokes`].filter(Boolean).join(' · ')}</p>
+                    </div>
+                  </button>)}
                 </div>
-
-                {hasLocalKanjiInfo ? (
-                  <div className="grid gap-2">
-                    {localKanjiInfo.map((entry) => (
-                      <div
-                        key={entry.kanji}
-                        className="rounded-lg border border-neutral-700 bg-neutral-950/25 p-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="shrink-0 text-3xl font-semibold leading-none text-blue-300">
-                            {entry.kanji}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400">
-                              {entry.level && <span>JLPT {entry.level}</span>}
-                              <span>{entry.stroke_count} strokes</span>
-                              {entry.grade && <span>grade {entry.grade}</span>}
-                              {entry.freq_mainichi_shinbun && (
-                                <span>Top {entry.freq_mainichi_shinbun.toLocaleString()}</span>
-                              )}
-                            </div>
-                            <div className="mt-1 text-sm font-medium leading-snug text-neutral-100">
-                              {entry.meanings.slice(0, 5).join(', ') || 'Definition not found'}
-                            </div>
-                            <div className="mt-2 space-y-1 text-xs leading-snug text-neutral-400">
-                              {reading && reading !== surfaceWord && (
-                                <div>
-                                  <span className="text-neutral-300">Reading:</span> {reading}
-                                </div>
-                              )}
-                              {entry.kun_readings.length > 0 && (
-                                <div>
-                                  <span className="text-neutral-300">Kun:</span> {entry.kun_readings.slice(0, 6).join(', ')}
-                                </div>
-                              )}
-                              {entry.on_readings.length > 0 && (
-                                <div>
-                                  <span className="text-neutral-300">On:</span> {entry.on_readings.slice(0, 6).join(', ')}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-neutral-700 bg-neutral-950/25 p-3 text-sm text-neutral-400">
-                    Definition not found
-                  </div>
-                )}
-              </div>
+              </section>
             )}
           </div>
 
-          <div className="hidden w-28 shrink-0 text-right sm:block">
-            <div className="space-y-2 text-sm">
-              {hasNeverForget && (
-                <div className="text-lime-300 underline underline-offset-4">never-forget</div>
-              )}
-              {hasBlacklisted && (
-                <div className="text-red-300 underline underline-offset-4">blacklisted</div>
-              )}
-              {token?.card?.frequencyRank && (
-                <div className="text-base font-medium text-neutral-200">Top {token.card.frequencyRank.toLocaleString()}</div>
-              )}
-            </div>
-          </div>
+
         </div>
       </div>
 
-      {!isOfflineMode && (
-        <div className="shrink-0 border-t border-neutral-700/50 bg-neutral-900/40 px-2 py-1.5 sm:px-3 sm:pb-3 sm:pt-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePopupClick();
-            }}
-            className="text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-4"
-            title="Open on jpdb.io"
-          >
-            Open on JPDB
-          </button>
+      {!isOfflineMode && hasWordDefinition && card && config.apiKey && (
+        <div className="relative shrink-0 border-t border-neutral-700 bg-neutral-900 px-2 py-2" onClick={event => event.stopPropagation()}>
+          {isLoading && <p role="status" className="mb-1 text-xs text-neutral-400">Processing…</p>}
+          <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto" aria-label="Grade this word">
+              {([
+                ['something', 'Something', "I recognize this word but don't know the meaning"],
+                ['hard', 'Hard', 'I know this word but it was difficult'],
+                ['good', 'Okay', 'I know this word well'],
+                ['easy', 'Easy', 'This word is very easy for me'],
+              ] as const).map(([grade, label, title]) => <button key={grade} className={flatBtnBase} title={title} disabled={isLoading} onClick={() => handleReviewCard(grade)}>{label}</button>)}
+            </div>
+            <details className="group shrink-0" onKeyDown={event => {
+              if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); }
+            }}>
+              <summary aria-label="Word actions" title="Word actions" className="flex h-8 w-8 cursor-pointer list-none items-center justify-center border border-neutral-600 text-neutral-200 hover:bg-neutral-800 [&::-webkit-details-marker]:hidden">
+                <svg aria-hidden="true" className="h-4 w-4 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 15 6-6 6 6" strokeWidth="2" /></svg>
+              </summary>
+              <div className="absolute bottom-full right-2 left-2 border border-neutral-600 bg-neutral-900 p-3">
+                <div className="flex flex-wrap gap-2">
+                  <button className={flatBtnBase} disabled={isLoading || !canMine} title={addButtonTitle} onClick={handleMineWord}>Add</button>
+                  <button className={flatBtnBase} disabled={isLoading} aria-pressed={hasNeverForget} onClick={() => handleUpdateWordState('never-forget', hasNeverForget)}>Never forget</button>
+                  <button className={flatBtnBase} disabled={isLoading} aria-pressed={hasBlacklisted} onClick={() => handleUpdateWordState('blacklist', hasBlacklisted)}>Blacklist</button>
+                </div>
+                {!canMine && <p className="mt-2 text-xs text-neutral-400">{addButtonTitle}</p>}
+              </div>
+            </details>
+          </div>
         </div>
       )}
     </div>

@@ -1,0 +1,1 @@
+Component relationships derived from KanjiVG (https://github.com/KanjiVG/kanjivg), retrieved 2026-09-10. Copyright Ulrich Apel and contributors. Licensed CC BY-SA 3.0; see COPYING. Derived from the element group hierarchy in the unmodified default SVG for each character. These are graphical components, not etymological claims.

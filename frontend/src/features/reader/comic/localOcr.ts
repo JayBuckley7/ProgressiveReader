@@ -39,13 +39,13 @@ async function cache() {
 }
 
 /** Only model files are fetched. Page pixels remain in the browser worker. */
-export async function recognizeLocalPage(image: Blob, owner: string | null | undefined, direction: OcrDirection, signal: AbortSignal, progress: (message: string) => void): Promise<OcrPageLayoutResponse> {
+async function runLocalPage(image: Blob, owner: string | null | undefined, direction: OcrDirection, signal: AbortSignal, progress: (message: string) => void, force = false): Promise<OcrPageLayoutResponse> {
   const digest = await crypto.subtle.digest('SHA-256', await image.arrayBuffer());
   const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
   const prefix = JSON.stringify([owner ?? 'device-guest', MODEL_VERSION]);
   const key = `${prefix}:${direction}:${hash}`;
   if (signal.aborted) throw abortError();
-  if (owner !== undefined) {
+  if (owner !== undefined && !force) {
     try {
       const db = await cache(); const hit = await db.get('pages', key); db.close();
       if (!signal.aborted && hit?.layout?.status === 'ready' && Array.isArray(hit.layout.lines) && Array.isArray(hit.layout.atoms)) return { ...hit.layout, cacheHit: true };
@@ -56,13 +56,16 @@ export async function recognizeLocalPage(image: Blob, owner: string | null | und
   let worker: Worker | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let cancel: () => void = () => {};
+  let fail: (error: unknown) => void = () => {};
   const aborted = new Promise<never>((_, reject) => {
+    fail = error => { stopped = true; void worker?.terminate(); reject(new Error(typeof error === 'string' ? error : 'Web OCR failed. Try a smaller area.')); };
     cancel = () => { stopped = true; void worker?.terminate(); reject(abortError()); };
     signal.addEventListener('abort', cancel, { once: true });
     timer = setTimeout(() => { stopped = true; void worker?.terminate(); reject(new Error('OCR timed out. Please retry this page.')); }, 120_000);
   });
   const run = async () => {
     const created = await createWorker(direction === 'vertical' ? 'jpn_vert' : 'jpn', OEM.LSTM_ONLY, {
+      errorHandler: fail,
       workerPath: '/ocr-runtime/worker.min.js', corePath: '/ocr-runtime/', workerBlobURL: false,
       logger: event => progress(event.status.includes('recogniz') ? `Reading text… ${Math.round(event.progress * 100)}%` : 'Preparing Japanese OCR (first use downloads the language model)…'),
     });
@@ -92,5 +95,17 @@ export async function recognizeLocalPage(image: Blob, owner: string | null | und
     return layout;
   };
   try { return await Promise.race([run(), aborted]); }
-  finally { stopped = true; if (timer) clearTimeout(timer); signal.removeEventListener('abort', cancel); void worker?.terminate(); }
+  finally { stopped = true; if (timer) clearTimeout(timer); signal.removeEventListener('abort', cancel); await worker?.terminate(); }
+}
+
+// Each Japanese worker has a sizable WASM heap. Do not overlap workers when a
+// selection is replaced or the reader changes pages before recognition finishes.
+let pendingRecognition: Promise<unknown> = Promise.resolve();
+export function recognizeLocalPage(...args: Parameters<typeof runLocalPage>): ReturnType<typeof runLocalPage> {
+  const result = pendingRecognition.catch(() => {}).then(() => {
+    if (args[3].aborted) throw abortError();
+    return runLocalPage(...args);
+  });
+  pendingRecognition = result.catch(() => {});
+  return result;
 }

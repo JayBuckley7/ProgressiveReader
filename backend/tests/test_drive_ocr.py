@@ -105,3 +105,35 @@ def test_prefers_android_variant_and_keeps_weaker_variant(monkeypatch):
     monkeypatch.setattr('app.infrastructure.drive_ocr.requests.get', get)
     assert storage.page('alice', HASH)['engine'] == 'mlkit-japanese-v2'
     assert get.call_args.args[0].endswith('/android')
+
+
+def test_explicit_repair_is_immutable_and_retryable(monkeypatch):
+    storage = DriveOcrStorage(SimpleNamespace(get_access_token=lambda owner: 'token'))
+    old = {'id': 'old', 'createdTime': '1', 'appProperties': {'pr_engine': 'mlkit-japanese-v2'}}
+    revision = 'b' * 32
+    repaired = dict(PAGE, engine='mlkit-japanese-v2', revision=revision)
+    new = {'id': 'repair', 'createdTime': '2', 'appProperties': {'pr_engine': 'mlkit-japanese-v2', 'pr_revision': revision}}
+    listing = Mock(side_effect=[[old], [{'id': 'folder'}], [old, new], [old, new]])
+    monkeypatch.setattr(storage, '_list', listing)
+    post = Mock(return_value=response({'id': 'repair'}))
+    get = Mock(return_value=response(repaired))
+    monkeypatch.setattr('app.infrastructure.drive_ocr.requests.post', post)
+    monkeypatch.setattr('app.infrastructure.drive_ocr.requests.get', get)
+    assert storage.page('alice', HASH, repaired) == repaired
+    assert storage.page('alice', HASH, repaired) == repaired
+    assert storage.page('alice', HASH) == repaired
+    assert post.call_count == 1
+    assert get.call_args.args[0].endswith('/repair')
+
+
+def test_android_result_wins_over_a_later_web_repair(monkeypatch):
+    storage = DriveOcrStorage(SimpleNamespace(get_access_token=lambda owner: 'token'))
+    items = [
+        {'id': 'android', 'createdTime': '1', 'appProperties': {'pr_engine': 'mlkit-japanese-v2'}},
+        {'id': 'web', 'createdTime': '2', 'appProperties': {'pr_engine': 'tesseract-vertical', 'pr_revision': 'a' * 32}},
+    ]
+    monkeypatch.setattr(storage, '_list', lambda *a: items)
+    get = Mock(return_value=response(dict(PAGE, engine='mlkit-japanese-v2')))
+    monkeypatch.setattr('app.infrastructure.drive_ocr.requests.get', get)
+    storage.page('alice', HASH)
+    assert get.call_args.args[0].endswith('/android')

@@ -1,4 +1,5 @@
-import { useState, type RefObject } from "react";
+import { ReaderEdgeNavigation } from "./ReaderEdgeNavigation";
+import { useEffect, useState, type RefObject } from "react";
 
 import { SettingsModal } from "@shared/components/SettingsModal";
 import { TtsControlModal } from "@shared/components/TtsControlModal";
@@ -18,6 +19,15 @@ interface BookReaderProps {
 }
 
 export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }: BookReaderProps) {
+  const [headerNavigation, setHeaderNavigation] = useState(() => window.matchMedia('(min-width: 900px)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 900px)');
+    const update = () => setHeaderNavigation(query.matches);
+    query.addEventListener('change', update);
+    update();
+    return () => query.removeEventListener('change', update);
+  }, []);
+  const [ocrToolsHost, setOcrToolsHost] = useState<HTMLDivElement | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showMixSettings, setShowMixSettings] = useState(false);
   const [showReaderControls, setShowReaderControls] = useState(false);
@@ -54,6 +64,25 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
       ? `${chapterTitle || `Chapter ${c.chapter + 1}`} · Page ${c.pagination.pageIndex + 1} of ${Math.max(1, c.pagination.pageCount)}`
       : `${chapterTitle || `Chapter ${c.chapter + 1}`} · Laying out pages…`;
 
+  const navigation = (
+    <ReaderDock
+        inline={headerNavigation}
+        currentIndex={readerIndex}
+        totalItems={readerTotal}
+        onPrevious={previous}
+        onNext={next}
+        canPrevious={canPrevious}
+        canNext={canNext}
+        rightToLeftPageTurning={rightToLeftPageTurning}
+        navigationUnit="page"
+        statusLabel={pageStatus}
+        onShowContents={() => {
+          setShowReaderControls(false);
+          setShowContents(true);
+        }}
+      />
+  );
+
   if (c.isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
@@ -65,6 +94,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <ReaderHeader
+        navigation={headerNavigation ? navigation : undefined}
+        ocrToolsRef={setOcrToolsHost}
         bookContent={c.bookContent}
         chapter={c.chapter}
         progressLabel={pageStatus}
@@ -82,7 +113,9 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         onToggleTranslation={c.translation.applyStoredTranslation}
       />
 
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <BookContent
+        ocrToolsHost={ocrToolsHost}
         bookMetadata={c.bookMetadata}
         contentRef={c.contentRef as RefObject<HTMLDivElement>}
         flowRef={c.flowRef as RefObject<HTMLDivElement>}
@@ -99,6 +132,10 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         settings={c.settings || undefined}
         showPdfTokenHighlights={c.isFixedLayout && c.highlighting.jpdbHighlighted}
       />
+      {c.bookMetadata?.fileType === 'cbz' && !showSettings && !showMixSettings && !showReaderControls && !showContents && (
+        <ReaderEdgeNavigation onNext={next} onPrevious={previous} canNext={canNext} canPrevious={canPrevious} />
+      )}
+      </div>
 
       {!c.isFixedLayout && c.translation.pageTranslationError && (
         <div
@@ -117,21 +154,8 @@ export function BookReader({ bookId, currentChapter, setCurrentChapter, onBack }
         </div>
       )}
 
-      <ReaderDock
-        currentIndex={readerIndex}
-        totalItems={readerTotal}
-        onPrevious={previous}
-        onNext={next}
-        canPrevious={canPrevious}
-        canNext={canNext}
-        rightToLeftPageTurning={rightToLeftPageTurning}
-        navigationUnit="page"
-        statusLabel={pageStatus}
-        onShowContents={() => {
-          setShowReaderControls(false);
-          setShowContents(true);
-        }}
-      />
+      {!headerNavigation && navigation}
+
 
       <ReaderControls
         visible={showReaderControls}
